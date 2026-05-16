@@ -6,7 +6,7 @@
     "layout": {
       "left": [
         { "id": "omarchy" },
-        { "id": "workspaces" },
+        { "id": "omarchy.lacuna-workspaces", "workspaceCount": 7 },
         { "id": "omarchy.lacuna-codex-usage", "interval": 300000, "showIcon": true },
         { "id": "omarchy.lacuna-claude-usage", "interval": 30000, "showIcon": true },
         { "id": "omarchy.lacuna-compact-pill" }
