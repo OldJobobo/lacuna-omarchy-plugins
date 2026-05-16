@@ -14,6 +14,9 @@ LacunaRect {
   property color hoverAccent: "#88c0d0"
   property int buttonSize: 32
   property int iconSize: 18
+  property int buttonRadius: 0
+  property real hoverOpacity: 0.06
+  property real pressOpacity: 0.11
   readonly property bool hovered: stateLayer.containsMouse
   readonly property color iconColor: hovered ? hoverAccent : muted
 
@@ -21,6 +24,7 @@ LacunaRect {
   implicitHeight: buttonSize
   width: implicitWidth
   height: implicitHeight
+  radius: buttonRadius
   clip: true
 
   Shape {
@@ -132,6 +136,8 @@ LacunaRect {
     id: stateLayer
 
     stateColor: root.hoverAccent
+    hoverOpacity: root.hoverOpacity
+    pressOpacity: root.pressOpacity
     onTriggered: root.triggered()
   }
 }

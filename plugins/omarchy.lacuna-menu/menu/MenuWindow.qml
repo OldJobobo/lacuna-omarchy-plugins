@@ -31,10 +31,13 @@ Item {
   property color muted: menuTheme.muted
   property string version: ""
   property bool compact: compactState.compact
+  property bool forceCompactRail: true
+  property bool railCompact: forceCompactRail ? true : compact
+  property string designStyle: lacunaSettings.data && lacunaSettings.data.designStyle ? lacunaSettings.data.designStyle : "carbon"
   property int fullPanelWidth: compact ? 270 : 310
-  property int railButtonWidth: barHeight
-  property int railLeftInset: compact ? 7 : 9
-  property int railRightInset: compact ? 7 : 9
+  property int railButtonWidth: railCompact ? 24 : barHeight
+  property int railLeftInset: railDesignTokens.railLeftInset
+  property int railRightInset: railDesignTokens.railRightInset
   property int railPanelWidth: railButtonWidth + railLeftInset + railRightInset
   property int panelWidth: sidebarState.collapsed ? railPanelWidth : fullPanelWidth
   property int barHeight: compact ? 24 : 32
@@ -104,6 +107,13 @@ Item {
       return
     }
 
+    if (entry.action === "cycle-design-style") {
+      var nextStyleSettings = lacunaSettings.normalize(lacunaSettings.data)
+      nextStyleSettings.designStyle = lacunaSettings.nextDesignStyle(nextStyleSettings.designStyle)
+      lacunaSettings.save(nextStyleSettings)
+      return
+    }
+
     if (entry.action === "reload-apps") {
       appCatalog.reload()
       return
@@ -149,6 +159,24 @@ Item {
     id: menuTheme
   }
 
+  DesignTokens {
+    id: designTokens
+    designStyle: root.designStyle
+    compact: root.compact
+    foreground: root.foreground
+    background: root.background
+    accent: root.accent
+  }
+
+  DesignTokens {
+    id: railDesignTokens
+    designStyle: root.designStyle
+    compact: root.railCompact
+    foreground: root.foreground
+    background: root.background
+    accent: root.accent
+  }
+
   FileView {
     id: versionFile
 
@@ -169,6 +197,7 @@ Item {
     sidebarCollapsed: sidebarState.collapsed
     sidebarCornerPieces: sidebarState.cornerPieces
     compact: root.compact
+    designStyle: root.designStyle
     colorProfile: lacunaSettings.data && lacunaSettings.data.colorProfile ? lacunaSettings.data.colorProfile : "semantic"
     appCatalog: appCatalog
   }
@@ -229,15 +258,18 @@ Item {
       bodyRightInset: root.surfaceRightInset
       cornerPieces: sidebarState.cornerPieces
       panelColor: root.panelColor
+      foreground: root.foreground
+      designTokens: designTokens
 
       MenuContent {
         visible: !sidebarState.collapsed
         anchors.fill: parent
-        anchors.leftMargin: root.compact ? 10 : 14
-        anchors.rightMargin: root.compact ? 10 : 14
-        anchors.topMargin: root.barBottomY + (root.compact ? 6 : 8)
-        anchors.bottomMargin: root.compact ? 10 : 16
+        anchors.leftMargin: designTokens.contentInset
+        anchors.rightMargin: designTokens.contentInset
+        anchors.topMargin: root.barBottomY + designTokens.topInset
+        anchors.bottomMargin: designTokens.bottomInset
         compact: root.compact
+        designTokens: designTokens
         open: root.menuState.open
         menuState: root.menuState
         registry: registry
@@ -261,10 +293,11 @@ Item {
       MenuRail {
         visible: sidebarState.collapsed
         anchors.top: parent.top
-        anchors.topMargin: root.barBottomY + (root.compact ? 6 : 10)
+        anchors.topMargin: root.barBottomY + (root.railCompact ? 6 : 10)
         anchors.left: parent.left
         anchors.leftMargin: root.railLeftInset
-        compact: root.compact
+        compact: root.railCompact
+        designTokens: railDesignTokens
         open: root.menuState.open
         menuState: root.menuState
         registry: registry

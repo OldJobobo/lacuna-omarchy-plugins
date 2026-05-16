@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 import "../components"
+import "../services"
 
 Item {
   id: root
@@ -21,6 +22,8 @@ Item {
   property int bodyRightInset: joinRadius
   property bool cornerPieces: true
   property color panelColor: "#101315"
+  property color foreground: "#d8dee9"
+  property var designTokens: fallbackDesignTokens
   property real openProgress: open ? 1 : 0
 
   readonly property int bodyTop: barBottomY
@@ -46,6 +49,10 @@ Item {
       width: root.panelWidth
       height: surface.height
       color: root.panelColor
+      opacity: 1
+      radius: 0
+      border.width: 0
+      border.color: "transparent"
     }
 
     Shape {
@@ -107,5 +114,11 @@ Item {
       height: surface.height
     }
 
+  }
+
+  DesignTokens {
+    id: fallbackDesignTokens
+    foreground: root.foreground
+    background: root.panelColor
   }
 }

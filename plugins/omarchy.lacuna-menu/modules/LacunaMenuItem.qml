@@ -1,5 +1,6 @@
 import QtQuick
 import "../components"
+import "../services"
 
 LacunaRect {
   id: root
@@ -27,6 +28,7 @@ LacunaRect {
   property string labelFontFamily: fontFamily
   property int iconRailWidth: 32
   property bool compact: false
+  property var designTokens: fallbackDesignTokens
   readonly property bool hovered: stateLayer.containsMouse
   readonly property bool pressed: stateLayer.pressed
   readonly property real reveal: stateLayer.reveal
@@ -34,11 +36,14 @@ LacunaRect {
   readonly property bool featured: layout === "featured"
   readonly property bool compactRow: layout === "compact"
   readonly property bool primary: priority === "primary"
-  readonly property int rowHeight: compact ? (featured ? 42 : primary ? 34 : compactRow ? 28 : 32) : (featured ? 48 : primary ? 40 : compactRow ? 32 : 38)
+  readonly property int rowHeight: featured ? designTokens.featuredItemHeight : primary ? designTokens.primaryItemHeight : compactRow ? designTokens.compactItemHeight : designTokens.itemHeight
   property int contentLeftMargin: Math.round(reveal * (featured ? 3 : 2))
 
   width: parent ? parent.width : implicitWidth
   height: header ? (compact ? 24 : 30) : rowHeight
+  radius: header ? 0 : designTokens.radius
+  border.width: !header && designTokens.omarchy && (hovered || primary) ? designTokens.borderWidth : 0
+  border.color: Qt.rgba(foreground.r, foreground.g, foreground.b, hovered ? 0.18 : 0.10)
   clip: true
 
   Behavior on contentLeftMargin {
@@ -46,14 +51,14 @@ LacunaRect {
   }
 
   LacunaRect {
-    visible: !root.header
+    visible: !root.header && root.designTokens.carbon
     anchors.fill: parent
     color: root.toneAccent
     opacity: root.featured ? 0.045 + root.reveal * 0.065 : root.primary ? 0.025 + root.reveal * 0.06 : root.reveal * 0.055
   }
 
   LacunaRect {
-    visible: !root.header
+    visible: !root.header && root.designTokens.accentStrips
     anchors.left: parent.left
     anchors.top: parent.top
     anchors.bottom: parent.bottom
@@ -63,7 +68,7 @@ LacunaRect {
   }
 
   LacunaRect {
-    visible: !root.header && root.reveal > 0
+    visible: !root.header && root.designTokens.decorativeLinework && root.reveal > 0
     anchors.left: parent.left
     anchors.leftMargin: 9
     anchors.top: parent.top
@@ -74,7 +79,7 @@ LacunaRect {
   }
 
   LacunaRect {
-    visible: !root.header && root.reveal > 0
+    visible: !root.header && root.designTokens.decorativeLinework && root.reveal > 0
     anchors.right: parent.right
     anchors.rightMargin: 8
     anchors.bottom: parent.bottom
@@ -197,15 +202,15 @@ LacunaRect {
 
       visible: root.switchVisible
       anchors.centerIn: parent
-      width: root.compact ? 30 : 34
-      height: root.compact ? 14 : 16
+      width: root.designTokens.switchStyle === "material" ? (root.compact ? 34 : 38) : root.compact ? 30 : 34
+      height: root.designTokens.switchStyle === "material" ? (root.compact ? 18 : 20) : root.compact ? 14 : 16
       radius: height / 2
-      color: root.switchChecked ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.32) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
+      color: root.switchChecked ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, root.designTokens.material ? 0.42 : 0.32) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, root.designTokens.omarchy ? 0.09 : 0.12)
       border.width: 1
-      border.color: root.switchChecked ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.65) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.18)
+      border.color: root.switchChecked ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, root.designTokens.material ? 0.85 : 0.65) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, root.designTokens.omarchy ? 0.24 : 0.18)
 
       LacunaRect {
-        width: root.compact ? 8 : 10
+        width: root.designTokens.switchStyle === "material" ? (root.compact ? 12 : 14) : root.compact ? 8 : 10
         height: width
         radius: width / 2
         x: root.switchChecked ? switchTrack.width - width - 3 : 3
@@ -224,7 +229,18 @@ LacunaRect {
 
     disabled: root.header
     stateColor: root.toneAccent
-    showFill: false
+    hoverOpacity: root.designTokens.hoverOpacity
+    pressOpacity: root.designTokens.activeOpacity
+    showFill: !root.designTokens.carbon
     onTriggered: root.triggered()
+  }
+
+  DesignTokens {
+    id: fallbackDesignTokens
+    designStyle: "carbon"
+    compact: root.compact
+    foreground: root.foreground
+    background: root.background
+    accent: root.accent
   }
 }

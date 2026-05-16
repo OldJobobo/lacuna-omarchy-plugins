@@ -14,6 +14,7 @@ Item {
   function defaultData() {
     return {
       version: 1,
+      designStyle: "carbon",
       colorProfile: "semantic",
       compact: false,
       sidebar: {
@@ -28,6 +29,7 @@ Item {
     var next = defaultData()
     if (value && typeof value === "object") {
       next.version = Number(value.version || 1)
+      next.designStyle = normalizeDesignStyle(value.designStyle)
       next.colorProfile = String(value.colorProfile || "").toLowerCase() === "colorful" ? "colorful" : "semantic"
       next.compact = value.compact === true
       if (value.sidebar && typeof value.sidebar === "object") {
@@ -37,6 +39,19 @@ Item {
       }
     }
     return next
+  }
+
+  function normalizeDesignStyle(value) {
+    var style = String(value || "").toLowerCase()
+    if (style === "omarchy" || style === "material") return style
+    return "carbon"
+  }
+
+  function nextDesignStyle(value) {
+    var style = normalizeDesignStyle(value)
+    if (style === "carbon") return "omarchy"
+    if (style === "omarchy") return "material"
+    return "carbon"
   }
 
   function load() {

@@ -15,6 +15,9 @@ LacunaRect {
   property bool disabled: false
   property int iconSize: 15
   property int buttonSize: tokens.controlSmall
+  property int buttonRadius: 0
+  property real hoverOpacity: 0.06
+  property real pressOpacity: 0.11
   property string fontFamily: tokens.monoFont
   readonly property bool hovered: stateLayer.containsMouse
 
@@ -22,6 +25,7 @@ LacunaRect {
   implicitHeight: buttonSize
   width: implicitWidth
   height: implicitHeight
+  radius: buttonRadius
   clip: true
 
   Image {
@@ -58,6 +62,8 @@ LacunaRect {
 
     disabled: root.disabled
     stateColor: root.hoverAccent
+    hoverOpacity: root.hoverOpacity
+    pressOpacity: root.pressOpacity
     onTriggered: root.triggered()
     onSecondaryClicked: root.secondaryTriggered()
   }

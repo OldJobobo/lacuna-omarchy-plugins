@@ -9,6 +9,7 @@ Item {
   property bool sidebarCollapsed: false
   property bool sidebarCornerPieces: true
   property bool compact: false
+  property string designStyle: "carbon"
   property string colorProfile: "semantic"
   readonly property string lacunaIconSource: String(Qt.resolvedUrl("../assets/tabler/circle-dotted-letter-l.svg"))
   property var appCatalog: null
@@ -115,6 +116,18 @@ Item {
 
   function categoryTitle(category) {
     return categoryMeta(category).label
+  }
+
+  function designStyleName() {
+    if (root.designStyle === "omarchy") return "Omarchy"
+    if (root.designStyle === "material") return "Material"
+    return "Carbon"
+  }
+
+  function designStyleHint() {
+    if (root.designStyle === "omarchy") return "Native Omarchy borders and containment"
+    if (root.designStyle === "material") return "Softer tonal surfaces and clearer states"
+    return "Flat compact Lacuna linework"
   }
 
   function appCount(category) {
@@ -230,6 +243,7 @@ Item {
     if (view === "lacuna-preferences") {
       return [
         item("header", "", "Layout", "", "", "", "lacuna", "normal", "section", false, "lacuna"),
+        item("item", "󰙨", "Design: " + designStyleName(), designStyleHint(), "", "", "lacuna", "normal", "row", false, "lacuna", "cycle-design-style"),
         item("item", "󰏘", root.colorProfile === "colorful" ? "Colorful Profile" : "Semantic Profile", root.colorProfile === "colorful" ? "Use theme colors across Lacuna topbar modules" : "Use foreground with semantic colors only", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-color-profile", "", true, root.colorProfile === "colorful"),
         item("item", "󰙵", root.compact ? "Compact Density" : "Normal Density", root.compact ? "Use tighter Lacuna UI spacing" : "Use standard Lacuna UI spacing", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-bar-density", "", true, root.compact),
         item("item", root.sidebarCollapsed ? "󰍽" : "󰍾", root.sidebarCollapsed ? "Icon Rail" : "Full Sidebar", root.sidebarCollapsed ? "Show the compact icon rail" : "Show the full sidebar surface", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-sidebar-rail", "", true, root.sidebarCollapsed),
@@ -246,6 +260,7 @@ Item {
         item("item", "󰔎", "Theme", "Switch Omarchy theme", "", switchThemeCommand(), "shell", "primary", "row", false, "customize"),
         item("item", "󰖔", "Background", "Switch theme background", "", switchBackgroundCommand(), "shell", "primary", "row", false, "customize"),
         item("header", "", "Layout", "", "", "", "lacuna", "normal", "section", false, "layout"),
+        item("item", "󰙨", "Design: " + designStyleName(), designStyleHint(), "", "", "lacuna", "normal", "row", false, "layout", "cycle-design-style"),
         item("item", "󰏘", root.colorProfile === "colorful" ? "Colorful Profile" : "Semantic Profile", root.colorProfile === "colorful" ? "Use theme colors across Lacuna topbar modules" : "Use foreground with semantic colors only", "", "", "lacuna", "normal", "row", false, "layout", "toggle-color-profile", "", true, root.colorProfile === "colorful"),
         item("item", "󰙵", root.compact ? "Compact Density" : "Normal Density", root.compact ? "Use tighter Lacuna UI spacing" : "Use standard Lacuna UI spacing", "", "", "lacuna", "normal", "row", false, "layout", "toggle-bar-density", "", true, root.compact),
         item("item", root.sidebarCollapsed ? "󰍽" : "󰍾", root.sidebarCollapsed ? "Icon Rail" : "Full Sidebar", root.sidebarCollapsed ? "Show the compact icon rail" : "Show the full sidebar surface", "", "", "lacuna", "normal", "row", false, "layout", "toggle-sidebar-rail", "", true, root.sidebarCollapsed),

@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import "../components"
+import "../services"
 
 Column {
   id: root
@@ -31,6 +32,7 @@ Column {
   property int tooltipWidth: 118
   property int tooltipHeight: 30
   property bool tooltipVisible: false
+  property var designTokens: fallbackDesignTokens
 
   function toneAccent(tone) {
     if (tone === "lacuna") return root.accent
@@ -85,7 +87,7 @@ Column {
     tooltipY = Math.round(Math.max(8, Math.min(point.y - tooltipHeight / 2, panelWindow.height - tooltipHeight - 8)))
   }
 
-  spacing: compact ? 5 : 7
+  spacing: designTokens.railSpacing
   opacity: open ? 1 : 0
 
   Behavior on opacity {
@@ -102,6 +104,9 @@ Column {
     hoverAccent: root.accent
     fontFamily: root.bodyFontFamily
     buttonSize: root.railWidth
+    buttonRadius: root.designTokens.controlRadius
+    hoverOpacity: root.designTokens.hoverOpacity
+    pressOpacity: root.designTokens.activeOpacity
     iconSize: root.compact ? 17 : 19
     onHoveredChanged: if (hovered) root.showTooltipText(this, "Expand sidebar", root.accent)
                     else root.hideTooltip(this)
@@ -123,6 +128,9 @@ Column {
       muted: root.foreground
       hoverAccent: root.accent
       buttonSize: root.railWidth
+      buttonRadius: root.designTokens.controlRadius
+      hoverOpacity: root.designTokens.hoverOpacity
+      pressOpacity: root.designTokens.activeOpacity
       iconSize: root.compact ? 16 : 18
       onHoveredChanged: if (hovered) root.showTooltip(this, modelData)
                       else root.hideTooltip(this)
@@ -151,10 +159,12 @@ Column {
       anchors.fill: parent
       color: root.panelColor
       opacity: 1
-      border.width: 1
-      border.color: Qt.rgba(root.tooltipAccent.r, root.tooltipAccent.g, root.tooltipAccent.b, 0.24)
+      radius: root.designTokens.tooltipTreatment === "tonal" ? root.designTokens.radius : 0
+      border.width: root.designTokens.tooltipTreatment === "accent-strip" ? 1 : root.designTokens.borderWidth
+      border.color: root.designTokens.tooltipTreatment === "bordered" ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.22) : Qt.rgba(root.tooltipAccent.r, root.tooltipAccent.g, root.tooltipAccent.b, 0.24)
 
       LacunaRect {
+        visible: root.designTokens.tooltipTreatment === "accent-strip"
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
@@ -176,5 +186,14 @@ Column {
         font.weight: Font.DemiBold
       }
     }
+  }
+
+  DesignTokens {
+    id: fallbackDesignTokens
+    designStyle: "carbon"
+    compact: root.compact
+    foreground: root.foreground
+    background: root.panelColor
+    accent: root.accent
   }
 }

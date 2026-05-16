@@ -707,6 +707,7 @@ Status: complete in the current plugin pass.
    `~/.config/omarchy/lacuna/settings.json`.
 2. Expose settings that matter:
    - Lacuna UI density (`compact` compatibility key)
+   - Lacuna design style (`carbon`, `omarchy`, or `material`)
    - Lacuna color profile (`semantic` or `colorful`)
    - sidebar collapsed
    - sidebar exclusive/overlay
@@ -729,6 +730,9 @@ Completed notes:
 
 - `omarchy.lacuna-menu` now uses a shared Lacuna settings service for density
   and sidebar state.
+- Lacuna menu/sidebar now keeps `designStyle` separate from `colorProfile`:
+  design style controls structure, borders, radius, spacing, state layers, and
+  surface treatment while color profile controls color distribution.
 - `omarchy.lacuna-compact-pill` now reads and writes the same
   `~/.config/omarchy/lacuna/settings.json` file.
 - Lacuna topbar modules support a global `colorProfile` plus per-widget

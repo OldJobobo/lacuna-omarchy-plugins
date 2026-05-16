@@ -1,6 +1,7 @@
 import QtQuick
 import "../components"
 import "../modules"
+import "../services"
 
 Column {
   id: root
@@ -27,6 +28,7 @@ Column {
   property string bodyFontFamily: "GeistMono Nerd Font"
   property string itemFontFamily: itemFont.name !== "" ? itemFont.name : "Tektur"
   property int iconRailWidth: 32
+  property var designTokens: fallbackDesignTokens
 
   function toneAccent(tone) {
     if (tone === "lacuna") return root.accent
@@ -36,7 +38,7 @@ Column {
     return root.navAccent
   }
 
-  spacing: compact ? 7 : 10
+  spacing: designTokens.sectionSpacing
   onCurrentViewChanged: {
     viewProgress = 0
     viewReveal.restart()
@@ -76,6 +78,7 @@ Column {
     accent: root.accent
     danger: root.dangerAccent
     compact: root.compact
+    designTokens: root.designTokens
     bodyFontFamily: root.bodyFontFamily
     onBackRequested: root.menuState.back()
     onCollapseRequested: root.collapseRequested()
@@ -86,6 +89,7 @@ Column {
     width: parent.width
     height: 1
     color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.07)
+    opacity: root.designTokens.headerTreatment === "accent-line" ? 1 : 0.55
   }
 
   Flickable {
@@ -100,7 +104,7 @@ Column {
       id: itemList
 
       width: parent.width
-      spacing: 2
+      spacing: root.designTokens.itemSpacing
 
       Repeater {
         model: root.registry.itemsFor(root.menuState.currentView)
@@ -155,8 +159,18 @@ Column {
         labelFontFamily: root.itemFontFamily
         iconRailWidth: root.iconRailWidth
         compact: root.compact
+        designTokens: root.designTokens
         onTriggered: root.activated(parent.entry)
       }
     }
+  }
+
+  DesignTokens {
+    id: fallbackDesignTokens
+    designStyle: "carbon"
+    compact: root.compact
+    foreground: root.foreground
+    background: root.background
+    accent: root.accent
   }
 }

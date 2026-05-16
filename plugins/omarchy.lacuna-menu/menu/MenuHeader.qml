@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Effects
 import "../components"
+import "../services"
 
 Item {
   id: root
@@ -20,12 +21,14 @@ Item {
   property color danger: "#bf616a"
   property string bodyFontFamily: "GeistMono Nerd Font"
   property bool compact: false
+  property var designTokens: fallbackDesignTokens
   readonly property bool hasSubtitle: subtitle !== ""
   readonly property bool hasVersion: version !== ""
   readonly property int controlSize: compact ? 24 : tokens.controlSmall
+  readonly property int backButtonWidth: canGoBack ? controlSize : 0
 
   width: parent ? parent.width : implicitWidth
-  height: compact ? (hasSubtitle || hasVersion ? 50 : 36) : (hasSubtitle || hasVersion ? 62 : 46)
+  height: compact ? (hasSubtitle || hasVersion ? 50 : 36) : (hasSubtitle || hasVersion ? 62 : 46) + (designTokens.material ? 2 : 0)
 
   FontLoader {
     id: headingFont
@@ -36,7 +39,8 @@ Item {
   Item {
     id: headerGlyph
 
-    anchors.left: parent.left
+    anchors.left: backButton.right
+    anchors.leftMargin: root.canGoBack ? tokens.spaceSmall : 0
     anchors.top: parent.top
     anchors.topMargin: 2
     width: root.controlSize
@@ -58,6 +62,28 @@ Item {
         colorizationColor: root.accent
       }
     }
+  }
+
+  LacunaIconButton {
+    id: backButton
+
+    visible: root.canGoBack
+    anchors.left: parent.left
+    anchors.top: headerGlyph.top
+    width: root.backButtonWidth
+    icon: "←"
+    foreground: root.foreground
+    muted: root.muted
+    accent: root.accent
+    hoverAccent: root.accent
+    fontFamily: root.bodyFontFamily
+    buttonSize: root.controlSize
+    buttonRadius: root.designTokens.controlRadius
+    hoverOpacity: root.designTokens.hoverOpacity
+    pressOpacity: root.designTokens.activeOpacity
+    iconSize: root.compact ? 13 : 15
+    disabled: !visible
+    onTriggered: root.backRequested()
   }
 
   Column {
@@ -106,26 +132,8 @@ Item {
 
     anchors.right: parent.right
     anchors.top: parent.top
-    width: backButton.width + collapseButton.width + spacing
+    width: collapseButton.width
     height: root.controlSize
-    spacing: root.compact ? 2 : tokens.spaceSmall
-
-    LacunaIconButton {
-      id: backButton
-
-      visible: root.canGoBack
-      width: visible ? implicitWidth : 0
-      icon: "‹"
-      foreground: root.foreground
-      muted: root.muted
-      accent: root.accent
-      hoverAccent: root.accent
-      fontFamily: root.bodyFontFamily
-      buttonSize: root.controlSize
-      iconSize: root.compact ? 16 : 18
-      disabled: !visible
-      onTriggered: root.backRequested()
-    }
 
     LacunaIconButton {
       id: collapseButton
@@ -139,6 +147,9 @@ Item {
       hoverAccent: root.accent
       fontFamily: root.bodyFontFamily
       buttonSize: root.controlSize
+      buttonRadius: root.designTokens.controlRadius
+      hoverOpacity: root.designTokens.hoverOpacity
+      pressOpacity: root.designTokens.activeOpacity
       iconSize: root.compact ? 19 : 21
       disabled: !visible
       onTriggered: root.collapseRequested()
@@ -151,10 +162,11 @@ Item {
     anchors.bottom: parent.bottom
     height: 1
     color: root.accent
-    opacity: 0.24
+    opacity: root.designTokens.headerTreatment === "body-border" ? 0.12 : root.designTokens.headerTreatment === "tonal" ? 0.18 : 0.24
   }
 
   LacunaRect {
+    visible: root.designTokens.decorativeLinework
     anchors.left: headerGlyph.left
     anchors.bottom: parent.bottom
     width: root.compact ? 26 : 34
@@ -165,5 +177,13 @@ Item {
 
   LacunaTokens {
     id: tokens
+  }
+
+  DesignTokens {
+    id: fallbackDesignTokens
+    designStyle: "carbon"
+    compact: root.compact
+    foreground: root.foreground
+    accent: root.accent
   }
 }
