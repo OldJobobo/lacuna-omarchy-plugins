@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+
+import json
+import sys
+from pathlib import Path
+
+
+SETTINGS_PATH = Path.home() / ".config" / "omarchy" / "lacuna" / "settings.json"
+
+
+def load_settings():
+    if not SETTINGS_PATH.exists():
+        return {"version": 1, "colorProfile": "semantic", "compact": False, "sidebar": {"collapsed": False, "exclusive": True, "cornerPieces": True}}
+    try:
+        data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    data.setdefault("version", 1)
+    if data.get("colorProfile") not in ("semantic", "colorful"):
+        data["colorProfile"] = "semantic"
+    data.setdefault("compact", False)
+    sidebar = data.setdefault("sidebar", {})
+    if not isinstance(sidebar, dict):
+        data["sidebar"] = {"collapsed": False, "exclusive": True, "cornerPieces": True}
+    else:
+        sidebar.setdefault("collapsed", False)
+        sidebar.setdefault("exclusive", True)
+        sidebar.setdefault("cornerPieces", True)
+    return data
+
+
+def save_settings(data):
+    SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp = SETTINGS_PATH.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(SETTINGS_PATH)
+
+
+def emit(data):
+    compact = bool(data.get("compact"))
+    print(json.dumps({
+        "compact": compact,
+        "tooltip": "<b>Lacuna Density</b><br/>Mode: " + ("compact" if compact else "normal"),
+    }, separators=(",", ":")))
+
+
+def main():
+    data = load_settings()
+    if len(sys.argv) > 1 and sys.argv[1] == "toggle":
+        data["compact"] = not bool(data.get("compact"))
+        save_settings(data)
+    emit(data)
+
+
+if __name__ == "__main__":
+    main()

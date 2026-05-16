@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "omarchy.lacuna-wallpaper",
+  "name": "Lacuna Wallpaper",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Lacuna-styled top-bar widget for the active Omarchy wallpaper.",
+  "kinds": ["bar-widget"],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lacuna Wallpaper",
+    "description": "Shows the current Omarchy wallpaper and opens the background switcher.",
+    "category": "Lacuna",
+    "allowMultiple": false,
+    "defaults": {
+      "maxTextLength": 18,
+      "showIcon": true
+    },
+    "schema": [
+      { "key": "maxTextLength", "type": "integer", "label": "Max text length", "min": 4, "max": 80, "step": 1 },
+      { "key": "showIcon", "type": "boolean", "label": "Show icon" },
+      { "key": "colorProfile", "type": "enum", "label": "Color profile", "options": ["semantic", "colorful"], "description": "Override the global Lacuna color profile for this widget." }
+    ]
+  }
+}

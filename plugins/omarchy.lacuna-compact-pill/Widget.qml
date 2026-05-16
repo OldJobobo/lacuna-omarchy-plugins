@@ -1,0 +1,124 @@
+import QtQuick
+import QtQuick.Effects
+import Quickshell
+import Quickshell.Io
+
+Item {
+  id: root
+
+  property var bar: null
+  property string moduleName: "omarchy.lacuna-compact-pill"
+  property var settings: ({})
+  property bool compact: false
+  property string tooltipText: ""
+
+  readonly property bool vertical: bar ? bar.vertical : false
+  readonly property int barSize: bar ? bar.barSize : 26
+  readonly property color foreground: bar ? bar.foreground : "#d8dee9"
+  readonly property color urgent: bar ? bar.urgent : "#d42b5b"
+  readonly property color moduleColor: compact ? colorProfile.statusColor("active", "density") : colorProfile.roleColor("density", foreground)
+  readonly property int intervalMs: Math.max(500, Number(setting("interval", 1000)))
+  readonly property string scriptPath: localPath(Qt.resolvedUrl("scripts/compact-state"))
+  readonly property url iconSource: compact ? Qt.resolvedUrl("assets/tabler/arrows-maximize.svg") : Qt.resolvedUrl("assets/tabler/arrows-minimize.svg")
+
+  visible: true
+  implicitWidth: button.implicitWidth
+  implicitHeight: button.implicitHeight
+
+  function setting(name, fallback) {
+    var value = settings ? settings[name] : undefined
+    return value === undefined || value === null ? fallback : value
+  }
+
+  function localPath(url) {
+    var value = String(url || "")
+    if (value.indexOf("file://") === 0) value = value.slice(7)
+    return decodeURIComponent(value)
+  }
+
+  function refresh() {
+    if (!readProc.running) readProc.running = true
+  }
+
+  function toggle() {
+    if (!toggleProc.running) toggleProc.running = true
+  }
+
+  ColorProfile {
+    id: colorProfile
+    bar: root.bar
+    widgetSettings: root.settings
+    role: "density"
+  }
+
+  Timer {
+    interval: root.intervalMs
+    running: true
+    repeat: true
+    triggeredOnStart: true
+    onTriggered: root.refresh()
+  }
+
+  Process {
+    id: readProc
+    command: [root.scriptPath, "get"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.applyPayload(text)
+    }
+  }
+
+  Process {
+    id: toggleProc
+    command: [root.scriptPath, "toggle"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.applyPayload(text)
+    }
+  }
+
+  function applyPayload(raw) {
+    try {
+      var payload = JSON.parse(String(raw || "{}"))
+      compact = payload.compact === true
+      tooltipText = payload.tooltip || ""
+    } catch (e) {
+      compact = false
+      tooltipText = ""
+    }
+  }
+
+  Item {
+    id: button
+
+    width: root.barSize
+    height: root.barSize
+    implicitWidth: width
+    implicitHeight: height
+
+    Image {
+      anchors.centerIn: parent
+      source: root.iconSource
+      width: 15
+      height: 15
+      sourceSize.width: width
+      sourceSize.height: height
+      smooth: true
+      mipmap: true
+      layer.enabled: true
+      layer.effect: MultiEffect {
+        colorization: 1.0
+        colorizationColor: root.moduleColor
+      }
+    }
+
+    MouseArea {
+      anchors.fill: parent
+      hoverEnabled: true
+      acceptedButtons: Qt.LeftButton
+      onEntered: if (bar && root.tooltipText) bar.showTooltip(root, root.tooltipText)
+      onExited: if (bar) bar.hideTooltip(root)
+      onClicked: root.toggle()
+    }
+  }
+}

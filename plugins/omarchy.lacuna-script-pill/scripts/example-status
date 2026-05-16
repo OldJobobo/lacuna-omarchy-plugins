@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+printf '{"text":"ok","tooltip":"<b>Lacuna Script Pill</b><br/>Example status","class":"normal"}\n'

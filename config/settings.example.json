@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "colorProfile": "semantic",
+  "compact": false,
+  "sidebar": {
+    "collapsed": false,
+    "exclusive": true,
+    "cornerPieces": true
+  }
+}

@@ -1,0 +1,182 @@
+import Quickshell
+import Quickshell.Io
+import QtQuick
+
+Item {
+  id: root
+
+  property var bar: null
+  property string moduleName: "omarchy.lacuna-theme"
+  property var settings: ({})
+  property var palette: ({})
+  property string themeName: ""
+
+  readonly property bool vertical: bar ? bar.vertical : false
+  readonly property int barSize: bar ? bar.barSize : 26
+  readonly property color foreground: bar ? bar.foreground : "#d8dee9"
+  readonly property color moduleColor: colorProfile.roleColor("theme", foreground)
+  readonly property int maxTextLength: Math.max(4, Number(setting("maxTextLength", 26)))
+  readonly property bool showIcon: setting("showIcon", true) === true
+  readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
+  readonly property string colorsPath: configHome + "/omarchy/current/theme/colors.toml"
+  readonly property string themeNamePath: configHome + "/omarchy/current/theme.name"
+  readonly property string themeTitle: formatTitle(themeName)
+  readonly property string displayText: clipped((showIcon ? "󰸉 " : "") + themeTitle)
+  readonly property string tooltipText: themeTooltip()
+
+  visible: themeTitle.length > 0
+  implicitWidth: visible ? button.implicitWidth : 0
+  implicitHeight: visible ? button.implicitHeight : 0
+
+  function setting(name, fallback) {
+    var value = settings ? settings[name] : undefined
+    return value === undefined || value === null ? fallback : value
+  }
+
+  function shellQuote(value) {
+    if (bar && bar.shellQuote) return bar.shellQuote(value)
+    return "'" + String(value).replace(/'/g, "'\\''") + "'"
+  }
+
+  function switchThemeCommand() {
+    return "theme=$(omarchy theme switcher); [ -n \"$theme\" ] && omarchy theme set \"$theme\""
+  }
+
+  function randomThemeCommand() {
+    return "current=\"$(omarchy theme current)\"; next=\"$(omarchy theme list | grep -Fvx \"$current\" | shuf -n 1)\"; [ -n \"$next\" ] && omarchy theme set \"$next\""
+  }
+
+  function clipped(value) {
+    var text = String(value || "")
+    if (text.length <= maxTextLength) return text
+    return text.slice(0, Math.max(1, maxTextLength - 1)) + "..."
+  }
+
+  function formatTitle(value) {
+    return String(value || "")
+      .replace(/[-_]/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, function(letter) { return letter.toUpperCase() })
+  }
+
+  function swatchRow(start, end) {
+    var row = ""
+    for (var i = start; i <= end; i++) {
+      row += "<font color='" + rawColor("color" + i) + "' size='+2'>■</font> "
+    }
+    return row
+  }
+
+  function rawColor(name) {
+    return palette[name] || fallbackColor(name)
+  }
+
+  function fallbackColor(name) {
+    var fallbacks = {
+      foreground: "#d8dee9",
+      background: "#101315",
+      color0: "#101315",
+      color7: "#e5e9f0",
+      color11: "#ebcb8b"
+    }
+    return fallbacks[name] || foreground
+  }
+
+  function themeTooltip() {
+    return "<b>" + themeTitle + "</b><br/>Current Omarchy theme<br/><br/><b>Palette</b><br/>"
+      + swatchRow(0, 7) + "<br/>"
+      + swatchRow(8, 15) + "<br/><br/>"
+      + "<font color='" + rawColor("color0") + "'>■</font> base00  "
+      + "<font color='" + rawColor("color7") + "'>■</font> base07  "
+      + "<font color='" + rawColor("color11") + "'>■</font> accent<br/><br/>"
+      + "Left click: switcher<br/>Right click: random"
+  }
+
+  function loadTheme(raw) {
+    var next = {}
+    var lines = String(raw || "").split(/\n/)
+    for (var i = 0; i < lines.length; i++) {
+      var match = lines[i].match(/^\s*([A-Za-z0-9_-]+)\s*=\s*["']?([^"'\s]+)["']?/)
+      if (match) next[match[1]] = match[2].trim()
+    }
+    palette = next
+  }
+
+  ColorProfile {
+    id: colorProfile
+    bar: root.bar
+    widgetSettings: root.settings
+    role: "theme"
+  }
+
+  FileView {
+    id: colorsFile
+    path: root.colorsPath
+    watchChanges: true
+    printErrors: false
+    onLoaded: root.loadTheme(text())
+    onFileChanged: reload()
+    onLoadFailed: themeRetry.restart()
+  }
+
+  FileView {
+    id: themeNameFile
+    path: root.themeNamePath
+    watchChanges: true
+    printErrors: false
+    onLoaded: root.themeName = text().trim()
+    onFileChanged: {
+      reload()
+      themeRetry.restart()
+    }
+    onLoadFailed: themeRetry.restart()
+  }
+
+  Timer {
+    id: themeRetry
+    interval: 500
+    repeat: false
+    onTriggered: {
+      colorsFile.reload()
+      themeNameFile.reload()
+    }
+  }
+
+  Item {
+    id: button
+
+    readonly property int horizontalPadding: root.vertical ? 0 : 8
+    readonly property int minimumWidth: root.vertical ? root.barSize : 32
+
+    width: root.vertical ? root.barSize : Math.max(minimumWidth, label.implicitWidth + horizontalPadding * 2)
+    height: root.vertical ? Math.max(root.barSize, label.implicitHeight + 10) : root.barSize
+    implicitWidth: width
+    implicitHeight: height
+    clip: true
+
+    Text {
+      id: label
+      anchors.centerIn: parent
+      rotation: root.vertical ? -90 : 0
+      text: root.displayText
+      color: root.moduleColor
+      font.family: bar ? bar.fontFamily : "monospace"
+      font.pixelSize: 12
+      maximumLineCount: 1
+      elide: Text.ElideRight
+    }
+
+    MouseArea {
+      anchors.fill: parent
+      hoverEnabled: true
+      acceptedButtons: Qt.LeftButton | Qt.RightButton
+      onEntered: if (bar && root.tooltipText) bar.showTooltip(root, root.tooltipText)
+      onExited: if (bar) bar.hideTooltip(root)
+      onClicked: function(mouse) {
+        if (!bar) return
+        if (mouse.button === Qt.RightButton) bar.run(root.randomThemeCommand())
+        else bar.run(root.switchThemeCommand())
+      }
+    }
+  }
+}

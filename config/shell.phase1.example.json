@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "bar": {
+    "position": "top",
+    "centerAnchor": "calendar",
+    "layout": {
+      "left": [
+        { "id": "omarchy" },
+        { "id": "workspaces" },
+        { "id": "omarchy.lacuna-codex-usage", "interval": 300000, "showIcon": true },
+        { "id": "omarchy.lacuna-claude-usage", "interval": 30000, "showIcon": true },
+        { "id": "omarchy.lacuna-compact-pill" }
+      ],
+      "center": [
+        { "id": "calendar" }
+      ],
+      "right": [
+        { "id": "tray" },
+        { "id": "bluetoothPanel" },
+        { "id": "networkPanel" },
+        { "id": "audioPanel" },
+        { "id": "battery" },
+        { "id": "omarchy.lacuna-theme" },
+        { "id": "omarchy.lacuna-wallpaper" },
+        { "id": "omarchy.lacuna-system-stats" },
+        { "id": "omarchy.lacuna-temperature", "warmF": 150, "criticalF": 185 },
+        { "id": "controlCenter" }
+      ]
+    }
+  },
+  "plugins": []
+}
