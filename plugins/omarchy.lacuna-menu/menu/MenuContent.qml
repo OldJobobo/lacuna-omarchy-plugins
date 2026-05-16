@@ -25,7 +25,7 @@ Column {
   property color dangerAccent: "#bf616a"
   property color navAccent: "#d8dee9"
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
-  property string bodyFontFamily: "GeistMono Nerd Font"
+  property string bodyFontFamily: "JetBrains Mono"
   property string itemFontFamily: itemFont.name !== "" ? itemFont.name : "Tektur"
   property int iconRailWidth: 32
   property var designTokens: fallbackDesignTokens
@@ -154,6 +154,12 @@ Column {
         danger: parent.entry.danger
         switchVisible: parent.entry.switchVisible || false
         switchChecked: parent.entry.switchChecked || false
+        badgeText: parent.entry.badgeText || ""
+        trailingAction: parent.entry.trailingAction || ""
+        trailingIcon: parent.entry.trailingIcon || ""
+        trailingTooltip: parent.entry.trailingTooltip || ""
+        optionValue: parent.entry.optionValue || ""
+        options: parent.entry.options || []
         background: root.background
         fontFamily: root.bodyFontFamily
         labelFontFamily: root.itemFontFamily
@@ -161,6 +167,24 @@ Column {
         compact: root.compact
         designTokens: root.designTokens
         onTriggered: root.activated(parent.entry)
+        onTrailingActionTriggered: function(action) {
+          var next = {
+            kind: parent.entry.kind,
+            action: action,
+            appId: parent.entry.appId || "",
+            view: "",
+            command: ""
+          }
+          root.activated(next)
+        }
+        onOptionSelected: function(value) {
+          root.activated({
+            kind: "item",
+            action: "set-design-style-" + value,
+            view: "",
+            command: ""
+          })
+        }
       }
     }
   }

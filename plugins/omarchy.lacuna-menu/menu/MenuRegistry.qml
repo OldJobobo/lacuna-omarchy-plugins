@@ -11,8 +11,9 @@ Item {
   property bool compact: false
   property string designStyle: "carbon"
   property string colorProfile: "semantic"
-  readonly property string lacunaIconSource: String(Qt.resolvedUrl("../assets/tabler/circle-dotted-letter-l.svg"))
   property var appCatalog: null
+  property var quickLaunch: []
+  property var appDefaults: ({})
 
   function item(kind, icon, label, hint, view, command, tone, priority, layout, danger, group, action, iconSource, switchVisible, switchChecked) {
     return {
@@ -30,7 +31,38 @@ Item {
       danger: danger || tone === "danger",
       group: group || "",
       switchVisible: switchVisible === true,
-      switchChecked: switchChecked === true
+      switchChecked: switchChecked === true,
+      badgeText: "",
+      trailingAction: "",
+      trailingIcon: "",
+      trailingTooltip: "",
+      appId: ""
+    }
+  }
+
+  function designStyleControl(group) {
+    return {
+      kind: "item",
+      icon: "palette",
+      iconSource: "",
+      label: "Design",
+      hint: designStyleName(),
+      view: "",
+      command: "",
+      action: "",
+      tone: "lacuna",
+      priority: "normal",
+      layout: "design-style-control",
+      danger: false,
+      group: group || "lacuna",
+      switchVisible: false,
+      switchChecked: false,
+      optionValue: root.designStyle,
+      options: [
+        { value: "carbon", label: "Carbon" },
+        { value: "omarchy", label: "Omarchy" },
+        { value: "material", label: "Material" }
+      ]
     }
   }
 
@@ -40,6 +72,7 @@ Item {
     if (view === "customize") return "Customize"
     if (view === "lacuna-shell") return "Runtime"
     if (view === "lacuna-preferences") return "Layout"
+    if (view === "lacuna-app-defaults") return "App Defaults"
     if (view === "system") return "System"
     if (view === "apps") return "Apps"
     if (view === "apps-all") return "All Apps"
@@ -51,6 +84,14 @@ Item {
     return "'" + String(value).replace(/'/g, "'\\''") + "'"
   }
 
+  function shellDoubleQuote(value) {
+    return "\"" + String(value).replace(/\\/g, "\\\\").replace(/"/g, "\\\"").replace(/\$/g, "\\$").replace(/`/g, "\\`") + "\""
+  }
+
+  function hyprExec(command) {
+    return "hyprctl dispatch " + shellDoubleQuote("hl.dsp.exec_cmd([[" + command + "]])")
+  }
+
   function terminalCommand(command, title, holdOpen) {
     var terminalBody = command
     if (holdOpen) {
@@ -60,7 +101,7 @@ Item {
   }
 
   function openTerminalCommand() {
-    return "foot --app-id=org.omarchy.terminal --title=" + shellQuote("Terminal")
+    return hyprExec("omarchy launch terminal")
   }
 
   function updateLacunaCommand() {
@@ -94,15 +135,15 @@ Item {
 
   function categories() {
     return [
-      { id: "games", label: "Games", icon: "󰊴", tone: "lacuna" },
-      { id: "internet", label: "Internet", icon: "󰖟", tone: "nav" },
-      { id: "development", label: "Development", icon: "", tone: "shell" },
-      { id: "media", label: "Media", icon: "󰝚", tone: "session" },
-      { id: "graphics", label: "Graphics", icon: "󰸌", tone: "shell" },
-      { id: "office", label: "Office", icon: "󰈙", tone: "nav" },
-      { id: "system", label: "System", icon: "󰒓", tone: "session" },
-      { id: "utilities", label: "Utilities", icon: "󰆧", tone: "nav" },
-      { id: "other", label: "Other", icon: "󰘳", tone: "nav" }
+      { id: "games", label: "Games", icon: "gamepad", tone: "lacuna" },
+      { id: "internet", label: "Internet", icon: "world", tone: "nav" },
+      { id: "development", label: "Development", icon: "code", tone: "shell" },
+      { id: "media", label: "Media", icon: "music", tone: "session" },
+      { id: "graphics", label: "Graphics", icon: "palette", tone: "shell" },
+      { id: "office", label: "Office", icon: "file-text", tone: "nav" },
+      { id: "system", label: "System", icon: "settings", tone: "session" },
+      { id: "utilities", label: "Utilities", icon: "tool", tone: "nav" },
+      { id: "other", label: "Other", icon: "dots", tone: "nav" }
     ]
   }
 
@@ -111,7 +152,7 @@ Item {
     for (var i = 0; i < all.length; i++) {
       if (all[i].id === category) return all[i]
     }
-    return { id: category, label: "Apps", icon: "󰀻", tone: "nav" }
+    return { id: category, label: "Apps", icon: "apps", tone: "nav" }
   }
 
   function categoryTitle(category) {
@@ -135,27 +176,146 @@ Item {
   }
 
   function categoryLabel(meta) {
+    return meta.label
+  }
+
+  function categoryItem(meta) {
+    var row = item("item", meta.icon, categoryLabel(meta), "", "apps-" + meta.id, "", meta.tone, "primary", "row", false, "apps")
     var count = appCount(meta.id)
-    return count > 0 ? meta.label + " " + count : meta.label
+    row.badgeText = count > 0 ? String(count) : ""
+    return row
   }
 
   function appIcon(app) {
-    if (app.category === "games") return "󰊴"
-    if (app.category === "internet") return "󰖟"
-    if (app.category === "development") return ""
-    if (app.category === "media") return "󰝚"
-    if (app.category === "graphics") return "󰸌"
-    if (app.category === "office") return "󰈙"
-    if (app.category === "system") return "󰒓"
-    return "󰀻"
+    if (app.category === "games") return "gamepad"
+    if (app.category === "internet") return "world"
+    if (app.category === "development") return "code"
+    if (app.category === "media") return "music"
+    if (app.category === "graphics") return "palette"
+    if (app.category === "office") return "file-text"
+    if (app.category === "system") return "settings"
+    return "apps"
   }
 
   function appIconSource(app) {
-    var icon = app.Icon || ""
+    var icon = String(app.Icon || "").trim()
     if (icon === "") return ""
-    if (icon.indexOf("file://") === 0 || icon.indexOf("image://") === 0) return icon
+    if (icon.indexOf("file://") === 0) return icon
     if (icon.indexOf("/") === 0) return "file://" + encodeURI(icon)
     return "image://icon/" + icon
+  }
+
+  function appEntry(app, quickAdd) {
+    var row = item("item", appIcon(app), app.Name, app.Comment || app.GenericName, "", "gtk-launch " + shellQuote(app.id), categoryMeta(app.category).tone, "primary", "row", false, "apps", "", appIconSource(app))
+    row.appId = app.id
+    if (quickAdd) {
+      row.trailingAction = "add-quicklaunch"
+      row.trailingIcon = quickLaunchContains(app.id) ? "check" : "plus"
+      row.trailingTooltip = quickLaunchContains(app.id) ? "Already in quick launch" : "Add to quick launch"
+    }
+    return row
+  }
+
+  function quickLaunchContains(id) {
+    var ids = root.quickLaunch || []
+    for (var i = 0; i < ids.length; i++) {
+      if (String(ids[i]) === String(id)) return true
+    }
+    return false
+  }
+
+  function roleMeta(role) {
+    if (role === "files") return { label: "Files", icon: "folder", tone: "nav", systemHint: "System default" }
+    if (role === "editor") return { label: "Editor", icon: "edit", tone: "shell", systemHint: "System editor" }
+    if (role === "email") return { label: "Email", icon: "mail", tone: "nav", systemHint: "System email" }
+    if (role === "discord") return { label: "Discord", icon: "message", tone: "session", systemHint: "Detected Discord app" }
+    return { label: "App", icon: "apps", tone: "nav", systemHint: "System default" }
+  }
+
+  function appDefaultValue(role) {
+    if (!root.appDefaults || typeof root.appDefaults !== "object") return "system"
+    var value = String(root.appDefaults[role] || "").trim()
+    return value === "" ? "system" : value
+  }
+
+  function detectedDiscordApp() {
+    var ids = ["Discord", "vesktop"]
+    if (!root.appCatalog || !root.appCatalog.ready) return ""
+
+    for (var i = 0; i < ids.length; i++) {
+      if (root.appCatalog.appById(ids[i])) return ids[i]
+    }
+
+    return ""
+  }
+
+  function appName(id) {
+    if (!root.appCatalog || !root.appCatalog.ready || !id) return ""
+    var app = root.appCatalog.appById(id)
+    return app ? app.Name : ""
+  }
+
+  function appDefaultHint(role) {
+    var value = appDefaultValue(role)
+    var meta = roleMeta(role)
+    if (value === "system") {
+      if (role === "discord") {
+        var detected = detectedDiscordApp()
+        return detected ? "System: " + (appName(detected) || detected) : "System: Discord web app"
+      }
+      return meta.systemHint
+    }
+
+    return "Manual: " + (appName(value) || value)
+  }
+
+  function appLaunchCommand(id) {
+    return hyprExec("gtk-launch " + shellQuote(id))
+  }
+
+  function roleCommand(role) {
+    var value = appDefaultValue(role)
+    if (value !== "system") return appLaunchCommand(value)
+
+    if (role === "files") return hyprExec("omarchy launch nautilus")
+    if (role === "editor") return hyprExec("omarchy launch editor")
+    if (role === "email") return hyprExec("xdg-open mailto:")
+    if (role === "discord") {
+      var detected = detectedDiscordApp()
+      if (detected) return appLaunchCommand(detected)
+      return hyprExec("omarchy launch webapp https://discord.com/channels/@me")
+    }
+
+    return ""
+  }
+
+  function roleEntry(role, priority) {
+    var meta = roleMeta(role)
+    return item("item", meta.icon, meta.label, appDefaultHint(role), "", roleCommand(role), meta.tone, priority || "primary", "row", false, "launch")
+  }
+
+  function roleSettingsItem(role) {
+    var meta = roleMeta(role)
+    return item("item", meta.icon, meta.label, appDefaultHint(role), "", "", meta.tone, "primary", "row", false, "app-defaults", "choose-app-default-" + role)
+  }
+
+  function quickLaunchItems() {
+    var rows = []
+    var ids = root.quickLaunch || []
+    if (!root.appCatalog || !root.appCatalog.ready) return rows
+
+    for (var i = 0; i < ids.length; i++) {
+      var id = String(ids[i] || "")
+      if (id.indexOf("role:") === 0) {
+        rows.push(roleEntry(id.substring(5), "primary"))
+        continue
+      }
+
+      var app = root.appCatalog.appById(id)
+      if (app) rows.push(appEntry(app, false))
+    }
+
+    return rows
   }
 
   function appItems(category) {
@@ -172,27 +332,28 @@ Item {
     if (source.length === 0) {
       return [
         item("header", "", "Empty", "", "", "", "nav"),
-        item("item", "󰀻", "No apps found", "", "", "", "nav", "primary", "row")
+        item("item", "apps", "No apps found", "", "", "", "nav", "primary", "row")
       ]
     }
 
     rows.push(item("header", "", category === "all" ? "Applications" : categoryTitle(category), "", "", "", "nav"))
     for (var i = 0; i < source.length; i++) {
       var app = source[i]
-      rows.push(item("item", appIcon(app), app.Name, app.Comment || app.GenericName, "", "gtk-launch " + shellQuote(app.id), categoryMeta(app.category).tone, "primary", "row", false, "apps", "", appIconSource(app)))
+      rows.push(appEntry(app, true))
     }
     return rows
   }
 
   function railItems() {
     return [
-      item("item", "", "Lacuna", "Runtime and layout controls", "lacuna", "", "lacuna", "primary", "row", false, "lacuna", "", root.lacunaIconSource),
-      item("item", "󰀻", "Apps", "Browse categorized launchers", "apps", "", "nav", "primary", "row", false, "apps"),
-      item("item", "", "Customize", "Theme, background, and wallpaper tools", "customize", "", "shell", "primary", "row", false, "customize"),
-      item("item", "", "System", "Lock, logout, restart, shutdown", "system", "", "session", "primary", "row", false, "session"),
-      item("item", "", "Terminal", "Open a terminal", "", openTerminalCommand(), "nav", "normal", "row", false, "launch"),
-      item("item", "󰈹", "Browser", "Launch browser", "", "omarchy launch browser", "nav", "normal", "row", false, "launch")
-    ]
+      item("item", "lacuna", "Lacuna", "Runtime and layout controls", "lacuna", "", "lacuna", "primary", "row", false, "lacuna"),
+      item("item", "apps", "Apps", "Browse categorized launchers", "apps", "", "nav", "primary", "row", false, "apps"),
+      item("item", "palette", "Customize", "Theme, background, and wallpaper tools", "customize", "", "shell", "primary", "row", false, "customize"),
+      item("item", "power", "System", "Lock, logout, restart, shutdown", "system", "", "session", "primary", "row", false, "session")
+    ].concat(quickLaunchItems()).concat([
+      item("item", "terminal", "Terminal", "Open a terminal", "", openTerminalCommand(), "nav", "normal", "row", false, "launch"),
+      item("item", "world", "Browser", "Launch browser", "", "omarchy launch browser", "nav", "normal", "row", false, "launch")
+    ])
   }
 
   function itemsFor(view) {
@@ -202,13 +363,13 @@ Item {
       for (var c = 0; c < cats.length; c++) {
         var meta = cats[c]
         if (appCount(meta.id) > 0 || meta.id === "games") {
-          rows.push(item("item", meta.icon, categoryLabel(meta), "", "apps-" + meta.id, "", meta.tone, "primary", "row", false, "apps"))
+          rows.push(categoryItem(meta))
         }
       }
       rows.push(item("header", "", "Fallback", "", "", "", "shell"))
-      rows.push(item("item", "󰀻", "All Apps", "", "apps-all", "", "nav", "primary", "row", false, "apps"))
-      rows.push(item("item", "󰑐", "Reload app catalog", "", "", "", "shell", "normal", "row", false, "apps", "reload-apps"))
-      rows.push(item("item", "󰅶", "Open Walker", "", "", "walker -p 'Launch…'", "shell", "normal", "row", false, "apps"))
+      rows.push(item("item", "apps", "All Apps", "", "apps-all", "", "nav", "primary", "row", false, "apps"))
+      rows.push(item("item", "refresh", "Reload app catalog", "", "", "", "shell", "normal", "row", false, "apps", "reload-apps"))
+      rows.push(item("item", "search", "Open Walker", "", "", "walker -p 'Launch…'", "shell", "normal", "row", false, "apps"))
       return rows
     }
 
@@ -223,82 +384,95 @@ Item {
     if (view === "lacuna") {
       return [
         item("header", "", "Settings", "", "", "", "lacuna", "normal", "section", false, "lacuna"),
-        item("item", "󰒓", "Runtime", "Commands, logs, and diagnostics", "lacuna-shell", "", "lacuna", "primary", "row", false, "lacuna"),
-        item("item", "", "Layout", "Density, sidebar, and surface behavior", "lacuna-preferences", "", "lacuna", "primary", "row", false, "lacuna"),
+        item("item", "settings", "Runtime", "Commands, logs, and diagnostics", "lacuna-shell", "", "lacuna", "primary", "row", false, "lacuna"),
+        item("item", "density-normal", "Layout", "Density, sidebar, and surface behavior", "lacuna-preferences", "", "lacuna", "primary", "row", false, "lacuna"),
         item("header", "", "Source", "", "", "", "shell"),
-        item("item", "󰑐", "Restart shell", "Reload Omarchy shell", "", restartLacunaCommand(), "shell"),
-        item("item", "", "Open plugin source", "Edit the Lacuna plugin repository", "", editPluginCommand(), "shell")
+        item("item", "refresh", "Restart shell", "Reload Omarchy shell", "", restartLacunaCommand(), "shell"),
+        item("item", "edit", "Open plugin source", "Edit the Lacuna plugin repository", "", editPluginCommand(), "shell")
       ]
     }
 
     if (view === "lacuna-shell") {
       return [
         item("header", "", "Runtime", "", "", "", "shell", "normal", "section", false, "shell"),
-        item("item", "󰑐", "Restart shell", "Restart Omarchy shell", "", restartLacunaCommand(), "shell", "primary", "row", false, "shell"),
-        item("item", "󰌾", "Open log", "View the current Lacuna log", "", openLogCommand(), "shell"),
-        item("item", "", "Edit plugin", "Open Lacuna plugin source", "", editPluginCommand(), "lacuna")
+        item("item", "refresh", "Restart shell", "Restart Omarchy shell", "", restartLacunaCommand(), "shell", "primary", "row", false, "shell"),
+        item("item", "file-search", "Open log", "View the current Lacuna log", "", openLogCommand(), "shell"),
+        item("item", "edit", "Edit plugin", "Open Lacuna plugin source", "", editPluginCommand(), "lacuna")
       ]
     }
 
     if (view === "lacuna-preferences") {
       return [
         item("header", "", "Layout", "", "", "", "lacuna", "normal", "section", false, "lacuna"),
-        item("item", "󰙨", "Design: " + designStyleName(), designStyleHint(), "", "", "lacuna", "normal", "row", false, "lacuna", "cycle-design-style"),
-        item("item", "󰏘", root.colorProfile === "colorful" ? "Colorful Profile" : "Semantic Profile", root.colorProfile === "colorful" ? "Use theme colors across Lacuna topbar modules" : "Use foreground with semantic colors only", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-color-profile", "", true, root.colorProfile === "colorful"),
-        item("item", "󰙵", root.compact ? "Compact Density" : "Normal Density", root.compact ? "Use tighter Lacuna UI spacing" : "Use standard Lacuna UI spacing", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-bar-density", "", true, root.compact),
-        item("item", root.sidebarCollapsed ? "󰍽" : "󰍾", root.sidebarCollapsed ? "Icon Rail" : "Full Sidebar", root.sidebarCollapsed ? "Show the compact icon rail" : "Show the full sidebar surface", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-sidebar-rail", "", true, root.sidebarCollapsed),
-        item("item", root.sidebarExclusive ? "󰹑" : "󰹐", root.sidebarExclusive ? "Sidebar Overlay" : "Sidebar Docked", root.sidebarExclusive ? "Let the sidebar float over windows" : "Reserve screen space for the sidebar", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-sidebar-mode", "", true, root.sidebarExclusive),
-        item("item", "󰉼", root.sidebarCornerPieces ? "Corner Pieces" : "Flat Edge", root.sidebarCornerPieces ? "Show the rounded connector pieces" : "Hide the rounded connector pieces", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-corner-pieces", "", true, root.sidebarCornerPieces),
-        item("item", "󰑐", "Reload app catalog", "Rescan desktop launchers", "", "", "shell", "normal", "row", false, "apps", "reload-apps")
+        designStyleControl("lacuna"),
+        item("item", "list-check", "App Defaults", "Files, editor, email, and Discord launch targets", "lacuna-app-defaults", "", "lacuna", "primary", "row", false, "lacuna"),
+        item("item", "color-swatch", root.colorProfile === "colorful" ? "Colorful Profile" : "Semantic Profile", root.colorProfile === "colorful" ? "Use theme colors across Lacuna topbar modules" : "Use foreground with semantic colors only", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-color-profile", "", true, root.colorProfile === "colorful"),
+        item("item", root.compact ? "density-compact" : "density-normal", root.compact ? "Compact Density" : "Normal Density", root.compact ? "Use tighter Lacuna UI spacing" : "Use standard Lacuna UI spacing", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-bar-density", "", true, root.compact),
+        item("item", root.sidebarCollapsed ? "sidebar-expand" : "sidebar-collapse", root.sidebarCollapsed ? "Icon Rail" : "Full Sidebar", root.sidebarCollapsed ? "Show the compact icon rail" : "Show the full sidebar surface", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-sidebar-rail", "", true, root.sidebarCollapsed),
+        item("item", "sidebar-overlay", root.sidebarExclusive ? "Sidebar Overlay" : "Sidebar Docked", root.sidebarExclusive ? "Let the sidebar float over windows" : "Reserve screen space for the sidebar", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-sidebar-mode", "", true, root.sidebarExclusive),
+        item("item", "corners", root.sidebarCornerPieces ? "Corner Pieces" : "Flat Edge", root.sidebarCornerPieces ? "Show the rounded connector pieces" : "Hide the rounded connector pieces", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-corner-pieces", "", true, root.sidebarCornerPieces),
+        item("item", "refresh", "Reload app catalog", "Rescan desktop launchers", "", "", "shell", "normal", "row", false, "apps", "reload-apps")
+      ]
+    }
+
+    if (view === "lacuna-app-defaults") {
+      return [
+        item("header", "", "App Defaults", "", "", "", "lacuna", "normal", "section", false, "app-defaults"),
+        roleSettingsItem("files"),
+        roleSettingsItem("editor"),
+        roleSettingsItem("email"),
+        roleSettingsItem("discord")
       ]
     }
 
     if (view === "customize") {
       return [
         item("header", "", "Customize", "", "", "", "shell", "normal", "section", false, "customize"),
-        item("item", "󰸉", "Wallpaper Catalog", "Open wallpaper picker", "", "jobowalls-gui", "shell", "primary", "row", false, "customize"),
-        item("item", "󰔎", "Theme", "Switch Omarchy theme", "", switchThemeCommand(), "shell", "primary", "row", false, "customize"),
-        item("item", "󰖔", "Background", "Switch theme background", "", switchBackgroundCommand(), "shell", "primary", "row", false, "customize"),
+        item("item", "photo", "Wallpaper Catalog", "Open wallpaper picker", "", "jobowalls-gui", "shell", "primary", "row", false, "customize"),
+        item("item", "palette", "Theme", "Switch Omarchy theme", "", switchThemeCommand(), "shell", "primary", "row", false, "customize"),
+        item("item", "background", "Background", "Switch theme background", "", switchBackgroundCommand(), "shell", "primary", "row", false, "customize"),
         item("header", "", "Layout", "", "", "", "lacuna", "normal", "section", false, "layout"),
-        item("item", "󰙨", "Design: " + designStyleName(), designStyleHint(), "", "", "lacuna", "normal", "row", false, "layout", "cycle-design-style"),
-        item("item", "󰏘", root.colorProfile === "colorful" ? "Colorful Profile" : "Semantic Profile", root.colorProfile === "colorful" ? "Use theme colors across Lacuna topbar modules" : "Use foreground with semantic colors only", "", "", "lacuna", "normal", "row", false, "layout", "toggle-color-profile", "", true, root.colorProfile === "colorful"),
-        item("item", "󰙵", root.compact ? "Compact Density" : "Normal Density", root.compact ? "Use tighter Lacuna UI spacing" : "Use standard Lacuna UI spacing", "", "", "lacuna", "normal", "row", false, "layout", "toggle-bar-density", "", true, root.compact),
-        item("item", root.sidebarCollapsed ? "󰍽" : "󰍾", root.sidebarCollapsed ? "Icon Rail" : "Full Sidebar", root.sidebarCollapsed ? "Show the compact icon rail" : "Show the full sidebar surface", "", "", "lacuna", "normal", "row", false, "layout", "toggle-sidebar-rail", "", true, root.sidebarCollapsed),
-        item("item", root.sidebarExclusive ? "󰹑" : "󰹐", root.sidebarExclusive ? "Sidebar Overlay" : "Sidebar Docked", root.sidebarExclusive ? "Let the sidebar float over windows" : "Reserve screen space for the sidebar", "", "", "lacuna", "normal", "row", false, "layout", "toggle-sidebar-mode", "", true, root.sidebarExclusive),
-        item("item", "󰉼", root.sidebarCornerPieces ? "Corner Pieces" : "Flat Edge", root.sidebarCornerPieces ? "Show the rounded connector pieces" : "Hide the rounded connector pieces", "", "", "lacuna", "normal", "row", false, "layout", "toggle-corner-pieces", "", true, root.sidebarCornerPieces)
+        designStyleControl("layout"),
+        item("item", "color-swatch", root.colorProfile === "colorful" ? "Colorful Profile" : "Semantic Profile", root.colorProfile === "colorful" ? "Use theme colors across Lacuna topbar modules" : "Use foreground with semantic colors only", "", "", "lacuna", "normal", "row", false, "layout", "toggle-color-profile", "", true, root.colorProfile === "colorful"),
+        item("item", root.compact ? "density-compact" : "density-normal", root.compact ? "Compact Density" : "Normal Density", root.compact ? "Use tighter Lacuna UI spacing" : "Use standard Lacuna UI spacing", "", "", "lacuna", "normal", "row", false, "layout", "toggle-bar-density", "", true, root.compact),
+        item("item", root.sidebarCollapsed ? "sidebar-expand" : "sidebar-collapse", root.sidebarCollapsed ? "Icon Rail" : "Full Sidebar", root.sidebarCollapsed ? "Show the compact icon rail" : "Show the full sidebar surface", "", "", "lacuna", "normal", "row", false, "layout", "toggle-sidebar-rail", "", true, root.sidebarCollapsed),
+        item("item", "sidebar-overlay", root.sidebarExclusive ? "Sidebar Overlay" : "Sidebar Docked", root.sidebarExclusive ? "Let the sidebar float over windows" : "Reserve screen space for the sidebar", "", "", "lacuna", "normal", "row", false, "layout", "toggle-sidebar-mode", "", true, root.sidebarExclusive),
+        item("item", "corners", root.sidebarCornerPieces ? "Corner Pieces" : "Flat Edge", root.sidebarCornerPieces ? "Show the rounded connector pieces" : "Hide the rounded connector pieces", "", "", "lacuna", "normal", "row", false, "layout", "toggle-corner-pieces", "", true, root.sidebarCornerPieces)
       ]
     }
 
     if (view === "system") {
       return [
         item("header", "", "Session", "", "", "", "session", "normal", "section", false, "session"),
-        item("item", "󱄄", "Screensaver", "Start screensaver now", "", "omarchy-launch-screensaver force", "session"),
-        item("item", "", "Lock", "Lock session", "", "omarchy-system-lock", "session", "primary", "row", false, "session"),
-        item("item", "󰍃", "Logout", "End session", "", "omarchy-system-logout", "session"),
+        item("item", "moon", "Screensaver", "Start screensaver now", "", "omarchy-launch-screensaver force", "session"),
+        item("item", "lock", "Lock", "Lock session", "", "omarchy-system-lock", "session", "primary", "row", false, "session"),
+        item("item", "logout", "Logout", "End session", "", "omarchy-system-logout", "session"),
         item("header", "", "Power", "", "", "", "danger", "normal", "section", true, "power"),
-        item("item", "󰜉", "Restart", "Reboot machine", "", "omarchy-system-reboot", "danger", "normal", "row", true, "power"),
-        item("item", "󰐥", "Shutdown", "Power off machine", "", "omarchy-system-shutdown", "danger", "primary", "row", true, "power")
+        item("item", "refresh", "Restart", "Reboot machine", "", "omarchy-system-reboot", "danger", "normal", "row", true, "power"),
+        item("item", "power", "Shutdown", "Power off machine", "", "omarchy-system-shutdown", "danger", "primary", "row", true, "power")
       ]
     }
 
     return [
       item("header", "", "Lacuna", "", "", "", "lacuna", "normal", "section", false, "lacuna"),
-      item("item", "󰀻", "Apps", "Browse categorized launchers", "apps", "", "nav", "primary", "featured"),
-      item("item", "", "Customize", "Theme, background, and wallpaper tools", "customize", "", "shell", "primary", "featured", false, "customize"),
-      item("item", "", "System", "Lock, logout, restart, shutdown", "system", "", "session", "primary", "featured", false, "session"),
+      item("item", "apps", "Apps", "Browse categorized launchers", "apps", "", "nav", "primary", "featured"),
+      item("item", "palette", "Customize", "Theme, background, and wallpaper tools", "customize", "", "shell", "primary", "featured", false, "customize"),
+      item("item", "power", "System", "Lock, logout, restart, shutdown", "system", "", "session", "primary", "featured", false, "session"),
       item("header", "", "Launch", "", "", "", "nav"),
-      item("item", "", "Terminal", "Open a terminal", "", openTerminalCommand(), "nav", "primary", "row"),
-      item("item", "󰈹", "Browser", "Launch browser", "", "omarchy launch browser", "nav", "primary", "row"),
+      item("item", "plus", "Add quick launch", "Pick an app for this section", "", "", "lacuna", "primary", "row", false, "launch", "open-quicklaunch-picker")
+    ].concat(quickLaunchItems()).concat([
+      item("item", "terminal", "Terminal", "Open a terminal", "", openTerminalCommand(), "nav", "primary", "row"),
+      item("item", "world", "Browser", "Launch browser", "", "omarchy launch browser", "nav", "primary", "row"),
       item("header", "", "System Tools", "", "", "", "session"),
-      item("item", "󰖩", "Wi-Fi", "Open Wi-Fi controls", "", "hyprctl dispatch 'hl.dsp.exec_cmd([[omarchy launch wifi]])'", "session"),
-      item("item", "󰂯", "Bluetooth", "Open Bluetooth controls", "", "hyprctl dispatch 'hl.dsp.exec_cmd([[omarchy launch bluetooth]])'", "session"),
-      item("item", "󰕾", "Audio", "Open audio mixer", "", "hyprctl dispatch 'hl.dsp.exec_cmd([[omarchy launch audio]])'", "session"),
-      item("item", "󰄄", "Record screen", "Toggle screen recording", "", "omarchy capture screenrecording", "session"),
-      item("item", "󰒲", "Idle", "Toggle idle behavior", "", "omarchy toggle idle", "session"),
+      item("item", "wifi", "Wi-Fi", "Open Wi-Fi controls", "", "hyprctl dispatch 'hl.dsp.exec_cmd([[omarchy launch wifi]])'", "session"),
+      item("item", "bluetooth", "Bluetooth", "Open Bluetooth controls", "", "hyprctl dispatch 'hl.dsp.exec_cmd([[omarchy launch bluetooth]])'", "session"),
+      item("item", "volume", "Audio", "Open audio mixer", "", "hyprctl dispatch 'hl.dsp.exec_cmd([[omarchy launch audio]])'", "session"),
+      item("item", "video", "Record screen", "Choose screen recording mode", "", "", "session", "normal", "row", false, "session", "open-screenrecord-menu"),
+      item("item", "idle", "Idle", "Toggle idle behavior", "", "omarchy toggle idle", "session"),
       item("header", "", "Maintenance", "", "", "", "shell"),
-      item("item", "", "Lacuna Settings", "Runtime and layout controls", "lacuna", "", "lacuna", "normal", "row", false, "lacuna", "", root.lacunaIconSource),
-      item("item", "", "Update Lacuna", "Pull the Lacuna git repo", "", updateLacunaCommand(), "shell"),
-      item("item", "󰑐", "Restart shell", "Reload Omarchy shell", "", restartLacunaCommand(), "shell")
-    ]
+      item("item", "lacuna", "Lacuna Settings", "Runtime and layout controls", "lacuna", "", "lacuna", "normal", "row", false, "lacuna"),
+      item("item", "update", "Update Lacuna", "Pull the Lacuna git repo", "", updateLacunaCommand(), "shell"),
+      item("item", "refresh", "Restart shell", "Reload Omarchy shell", "", restartLacunaCommand(), "shell")
+    ])
   }
 }

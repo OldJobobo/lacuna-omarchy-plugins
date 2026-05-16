@@ -64,6 +64,43 @@ The live Omarchy shell now owns several pipelines that affect Lacuna:
    `omarchy theme switcher`, `omarchy theme bg-switcher`, and
    `omarchy style corners sharp|round`.
 
+### Upstream Settings Finding
+
+The current Omarchy Settings panel is schema-driven. It reads each discovered
+widget/plugin manifest and builds the settings UI from the manifest metadata
+instead of relying on hand-written controls for every module.
+
+For Lacuna bar widgets, the important manifest fields are:
+
+```json
+"barWidget": {
+  "defaults": {
+    "maxTextLength": 34,
+    "sweepOnPlaying": true
+  },
+  "schema": [
+    { "key": "maxTextLength", "type": "integer", "label": "Maximum text length" },
+    { "key": "sweepOnPlaying", "type": "boolean", "label": "Sweep text while playing" }
+  ]
+}
+```
+
+Omarchy Settings turns those schema rows into controls and writes the selected
+values inline to the matching `bar.layout.<section>[]` entry in
+`~/.config/omarchy/shell.json`. The widget then receives those values through
+its injected `settings` property.
+
+Implications for Lacuna:
+
+1. Keep Lacuna bar-widget settings in `manifest.json`, not in a custom settings
+   panel, when the setting is meant to be user-facing in Omarchy Settings.
+2. Treat manifest labels, defaults, ranges, and enum option names as user-facing
+   UI copy.
+3. Use Lacuna-private settings files only for runtime/sidebar state that should
+   not be edited from Omarchy Settings.
+4. Add or revise widget settings by changing the manifest schema first, then
+   reading the injected `settings` object in QML.
+
 ## Current Lacuna Shape
 
 Current standalone root:
@@ -126,6 +163,9 @@ Port Lacuna code when it adds one of these:
 4. A sidebar-specific behavior that should not live in the generic Omarchy menu.
 5. A script-backed experiment that has proven useful enough to graduate from
    `omarchy.lacuna-script-pill` into its own plugin.
+
+`omarchy.lacuna-mpris` is included under this exception because the native media
+module does not own Lacuna's original per-character sweep animation treatment.
 
 The sidebar is the intentional exception. It overlaps with `omarchy.menu`, but
 it is a different interaction model: persistent left rail, docked/overlay mode,

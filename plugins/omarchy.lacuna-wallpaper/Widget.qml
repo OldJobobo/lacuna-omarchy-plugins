@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import QtQuick.Shapes
 
 Item {
   id: root
@@ -21,7 +22,7 @@ Item {
   readonly property string backgroundLink: configHome + "/omarchy/current/background"
   readonly property string wallpaperTitle: backgroundPath ? formatTitle(backgroundPath) : "No Wallpaper"
   readonly property string nextWallpaperTitle: nextBackgroundPath ? formatTitle(nextBackgroundPath) : ""
-  readonly property string displayText: clipped((showIcon ? " " : "") + wallpaperTitle)
+  readonly property string displayText: clipped(wallpaperTitle)
   readonly property string tooltipText: backgroundPath
     ? "<b>" + wallpaperTitle + "</b><br/>Current wallpaper"
       + (nextWallpaperTitle.length > 0 ? "<br/>Next: " + nextWallpaperTitle : "")
@@ -113,22 +114,55 @@ Item {
     readonly property int horizontalPadding: root.vertical ? 0 : 8
     readonly property int minimumWidth: root.vertical ? root.barSize : 32
 
-    width: root.vertical ? root.barSize : Math.max(minimumWidth, label.implicitWidth + horizontalPadding * 2)
-    height: root.vertical ? Math.max(root.barSize, label.implicitHeight + 10) : root.barSize
+    width: root.vertical ? root.barSize : Math.max(minimumWidth, content.implicitWidth + horizontalPadding * 2)
+    height: root.vertical ? Math.max(root.barSize, content.implicitHeight + 10) : root.barSize
     implicitWidth: width
     implicitHeight: height
     clip: true
 
-    Text {
-      id: label
+    Row {
+      id: content
       anchors.centerIn: parent
       rotation: root.vertical ? -90 : 0
-      text: root.displayText
-      color: root.moduleColor
-      font.family: bar ? bar.fontFamily : "monospace"
-      font.pixelSize: 12
-      maximumLineCount: 1
-      elide: Text.ElideRight
+      spacing: root.showIcon ? 4 : 0
+
+      Item {
+        visible: root.showIcon
+        anchors.verticalCenter: parent.verticalCenter
+        width: visible ? 14 : 0
+        height: 14
+
+        Shape {
+          width: 24
+          height: 24
+          scale: parent.width / 24
+          transformOrigin: Item.TopLeft
+          preferredRendererType: Shape.CurveRenderer
+
+          ShapePath {
+            strokeColor: root.moduleColor
+            strokeWidth: 2
+            fillColor: "transparent"
+            capStyle: ShapePath.RoundCap
+            joinStyle: ShapePath.RoundJoin
+            PathSvg { path: "M15 8h.01" }
+            PathSvg { path: "M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z" }
+            PathSvg { path: "M3 16l5 -5c.93 -.89 2.07 -.89 3 0l5 5" }
+            PathSvg { path: "M14 14l1 -1c.93 -.89 2.07 -.89 3 0l3 3" }
+          }
+        }
+      }
+
+      Text {
+        id: label
+        anchors.verticalCenter: parent.verticalCenter
+        text: root.displayText
+        color: root.moduleColor
+        font.family: bar ? bar.fontFamily : "monospace"
+        font.pixelSize: 12
+        maximumLineCount: 1
+        elide: Text.ElideRight
+      }
     }
 
     MouseArea {

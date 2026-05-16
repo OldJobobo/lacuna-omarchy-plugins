@@ -19,7 +19,7 @@ Item {
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
   property color accent: "#88c0d0"
   property color danger: "#bf616a"
-  property string bodyFontFamily: "GeistMono Nerd Font"
+  property string bodyFontFamily: "JetBrains Mono"
   property bool compact: false
   property var designTokens: fallbackDesignTokens
   readonly property bool hasSubtitle: subtitle !== ""
@@ -71,7 +71,7 @@ Item {
     anchors.left: parent.left
     anchors.top: headerGlyph.top
     width: root.backButtonWidth
-    icon: "←"
+    icon: "arrow-left"
     foreground: root.foreground
     muted: root.muted
     accent: root.accent
@@ -135,23 +135,19 @@ Item {
     width: collapseButton.width
     height: root.controlSize
 
-    LacunaIconButton {
+    MenuRailButton {
       id: collapseButton
 
       visible: root.canCollapse
       width: visible ? implicitWidth : 0
-      icon: "‹"
-      foreground: root.foreground
+      shape: "sidebar-collapse"
       muted: root.muted
-      accent: root.accent
       hoverAccent: root.accent
-      fontFamily: root.bodyFontFamily
       buttonSize: root.controlSize
       buttonRadius: root.designTokens.controlRadius
       hoverOpacity: root.designTokens.hoverOpacity
       pressOpacity: root.designTokens.activeOpacity
-      iconSize: root.compact ? 19 : 21
-      disabled: !visible
+      iconSize: root.compact ? 15 : 17
       onTriggered: root.collapseRequested()
     }
   }

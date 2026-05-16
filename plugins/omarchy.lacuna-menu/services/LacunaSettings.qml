@@ -17,6 +17,13 @@ Item {
       designStyle: "carbon",
       colorProfile: "semantic",
       compact: false,
+      quickLaunch: [],
+      appDefaults: {
+        files: "system",
+        editor: "system",
+        email: "system",
+        discord: "system"
+      },
       sidebar: {
         collapsed: false,
         exclusive: true,
@@ -32,12 +39,47 @@ Item {
       next.designStyle = normalizeDesignStyle(value.designStyle)
       next.colorProfile = String(value.colorProfile || "").toLowerCase() === "colorful" ? "colorful" : "semantic"
       next.compact = value.compact === true
+      next.quickLaunch = normalizeQuickLaunch(value.quickLaunch)
+      next.appDefaults = normalizeAppDefaults(value.appDefaults)
       if (value.sidebar && typeof value.sidebar === "object") {
         next.sidebar.collapsed = value.sidebar.collapsed === true
         next.sidebar.exclusive = value.sidebar.exclusive !== false
         next.sidebar.cornerPieces = value.sidebar.cornerPieces !== false
       }
     }
+    return next
+  }
+
+  function normalizeQuickLaunch(value) {
+    var list = []
+    if (!value || !Array.isArray(value)) return list
+
+    for (var i = 0; i < value.length; i++) {
+      var id = String(value[i] || "").trim()
+      if (id !== "" && list.indexOf(id) === -1) list.push(id)
+    }
+
+    return list.slice(0, 12)
+  }
+
+  function normalizeAppDefaults(value) {
+    var defaults = defaultData().appDefaults
+    var next = {
+      files: defaults.files,
+      editor: defaults.editor,
+      email: defaults.email,
+      discord: defaults.discord
+    }
+
+    if (!value || typeof value !== "object") return next
+
+    var roles = ["files", "editor", "email", "discord"]
+    for (var i = 0; i < roles.length; i++) {
+      var role = roles[i]
+      var id = String(value[role] || "").trim()
+      next[role] = id === "" ? "system" : id
+    }
+
     return next
   }
 

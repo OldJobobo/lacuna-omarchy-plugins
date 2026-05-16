@@ -3,7 +3,7 @@ import QtQuick
 QtObject {
   id: root
 
-  readonly property string monoFont: "BlexMono Nerd Font Propo"
+  readonly property string monoFont: "JetBrains Mono"
 
   readonly property int animFast: 120
   readonly property int animNormal: 180

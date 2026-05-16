@@ -26,6 +26,13 @@ Item {
     return filtered
   }
 
+  function appById(id) {
+    for (var i = 0; i < apps.length; i++) {
+      if (String(apps[i].id) === String(id)) return apps[i]
+    }
+    return null
+  }
+
   function countFor(category) {
     return appsFor(category).length
   }

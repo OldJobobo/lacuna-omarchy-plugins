@@ -8,6 +8,7 @@ Column {
 
   signal activated(var entry)
   signal expandRequested()
+  signal compactToggleRequested()
 
   required property var menuState
   required property var registry
@@ -21,7 +22,7 @@ Column {
   property color navAccent: "#d8dee9"
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
   property color panelColor: "#101315"
-  property string bodyFontFamily: "GeistMono Nerd Font"
+  property string bodyFontFamily: "JetBrains Mono"
   property int railWidth: 32
   property var panelWindow: null
   property var tooltipTarget: null
@@ -47,12 +48,13 @@ Column {
   }
 
   function iconShape(entry) {
+    if (entry && entry.icon) return entry.icon
     if (!entry || !entry.label) return "apps"
     if (entry.label === "Lacuna") return "lacuna"
-    if (entry.label === "Customize") return "customize"
+    if (entry.label === "Customize") return "palette"
     if (entry.label === "System") return "system"
     if (entry.label === "Terminal") return "terminal"
-    if (entry.label === "Browser") return "browser"
+    if (entry.label === "Browser") return "world"
     return "apps"
   }
 
@@ -94,23 +96,36 @@ Column {
     LacunaAnim { motion: "normal" }
   }
 
-  LacunaIconButton {
+  MenuRailButton {
     id: expandButton
 
-    icon: "›"
-    foreground: root.foreground
+    shape: "sidebar-expand"
     muted: root.foreground
-    accent: root.accent
     hoverAccent: root.accent
-    fontFamily: root.bodyFontFamily
     buttonSize: root.railWidth
     buttonRadius: root.designTokens.controlRadius
     hoverOpacity: root.designTokens.hoverOpacity
     pressOpacity: root.designTokens.activeOpacity
-    iconSize: root.compact ? 17 : 19
+    iconSize: root.compact ? 16 : 18
     onHoveredChanged: if (hovered) root.showTooltipText(this, "Expand sidebar", root.accent)
                     else root.hideTooltip(this)
     onTriggered: root.expandRequested()
+  }
+
+  MenuRailButton {
+    id: compactButton
+
+    shape: root.compact ? "density-normal" : "density-compact"
+    muted: root.foreground
+    hoverAccent: root.accent
+    buttonSize: root.railWidth
+    buttonRadius: root.designTokens.controlRadius
+    hoverOpacity: root.designTokens.hoverOpacity
+    pressOpacity: root.designTokens.activeOpacity
+    iconSize: root.compact ? 16 : 18
+    onHoveredChanged: if (hovered) root.showTooltipText(this, root.compact ? "Normal density" : "Compact density", root.accent)
+                    else root.hideTooltip(this)
+    onTriggered: root.compactToggleRequested()
   }
 
   LacunaRect {

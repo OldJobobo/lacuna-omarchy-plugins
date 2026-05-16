@@ -24,7 +24,9 @@ Item {
   }
 
   function saveCommand() {
-    var lines = [open ? "open" : "closed"].concat(stack)
+    // Open/closed is runtime-only. Persisting "open" can make the plugin host
+    // revive the sidebar on a shell restart, sometimes on the wrong monitor.
+    var lines = ["closed"].concat(stack)
     var commands = []
     for (var i = 0; i < lines.length; i++) {
       commands.push("echo " + quote(lines[i]))

@@ -15,6 +15,8 @@ styling, and workflow ideas. New Omarchy work should happen here as plugins.
 - `plugins/omarchy.lacuna-menu-button/`: topbar launcher for the Lacuna menu.
 - `plugins/omarchy.lacuna-workspaces/`: original Lacuna numbered workspace
   switcher as an Omarchy bar widget.
+- `plugins/omarchy.lacuna-mpris/`: original Lacuna media pill with playback
+  text sweep animation.
 - `plugins/omarchy.lacuna-*-usage/`: Codex and Claude usage bar widgets.
 - `plugins/omarchy.lacuna-theme/` and
   `plugins/omarchy.lacuna-wallpaper/`: active Omarchy theme/background widgets.

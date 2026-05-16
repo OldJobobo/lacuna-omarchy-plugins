@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import QtQuick.Shapes
 
 Item {
   id: root
@@ -21,7 +22,7 @@ Item {
   readonly property string colorsPath: configHome + "/omarchy/current/theme/colors.toml"
   readonly property string themeNamePath: configHome + "/omarchy/current/theme.name"
   readonly property string themeTitle: formatTitle(themeName)
-  readonly property string displayText: clipped((showIcon ? "󰸉 " : "") + themeTitle)
+  readonly property string displayText: clipped(themeTitle)
   readonly property string tooltipText: themeTooltip()
 
   visible: themeTitle.length > 0
@@ -148,22 +149,56 @@ Item {
     readonly property int horizontalPadding: root.vertical ? 0 : 8
     readonly property int minimumWidth: root.vertical ? root.barSize : 32
 
-    width: root.vertical ? root.barSize : Math.max(minimumWidth, label.implicitWidth + horizontalPadding * 2)
-    height: root.vertical ? Math.max(root.barSize, label.implicitHeight + 10) : root.barSize
+    width: root.vertical ? root.barSize : Math.max(minimumWidth, content.implicitWidth + horizontalPadding * 2)
+    height: root.vertical ? Math.max(root.barSize, content.implicitHeight + 10) : root.barSize
     implicitWidth: width
     implicitHeight: height
     clip: true
 
-    Text {
-      id: label
+    Row {
+      id: content
       anchors.centerIn: parent
       rotation: root.vertical ? -90 : 0
-      text: root.displayText
-      color: root.moduleColor
-      font.family: bar ? bar.fontFamily : "monospace"
-      font.pixelSize: 12
-      maximumLineCount: 1
-      elide: Text.ElideRight
+      spacing: root.showIcon ? 4 : 0
+
+      Item {
+        visible: root.showIcon
+        anchors.verticalCenter: parent.verticalCenter
+        width: visible ? 14 : 0
+        height: 14
+
+        Shape {
+          width: 24
+          height: 24
+          scale: parent.width / 24
+          transformOrigin: Item.TopLeft
+          preferredRendererType: Shape.CurveRenderer
+
+          ShapePath {
+            strokeColor: root.moduleColor
+            strokeWidth: 2
+            fillColor: "transparent"
+            capStyle: ShapePath.RoundCap
+            joinStyle: ShapePath.RoundJoin
+            PathSvg { path: "M12 21a9 9 0 1 1 0 -18c4.97 0 9 3.58 9 8c0 2.21 -1.79 4 -4 4h-2a2 2 0 0 0 -1 3.73a1.3 1.3 0 0 1 -1 2.27z" }
+            PathSvg { path: "M7.5 10.5h.01" }
+            PathSvg { path: "M10.5 7.5h.01" }
+            PathSvg { path: "M14.5 7.5h.01" }
+            PathSvg { path: "M17.5 10.5h.01" }
+          }
+        }
+      }
+
+      Text {
+        id: label
+        anchors.verticalCenter: parent.verticalCenter
+        text: root.displayText
+        color: root.moduleColor
+        font.family: bar ? bar.fontFamily : "monospace"
+        font.pixelSize: 12
+        maximumLineCount: 1
+        elide: Text.ElideRight
+      }
     }
 
     MouseArea {

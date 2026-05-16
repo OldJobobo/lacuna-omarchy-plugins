@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Widgets
 import "../components"
 import "../services"
 
@@ -6,6 +7,8 @@ LacunaRect {
   id: root
 
   signal triggered()
+  signal optionSelected(string value)
+  signal trailingActionTriggered(string action)
 
   property string kind: "item"
   property string icon: ""
@@ -19,12 +22,18 @@ LacunaRect {
   property bool hasChildren: false
   property bool switchVisible: false
   property bool switchChecked: false
+  property string badgeText: ""
+  property string trailingAction: ""
+  property string trailingIcon: ""
+  property string trailingTooltip: ""
+  property string optionValue: ""
+  property var options: []
   property color foreground: "#d8dee9"
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
   property color accent: "#88c0d0"
   property color toneAccent: accent
   property color background: "#101315"
-  property string fontFamily: "GeistMono Nerd Font"
+  property string fontFamily: "JetBrains Mono"
   property string labelFontFamily: fontFamily
   property int iconRailWidth: 32
   property bool compact: false
@@ -34,9 +43,18 @@ LacunaRect {
   readonly property real reveal: stateLayer.reveal
   readonly property bool header: kind === "header"
   readonly property bool featured: layout === "featured"
+  readonly property bool optionControl: layout === "design-style-control"
   readonly property bool compactRow: layout === "compact"
   readonly property bool primary: priority === "primary"
-  readonly property int rowHeight: featured ? designTokens.featuredItemHeight : primary ? designTokens.primaryItemHeight : compactRow ? designTokens.compactItemHeight : designTokens.itemHeight
+  readonly property bool badgeVisible: badgeText !== ""
+  readonly property bool trailingActionVisible: trailingAction !== ""
+  property bool trailingActionHovered: false
+  readonly property int badgeWidth: badgeVisible ? Math.max(compact ? 22 : 24, badgeText.length * (compact ? 6 : 7) + (compact ? 10 : 12)) : 0
+  readonly property int trailingActionWidth: trailingActionVisible ? (compact ? 22 : 24) : 0
+  readonly property bool trailingTooltipVisible: trailingActionHovered && trailingTooltip !== ""
+  readonly property int trailingTooltipWidth: trailingTooltipVisible ? Math.max(88, Math.min(150, trailingTooltip.length * (compact ? 7 : 8) + 18)) : 0
+  readonly property int rowHeight: optionControl ? (compact ? 38 : 42) : featured ? designTokens.featuredItemHeight : primary ? designTokens.primaryItemHeight : compactRow ? designTokens.compactItemHeight : designTokens.itemHeight
+  readonly property int iconLeftPadding: designTokens.accentStrips ? (compact ? 5 : 6) : 0
   property int contentLeftMargin: Math.round(reveal * (featured ? 3 : 2))
 
   width: parent ? parent.width : implicitWidth
@@ -123,7 +141,7 @@ LacunaRect {
     anchors.left: parent.left
     anchors.right: trailing.left
     anchors.verticalCenter: parent.verticalCenter
-    anchors.leftMargin: root.contentLeftMargin
+    anchors.leftMargin: root.contentLeftMargin + root.iconLeftPadding
     anchors.rightMargin: 8
     spacing: root.compact ? (root.featured ? 6 : 5) : (root.featured ? 8 : root.primary ? 7 : 6)
 
@@ -132,27 +150,32 @@ LacunaRect {
       height: root.rowHeight
       anchors.verticalCenter: parent.verticalCenter
 
-      Image {
+      IconImage {
         id: iconImage
 
         anchors.centerIn: parent
         width: root.compact ? (root.featured ? 19 : root.primary ? 16 : 14) : (root.featured ? 22 : root.primary ? 19 : 17)
         height: width
+        implicitSize: width
         source: root.iconSource
-        sourceSize.width: width
-        sourceSize.height: height
-        fillMode: Image.PreserveAspectFit
-        asynchronous: true
-        mipmap: true
-        smooth: true
-        visible: root.iconSource !== "" && status === Image.Ready
+        visible: root.iconSource !== "" && status !== Image.Error
         opacity: root.hovered ? 1 : 0.88
+      }
+
+      LacunaTablerIcon {
+        id: iconShape
+
+        anchors.centerIn: parent
+        visible: root.iconSource === "" && valid
+        name: root.icon
+        color: root.tone === "nav" && !root.hovered ? root.muted : root.toneAccent
+        iconSize: root.compact ? (root.featured ? 17 : root.primary ? 15 : 13) : (root.featured ? 20 : root.primary ? 17 : 15)
       }
 
       LacunaText {
         anchors.centerIn: parent
         width: parent.width
-        visible: root.iconSource === "" || iconImage.status !== Image.Ready
+        visible: (root.iconSource === "" && !iconShape.valid) || (root.iconSource !== "" && iconImage.status === Image.Error)
         text: root.icon
         color: root.tone === "nav" && !root.hovered ? root.muted : root.toneAccent
         fontFamily: root.fontFamily
@@ -163,7 +186,7 @@ LacunaRect {
 
     Column {
       anchors.verticalCenter: parent.verticalCenter
-      width: Math.max(0, parent.width - root.iconRailWidth - content.spacing)
+      width: Math.max(0, parent.width - root.iconLeftPadding - root.iconRailWidth - content.spacing)
       spacing: 1
 
       LacunaText {
@@ -181,26 +204,121 @@ LacunaRect {
   Item {
     id: trailing
 
-    visible: !root.header && (root.hasChildren || root.switchVisible)
+    z: 2
+    visible: !root.header && (root.hasChildren || root.switchVisible || root.optionControl || root.badgeVisible || root.trailingActionVisible)
     anchors.right: parent.right
     anchors.rightMargin: 8
     anchors.verticalCenter: parent.verticalCenter
-    width: root.switchVisible ? (root.compact ? 32 : 36) : 12
+    width: root.optionControl ? segmentControl.width : root.switchVisible ? (root.compact ? 32 : 36) : root.trailingActionVisible ? root.trailingActionWidth + root.trailingTooltipWidth + (root.trailingTooltipVisible ? 6 : 0) : root.badgeVisible ? root.badgeWidth + (root.hasChildren ? 18 : 0) : 12
     height: root.rowHeight
 
-    LacunaText {
+    Item {
+      id: childArrow
+
       visible: root.hasChildren && !root.switchVisible
-      anchors.centerIn: parent
-      text: "›"
-      color: root.hovered ? root.toneAccent : root.muted
-      fontFamily: root.fontFamily
-      font.pixelSize: root.compact ? 14 : 16
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      width: root.compact ? 12 : 14
+      height: root.compact ? 12 : 14
+
+      LacunaTablerIcon {
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        name: "chevron-right"
+        color: root.hovered ? root.toneAccent : root.muted
+        iconSize: root.compact ? 12 : 14
+      }
+    }
+
+    LacunaRect {
+      id: trailingActionButton
+
+      visible: root.trailingActionVisible && !root.switchVisible && !root.optionControl
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      width: root.trailingActionWidth
+      height: width
+      radius: root.designTokens.material ? height / 2 : root.designTokens.controlRadius
+      color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, trailingActionLayer.containsMouse ? 0.18 : 0.08)
+      border.width: root.designTokens.carbon ? 0 : 1
+      border.color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, trailingActionLayer.containsMouse ? 0.46 : 0.22)
+
+      LacunaTablerIcon {
+        anchors.centerIn: parent
+        name: root.trailingIcon !== "" ? root.trailingIcon : "plus"
+        color: trailingActionLayer.containsMouse ? root.foreground : root.toneAccent
+        iconSize: root.compact ? 12 : 13
+      }
+
+      LacunaStateLayer {
+        id: trailingActionLayer
+
+        anchors.fill: parent
+        stateColor: root.toneAccent
+        hoverOpacity: root.designTokens.hoverOpacity
+        pressOpacity: root.designTokens.activeOpacity
+        onContainsMouseChanged: root.trailingActionHovered = containsMouse
+        onTriggered: root.trailingActionTriggered(root.trailingAction)
+      }
+    }
+
+    LacunaRect {
+      visible: root.trailingTooltipVisible && !root.switchVisible && !root.optionControl
+      anchors.right: trailingActionButton.left
+      anchors.rightMargin: 6
+      anchors.verticalCenter: parent.verticalCenter
+      width: root.trailingTooltipWidth
+      height: root.compact ? 18 : 20
+      radius: root.designTokens.material ? height / 2 : root.designTokens.controlRadius
+      color: root.background
+      border.width: 1
+      border.color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.32)
+      clip: true
+
+      LacunaText {
+        anchors.fill: parent
+        anchors.leftMargin: 8
+        anchors.rightMargin: 8
+        anchors.verticalCenter: parent.verticalCenter
+        text: root.trailingTooltip
+        color: root.foreground
+        fontFamily: root.fontFamily
+        font.pixelSize: root.compact ? 8 : 9
+        font.weight: Font.DemiBold
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        elide: Text.ElideRight
+        maximumLineCount: 1
+      }
+    }
+
+    LacunaRect {
+      visible: root.badgeVisible && !root.switchVisible && !root.optionControl
+      anchors.right: root.hasChildren ? childArrow.left : parent.right
+      anchors.rightMargin: root.hasChildren ? 6 : 0
+      anchors.verticalCenter: parent.verticalCenter
+      width: root.badgeWidth
+      height: root.compact ? 16 : 18
+      radius: height / 2
+      color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, root.designTokens.material ? 0.20 : 0.13)
+      border.width: root.designTokens.carbon ? 0 : 1
+      border.color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, root.hovered ? 0.48 : 0.28)
+
+      LacunaText {
+        anchors.centerIn: parent
+        text: root.badgeText
+        color: root.hovered ? root.foreground : root.muted
+        fontFamily: root.fontFamily
+        font.pixelSize: root.compact ? 8 : 9
+        font.weight: Font.DemiBold
+        horizontalAlignment: Text.AlignHCenter
+      }
     }
 
     LacunaRect {
       id: switchTrack
 
-      visible: root.switchVisible
+      visible: root.switchVisible && !root.optionControl
       anchors.centerIn: parent
       width: root.designTokens.switchStyle === "material" ? (root.compact ? 34 : 38) : root.compact ? 30 : 34
       height: root.designTokens.switchStyle === "material" ? (root.compact ? 18 : 20) : root.compact ? 14 : 16
@@ -222,12 +340,56 @@ LacunaRect {
         }
       }
     }
+
+    Row {
+      id: segmentControl
+
+      visible: root.optionControl
+      anchors.verticalCenter: parent.verticalCenter
+      width: implicitWidth
+      height: root.compact ? 24 : 26
+      spacing: 2
+
+      Repeater {
+        model: root.options
+
+        LacunaRect {
+          required property var modelData
+
+          readonly property bool selected: modelData.value === root.optionValue
+          width: root.compact ? 54 : 62
+          height: segmentControl.height
+          radius: root.designTokens.material ? height / 2 : root.designTokens.controlRadius
+          color: selected ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, root.designTokens.material ? 0.34 : 0.22) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, root.designTokens.omarchy ? 0.06 : 0.08)
+          border.width: 1
+          border.color: selected ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.78) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.16)
+          clip: true
+
+          LacunaText {
+            anchors.centerIn: parent
+            text: modelData.label
+            color: parent.selected ? root.foreground : root.muted
+            fontFamily: root.fontFamily
+            font.pixelSize: root.compact ? 8 : 9
+            font.weight: parent.selected ? Font.DemiBold : Font.Normal
+          }
+
+          LacunaStateLayer {
+            anchors.fill: parent
+            stateColor: root.toneAccent
+            hoverOpacity: root.designTokens.hoverOpacity
+            pressOpacity: root.designTokens.activeOpacity
+            onTriggered: root.optionSelected(modelData.value)
+          }
+        }
+      }
+    }
   }
 
   LacunaStateLayer {
     id: stateLayer
 
-    disabled: root.header
+    disabled: root.header || root.optionControl
     stateColor: root.toneAccent
     hoverOpacity: root.designTokens.hoverOpacity
     pressOpacity: root.designTokens.activeOpacity

@@ -45,11 +45,21 @@ LacunaRect {
     opacity: stateLayer.containsMouse ? 1 : 0.86
   }
 
+  LacunaTablerIcon {
+    id: iconShape
+
+    anchors.centerIn: parent
+    visible: root.iconSource === "" && valid
+    name: iconLabel.text
+    color: stateLayer.containsMouse ? root.hoverAccent : root.muted
+    iconSize: root.iconSize
+  }
+
   LacunaText {
     id: iconLabel
 
     anchors.centerIn: parent
-    visible: root.iconSource === "" || iconImage.status !== Image.Ready
+    visible: (root.iconSource === "" && !iconShape.valid) || (root.iconSource !== "" && iconImage.status !== Image.Ready)
     color: stateLayer.containsMouse ? root.hoverAccent : root.muted
     fontFamily: root.fontFamily
     font.pixelSize: root.iconSize

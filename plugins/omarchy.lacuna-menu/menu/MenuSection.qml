@@ -9,7 +9,7 @@ Item {
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
   property color accent: "#88c0d0"
   property bool band: false
-  property string fontFamily: "GeistMono Nerd Font"
+  property string fontFamily: "JetBrains Mono"
   property bool compact: false
 
   width: parent ? parent.width : implicitWidth
