@@ -6,6 +6,7 @@ import QtQuick
 import QtQuick.Controls
 import "../services"
 import "../components"
+import "../settings"
 
 Item {
   id: root
@@ -48,15 +49,35 @@ Item {
   property int connectorOverlap: sidebarState.cornerPieces ? (compact ? 25 : 33) : 0
   property int bodyRightInset: sidebarState.cornerPieces ? joinRadius : 0
   property int surfaceRightInset: bodyRightInset
+  property int flyoutLeftX: panelWidth + surfaceRightInset
+  property int flyoutTopY: sidebarState.cornerPieces ? (sidebarState.exclusive ? 0 : barHeight) : (sidebarState.exclusive ? designTokens.topInset : barHeight + designTokens.topInset)
+  property int flyoutLaneWidth: (settingsPanelOpen ? settingsPanelWidth : 0) + (appPickerOpen ? appPickerWidth : 0)
   // In exclusive mode the compositor already places this window below the top
   // bar, so the bar edge is local y=0. In overlay mode the window starts at
   // screen top and the bar edge is the live bar height.
   property int barBottomY: sidebarState.exclusive ? 0 : barHeight
   property bool panelVisible: menuState.open
-  property bool quickLaunchPickerOpen: false
-  property string quickLaunchPickerMode: "quickLaunch"
-  property string appDefaultPickerRole: ""
-  property int quickLaunchPickerWidth: compact ? 260 : 300
+  property bool settingsPanelOpen: false
+  property int settingsPanelWidth: compact ? 360 : 400
+  property bool appPickerOpen: false
+  property string appPickerMode: "customQuickLaunchApp"
+  property string preferredAppPickerRole: ""
+  property int appPickerWidth: compact ? 260 : 300
+  property int pluginStateRevision: 0
+  readonly property var shellConfig: shell && shell.shellConfig ? shell.shellConfig : ({})
+  readonly property var desktopClockSettings: shellPluginSettings("omarchy.lacuna-desktop-clock", {
+    anchor: "bottom-right",
+    offsetX: 0,
+    offsetY: 0,
+    scale: 1,
+    use12Hour: false
+  })
+  readonly property bool desktopClockEnabled: shellPluginEnabled("omarchy.lacuna-desktop-clock")
+  readonly property string desktopClockAnchor: validClockAnchor(desktopClockSettings.anchor)
+  readonly property int desktopClockOffsetX: numberSetting(desktopClockSettings.offsetX, 0)
+  readonly property int desktopClockOffsetY: numberSetting(desktopClockSettings.offsetY, 0)
+  readonly property real desktopClockScale: numberSetting(desktopClockSettings.scale, 1)
+  readonly property bool desktopClockUse12Hour: boolSetting(desktopClockSettings.use12Hour, false)
   readonly property var sidebarScreen: Quickshell.screens && Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
 
   function localPath(url) {
@@ -114,56 +135,217 @@ Item {
     lacunaSettings.save(nextStyleSettings)
   }
 
-  function quickLaunchContains(id) {
-    var ids = lacunaSettings.data && lacunaSettings.data.quickLaunch ? lacunaSettings.data.quickLaunch : []
+  function customQuickLaunchContains(id) {
+    var ids = lacunaSettings.data && lacunaSettings.data.customQuickLaunchApps ? lacunaSettings.data.customQuickLaunchApps : []
     for (var i = 0; i < ids.length; i++) {
       if (String(ids[i]) === String(id)) return true
     }
     return false
   }
 
-  function addQuickLaunchApp(id) {
-    if (!id || quickLaunchContains(id)) return
+  function addCustomQuickLaunchApp(id) {
+    if (!id || customQuickLaunchContains(id)) return
 
     var next = lacunaSettings.normalize(lacunaSettings.data)
-    next.quickLaunch = next.quickLaunch.concat([String(id)]).slice(0, 12)
+    next.customQuickLaunchApps = next.customQuickLaunchApps.concat([String(id)]).slice(0, 12)
     lacunaSettings.save(next)
   }
 
-  function appDefaultValue(role) {
-    var defaults = lacunaSettings.data && lacunaSettings.data.appDefaults ? lacunaSettings.data.appDefaults : {}
+  function preferredAppValue(role) {
+    var defaults = lacunaSettings.data && lacunaSettings.data.preferredApps ? lacunaSettings.data.preferredApps : {}
     var value = String(defaults[role] || "").trim()
     return value === "" ? "system" : value
   }
 
-  function setAppDefault(role, id) {
+  function setPreferredApp(role, id) {
     if (!role) return
 
     var next = lacunaSettings.normalize(lacunaSettings.data)
-    next.appDefaults[role] = String(id || "system").trim() || "system"
+    next.preferredApps[role] = String(id || "system").trim() || "system"
     lacunaSettings.save(next)
-    quickLaunchPickerOpen = false
+    appPickerOpen = false
   }
 
-  function openQuickLaunchPicker() {
+  function openCustomQuickLaunchPicker() {
     if (!appCatalog.ready) appCatalog.reload()
-    quickLaunchPickerMode = "quickLaunch"
-    appDefaultPickerRole = ""
-    quickLaunchPickerOpen = true
-    if (sidebarState.collapsed) sidebarState.expand()
+    appPicker.query = ""
+    searchInput.text = ""
+    appPickerMode = "customQuickLaunchApp"
+    preferredAppPickerRole = ""
+    appPickerOpen = true
+    if (sidebarState.collapsed && !settingsPanelOpen) sidebarState.expand()
     Qt.callLater(function() {
       searchInput.forceActiveFocus()
     })
   }
 
-  function openAppDefaultPicker(role) {
+  function openPreferredAppPicker(role) {
     if (!appCatalog.ready) appCatalog.reload()
-    quickLaunchPickerMode = "appDefault"
-    appDefaultPickerRole = role
-    quickLaunchPickerOpen = true
-    if (sidebarState.collapsed) sidebarState.expand()
+    appPicker.query = ""
+    searchInput.text = ""
+    appPickerMode = "preferredApp"
+    preferredAppPickerRole = role
+    appPickerOpen = true
+    if (sidebarState.collapsed && !settingsPanelOpen) sidebarState.expand()
     Qt.callLater(function() {
       searchInput.forceActiveFocus()
+    })
+  }
+
+  function toggleSettingsPanel() {
+    settingsPanelOpen = !settingsPanelOpen
+    if (settingsPanelOpen) {
+      if (!menuState.open) menuState.show()
+      Qt.callLater(function() {
+        settingsPanel.forceActiveFocus()
+      })
+    }
+  }
+
+  function shellPluginEnabled(id) {
+    var revision = pluginStateRevision
+    var config = root.shellConfig
+    var plugins = config && Array.isArray(config.plugins) ? config.plugins : []
+    for (var i = 0; i < plugins.length; i++) {
+      if (plugins[i] && plugins[i].id === id) return true
+    }
+    return false
+  }
+
+  function shellPluginSettings(id, defaults) {
+    var revision = pluginStateRevision
+    var merged = {}
+    for (var key in defaults) merged[key] = defaults[key]
+
+    var config = root.shellConfig
+    var plugins = config && Array.isArray(config.plugins) ? config.plugins : []
+    for (var i = 0; i < plugins.length; i++) {
+      var entry = plugins[i]
+      if (!entry || entry.id !== id) continue
+      for (var entryKey in entry) {
+        if (entryKey !== "id") merged[entryKey] = entry[entryKey]
+      }
+      break
+    }
+
+    return merged
+  }
+
+  function numberSetting(value, fallback) {
+    var parsed = Number(value)
+    return isFinite(parsed) ? parsed : fallback
+  }
+
+  function boolSetting(value, fallback) {
+    if (value === true || value === false) return value
+    var normalized = String(value || "").toLowerCase()
+    if (normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "on") return true
+    if (normalized === "false" || normalized === "0" || normalized === "no" || normalized === "off") return false
+    return fallback
+  }
+
+  function validClockAnchor(value) {
+    var anchor = String(value || "bottom-right").toLowerCase()
+    var valid = {
+      "top-left": true,
+      "top": true,
+      "top-right": true,
+      "left": true,
+      "center": true,
+      "right": true,
+      "bottom-left": true,
+      "bottom": true,
+      "bottom-right": true
+    }
+
+    return valid[anchor] ? anchor : "bottom-right"
+  }
+
+  function clockAnchorHorizontal(anchor) {
+    if (anchor.indexOf("left") !== -1) return "left"
+    if (anchor.indexOf("right") !== -1) return "right"
+    return "center"
+  }
+
+  function clockAnchorVertical(anchor) {
+    if (anchor.indexOf("top") !== -1) return "top"
+    if (anchor.indexOf("bottom") !== -1) return "bottom"
+    return "center"
+  }
+
+  function clockAnchorFromParts(horizontal, vertical) {
+    var h = String(horizontal || "center")
+    var v = String(vertical || "center")
+
+    if (h === "center" && v === "center") return "center"
+    if (h === "center") return v
+    if (v === "center") return h
+    return v + "-" + h
+  }
+
+  function setShellPluginEnabled(id, enabled) {
+    if (pluginRegistry && typeof pluginRegistry.setEnabled === "function") {
+      pluginRegistry.setEnabled(id, enabled)
+      pluginStateRevision++
+      return
+    }
+
+    commands.run("omarchy-shell-ipc shell setPluginEnabled " + id + " " + (enabled ? "true" : "false"))
+    pluginStateRevision++
+  }
+
+  function setDesktopClockSettings(patch) {
+    var next = {
+      anchor: root.desktopClockAnchor,
+      offsetX: root.desktopClockOffsetX,
+      offsetY: root.desktopClockOffsetY,
+      scale: root.desktopClockScale,
+      use12Hour: root.desktopClockUse12Hour
+    }
+
+    for (var key in patch) next[key] = patch[key]
+
+    if (!root.desktopClockEnabled && pluginRegistry && typeof pluginRegistry.setEnabled === "function") {
+      pluginRegistry.setEnabled("omarchy.lacuna-desktop-clock", true)
+    }
+
+    if (shell && typeof shell.updateEntryInline === "function") {
+      shell.updateEntryInline("omarchy.lacuna-desktop-clock", next)
+      pluginStateRevision++
+      return
+    }
+
+    commands.run("notify-send 'Lacuna' 'Clock settings require the Omarchy shell plugin registry'")
+  }
+
+  function setDesktopClockAnchorAxis(axis, value) {
+    var horizontal = clockAnchorHorizontal(root.desktopClockAnchor)
+    var vertical = clockAnchorVertical(root.desktopClockAnchor)
+
+    if (axis === "x") horizontal = value
+    else vertical = value
+
+    setDesktopClockSettings({ anchor: clockAnchorFromParts(horizontal, vertical) })
+  }
+
+  function nudgeDesktopClock(dx, dy) {
+    setDesktopClockSettings({
+      offsetX: root.desktopClockOffsetX + dx,
+      offsetY: root.desktopClockOffsetY + dy
+    })
+  }
+
+  function scaleDesktopClock(delta) {
+    var nextScale = Math.max(0.5, Math.min(2, Math.round((root.desktopClockScale + delta) * 100) / 100))
+    setDesktopClockSettings({ scale: nextScale })
+  }
+
+  function resetDesktopClockPosition() {
+    setDesktopClockSettings({
+      anchor: "bottom-right",
+      offsetX: 0,
+      offsetY: 0,
+      scale: 1
     })
   }
 
@@ -190,13 +372,13 @@ Item {
       return
     }
 
-    if (entry.action === "open-quicklaunch-picker") {
-      openQuickLaunchPicker()
+    if (entry.action === "open-custom-quick-launch-picker") {
+      openCustomQuickLaunchPicker()
       return
     }
 
-    if (entry.action === "add-quicklaunch") {
-      addQuickLaunchApp(entry.appId)
+    if (entry.action === "add-custom-quick-launch-app") {
+      addCustomQuickLaunchApp(entry.appId)
       return
     }
 
@@ -204,6 +386,61 @@ Item {
       var next = lacunaSettings.normalize(lacunaSettings.data)
       next.colorProfile = next.colorProfile === "colorful" ? "semantic" : "colorful"
       lacunaSettings.save(next)
+      return
+    }
+
+    if (entry.action === "toggle-desktop-clock") {
+      setShellPluginEnabled("omarchy.lacuna-desktop-clock", !desktopClockEnabled)
+      return
+    }
+
+    if (entry.action === "toggle-clock-12-hour") {
+      setDesktopClockSettings({ use12Hour: !root.desktopClockUse12Hour })
+      return
+    }
+
+    if (entry.action.indexOf("set-clock-anchor-x-") === 0) {
+      setDesktopClockAnchorAxis("x", entry.action.substring("set-clock-anchor-x-".length))
+      return
+    }
+
+    if (entry.action.indexOf("set-clock-anchor-y-") === 0) {
+      setDesktopClockAnchorAxis("y", entry.action.substring("set-clock-anchor-y-".length))
+      return
+    }
+
+    if (entry.action === "nudge-clock-left") {
+      nudgeDesktopClock(-24, 0)
+      return
+    }
+
+    if (entry.action === "scale-clock-down") {
+      scaleDesktopClock(-0.1)
+      return
+    }
+
+    if (entry.action === "scale-clock-up") {
+      scaleDesktopClock(0.1)
+      return
+    }
+
+    if (entry.action === "nudge-clock-right") {
+      nudgeDesktopClock(24, 0)
+      return
+    }
+
+    if (entry.action === "nudge-clock-up") {
+      nudgeDesktopClock(0, -24)
+      return
+    }
+
+    if (entry.action === "nudge-clock-down") {
+      nudgeDesktopClock(0, 24)
+      return
+    }
+
+    if (entry.action === "reset-clock-position") {
+      resetDesktopClockPosition()
       return
     }
 
@@ -219,8 +456,8 @@ Item {
       return
     }
 
-    if (entry.action.indexOf("choose-app-default-") === 0) {
-      openAppDefaultPicker(entry.action.substring("choose-app-default-".length))
+    if (entry.action.indexOf("choose-preferred-app-") === 0) {
+      openPreferredAppPicker(entry.action.substring("choose-preferred-app-".length))
       return
     }
 
@@ -237,13 +474,13 @@ Item {
 
     if (entry.view) {
       if (sidebarState.collapsed) sidebarState.expand()
-      quickLaunchPickerOpen = false
+      appPickerOpen = false
       menuState.push(entry.view)
       return
     }
 
     if (entry.command) {
-      quickLaunchPickerOpen = false
+      appPickerOpen = false
       commands.run(entry.command)
     }
   }
@@ -317,9 +554,15 @@ Item {
     compact: root.compact
     designStyle: root.designStyle
     colorProfile: lacunaSettings.data && lacunaSettings.data.colorProfile ? lacunaSettings.data.colorProfile : "semantic"
+    desktopClockEnabled: root.desktopClockEnabled
+    desktopClockAnchor: root.desktopClockAnchor
+    desktopClockOffsetX: root.desktopClockOffsetX
+    desktopClockOffsetY: root.desktopClockOffsetY
+    desktopClockScale: root.desktopClockScale
+    desktopClockUse12Hour: root.desktopClockUse12Hour
     appCatalog: appCatalog
-    quickLaunch: lacunaSettings.data && lacunaSettings.data.quickLaunch ? lacunaSettings.data.quickLaunch : []
-    appDefaults: lacunaSettings.data && lacunaSettings.data.appDefaults ? lacunaSettings.data.appDefaults : ({})
+    customQuickLaunchApps: lacunaSettings.data && lacunaSettings.data.customQuickLaunchApps ? lacunaSettings.data.customQuickLaunchApps : []
+    preferredApps: lacunaSettings.data && lacunaSettings.data.preferredApps ? lacunaSettings.data.preferredApps : ({})
   }
 
   Connections {
@@ -328,7 +571,8 @@ Item {
       if (root.menuState.open) {
         root.panelVisible = true
       } else {
-        root.quickLaunchPickerOpen = false
+        root.appPickerOpen = false
+        root.settingsPanelOpen = false
         hideTimer.restart()
         if (!root.hostClosing && root.shell && root.shell.hide) {
           root.shell.hide(root.pluginId)
@@ -354,12 +598,12 @@ Item {
     visible: root.panelVisible
     screen: root.sidebarScreen
     color: "transparent"
-    implicitWidth: root.panelWidth + root.surfaceRightInset + (root.quickLaunchPickerOpen ? root.quickLaunchPickerWidth + 12 : 0)
+    implicitWidth: root.panelWidth + root.surfaceRightInset + root.flyoutLaneWidth
     exclusiveZone: sidebarState.exclusive && root.menuState.open ? root.panelWidth : 0
     exclusionMode: sidebarState.exclusive ? ExclusionMode.Normal : ExclusionMode.Ignore
     WlrLayershell.namespace: "lacuna-menu"
     WlrLayershell.layer: sidebarState.exclusive ? WlrLayer.Top : WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: root.quickLaunchPickerOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: root.appPickerOpen || root.settingsPanelOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     anchors {
       top: true
@@ -410,6 +654,7 @@ Item {
         onActivated: function(entry) {
           root.activate(entry)
         }
+        onSettingsRequested: root.toggleSettingsPanel()
         onCollapseRequested: sidebarState.toggleCollapsed()
       }
 
@@ -417,6 +662,8 @@ Item {
         visible: sidebarState.collapsed
         anchors.top: parent.top
         anchors.topMargin: root.barBottomY + (root.railCompact ? 6 : 10)
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: designTokens.bottomInset
         anchors.left: parent.left
         anchors.leftMargin: root.railLeftInset
         compact: root.railCompact
@@ -439,11 +686,42 @@ Item {
         onActivated: function(entry) {
           root.activate(entry)
         }
+        onSettingsRequested: root.toggleSettingsPanel()
       }
     }
 
+    SettingsWindow {
+      id: settingsPanel
+
+      visible: root.menuState.open && root.settingsPanelOpen
+      enabled: root.settingsPanelOpen
+      opacity: root.settingsPanelOpen ? 1 : 0
+      x: root.flyoutLeftX
+      y: root.flyoutTopY
+      width: root.settingsPanelWidth
+      height: Math.min(menuWindow.height - y - designTokens.bottomInset, root.compact ? 520 : 620)
+      open: root.settingsPanelOpen
+      compact: root.compact
+      designTokens: designTokens
+      registry: registry
+      version: root.version
+      themeTitle: menuTheme.themeTitle
+      foreground: root.foreground
+      background: root.background
+      accent: root.accent
+      shellAccent: root.shellAccent
+      sessionAccent: root.sessionAccent
+      dangerAccent: root.dangerAccent
+      navAccent: root.navAccent
+      muted: root.muted
+      onActivated: function(entry) {
+        root.activate(entry)
+      }
+      onCloseRequested: root.settingsPanelOpen = false
+    }
+
     LacunaRect {
-      id: quickLaunchPicker
+      id: appPicker
 
       property string query: ""
 
@@ -462,12 +740,12 @@ Item {
         return list
       }
 
-      visible: root.menuState.open && root.quickLaunchPickerOpen
-      enabled: root.quickLaunchPickerOpen
-      opacity: root.quickLaunchPickerOpen ? 1 : 0
-      x: root.panelWidth + root.surfaceRightInset + 8
-      y: root.barBottomY + designTokens.topInset
-      width: root.quickLaunchPickerWidth
+      visible: root.menuState.open && root.appPickerOpen
+      enabled: root.appPickerOpen
+      opacity: root.appPickerOpen ? 1 : 0
+      x: root.flyoutLeftX + (root.settingsPanelOpen ? root.settingsPanelWidth : 0)
+      y: root.flyoutTopY
+      width: root.appPickerWidth
       height: Math.min(menuWindow.height - y - designTokens.bottomInset, root.compact ? 430 : 520)
       radius: designTokens.material ? designTokens.radius : 0
       color: root.panelColor
@@ -492,7 +770,7 @@ Item {
           LacunaText {
             width: parent.width - closePicker.width - parent.spacing
             anchors.verticalCenter: parent.verticalCenter
-            text: root.quickLaunchPickerMode === "appDefault" ? "Set " + registry.roleMeta(root.appDefaultPickerRole).label : "Add Quick Launch"
+            text: root.appPickerMode === "preferredApp" ? "Set " + registry.roleMeta(root.preferredAppPickerRole).label + " App" : "Add Quick Launch App"
             color: root.foreground
             fontFamily: "Tektur"
             font.pixelSize: root.compact ? 13 : 15
@@ -512,7 +790,7 @@ Item {
             hoverOpacity: designTokens.hoverOpacity
             pressOpacity: designTokens.activeOpacity
             iconSize: root.compact ? 13 : 15
-            onTriggered: root.quickLaunchPickerOpen = false
+            onTriggered: root.appPickerOpen = false
           }
         }
 
@@ -529,7 +807,7 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: 10
             anchors.verticalCenter: parent.verticalCenter
-            text: root.quickLaunchPickerMode === "appDefault" ? "Search app override" : "Search apps"
+            text: "Search apps"
             color: root.muted
             fontFamily: "JetBrains Mono"
             font.pixelSize: root.compact ? 10 : 11
@@ -541,7 +819,7 @@ Item {
             anchors.fill: parent
             anchors.leftMargin: 10
             anchors.rightMargin: 10
-            focus: root.quickLaunchPickerOpen
+            focus: root.appPickerOpen
             activeFocusOnPress: true
             color: root.foreground
             selectedTextColor: root.background
@@ -550,7 +828,7 @@ Item {
             font.pixelSize: root.compact ? 10 : 11
             verticalAlignment: TextInput.AlignVCenter
             clip: true
-            onTextChanged: quickLaunchPicker.query = text
+            onTextChanged: appPicker.query = text
           }
         }
 
@@ -578,12 +856,12 @@ Item {
             spacing: root.compact ? 4 : 5
 
             LacunaRect {
-              visible: root.quickLaunchPickerMode === "appDefault"
+              visible: root.appPickerMode === "preferredApp"
               width: parent.width
               height: visible ? (root.compact ? 32 : 38) : 0
               radius: designTokens.radius
               color: systemPickerMouse.containsMouse ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.10) : "transparent"
-              border.width: root.appDefaultValue(root.appDefaultPickerRole) === "system" && !designTokens.carbon ? 1 : 0
+              border.width: root.preferredAppValue(root.preferredAppPickerRole) === "system" && !designTokens.carbon ? 1 : 0
               border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.30)
               clip: true
 
@@ -604,7 +882,7 @@ Item {
                 anchors.right: systemState.left
                 anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
-                text: registry.roleMeta(root.appDefaultPickerRole).systemHint
+                text: registry.roleMeta(root.preferredAppPickerRole).systemHint
                 color: root.foreground
                 fontFamily: "JetBrains Mono"
                 font.pixelSize: root.compact ? 10 : 11
@@ -623,7 +901,7 @@ Item {
                 height: 18
 
                 LacunaTablerIcon {
-                  visible: root.appDefaultValue(root.appDefaultPickerRole) === "system"
+                  visible: root.preferredAppValue(root.preferredAppPickerRole) === "system"
                   anchors.centerIn: parent
                   name: "check"
                   color: root.accent
@@ -638,7 +916,7 @@ Item {
                 stateColor: root.accent
                 hoverOpacity: designTokens.hoverOpacity
                 pressOpacity: designTokens.activeOpacity
-                onTriggered: root.setAppDefault(root.appDefaultPickerRole, "system")
+                onTriggered: root.setPreferredApp(root.preferredAppPickerRole, "system")
                 onScrolled: function(delta) {
                   appPickerFlick.scrollBy(delta)
                 }
@@ -646,13 +924,13 @@ Item {
             }
 
             Repeater {
-              model: root.quickLaunchPickerOpen ? quickLaunchPicker.filteredApps() : []
+              model: root.appPickerOpen ? appPicker.filteredApps() : []
 
               LacunaRect {
                 required property var modelData
 
-                readonly property bool alreadyAdded: root.quickLaunchPickerMode === "quickLaunch" && root.quickLaunchContains(modelData.id)
-                readonly property bool selectedOverride: root.quickLaunchPickerMode === "appDefault" && root.appDefaultValue(root.appDefaultPickerRole) === String(modelData.id)
+                readonly property bool alreadyAdded: root.appPickerMode === "customQuickLaunchApp" && root.customQuickLaunchContains(modelData.id)
+                readonly property bool selectedOverride: root.appPickerMode === "preferredApp" && root.preferredAppValue(root.preferredAppPickerRole) === String(modelData.id)
                 width: parent.width
                 height: root.compact ? 32 : 38
                 radius: designTokens.radius
@@ -707,7 +985,7 @@ Item {
                   height: 18
 
                   LacunaTablerIcon {
-                    visible: alreadyAdded || selectedOverride || root.quickLaunchPickerMode === "quickLaunch"
+                    visible: alreadyAdded || selectedOverride || root.appPickerMode === "customQuickLaunchApp"
                     anchors.centerIn: parent
                     name: alreadyAdded || selectedOverride ? "check" : "plus"
                     color: alreadyAdded ? root.muted : root.accent
@@ -723,8 +1001,8 @@ Item {
                   hoverOpacity: designTokens.hoverOpacity
                   pressOpacity: designTokens.activeOpacity
                   onTriggered: {
-                    if (root.quickLaunchPickerMode === "appDefault") root.setAppDefault(root.appDefaultPickerRole, modelData.id)
-                    else root.addQuickLaunchApp(modelData.id)
+                    if (root.appPickerMode === "preferredApp") root.setPreferredApp(root.preferredAppPickerRole, modelData.id)
+                    else root.addCustomQuickLaunchApp(modelData.id)
                   }
                   onScrolled: function(delta) {
                     appPickerFlick.scrollBy(delta)

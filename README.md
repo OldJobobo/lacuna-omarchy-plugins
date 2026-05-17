@@ -17,6 +17,7 @@ styling, and workflow ideas. New Omarchy work should happen here as plugins.
   switcher as an Omarchy bar widget.
 - `plugins/omarchy.lacuna-mpris/`: original Lacuna media pill with playback
   text sweep animation.
+- `plugins/omarchy.lacuna-desktop-clock/`: desktop-layer Tektur digital clock.
 - `plugins/omarchy.lacuna-*-usage/`: Codex and Claude usage bar widgets.
 - `plugins/omarchy.lacuna-theme/` and
   `plugins/omarchy.lacuna-wallpaper/`: active Omarchy theme/background widgets.
@@ -34,12 +35,15 @@ Symlink plugin directories into Omarchy's plugin directory:
 mkdir -p ~/.config/omarchy/plugins
 ln -sfn "$PWD/plugins/omarchy.lacuna-menu" ~/.config/omarchy/plugins/omarchy.lacuna-menu
 ln -sfn "$PWD/plugins/omarchy.lacuna-menu-button" ~/.config/omarchy/plugins/omarchy.lacuna-menu-button
+ln -sfn "$PWD/plugins/omarchy.lacuna-desktop-clock" ~/.config/omarchy/plugins/omarchy.lacuna-desktop-clock
 ```
 
-Enable menu plugins in `~/.config/omarchy/shell.json`, then reload:
+Enable panel, overlay, and menu plugins in `~/.config/omarchy/shell.json`,
+then reload:
 
 ```bash
 omarchy-shell-ipc shell rescanPlugins
+omarchy-shell-ipc shell setPluginEnabled omarchy.lacuna-desktop-clock true
 omarchy restart shell
 ```
 
@@ -47,9 +51,12 @@ Bar widgets are placed in `bar.layout`; menu surfaces are enabled in
 `plugins`. Per-widget bar options belong in `shell.json` through Omarchy
 Settings. Lacuna runtime state lives in
 `~/.config/omarchy/lacuna/settings.json`, including the global
-`colorProfile` setting. Use `semantic` for the foreground-first profile or
-`colorful` to let Lacuna topbar modules draw from the active Omarchy theme
-colors.
+`colorProfile` setting, `customQuickLaunchApps`, and `preferredApps`. Use
+`semantic` for the foreground-first profile or `colorful` to let Lacuna topbar
+modules draw from the active Omarchy theme colors.
+
+The desktop clock uses ImageMagick's `magick` command for adaptive wallpaper
+contrast sampling. Without it, the clock still renders with theme colors.
 
 ## Development
 

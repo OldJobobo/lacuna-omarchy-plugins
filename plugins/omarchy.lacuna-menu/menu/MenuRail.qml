@@ -9,6 +9,7 @@ Column {
   signal activated(var entry)
   signal expandRequested()
   signal compactToggleRequested()
+  signal settingsRequested()
 
   required property var menuState
   required property var registry
@@ -151,6 +152,35 @@ Column {
                       else root.hideTooltip(this)
       onTriggered: root.activated(modelData)
     }
+  }
+
+  Item {
+    width: root.railWidth
+    height: Math.max(0, root.height - y - settingsDivider.height - settingsButton.height - root.spacing * 2)
+  }
+
+  LacunaRect {
+    id: settingsDivider
+
+    width: root.railWidth
+    height: 1
+    color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
+  }
+
+  MenuRailButton {
+    id: settingsButton
+
+    shape: "gear"
+    muted: root.foreground
+    hoverAccent: root.accent
+    buttonSize: root.railWidth
+    buttonRadius: root.designTokens.controlRadius
+    hoverOpacity: root.designTokens.hoverOpacity
+    pressOpacity: root.designTokens.activeOpacity
+    iconSize: root.compact ? 16 : 18
+    onHoveredChanged: if (hovered) root.showTooltipText(this, "Lacuna Settings", root.accent)
+                    else root.hideTooltip(this)
+    onTriggered: root.settingsRequested()
   }
 
   PopupWindow {

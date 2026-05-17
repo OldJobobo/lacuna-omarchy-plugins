@@ -10,6 +10,7 @@ Item {
   property real strokeWidth: 2
   readonly property string pathData: iconPath(name)
   readonly property bool valid: pathData !== ""
+  readonly property bool filled: name === "gear"
 
   implicitWidth: iconSize
   implicitHeight: iconSize
@@ -26,6 +27,7 @@ Item {
     if (icon === "palette" || icon === "theme" || icon === "customize") return "M12 21a9 9 0 1 1 0 -18c4.97 0 9 3.58 9 8c0 2.21 -1.79 4 -4 4h-2a2 2 0 0 0 -1 3.73a1.3 1.3 0 0 1 -1 2.27z M7.5 10.5h.01 M10.5 7.5h.01 M14.5 7.5h.01 M17.5 10.5h.01"
     if (icon === "file-text" || icon === "office") return "M14 3v4a1 1 0 0 0 1 1h4 M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z M9 9h1 M9 13h6 M9 17h6"
     if (icon === "settings" || icon === "system") return "M4 6h8 M16 6h4 M14 4a2 2 0 1 0 0 4a2 2 0 0 0 0 -4 M4 12h2 M10 12h10 M8 10a2 2 0 1 0 0 4a2 2 0 0 0 0 -4 M4 18h11 M19 18h1 M17 16a2 2 0 1 0 0 4a2 2 0 0 0 0 -4"
+    if (icon === "gear") return "M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"
     if (icon === "tool") return "M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8z"
     if (icon === "dots") return "M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0 M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0 M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"
     if (icon === "folder" || icon === "files") return "M5 4h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"
@@ -36,7 +38,8 @@ Item {
     if (icon === "refresh" || icon === "update") return "M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4 M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"
     if (icon === "search") return "M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0 M21 21l-6 -6"
     if (icon === "file-search" || icon === "log") return "M14 3v4a1 1 0 0 0 1 1h4 M11 21h-4a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v4 M16 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0 M20 20l-2 -2"
-    if (icon === "list-check" || icon === "app-defaults") return "M9 6h11 M9 12h11 M9 18h11 M5 6l.01 0 M5 12l.01 0 M5 18l.01 0"
+    if (icon === "list-check" || icon === "preferred-apps") return "M9 6h11 M9 12h11 M9 18h11 M5 6l.01 0 M5 12l.01 0 M5 18l.01 0"
+    if (icon === "clock") return "M12 7v5l3 3 M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"
     if (icon === "color-swatch") return "M19 7l-8.5 8.5a2.1 2.1 0 0 1 -3 0l-1 -1a2.1 2.1 0 0 1 0 -3l8.5 -8.5 M7 13l4 4 M3 21h18"
     if (icon === "density-compact") return "M5 5h14 M7 12h10 M9 19h6"
     if (icon === "density-normal") return "M5 4h14 M5 12h14 M5 20h14"
@@ -57,6 +60,8 @@ Item {
     if (icon === "check") return "M5 12l5 5l10 -10"
     if (icon === "x" || icon === "close") return "M18 6l-12 12 M6 6l12 12"
     if (icon === "arrow-left" || icon === "back") return "M5 12h14 M5 12l6 6 M5 12l6 -6"
+    if (icon === "arrow-up") return "M12 5v14 M12 5l-6 6 M12 5l6 6"
+    if (icon === "arrow-down") return "M12 19v-14 M12 19l-6 -6 M12 19l6 -6"
     if (icon === "chevron-right") return "M9 6l6 6l-6 6"
     if (icon === "player-play") return "M7 4v16l13 -8z"
     if (icon === "player-pause") return "M6 5h4v14h-4z M14 5h4v14h-4z"
@@ -74,9 +79,10 @@ Item {
     preferredRendererType: Shape.CurveRenderer
 
     ShapePath {
-      strokeColor: root.color
-      strokeWidth: root.strokeWidth
-      fillColor: "transparent"
+      strokeColor: root.filled ? "transparent" : root.color
+      strokeWidth: root.filled ? 0 : root.strokeWidth
+      fillColor: root.filled ? root.color : "transparent"
+      fillRule: root.filled ? ShapePath.OddEvenFill : ShapePath.WindingFill
       capStyle: ShapePath.RoundCap
       joinStyle: ShapePath.RoundJoin
       PathSvg { path: root.pathData }

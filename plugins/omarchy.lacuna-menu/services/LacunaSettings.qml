@@ -17,8 +17,8 @@ Item {
       designStyle: "carbon",
       colorProfile: "semantic",
       compact: false,
-      quickLaunch: [],
-      appDefaults: {
+      customQuickLaunchApps: [],
+      preferredApps: {
         files: "system",
         editor: "system",
         email: "system",
@@ -39,8 +39,8 @@ Item {
       next.designStyle = normalizeDesignStyle(value.designStyle)
       next.colorProfile = String(value.colorProfile || "").toLowerCase() === "colorful" ? "colorful" : "semantic"
       next.compact = value.compact === true
-      next.quickLaunch = normalizeQuickLaunch(value.quickLaunch)
-      next.appDefaults = normalizeAppDefaults(value.appDefaults)
+      next.customQuickLaunchApps = normalizeCustomQuickLaunchApps(value.customQuickLaunchApps || value.quickLaunch)
+      next.preferredApps = normalizePreferredApps(value.preferredApps || value.defaultLaunchers || value.appDefaults)
       if (value.sidebar && typeof value.sidebar === "object") {
         next.sidebar.collapsed = value.sidebar.collapsed === true
         next.sidebar.exclusive = value.sidebar.exclusive !== false
@@ -50,20 +50,21 @@ Item {
     return next
   }
 
-  function normalizeQuickLaunch(value) {
+  function normalizeCustomQuickLaunchApps(value) {
     var list = []
     if (!value || !Array.isArray(value)) return list
 
     for (var i = 0; i < value.length; i++) {
       var id = String(value[i] || "").trim()
+      if (id.indexOf("role:") === 0) continue
       if (id !== "" && list.indexOf(id) === -1) list.push(id)
     }
 
     return list.slice(0, 12)
   }
 
-  function normalizeAppDefaults(value) {
-    var defaults = defaultData().appDefaults
+  function normalizePreferredApps(value) {
+    var defaults = defaultData().preferredApps
     var next = {
       files: defaults.files,
       editor: defaults.editor,

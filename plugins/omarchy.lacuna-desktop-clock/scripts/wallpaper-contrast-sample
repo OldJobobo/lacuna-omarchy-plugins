@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import math
+import os
+import re
+import subprocess
+import sys
+
+
+def resolve_path(path):
+    if not path:
+        return ""
+    return os.path.realpath(os.path.expanduser(path))
+
+
+def run_magick(args):
+    return subprocess.check_output(["magick", *args], text=True, stderr=subprocess.DEVNULL)
+
+
+def srgb_to_linear(value):
+    value = value / 255.0
+    if value <= 0.04045:
+        return value / 12.92
+    return ((value + 0.055) / 1.055) ** 2.4
+
+
+def luminance(r, g, b):
+    return 0.2126 * srgb_to_linear(r) + 0.7152 * srgb_to_linear(g) + 0.0722 * srgb_to_linear(b)
+
+
+def image_size(path):
+    raw = run_magick(["identify", "-format", "%w %h", path]).strip()
+    width, height = raw.split()
+    return int(width), int(height)
+
+
+def cover_crop(args, image_width, image_height):
+    if args.screen_width <= 0 or args.screen_height <= 0 or args.width <= 0 or args.height <= 0:
+        return None
+
+    scale = max(args.screen_width / image_width, args.screen_height / image_height)
+    rendered_width = image_width * scale
+    rendered_height = image_height * scale
+    rendered_offset_x = max(0.0, (rendered_width - args.screen_width) / 2.0)
+    rendered_offset_y = max(0.0, (rendered_height - args.screen_height) / 2.0)
+
+    source_x = max(0, math.floor((args.x + rendered_offset_x) / scale))
+    source_y = max(0, math.floor((args.y + rendered_offset_y) / scale))
+    source_w = max(1, math.ceil(args.width / scale))
+    source_h = max(1, math.ceil(args.height / scale))
+
+    source_w = min(source_w, image_width - source_x)
+    source_h = min(source_h, image_height - source_y)
+    if source_w <= 0 or source_h <= 0:
+        return None
+
+    return source_w, source_h, source_x, source_y
+
+
+def sample_color(path, crop):
+    magick_args = [path]
+    if crop:
+        width, height, x, y = crop
+        magick_args.extend(["-crop", f"{width}x{height}+{x}+{y}"])
+    magick_args.extend(["-resize", "1x1!", "txt:-"])
+    raw = run_magick(magick_args)
+    match = re.search(r"#([0-9A-Fa-f]{6})", raw)
+    if not match:
+        raise RuntimeError("ImageMagick did not return an sRGB hex color")
+
+    hex_color = match.group(1).upper()
+    return tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--wallpaper", required=True)
+    parser.add_argument("--screen-width", type=float, default=0)
+    parser.add_argument("--screen-height", type=float, default=0)
+    parser.add_argument("--x", type=float, default=0)
+    parser.add_argument("--y", type=float, default=0)
+    parser.add_argument("--width", type=float, default=0)
+    parser.add_argument("--height", type=float, default=0)
+    args = parser.parse_args()
+
+    wallpaper = resolve_path(args.wallpaper)
+    if not wallpaper or not os.path.exists(wallpaper):
+        raise SystemExit("wallpaper not found")
+
+    image_width, image_height = image_size(wallpaper)
+    crop = cover_crop(args, image_width, image_height)
+    r, g, b = sample_color(wallpaper, crop)
+
+    print(json.dumps({
+        "background": f"#{r:02X}{g:02X}{b:02X}",
+        "luminance": luminance(r, g, b)
+    }))
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as error:
+        print(str(error), file=sys.stderr)
+        raise SystemExit(1)

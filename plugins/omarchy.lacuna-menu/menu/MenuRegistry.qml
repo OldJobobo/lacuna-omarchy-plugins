@@ -9,11 +9,17 @@ Item {
   property bool sidebarCollapsed: false
   property bool sidebarCornerPieces: true
   property bool compact: false
+  property bool desktopClockEnabled: false
+  property string desktopClockAnchor: "bottom-right"
+  property int desktopClockOffsetX: 0
+  property int desktopClockOffsetY: 0
+  property real desktopClockScale: 1
+  property bool desktopClockUse12Hour: false
   property string designStyle: "carbon"
   property string colorProfile: "semantic"
   property var appCatalog: null
-  property var quickLaunch: []
-  property var appDefaults: ({})
+  property var customQuickLaunchApps: []
+  property var preferredApps: ({})
 
   function item(kind, icon, label, hint, view, command, tone, priority, layout, danger, group, action, iconSource, switchVisible, switchChecked) {
     return {
@@ -66,13 +72,37 @@ Item {
     }
   }
 
+  function optionControl(icon, label, hint, group, value, options, actionPrefix) {
+    return {
+      kind: "item",
+      icon: icon,
+      iconSource: "",
+      label: label,
+      hint: hint || "",
+      view: "",
+      command: "",
+      action: "",
+      tone: "lacuna",
+      priority: "normal",
+      layout: "design-style-control",
+      danger: false,
+      group: group || "lacuna",
+      switchVisible: false,
+      switchChecked: false,
+      optionValue: value,
+      optionActionPrefix: actionPrefix,
+      options: options
+    }
+  }
+
   function titleFor(view) {
     if (view === "main") return "Lacuna"
     if (view === "lacuna") return "Lacuna"
     if (view === "customize") return "Customize"
     if (view === "lacuna-shell") return "Runtime"
     if (view === "lacuna-preferences") return "Layout"
-    if (view === "lacuna-app-defaults") return "App Defaults"
+    if (view === "lacuna-preferred-apps") return "Preferred Apps"
+    if (view === "lacuna-clock") return "Desktop Clock"
     if (view === "system") return "System"
     if (view === "apps") return "Apps"
     if (view === "apps-all") return "All Apps"
@@ -171,6 +201,30 @@ Item {
     return "Flat compact Lacuna linework"
   }
 
+  function anchorHorizontal() {
+    if (root.desktopClockAnchor.indexOf("left") !== -1) return "left"
+    if (root.desktopClockAnchor.indexOf("right") !== -1) return "right"
+    return "center"
+  }
+
+  function anchorVertical() {
+    if (root.desktopClockAnchor.indexOf("top") !== -1) return "top"
+    if (root.desktopClockAnchor.indexOf("bottom") !== -1) return "bottom"
+    return "center"
+  }
+
+  function clockPositionHint() {
+    return root.desktopClockAnchor + "  x " + root.desktopClockOffsetX + "  y " + root.desktopClockOffsetY
+  }
+
+  function clockFormatHint() {
+    return root.desktopClockUse12Hour ? "12-hour time" : "24-hour time"
+  }
+
+  function clockScaleHint() {
+    return Math.round(root.desktopClockScale * 100) + "%"
+  }
+
   function appCount(category) {
     return root.appCatalog ? root.appCatalog.countFor(category) : 0
   }
@@ -184,6 +238,10 @@ Item {
     var count = appCount(meta.id)
     row.badgeText = count > 0 ? String(count) : ""
     return row
+  }
+
+  function settingsEntry() {
+    return item("item", "gear", "Lacuna Settings", "Lacuna runtime and layout controls", "lacuna", "", "lacuna", "primary", "row", false, "lacuna")
   }
 
   function appIcon(app) {
@@ -209,15 +267,15 @@ Item {
     var row = item("item", appIcon(app), app.Name, app.Comment || app.GenericName, "", "gtk-launch " + shellQuote(app.id), categoryMeta(app.category).tone, "primary", "row", false, "apps", "", appIconSource(app))
     row.appId = app.id
     if (quickAdd) {
-      row.trailingAction = "add-quicklaunch"
-      row.trailingIcon = quickLaunchContains(app.id) ? "check" : "plus"
-      row.trailingTooltip = quickLaunchContains(app.id) ? "Already in quick launch" : "Add to quick launch"
+      row.trailingAction = "add-custom-quick-launch-app"
+      row.trailingIcon = customQuickLaunchContains(app.id) ? "check" : "plus"
+      row.trailingTooltip = customQuickLaunchContains(app.id) ? "Already in quick launch" : "Add to quick launch"
     }
     return row
   }
 
-  function quickLaunchContains(id) {
-    var ids = root.quickLaunch || []
+  function customQuickLaunchContains(id) {
+    var ids = root.customQuickLaunchApps || []
     for (var i = 0; i < ids.length; i++) {
       if (String(ids[i]) === String(id)) return true
     }
@@ -232,9 +290,9 @@ Item {
     return { label: "App", icon: "apps", tone: "nav", systemHint: "System default" }
   }
 
-  function appDefaultValue(role) {
-    if (!root.appDefaults || typeof root.appDefaults !== "object") return "system"
-    var value = String(root.appDefaults[role] || "").trim()
+  function preferredAppValue(role) {
+    if (!root.preferredApps || typeof root.preferredApps !== "object") return "system"
+    var value = String(root.preferredApps[role] || "").trim()
     return value === "" ? "system" : value
   }
 
@@ -255,8 +313,8 @@ Item {
     return app ? app.Name : ""
   }
 
-  function appDefaultHint(role) {
-    var value = appDefaultValue(role)
+  function preferredAppHint(role) {
+    var value = preferredAppValue(role)
     var meta = roleMeta(role)
     if (value === "system") {
       if (role === "discord") {
@@ -274,7 +332,7 @@ Item {
   }
 
   function roleCommand(role) {
-    var value = appDefaultValue(role)
+    var value = preferredAppValue(role)
     if (value !== "system") return appLaunchCommand(value)
 
     if (role === "files") return hyprExec("omarchy launch nautilus")
@@ -291,31 +349,35 @@ Item {
 
   function roleEntry(role, priority) {
     var meta = roleMeta(role)
-    return item("item", meta.icon, meta.label, appDefaultHint(role), "", roleCommand(role), meta.tone, priority || "primary", "row", false, "launch")
+    return item("item", meta.icon, meta.label, preferredAppHint(role), "", roleCommand(role), meta.tone, priority || "primary", "row", false, "launch")
   }
 
   function roleSettingsItem(role) {
     var meta = roleMeta(role)
-    return item("item", meta.icon, meta.label, appDefaultHint(role), "", "", meta.tone, "primary", "row", false, "app-defaults", "choose-app-default-" + role)
+    return item("item", meta.icon, meta.label, preferredAppHint(role), "", "", meta.tone, "primary", "row", false, "preferred-apps", "choose-preferred-app-" + role)
   }
 
-  function quickLaunchItems() {
+  function customQuickLaunchItems() {
     var rows = []
-    var ids = root.quickLaunch || []
+    var ids = root.customQuickLaunchApps || []
     if (!root.appCatalog || !root.appCatalog.ready) return rows
 
     for (var i = 0; i < ids.length; i++) {
       var id = String(ids[i] || "")
-      if (id.indexOf("role:") === 0) {
-        rows.push(roleEntry(id.substring(5), "primary"))
-        continue
-      }
-
       var app = root.appCatalog.appById(id)
       if (app) rows.push(appEntry(app, false))
     }
 
     return rows
+  }
+
+  function preferredAppItems(priority) {
+    return [
+      roleEntry("files", priority || "normal"),
+      roleEntry("editor", priority || "normal"),
+      roleEntry("email", priority || "normal"),
+      roleEntry("discord", priority || "normal")
+    ]
   }
 
   function appItems(category) {
@@ -346,11 +408,10 @@ Item {
 
   function railItems() {
     return [
-      item("item", "lacuna", "Lacuna", "Runtime and layout controls", "lacuna", "", "lacuna", "primary", "row", false, "lacuna"),
       item("item", "apps", "Apps", "Browse categorized launchers", "apps", "", "nav", "primary", "row", false, "apps"),
       item("item", "palette", "Customize", "Theme, background, and wallpaper tools", "customize", "", "shell", "primary", "row", false, "customize"),
       item("item", "power", "System", "Lock, logout, restart, shutdown", "system", "", "session", "primary", "row", false, "session")
-    ].concat(quickLaunchItems()).concat([
+    ].concat(customQuickLaunchItems()).concat([
       item("item", "terminal", "Terminal", "Open a terminal", "", openTerminalCommand(), "nav", "normal", "row", false, "launch"),
       item("item", "world", "Browser", "Launch browser", "", "omarchy launch browser", "nav", "normal", "row", false, "launch")
     ])
@@ -383,7 +444,7 @@ Item {
 
     if (view === "lacuna") {
       return [
-        item("header", "", "Settings", "", "", "", "lacuna", "normal", "section", false, "lacuna"),
+        item("header", "", "Lacuna", "", "", "", "lacuna", "normal", "section", false, "lacuna"),
         item("item", "settings", "Runtime", "Commands, logs, and diagnostics", "lacuna-shell", "", "lacuna", "primary", "row", false, "lacuna"),
         item("item", "density-normal", "Layout", "Density, sidebar, and surface behavior", "lacuna-preferences", "", "lacuna", "primary", "row", false, "lacuna"),
         item("header", "", "Source", "", "", "", "shell"),
@@ -405,7 +466,8 @@ Item {
       return [
         item("header", "", "Layout", "", "", "", "lacuna", "normal", "section", false, "lacuna"),
         designStyleControl("lacuna"),
-        item("item", "list-check", "App Defaults", "Files, editor, email, and Discord launch targets", "lacuna-app-defaults", "", "lacuna", "primary", "row", false, "lacuna"),
+        item("item", "list-check", "Preferred Apps", "Files, editor, email, and Discord launch targets", "lacuna-preferred-apps", "", "lacuna", "primary", "row", false, "lacuna"),
+        item("item", "clock", "Desktop Clock", clockPositionHint(), "lacuna-clock", "", "lacuna", "primary", "row", false, "lacuna"),
         item("item", "color-swatch", root.colorProfile === "colorful" ? "Colorful Profile" : "Semantic Profile", root.colorProfile === "colorful" ? "Use theme colors across Lacuna topbar modules" : "Use foreground with semantic colors only", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-color-profile", "", true, root.colorProfile === "colorful"),
         item("item", root.compact ? "density-compact" : "density-normal", root.compact ? "Compact Density" : "Normal Density", root.compact ? "Use tighter Lacuna UI spacing" : "Use standard Lacuna UI spacing", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-bar-density", "", true, root.compact),
         item("item", root.sidebarCollapsed ? "sidebar-expand" : "sidebar-collapse", root.sidebarCollapsed ? "Icon Rail" : "Full Sidebar", root.sidebarCollapsed ? "Show the compact icon rail" : "Show the full sidebar surface", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-sidebar-rail", "", true, root.sidebarCollapsed),
@@ -415,9 +477,35 @@ Item {
       ]
     }
 
-    if (view === "lacuna-app-defaults") {
+    if (view === "lacuna-clock") {
       return [
-        item("header", "", "App Defaults", "", "", "", "lacuna", "normal", "section", false, "app-defaults"),
+        item("header", "", "Activation", "", "", "", "lacuna", "normal", "section", false, "clock"),
+        item("item", "clock", "Desktop Clock", root.desktopClockEnabled ? "Visible on the desktop layer" : "Hidden from the desktop layer", "", "", "lacuna", "normal", "row", false, "clock", "toggle-desktop-clock", "", true, root.desktopClockEnabled),
+        item("item", "clock", "12-Hour Time", clockFormatHint(), "", "", "lacuna", "normal", "row", false, "clock", "toggle-clock-12-hour", "", true, root.desktopClockUse12Hour),
+        item("header", "", "Position", "", "", "", "lacuna", "normal", "section", false, "clock"),
+        optionControl("clock", "Horizontal", "Anchor column", "clock", anchorHorizontal(), [
+          { value: "left", label: "Left" },
+          { value: "center", label: "Center" },
+          { value: "right", label: "Right" }
+        ], "set-clock-anchor-x-"),
+        optionControl("clock", "Vertical", "Anchor row", "clock", anchorVertical(), [
+          { value: "top", label: "Top" },
+          { value: "center", label: "Center" },
+          { value: "bottom", label: "Bottom" }
+        ], "set-clock-anchor-y-"),
+        item("item", "density-compact", "Scale Down", "Current scale " + clockScaleHint(), "", "", "lacuna", "normal", "row", false, "clock", "scale-clock-down"),
+        item("item", "density-normal", "Scale Up", "Current scale " + clockScaleHint(), "", "", "lacuna", "normal", "row", false, "clock", "scale-clock-up"),
+        item("item", "arrow-left", "Move Left", "Nudge 24 px left", "", "", "lacuna", "normal", "row", false, "clock", "nudge-clock-left"),
+        item("item", "chevron-right", "Move Right", "Nudge 24 px right", "", "", "lacuna", "normal", "row", false, "clock", "nudge-clock-right"),
+        item("item", "arrow-up", "Move Up", "Nudge 24 px up", "", "", "lacuna", "normal", "row", false, "clock", "nudge-clock-up"),
+        item("item", "arrow-down", "Move Down", "Nudge 24 px down", "", "", "lacuna", "normal", "row", false, "clock", "nudge-clock-down"),
+        item("item", "refresh", "Reset Position", "Clear clock offsets and scale", "", "", "shell", "normal", "row", false, "clock", "reset-clock-position")
+      ]
+    }
+
+    if (view === "lacuna-preferred-apps") {
+      return [
+        item("header", "", "Preferred Apps", "", "", "", "lacuna", "normal", "section", false, "preferred-apps"),
         roleSettingsItem("files"),
         roleSettingsItem("editor"),
         roleSettingsItem("email"),
@@ -433,6 +521,7 @@ Item {
         item("item", "background", "Background", "Switch theme background", "", switchBackgroundCommand(), "shell", "primary", "row", false, "customize"),
         item("header", "", "Layout", "", "", "", "lacuna", "normal", "section", false, "layout"),
         designStyleControl("layout"),
+        item("item", "clock", "Desktop Clock", clockPositionHint(), "lacuna-clock", "", "lacuna", "primary", "row", false, "layout"),
         item("item", "color-swatch", root.colorProfile === "colorful" ? "Colorful Profile" : "Semantic Profile", root.colorProfile === "colorful" ? "Use theme colors across Lacuna topbar modules" : "Use foreground with semantic colors only", "", "", "lacuna", "normal", "row", false, "layout", "toggle-color-profile", "", true, root.colorProfile === "colorful"),
         item("item", root.compact ? "density-compact" : "density-normal", root.compact ? "Compact Density" : "Normal Density", root.compact ? "Use tighter Lacuna UI spacing" : "Use standard Lacuna UI spacing", "", "", "lacuna", "normal", "row", false, "layout", "toggle-bar-density", "", true, root.compact),
         item("item", root.sidebarCollapsed ? "sidebar-expand" : "sidebar-collapse", root.sidebarCollapsed ? "Icon Rail" : "Full Sidebar", root.sidebarCollapsed ? "Show the compact icon rail" : "Show the full sidebar surface", "", "", "lacuna", "normal", "row", false, "layout", "toggle-sidebar-rail", "", true, root.sidebarCollapsed),
@@ -458,9 +547,11 @@ Item {
       item("item", "apps", "Apps", "Browse categorized launchers", "apps", "", "nav", "primary", "featured"),
       item("item", "palette", "Customize", "Theme, background, and wallpaper tools", "customize", "", "shell", "primary", "featured", false, "customize"),
       item("item", "power", "System", "Lock, logout, restart, shutdown", "system", "", "session", "primary", "featured", false, "session"),
-      item("header", "", "Launch", "", "", "", "nav"),
-      item("item", "plus", "Add quick launch", "Pick an app for this section", "", "", "lacuna", "primary", "row", false, "launch", "open-quicklaunch-picker")
-    ].concat(quickLaunchItems()).concat([
+      item("header", "", "Quick Launch", "", "", "", "nav"),
+      item("item", "plus", "Add Quick Launch App", "Pick a custom app for this section", "", "", "lacuna", "primary", "row", false, "quick-launch", "open-custom-quick-launch-picker")
+    ].concat(customQuickLaunchItems()).concat([
+      item("header", "", "Preferred Apps", "", "", "", "lacuna")
+    ]).concat(preferredAppItems("normal")).concat([
       item("item", "terminal", "Terminal", "Open a terminal", "", openTerminalCommand(), "nav", "primary", "row"),
       item("item", "world", "Browser", "Launch browser", "", "omarchy launch browser", "nav", "primary", "row"),
       item("header", "", "System Tools", "", "", "", "session"),
@@ -470,7 +561,6 @@ Item {
       item("item", "video", "Record screen", "Choose screen recording mode", "", "", "session", "normal", "row", false, "session", "open-screenrecord-menu"),
       item("item", "idle", "Idle", "Toggle idle behavior", "", "omarchy toggle idle", "session"),
       item("header", "", "Maintenance", "", "", "", "shell"),
-      item("item", "lacuna", "Lacuna Settings", "Runtime and layout controls", "lacuna", "", "lacuna", "normal", "row", false, "lacuna"),
       item("item", "update", "Update Lacuna", "Pull the Lacuna git repo", "", updateLacunaCommand(), "shell"),
       item("item", "refresh", "Restart shell", "Reload Omarchy shell", "", restartLacunaCommand(), "shell")
     ])

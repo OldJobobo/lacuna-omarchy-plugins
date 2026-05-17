@@ -3,6 +3,13 @@
   "designStyle": "carbon",
   "colorProfile": "semantic",
   "compact": false,
+  "customQuickLaunchApps": [],
+  "preferredApps": {
+    "files": "system",
+    "editor": "system",
+    "email": "system",
+    "discord": "system"
+  },
   "sidebar": {
     "collapsed": false,
     "exclusive": true,
