@@ -28,6 +28,16 @@ Use QML for plugin entry points and keep roots compatible with Omarchy plugin co
 
 Use 2-space indentation for JSON and QML unless a copied source file already has a consistent style. Store bar-widget user options in the plugin manifest schema so Omarchy Settings writes them inline to `~/.config/omarchy/shell.json`. Keep `~/.config/omarchy/lacuna/settings.json` for Lacuna runtime/app state only.
 
+## Flyout Surface Geometry
+
+For new Lacuna flyout panels that attach to the sidebar, keep the attachment edge square and use Omarchy-style molding connectors instead of ordinary rounded connector corners. If `sidebarState.cornerPieces` is enabled, reserve a connector width equal to `joinRadius`, place the flyout at `panelWidth + connectorWidth`, and draw the connector at `x: panelWidth` so it sits between the sidebar and flyout. If corner pieces are disabled, attach the flyout directly at `panelWidth`.
+
+Connector pieces are molding transitions like the sidebar/topbar join in `plugins/omarchy.lacuna-menu/menu/MenuSurface.qml`, not normal rounded corners. Use a straight body between the panel's top and bottom plus two `ShapePath` cubic pieces outside the panel bounds: one above the panel and one vertically flipped below it. Use the same `curveKappa` constant (`0.5522847498`) as `MenuSurface.qml`.
+
+Flyout panels themselves may use normal rounding only on exposed corners. For a right-opening panel attached to the sidebar, keep the left edge square and round only the top-right and bottom-right corners with a custom `Shape`; do not use `Rectangle.radius`, because it rounds all four corners and breaks the connector edge.
+
+Do not draw thin outer borders on flyout panel shells. The flyout background shape should be fill-only (`strokeWidth: 0`); reserve borders for internal controls, dividers, or explicit selected states.
+
 ## Testing Guidelines
 
 Until automated tests exist, validate changes inside Omarchy shell. Confirm that each widget appears in Omarchy Settings, can be placed in `bar.layout`, survives shell restart, and uses injected `bar`, `moduleName`, and `settings` properties. Test script paths through `manifest.__sourceDir` or another plugin-relative path.

@@ -62,11 +62,16 @@ property string settingsSection: "overview"
 property var settingsStack: ["overview"]
 ```
 
-The panel should be positioned beside the sidebar:
+The panel should be positioned beside the sidebar and stay attached to it:
 
 ```qml
-x: root.panelWidth + root.surfaceRightInset + 10
-y: root.barBottomY + designTokens.topInset
+property int settingsConnectorWidth: sidebarState.cornerPieces ? joinRadius : 0
+property int attachedFlyoutLeftX: panelWidth + settingsConnectorWidth
+
+x: root.settingsPanelOpen
+  ? root.attachedFlyoutLeftX
+  : root.attachedFlyoutLeftX - Math.min(root.settingsPanelWidth, 72)
+y: root.settingsFlyoutY(targetHeight)
 ```
 
 Suggested sizing:
@@ -79,6 +84,135 @@ Suggested sizing:
 
 Keyboard focus should become exclusive while the settings panel is open only if
 needed for Escape handling, search inputs, or keyboard navigation.
+
+### Corner Pieces And Rounding
+
+Flyout panels that attach to the Lacuna sidebar must treat the left and right
+edges differently:
+
+1. The left edge is the attachment edge. Keep it square so it can sit flush
+   against the connector molding.
+2. The exposed right edge may use normal panel rounding. Round only the
+   top-right and bottom-right corners.
+3. Do not use normal rounded corners for the connector pieces. Connector pieces
+   are molding transitions, matching the sidebar/topbar connection in
+   `MenuSurface.qml`.
+4. When `sidebarState.cornerPieces` is false, omit the connector width and let
+   the panel attach directly at `panelWidth`.
+
+The connector lives between the sidebar and the flyout panel:
+
+```qml
+property int settingsConnectorWidth: sidebarState.cornerPieces ? joinRadius : 0
+property int attachedFlyoutLeftX: panelWidth + settingsConnectorWidth
+```
+
+Place the connector at the sidebar edge, not inside the panel:
+
+```qml
+x: root.panelWidth
+y: settingsPanel.y - root.settingsConnectorWidth
+width: root.settingsConnectorWidth
+height: settingsPanel.height + root.settingsConnectorWidth * 2
+```
+
+The connector is three pieces:
+
+1. A straight body from `settingsConnectorWidth` below the panel top to the
+   panel bottom.
+2. A top molding piece above the panel.
+3. A bottom molding piece below the panel, vertically flipped from the top.
+
+The straight body is just the shared panel color:
+
+```qml
+LacunaRect {
+  y: root.settingsConnectorWidth
+  width: parent.width + 1
+  height: settingsPanel.height
+  color: root.panelColor
+}
+```
+
+The molding pieces should use `ShapePath` cubic curves and the same
+`curveKappa` constant as `MenuSurface.qml`:
+
+```qml
+readonly property real curveKappa: 0.5522847498
+```
+
+Top molding path:
+
+```qml
+ShapePath {
+  fillColor: root.panelColor
+  strokeColor: root.panelColor
+  strokeWidth: 1
+  startX: 0
+  startY: root.settingsConnectorWidth
+
+  PathLine { x: root.settingsConnectorWidth; y: root.settingsConnectorWidth }
+  PathCubic {
+    x: 0
+    y: 0
+    control1X: root.settingsConnectorWidth * (1 - settingsConnector.curveKappa)
+    control1Y: root.settingsConnectorWidth
+    control2X: 0
+    control2Y: root.settingsConnectorWidth * settingsConnector.curveKappa
+  }
+  PathLine { x: 0; y: root.settingsConnectorWidth }
+}
+```
+
+Bottom molding path:
+
+```qml
+ShapePath {
+  fillColor: root.panelColor
+  strokeColor: root.panelColor
+  strokeWidth: 1
+  startX: 0
+  startY: 0
+
+  PathLine { x: root.settingsConnectorWidth; y: 0 }
+  PathCubic {
+    x: 0
+    y: root.settingsConnectorWidth
+    control1X: root.settingsConnectorWidth * (1 - settingsConnector.curveKappa)
+    control1Y: 0
+    control2X: 0
+    control2Y: root.settingsConnectorWidth * (1 - settingsConnector.curveKappa)
+  }
+  PathLine { x: 0; y: 0 }
+}
+```
+
+The flyout panel itself should draw a custom shape rather than using a
+rectangle radius, because rectangle radius rounds all four corners. Use a
+square left edge and cubic curves only on the right edge:
+
+```qml
+PathLine { x: root.width - root.panelRadius; y: 0 }
+PathCubic {
+  x: root.width
+  y: root.panelRadius
+  control1X: root.width - root.panelRadius * (1 - root.curveKappa)
+  control1Y: 0
+  control2X: root.width
+  control2Y: root.panelRadius * (1 - root.curveKappa)
+}
+PathLine { x: root.width; y: root.height - root.panelRadius }
+PathCubic {
+  x: root.width - root.panelRadius
+  y: root.height
+  control1X: root.width
+  control1Y: root.height - root.panelRadius * (1 - root.curveKappa)
+  control2X: root.width - root.panelRadius * (1 - root.curveKappa)
+  control2Y: root.height
+}
+PathLine { x: 0; y: root.height }
+PathLine { x: 0; y: 0 }
+```
 
 ## Visual Structure
 
