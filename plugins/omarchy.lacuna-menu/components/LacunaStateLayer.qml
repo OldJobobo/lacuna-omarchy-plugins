@@ -4,7 +4,7 @@ MouseArea {
   id: root
 
   signal triggered()
-  signal secondaryClicked()
+  signal secondaryClicked(real x, real y)
   signal scrolled(int delta)
 
   property bool disabled: false
@@ -22,7 +22,7 @@ MouseArea {
 
   onClicked: function(mouse) {
     if (mouse.button === Qt.RightButton) {
-      root.secondaryClicked()
+      root.secondaryClicked(mouse.x, mouse.y)
     } else {
       root.triggered()
     }

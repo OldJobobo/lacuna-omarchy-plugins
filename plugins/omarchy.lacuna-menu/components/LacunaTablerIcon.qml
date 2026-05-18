@@ -58,6 +58,7 @@ Item {
     if (icon === "video" || icon === "record") return "M15 10l4.553 -2.276a1 1 0 0 1 1.447 .894v6.764a1 1 0 0 1 -1.447 .894l-4.553 -2.276v-4z M3 6m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z"
     if (icon === "plus") return "M12 5v14 M5 12h14"
     if (icon === "check") return "M5 12l5 5l10 -10"
+    if (icon === "grip-vertical") return "M9 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0 M15 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0 M9 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0 M15 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0 M9 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0 M15 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"
     if (icon === "x" || icon === "close") return "M18 6l-12 12 M6 6l12 12"
     if (icon === "arrow-left" || icon === "back") return "M5 12h14 M5 12l6 6 M5 12l6 -6"
     if (icon === "arrow-up") return "M12 5v14 M12 5l-6 6 M12 5l6 6"

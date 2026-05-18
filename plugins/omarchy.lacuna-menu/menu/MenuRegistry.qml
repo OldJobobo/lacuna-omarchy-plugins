@@ -19,6 +19,7 @@ Item {
   property string colorProfile: "semantic"
   property var appCatalog: null
   property var customQuickLaunchApps: []
+  property var customQuickLaunchNames: ({})
   property var preferredApps: ({})
 
   function item(kind, icon, label, hint, view, command, tone, priority, layout, danger, group, action, iconSource, switchVisible, switchChecked) {
@@ -128,6 +129,20 @@ Item {
       terminalBody = command + "; status=$?; printf '\\nCommand exited with status %s. Press Enter to close...' \"$status\"; read -r _; exit \"$status\""
     }
     return "foot --app-id=org.omarchy.terminal --title=" + shellQuote(title || "Lacuna") + " -e bash -lc " + shellQuote(terminalBody)
+  }
+
+  function terminalLaunchCommand(command, title) {
+    return hyprExec("foot --app-id=org.omarchy.terminal --title=" + shellQuote(title || "Lacuna") + " -e bash -lc " + shellQuote("exec " + command))
+  }
+
+  function desktopExecCommand(execLine) {
+    var command = String(execLine || "").trim()
+    if (command === "") return ""
+
+    command = command.replace(/%%/g, "__LACUNA_PERCENT__")
+    command = command.replace(/%[fFuUdDnNickvm]/g, "")
+    command = command.replace(/__LACUNA_PERCENT__/g, "%")
+    return command.trim()
   }
 
   function openTerminalCommand() {
@@ -264,7 +279,7 @@ Item {
   }
 
   function appEntry(app, quickAdd) {
-    var row = item("item", appIcon(app), app.Name, app.Comment || app.GenericName, "", "gtk-launch " + shellQuote(app.id), categoryMeta(app.category).tone, "primary", "row", false, "apps", "", appIconSource(app))
+    var row = item("item", appIcon(app), app.Name, app.Comment || app.GenericName, "", appLaunchCommand(app), categoryMeta(app.category).tone, "primary", "row", false, "apps", "", appIconSource(app))
     row.appId = app.id
     if (quickAdd) {
       row.trailingAction = "add-custom-quick-launch-app"
@@ -327,7 +342,23 @@ Item {
     return "Manual: " + (appName(value) || value)
   }
 
-  function appLaunchCommand(id) {
+  function appLaunchCommand(appOrId) {
+    var app = null
+    var id = ""
+
+    if (typeof appOrId === "object" && appOrId !== null) {
+      app = appOrId
+      id = String(app.id || "")
+    } else {
+      id = String(appOrId || "")
+      if (root.appCatalog && root.appCatalog.ready) app = root.appCatalog.appById(id)
+    }
+
+    if (app && app.Terminal === true) {
+      var command = desktopExecCommand(app.Exec)
+      if (command !== "") return terminalLaunchCommand(command, app.Name || id)
+    }
+
     return hyprExec("gtk-launch " + shellQuote(id))
   }
 
@@ -365,7 +396,15 @@ Item {
     for (var i = 0; i < ids.length; i++) {
       var id = String(ids[i] || "")
       var app = root.appCatalog.appById(id)
-      if (app) rows.push(appEntry(app, false))
+      if (app) {
+        var row = appEntry(app, false)
+        var customName = root.customQuickLaunchNames && root.customQuickLaunchNames[id] ? String(root.customQuickLaunchNames[id]).trim() : ""
+        if (customName !== "") row.label = customName
+        row.group = "quick-launch"
+        row.reorderable = true
+        row.quickLaunchIndex = i
+        rows.push(row)
+      }
     }
 
     return rows

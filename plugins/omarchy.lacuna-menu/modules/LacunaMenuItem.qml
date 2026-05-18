@@ -7,8 +7,12 @@ LacunaRect {
   id: root
 
   signal triggered()
+  signal contextRequested(real x, real y)
   signal optionSelected(string value)
   signal trailingActionTriggered(string action)
+  signal reorderDragStarted(real sceneY)
+  signal reorderDragged(real sceneY)
+  signal reorderDropped(real sceneY)
 
   property string kind: "item"
   property string icon: ""
@@ -28,6 +32,8 @@ LacunaRect {
   property string trailingTooltip: ""
   property string optionValue: ""
   property var options: []
+  property bool reorderHandleVisible: false
+  property bool reorderActive: false
   property color foreground: "#d8dee9"
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
   property color accent: "#88c0d0"
@@ -51,11 +57,13 @@ LacunaRect {
   property bool trailingActionHovered: false
   readonly property int badgeWidth: badgeVisible ? Math.max(compact ? 22 : 24, badgeText.length * (compact ? 6 : 7) + (compact ? 10 : 12)) : 0
   readonly property int trailingActionWidth: trailingActionVisible ? (compact ? 22 : 24) : 0
+  readonly property int reorderHandleWidth: reorderHandleVisible ? (compact ? 18 : 20) : 0
   readonly property bool trailingTooltipVisible: trailingActionHovered && trailingTooltip !== ""
   readonly property int trailingTooltipWidth: trailingTooltipVisible ? Math.max(88, Math.min(150, trailingTooltip.length * (compact ? 7 : 8) + 18)) : 0
   readonly property int rowHeight: optionControl ? (compact ? 38 : 42) : featured ? designTokens.featuredItemHeight : primary ? designTokens.primaryItemHeight : compactRow ? designTokens.compactItemHeight : designTokens.itemHeight
   readonly property int iconLeftPadding: designTokens.accentStrips ? (compact ? 5 : 6) : 0
   property int contentLeftMargin: Math.round(reveal * (featured ? 3 : 2))
+  property bool reorderHandlePressed: false
 
   width: parent ? parent.width : implicitWidth
   height: header ? (compact ? 24 : 30) : rowHeight
@@ -63,8 +71,13 @@ LacunaRect {
   border.width: !header && designTokens.omarchy && (hovered || primary) ? designTokens.borderWidth : 0
   border.color: Qt.rgba(foreground.r, foreground.g, foreground.b, hovered ? 0.18 : 0.10)
   clip: true
+  opacity: reorderActive ? 0.76 : 1
 
   Behavior on contentLeftMargin {
+    LacunaAnim { motion: "fast" }
+  }
+
+  Behavior on opacity {
     LacunaAnim { motion: "fast" }
   }
 
@@ -205,18 +218,64 @@ LacunaRect {
     id: trailing
 
     z: 2
-    visible: !root.header && (root.hasChildren || root.switchVisible || root.optionControl || root.badgeVisible || root.trailingActionVisible)
+    visible: !root.header && (root.hasChildren || root.switchVisible || root.optionControl || root.badgeVisible || root.trailingActionVisible || root.reorderHandleVisible)
     anchors.right: parent.right
     anchors.rightMargin: 8
     anchors.verticalCenter: parent.verticalCenter
-    width: root.optionControl ? segmentControl.width : root.switchVisible ? (root.compact ? 32 : 36) : root.trailingActionVisible ? root.trailingActionWidth + root.trailingTooltipWidth + (root.trailingTooltipVisible ? 6 : 0) : root.badgeVisible ? root.badgeWidth + (root.hasChildren ? 18 : 0) : 12
+    width: root.optionControl ? segmentControl.width : root.switchVisible ? (root.compact ? 32 : 36) : root.trailingActionVisible ? root.trailingActionWidth + root.trailingTooltipWidth + (root.trailingTooltipVisible ? 6 : 0) + root.reorderHandleWidth + (root.reorderHandleVisible ? 5 : 0) : root.badgeVisible ? root.badgeWidth + (root.hasChildren ? 18 : 0) + root.reorderHandleWidth + (root.reorderHandleVisible ? 5 : 0) : root.hasChildren ? 12 + root.reorderHandleWidth + (root.reorderHandleVisible ? 5 : 0) : root.reorderHandleWidth
     height: root.rowHeight
+
+    LacunaRect {
+      id: reorderHandleButton
+
+      visible: root.reorderHandleVisible
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      width: root.reorderHandleWidth
+      height: width
+      radius: root.designTokens.material ? height / 2 : root.designTokens.controlRadius
+      color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, reorderHandleArea.containsMouse || root.reorderHandlePressed ? 0.16 : 0.07)
+
+      LacunaTablerIcon {
+        anchors.centerIn: parent
+        name: "grip-vertical"
+        color: reorderHandleArea.containsMouse || root.reorderHandlePressed ? root.foreground : root.muted
+        iconSize: root.compact ? 12 : 13
+      }
+
+      MouseArea {
+        id: reorderHandleArea
+
+        anchors.fill: parent
+        acceptedButtons: Qt.LeftButton
+        hoverEnabled: true
+        cursorShape: Qt.SizeVerCursor
+
+        function sceneY(mouse) {
+          return mapToItem(null, mouse.x, mouse.y).y
+        }
+
+        onPressed: function(mouse) {
+          root.reorderHandlePressed = true
+          root.reorderDragStarted(sceneY(mouse))
+        }
+        onPositionChanged: function(mouse) {
+          if (pressed) root.reorderDragged(sceneY(mouse))
+        }
+        onReleased: function(mouse) {
+          root.reorderHandlePressed = false
+          root.reorderDropped(sceneY(mouse))
+        }
+        onCanceled: root.reorderHandlePressed = false
+      }
+    }
 
     Item {
       id: childArrow
 
       visible: root.hasChildren && !root.switchVisible
-      anchors.right: parent.right
+      anchors.right: root.reorderHandleVisible ? reorderHandleButton.left : parent.right
+      anchors.rightMargin: root.reorderHandleVisible ? 5 : 0
       anchors.verticalCenter: parent.verticalCenter
       width: root.compact ? 12 : 14
       height: root.compact ? 12 : 14
@@ -234,7 +293,8 @@ LacunaRect {
       id: trailingActionButton
 
       visible: root.trailingActionVisible && !root.switchVisible && !root.optionControl
-      anchors.right: parent.right
+      anchors.right: root.reorderHandleVisible ? reorderHandleButton.left : parent.right
+      anchors.rightMargin: root.reorderHandleVisible ? 5 : 0
       anchors.verticalCenter: parent.verticalCenter
       width: root.trailingActionWidth
       height: width
@@ -295,11 +355,11 @@ LacunaRect {
     LacunaRect {
       visible: root.badgeVisible && !root.switchVisible && !root.optionControl
       anchors.right: root.hasChildren ? childArrow.left : parent.right
-      anchors.rightMargin: root.hasChildren ? 6 : 0
+      anchors.rightMargin: root.reorderHandleVisible && !root.hasChildren ? root.reorderHandleWidth + 5 : root.hasChildren ? 6 : 0
       anchors.verticalCenter: parent.verticalCenter
       width: root.badgeWidth
       height: root.compact ? 16 : 18
-      radius: height / 2
+      radius: root.designTokens.material ? height / 2 : root.designTokens.controlRadius
       color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, root.designTokens.material ? 0.20 : 0.13)
       border.width: root.designTokens.carbon ? 0 : 1
       border.color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, root.hovered ? 0.48 : 0.28)
@@ -395,6 +455,9 @@ LacunaRect {
     pressOpacity: root.designTokens.activeOpacity
     showFill: !root.designTokens.carbon
     onTriggered: root.triggered()
+    onSecondaryClicked: function(x, y) {
+      root.contextRequested(x, y)
+    }
   }
 
   DesignTokens {

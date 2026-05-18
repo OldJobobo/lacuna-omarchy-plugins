@@ -86,8 +86,10 @@ def main():
                 "Name": entry["Name"],
                 "GenericName": entry.get("GenericName", ""),
                 "Comment": entry.get("Comment", ""),
+                "Exec": entry.get("Exec", ""),
                 "Icon": entry.get("Icon", ""),
                 "Categories": entry.get("Categories", ""),
+                "Terminal": entry.get("Terminal", "").lower() == "true",
             }
             app["category"] = category_for(app)
             apps.append(app)

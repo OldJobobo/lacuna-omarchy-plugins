@@ -1,6 +1,5 @@
 import Quickshell
 import Quickshell.Io
-import Quickshell.Wayland
 import Quickshell.Widgets
 import QtQuick
 import QtQuick.Controls
@@ -20,7 +19,6 @@ Item {
   property string lacunaPath: manifest && manifest.__sourceDir ? manifest.__sourceDir : localPath(Qt.resolvedUrl(".."))
   property var sharedCompactState: null
   property var sharedSidebarState: null
-  property bool hostClosing: false
   readonly property var compactState: sharedCompactState || localCompactState
   readonly property var sidebarState: sharedSidebarState || localSidebarState
   property color foreground: menuTheme.foreground
@@ -49,17 +47,20 @@ Item {
   property int connectorOverlap: sidebarState.cornerPieces ? (compact ? 25 : 33) : 0
   property int bodyRightInset: sidebarState.cornerPieces ? joinRadius : 0
   property int surfaceRightInset: bodyRightInset
-  property int flyoutLeftX: panelWidth + surfaceRightInset
-  property int flyoutTopY: sidebarState.cornerPieces ? (sidebarState.exclusive ? 0 : barHeight) : (sidebarState.exclusive ? designTokens.topInset : barHeight + designTokens.topInset)
-  property int flyoutLaneWidth: (settingsPanelOpen ? settingsPanelWidth : 0) + (appPickerOpen ? appPickerWidth : 0)
+  property int settingsConnectorWidth: sidebarState.cornerPieces ? joinRadius : 0
+  property int attachedFlyoutLeftX: panelWidth + settingsConnectorWidth
+  property int flyoutLaneWidth: settingsPanelVisible ? settingsPanelWidth : appPickerVisible ? appPickerWidth : 0
   // In exclusive mode the compositor already places this window below the top
   // bar, so the bar edge is local y=0. In overlay mode the window starts at
   // screen top and the bar edge is the live bar height.
   property int barBottomY: sidebarState.exclusive ? 0 : barHeight
-  property bool panelVisible: menuState.open
-  property bool settingsPanelOpen: false
+  property bool panelVisible: panelController.panelVisible
+  readonly property bool settingsPanelOpen: panelController.isFlyoutOpen("settings")
+  readonly property bool settingsPanelVisible: panelController.isFlyoutVisible("settings")
   property int settingsPanelWidth: compact ? 360 : 400
-  property bool appPickerOpen: false
+  readonly property bool appPickerOpen: panelController.isFlyoutOpen("appPicker")
+  readonly property bool appPickerVisible: panelController.isFlyoutVisible("appPicker")
+  readonly property bool flyoutOpen: panelController.flyoutOpen
   property string appPickerMode: "customQuickLaunchApp"
   property string preferredAppPickerRole: ""
   property int appPickerWidth: compact ? 260 : 300
@@ -110,16 +111,39 @@ Item {
     return configBarHeight()
   }
 
+  function settingsFlyoutHeight() {
+    var availableHeight = menuWindow.height - barBottomY - designTokens.topInset - designTokens.bottomInset
+    return Math.max(260, Math.min(availableHeight, compact ? 430 : 470))
+  }
+
+  function settingsFlyoutY(panelHeight) {
+    var topLimit = barBottomY + designTokens.topInset
+    var lift = compact ? 72 : 112
+    return Math.max(topLimit, menuWindow.height - panelHeight - designTokens.bottomInset - lift)
+  }
+
+  function appPickerFlyoutY() {
+    var topLimit = barBottomY + designTokens.topInset
+    var panelHeight = root.compact ? 430 : 520
+    var preferredY = topLimit + (compact ? 38 : 52)
+    var maxY = Math.max(topLimit, menuWindow.height - panelHeight - designTokens.bottomInset)
+    return Math.min(preferredY, maxY)
+  }
+
+  function appPickerHeightFor(y) {
+    return Math.min(menuWindow.height - y - designTokens.bottomInset, root.compact ? 430 : 520)
+  }
+
   function open(payloadJson) {
-    hostClosing = false
-    menuState.show()
+    panelController.openMenu()
   }
 
   function close() {
-    hostClosing = true
-    menuState.close()
-    panelVisible = false
-    hostClosing = false
+    panelController.closeMenu()
+  }
+
+  function closeFlyouts() {
+    panelController.closeActiveFlyout()
   }
 
   function viewToneAccent() {
@@ -151,6 +175,43 @@ Item {
     lacunaSettings.save(next)
   }
 
+  function moveCustomQuickLaunchApp(id, targetIndex) {
+    var appId = String(id || "")
+    if (appId === "") return
+
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    var ids = next.customQuickLaunchApps.slice()
+    var from = ids.indexOf(appId)
+    if (from < 0) return
+
+    var target = Math.max(0, Math.min(ids.length, Math.round(Number(targetIndex) || 0)))
+    ids.splice(from, 1)
+    if (target > from) target--
+    target = Math.max(0, Math.min(ids.length, target))
+    if (target === from) return
+
+    ids.splice(target, 0, appId)
+    next.customQuickLaunchApps = ids
+    lacunaSettings.save(next)
+  }
+
+  function renameCustomQuickLaunchApp(id, label) {
+    var appId = String(id || "")
+    if (appId === "" || !customQuickLaunchContains(appId)) return
+
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    var names = {}
+    var source = next.customQuickLaunchNames || {}
+    for (var key in source) names[key] = source[key]
+
+    var trimmed = String(label || "").trim().slice(0, 48)
+    if (trimmed === "") delete names[appId]
+    else names[appId] = trimmed
+
+    next.customQuickLaunchNames = names
+    lacunaSettings.save(next)
+  }
+
   function preferredAppValue(role) {
     var defaults = lacunaSettings.data && lacunaSettings.data.preferredApps ? lacunaSettings.data.preferredApps : {}
     var value = String(defaults[role] || "").trim()
@@ -163,7 +224,7 @@ Item {
     var next = lacunaSettings.normalize(lacunaSettings.data)
     next.preferredApps[role] = String(id || "system").trim() || "system"
     lacunaSettings.save(next)
-    appPickerOpen = false
+    panelController.closeFlyout("appPicker")
   }
 
   function openCustomQuickLaunchPicker() {
@@ -172,8 +233,8 @@ Item {
     searchInput.text = ""
     appPickerMode = "customQuickLaunchApp"
     preferredAppPickerRole = ""
-    appPickerOpen = true
-    if (sidebarState.collapsed && !settingsPanelOpen) sidebarState.expand()
+    panelController.openFlyout("appPicker")
+    if (sidebarState.collapsed) sidebarState.expand()
     Qt.callLater(function() {
       searchInput.forceActiveFocus()
     })
@@ -185,17 +246,17 @@ Item {
     searchInput.text = ""
     appPickerMode = "preferredApp"
     preferredAppPickerRole = role
-    appPickerOpen = true
-    if (sidebarState.collapsed && !settingsPanelOpen) sidebarState.expand()
+    panelController.openFlyout("appPicker")
+    if (sidebarState.collapsed) sidebarState.expand()
     Qt.callLater(function() {
       searchInput.forceActiveFocus()
     })
   }
 
   function toggleSettingsPanel() {
-    settingsPanelOpen = !settingsPanelOpen
+    panelController.toggleFlyout("settings")
     if (settingsPanelOpen) {
-      if (!menuState.open) menuState.show()
+      if (!menuState.open) panelController.openMenu()
       Qt.callLater(function() {
         settingsPanel.forceActiveFocus()
       })
@@ -467,20 +528,20 @@ Item {
     }
 
     if (entry.action === "open-screenrecord-menu") {
-      menuState.close()
+      panelController.closeMenu()
       commands.run("omarchy-capture-screenrecording --stop-recording || omarchy-shell-ipc menu summon trigger.capture.screenrecord")
       return
     }
 
     if (entry.view) {
       if (sidebarState.collapsed) sidebarState.expand()
-      appPickerOpen = false
+      panelController.closeActiveFlyout()
       menuState.push(entry.view)
       return
     }
 
     if (entry.command) {
-      appPickerOpen = false
+      panelController.closeActiveFlyout()
       commands.run(entry.command)
     }
   }
@@ -562,54 +623,37 @@ Item {
     desktopClockUse12Hour: root.desktopClockUse12Hour
     appCatalog: appCatalog
     customQuickLaunchApps: lacunaSettings.data && lacunaSettings.data.customQuickLaunchApps ? lacunaSettings.data.customQuickLaunchApps : []
+    customQuickLaunchNames: lacunaSettings.data && lacunaSettings.data.customQuickLaunchNames ? lacunaSettings.data.customQuickLaunchNames : ({})
     preferredApps: lacunaSettings.data && lacunaSettings.data.preferredApps ? lacunaSettings.data.preferredApps : ({})
   }
 
-  Connections {
-    target: root.menuState
-    function onOpenChanged() {
-      if (root.menuState.open) {
-        root.panelVisible = true
-      } else {
-        root.appPickerOpen = false
-        root.settingsPanelOpen = false
-        hideTimer.restart()
-        if (!root.hostClosing && root.shell && root.shell.hide) {
-          root.shell.hide(root.pluginId)
-        }
-      }
+  PanelController {
+    id: panelController
+    menuState: root.menuState
+    onHostHideRequested: {
+      if (root.shell && root.shell.hide) root.shell.hide(root.pluginId)
     }
-  }
-
-  Timer {
-    id: hideTimer
-    interval: 190
-    repeat: false
-    onTriggered: if (!root.menuState.open) root.panelVisible = false
   }
 
   CommandRunner {
     id: commands
   }
 
-  PanelWindow {
+  LacunaPanelWindow {
     id: menuWindow
 
-    visible: root.panelVisible
-    screen: root.sidebarScreen
-    color: "transparent"
-    implicitWidth: root.panelWidth + root.surfaceRightInset + root.flyoutLaneWidth
-    exclusiveZone: sidebarState.exclusive && root.menuState.open ? root.panelWidth : 0
-    exclusionMode: sidebarState.exclusive ? ExclusionMode.Normal : ExclusionMode.Ignore
-    WlrLayershell.namespace: "lacuna-menu"
-    WlrLayershell.layer: sidebarState.exclusive ? WlrLayer.Top : WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: root.appPickerOpen || root.settingsPanelOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-
-    anchors {
-      top: true
-      bottom: true
-      left: true
-    }
+    targetScreen: root.sidebarScreen
+    menuOpen: root.menuState.open
+    panelVisible: root.panelVisible
+    flyoutOpen: root.flyoutOpen
+    exclusive: sidebarState.exclusive
+    panelWidth: root.panelWidth
+    surfaceRightInset: root.surfaceRightInset
+    flyoutLaneWidth: root.flyoutLaneWidth
+    sidebarSurfaceX: surface.surfaceX
+    activeFlyoutItem: root.settingsPanelVisible ? settingsFlyout : root.appPickerVisible ? appPicker : null
+    activeConnectorItem: root.settingsPanelVisible ? settingsConnector : root.appPickerVisible ? appPickerConnector : null
+    onFocusGrabCleared: root.closeFlyouts()
 
     MenuSurface {
       id: surface
@@ -654,6 +698,12 @@ Item {
         onActivated: function(entry) {
           root.activate(entry)
         }
+        onQuickLaunchMoveRequested: function(appId, targetIndex) {
+          root.moveCustomQuickLaunchApp(appId, targetIndex)
+        }
+        onQuickLaunchRenameRequested: function(appId, label) {
+          root.renameCustomQuickLaunchApp(appId, label)
+        }
         onSettingsRequested: root.toggleSettingsPanel()
         onCollapseRequested: sidebarState.toggleCollapsed()
       }
@@ -690,37 +740,70 @@ Item {
       }
     }
 
-    SettingsWindow {
-      id: settingsPanel
+    LacunaAttachedFlyout {
+      id: settingsFlyout
 
-      visible: root.menuState.open && root.settingsPanelOpen
-      enabled: root.settingsPanelOpen
-      opacity: root.settingsPanelOpen ? 1 : 0
-      x: root.flyoutLeftX
-      y: root.flyoutTopY
-      width: root.settingsPanelWidth
-      height: Math.min(menuWindow.height - y - designTokens.bottomInset, root.compact ? 520 : 620)
+      readonly property int targetHeight: root.settingsFlyoutHeight()
+
       open: root.settingsPanelOpen
-      compact: root.compact
-      designTokens: designTokens
-      registry: registry
-      version: root.version
-      themeTitle: menuTheme.themeTitle
+      openX: root.attachedFlyoutLeftX
+      openY: root.settingsFlyoutY(targetHeight)
+      panelWidth: root.settingsPanelWidth
+      panelHeight: targetHeight
+      panelRadius: Math.max(designTokens.radius, root.compact ? 10 : 14)
+      panelColor: root.panelColor
       foreground: root.foreground
-      background: root.background
-      accent: root.accent
-      shellAccent: root.shellAccent
-      sessionAccent: root.sessionAccent
-      dangerAccent: root.dangerAccent
-      navAccent: root.navAccent
-      muted: root.muted
-      onActivated: function(entry) {
-        root.activate(entry)
+      designTokens: designTokens
+
+      SettingsWindow {
+        id: settingsPanel
+
+        anchors.fill: parent
+        open: root.settingsPanelOpen
+        compact: root.compact
+        drawBackground: false
+        designTokens: designTokens
+        registry: registry
+        version: root.version
+        themeTitle: menuTheme.themeTitle
+        foreground: root.foreground
+        background: root.background
+        accent: root.accent
+        shellAccent: root.shellAccent
+        sessionAccent: root.sessionAccent
+        dangerAccent: root.dangerAccent
+        navAccent: root.navAccent
+        muted: root.muted
+        onActivated: function(entry) {
+          root.activate(entry)
+        }
+        onCloseRequested: panelController.closeFlyout("settings")
       }
-      onCloseRequested: root.settingsPanelOpen = false
     }
 
-    LacunaRect {
+    LacunaPanelConnector {
+      id: settingsConnector
+
+      open: root.menuState.open && root.settingsPanelOpen && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      x: root.panelWidth
+      y: settingsFlyout.y - root.settingsConnectorWidth
+      connectorWidth: root.settingsConnectorWidth
+      contentHeight: settingsFlyout.height
+      panelColor: root.panelColor
+    }
+
+    LacunaPanelConnector {
+      id: appPickerConnector
+
+      open: root.menuState.open && root.appPickerOpen && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      x: root.panelWidth
+      y: appPicker.y - root.settingsConnectorWidth
+      connectorWidth: root.settingsConnectorWidth
+      contentHeight: appPicker.height
+      panelColor: root.panelColor
+    }
+
+    LacunaAttachedFlyout {
       id: appPicker
 
       property string query: ""
@@ -740,22 +823,15 @@ Item {
         return list
       }
 
-      visible: root.menuState.open && root.appPickerOpen
-      enabled: root.appPickerOpen
-      opacity: root.appPickerOpen ? 1 : 0
-      x: root.flyoutLeftX + (root.settingsPanelOpen ? root.settingsPanelWidth : 0)
-      y: root.flyoutTopY
-      width: root.appPickerWidth
-      height: Math.min(menuWindow.height - y - designTokens.bottomInset, root.compact ? 430 : 520)
-      radius: designTokens.material ? designTokens.radius : 0
-      color: root.panelColor
-      border.width: designTokens.borderWidth
-      border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.28)
-      clip: true
-
-      Behavior on opacity {
-        LacunaAnim { motion: "fast" }
-      }
+      open: root.menuState.open && root.appPickerOpen
+      openX: root.attachedFlyoutLeftX
+      openY: root.appPickerFlyoutY()
+      panelWidth: root.appPickerWidth
+      panelHeight: root.appPickerHeightFor(openY)
+      panelRadius: Math.max(designTokens.radius, root.compact ? 10 : 14)
+      panelColor: root.panelColor
+      foreground: root.foreground
+      designTokens: designTokens
 
       Column {
         anchors.fill: parent
@@ -790,7 +866,7 @@ Item {
             hoverOpacity: designTokens.hoverOpacity
             pressOpacity: designTokens.activeOpacity
             iconSize: root.compact ? 13 : 15
-            onTriggered: root.appPickerOpen = false
+            onTriggered: panelController.closeFlyout("appPicker")
           }
         }
 
@@ -924,7 +1000,7 @@ Item {
             }
 
             Repeater {
-              model: root.appPickerOpen ? appPicker.filteredApps() : []
+              model: root.appPickerVisible ? appPicker.filteredApps() : []
 
               LacunaRect {
                 required property var modelData

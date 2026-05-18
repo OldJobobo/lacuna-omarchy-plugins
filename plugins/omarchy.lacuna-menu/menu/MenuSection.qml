@@ -16,6 +16,7 @@ Item {
   property int count: 0
   property string fontFamily: "JetBrains Mono"
   property bool compact: false
+  property var designTokens: null
   property real hoverOpacity: 0.06
   property real pressOpacity: 0.11
 
@@ -66,7 +67,7 @@ Item {
     anchors.verticalCenter: label.verticalCenter
     width: Math.max(root.compact ? 18 : 20, countText.implicitWidth + 10)
     height: root.compact ? 14 : 16
-    radius: height / 2
+    radius: root.designTokens && root.designTokens.material ? height / 2 : (root.designTokens ? root.designTokens.controlRadius : 0)
     color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, root.collapsed ? 0.16 : 0.10)
     border.width: 1
     border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, stateLayer.containsMouse ? 0.38 : 0.24)

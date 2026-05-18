@@ -18,6 +18,7 @@ Item {
       colorProfile: "semantic",
       compact: false,
       customQuickLaunchApps: [],
+      customQuickLaunchNames: {},
       preferredApps: {
         files: "system",
         editor: "system",
@@ -40,6 +41,7 @@ Item {
       next.colorProfile = String(value.colorProfile || "").toLowerCase() === "colorful" ? "colorful" : "semantic"
       next.compact = value.compact === true
       next.customQuickLaunchApps = normalizeCustomQuickLaunchApps(value.customQuickLaunchApps || value.quickLaunch)
+      next.customQuickLaunchNames = normalizeCustomQuickLaunchNames(value.customQuickLaunchNames || value.quickLaunchNames, next.customQuickLaunchApps)
       next.preferredApps = normalizePreferredApps(value.preferredApps || value.defaultLaunchers || value.appDefaults)
       if (value.sidebar && typeof value.sidebar === "object") {
         next.sidebar.collapsed = value.sidebar.collapsed === true
@@ -61,6 +63,19 @@ Item {
     }
 
     return list.slice(0, 12)
+  }
+
+  function normalizeCustomQuickLaunchNames(value, ids) {
+    var names = {}
+    if (!value || typeof value !== "object") return names
+
+    for (var i = 0; i < ids.length; i++) {
+      var id = String(ids[i] || "")
+      var name = String(value[id] || "").trim()
+      if (id !== "" && name !== "") names[id] = name.slice(0, 48)
+    }
+
+    return names
   }
 
   function normalizePreferredApps(value) {

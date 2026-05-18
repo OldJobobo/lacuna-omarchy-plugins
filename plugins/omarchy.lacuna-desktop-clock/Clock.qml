@@ -27,7 +27,7 @@ Item {
   readonly property real clockOffsetY: numberSetting("offsetY", 0)
   readonly property real clockScale: Math.max(0.5, Math.min(2, numberSetting("scale", 1)))
   readonly property bool use12Hour: boolSetting("use12Hour", false)
-  readonly property string timeText: Qt.formatDateTime(now, use12Hour ? "h:mm" : "HH:mm")
+  readonly property string timeText: use12Hour ? format12Hour(now) : Qt.formatDateTime(now, "HH:mm")
   readonly property string secondsText: Qt.formatDateTime(now, "ss")
   readonly property string meridiemText: Qt.formatDateTime(now, "AP")
   readonly property string dateText: Qt.formatDateTime(now, "dddd, MMMM d")
@@ -40,6 +40,12 @@ Item {
 
   function withAlpha(value, alpha) {
     return Qt.rgba(value.r, value.g, value.b, alpha)
+  }
+
+  function format12Hour(value) {
+    var hour = value.getHours() % 12
+    if (hour === 0) hour = 12
+    return hour + Qt.formatDateTime(value, ":mm")
   }
 
   function compositeOnBackground(foregroundColor, backgroundColor) {

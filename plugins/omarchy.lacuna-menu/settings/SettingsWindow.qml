@@ -1,9 +1,10 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Shapes
 import "../components"
 import "../services"
 
-LacunaRect {
+Item {
   id: root
 
   signal activated(var entry)
@@ -26,6 +27,9 @@ LacunaRect {
   property string bodyFontFamily: "JetBrains Mono"
   property string itemFontFamily: itemFont.name !== "" ? itemFont.name : "Tektur"
   property var designTokens: fallbackDesignTokens
+  property bool drawBackground: true
+  readonly property int panelRadius: Math.max(designTokens.radius, compact ? 10 : 14)
+  readonly property real curveKappa: 0.5522847498
 
   function sections() {
     return [
@@ -228,10 +232,6 @@ LacunaRect {
 
   width: 400
   height: 560
-  radius: designTokens.material ? designTokens.radius : 0
-  color: root.background
-  border.width: designTokens.borderWidth
-  border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.30)
   clip: true
   focus: open
   Keys.onEscapePressed: root.closeRequested()
@@ -244,6 +244,42 @@ LacunaRect {
     id: itemFont
 
     source: "../assets/fonts/Tektur-SemiBold.ttf"
+  }
+
+  Shape {
+    visible: root.drawBackground
+    anchors.fill: parent
+    asynchronous: true
+    antialiasing: true
+    preferredRendererType: Shape.CurveRenderer
+
+    ShapePath {
+      fillColor: root.background
+      strokeWidth: 0
+      startX: 0
+      startY: 0
+
+      PathLine { x: root.width - root.panelRadius; y: 0 }
+      PathCubic {
+        x: root.width
+        y: root.panelRadius
+        control1X: root.width - root.panelRadius * (1 - root.curveKappa)
+        control1Y: 0
+        control2X: root.width
+        control2Y: root.panelRadius * (1 - root.curveKappa)
+      }
+      PathLine { x: root.width; y: root.height - root.panelRadius }
+      PathCubic {
+        x: root.width - root.panelRadius
+        y: root.height
+        control1X: root.width
+        control1Y: root.height - root.panelRadius * (1 - root.curveKappa)
+        control2X: root.width - root.panelRadius * (1 - root.curveKappa)
+        control2Y: root.height
+      }
+      PathLine { x: 0; y: root.height }
+      PathLine { x: 0; y: 0 }
+    }
   }
 
   Item {
