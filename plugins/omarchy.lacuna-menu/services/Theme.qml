@@ -13,7 +13,7 @@ Item {
   property string themeName: ""
   property string themeTitle: formatTitle(themeName)
   property color foreground: shellColor("menu.text", color("foreground"))
-  property color background: shellColor("menu.background", color("background"))
+  property color background: color("background")
   property color accent: shellColor("menu.selected", color("accent"))
   property color voidColor: withAlpha(background, 0.18)
   property color border: withAlpha(foreground, 0.18)
