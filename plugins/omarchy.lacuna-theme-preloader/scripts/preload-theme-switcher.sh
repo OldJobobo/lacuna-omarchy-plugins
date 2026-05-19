@@ -8,6 +8,7 @@ CACHE_HOME=${XDG_CACHE_HOME:-"$HOME/.cache"}
 CACHE_PATH="$CACHE_HOME/omarchy/theme-selector"
 PREVIEW_DIR="$CACHE_PATH/previews"
 SIGNATURE_FILE="$CACHE_PATH/signature"
+FAST_SIGNATURE_FILE="$CACHE_PATH/fast-signature"
 STATUS_FILE="$CACHE_PATH/preloader-status.json"
 LOCK_DIR="$CACHE_PATH/preloader.lock"
 REASON="manual"
@@ -99,27 +100,45 @@ add_theme_preview() {
   ln -s "$preview" "$PREVIEW_DIR/$theme_name.$extension"
 }
 
-theme_signature=""
+fast_signature="v1"$'\n'
 theme_count=0
 
 for theme_dir in "$USER_THEMES_PATH" "$OMARCHY_THEMES_PATH"; do
   if [[ -d $theme_dir ]]; then
-    theme_signature+="$theme_dir:$(stat -Lc '%Y' "$theme_dir")"$'\n'
+    fast_signature+="$theme_dir:$(stat -Lc '%Y' "$theme_dir")"$'\n'
 
     while IFS= read -r -d '' theme_path; do
-      preview=$(find_preview "$theme_path")
-      theme_signature+="$theme_path:$(stat -Lc '%Y' "$theme_path")"$'\n'
+      fast_signature+="$theme_path:$(stat -Lc '%Y' "$theme_path")"$'\n'
       theme_count=$((theme_count + 1))
-
-      if [[ -n $preview && -e $preview ]]; then
-        theme_signature+="$preview:$(stat -Lc '%s:%Y' "$preview")"$'\n'
-      fi
     done < <(find -L "$theme_dir" -mindepth 1 -maxdepth 1 \( -type d -o -type l \) -print0 2>/dev/null | sort -z)
   fi
 done
 
+cache_stale=false
+if [[ ! -f $FAST_SIGNATURE_FILE ]] || ! cmp -s "$FAST_SIGNATURE_FILE" <(printf '%s' "$fast_signature"); then
+  cache_stale=true
+fi
+
+theme_signature=""
+if [[ $cache_stale == true ]]; then
+  for theme_dir in "$USER_THEMES_PATH" "$OMARCHY_THEMES_PATH"; do
+    if [[ -d $theme_dir ]]; then
+      theme_signature+="$theme_dir:$(stat -Lc '%Y' "$theme_dir")"$'\n'
+
+      while IFS= read -r -d '' theme_path; do
+        preview=$(find_preview "$theme_path")
+        theme_signature+="$theme_path:$(stat -Lc '%Y' "$theme_path")"$'\n'
+
+        if [[ -n $preview && -e $preview ]]; then
+          theme_signature+="$preview:$(stat -Lc '%s:%Y' "$preview")"$'\n'
+        fi
+      done < <(find -L "$theme_dir" -mindepth 1 -maxdepth 1 \( -type d -o -type l \) -print0 2>/dev/null | sort -z)
+    fi
+  done
+fi
+
 changed=false
-if [[ ! -f $SIGNATURE_FILE ]] || ! cmp -s "$SIGNATURE_FILE" <(printf '%s' "$theme_signature"); then
+if [[ $cache_stale == true ]]; then
   changed=true
   rm -rf "$PREVIEW_DIR"
   mkdir -p "$PREVIEW_DIR"
@@ -146,6 +165,7 @@ if [[ ! -f $SIGNATURE_FILE ]] || ! cmp -s "$SIGNATURE_FILE" <(printf '%s' "$them
   fi
 
   printf '%s' "$theme_signature" >"$SIGNATURE_FILE"
+  printf '%s' "$fast_signature" >"$FAST_SIGNATURE_FILE"
 fi
 
 menu_images="$OMARCHY_PATH/bin/omarchy-menu-images"
