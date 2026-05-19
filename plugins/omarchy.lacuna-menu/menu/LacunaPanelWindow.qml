@@ -18,28 +18,20 @@ PanelWindow {
   property int panelWidth: 0
   property int surfaceRightInset: 0
   property int flyoutLaneWidth: 0
-  property real sidebarSurfaceX: 0
-  property Item activeFlyoutItem: null
-  property Item activeConnectorItem: null
+  property real sidebarMaskX: 0
+  property real sidebarMaskY: 0
+  property real sidebarMaskWidth: panelWidth + surfaceRightInset
+  property real sidebarMaskHeight: height
+  property real connectorMaskX: 0
+  property real connectorMaskY: 0
+  property real connectorMaskWidth: 0
+  property real connectorMaskHeight: 0
+  property real flyoutMaskX: 0
+  property real flyoutMaskY: 0
+  property real flyoutMaskWidth: 0
+  property real flyoutMaskHeight: 0
+  property bool flyoutInteractive: false
   property string layerNamespace: "lacuna-menu"
-
-  function itemX(item) {
-    return item ? Math.round(item.x) : 0
-  }
-
-  function itemY(item) {
-    return item ? Math.round(item.y) : 0
-  }
-
-  function itemWidth(item) {
-    if (!item || !item.visible) return 0
-    return Math.round(item.width)
-  }
-
-  function itemHeight(item) {
-    if (!item || !item.visible) return 0
-    return Math.round(item.height)
-  }
 
   visible: panelVisible
   screen: targetScreen
@@ -49,33 +41,33 @@ PanelWindow {
   exclusionMode: exclusive ? ExclusionMode.Normal : ExclusionMode.Ignore
   WlrLayershell.namespace: layerNamespace
   WlrLayershell.layer: exclusive ? WlrLayer.Top : WlrLayer.Overlay
-  WlrLayershell.keyboardFocus: flyoutOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+  WlrLayershell.keyboardFocus: flyoutInteractive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
   mask: Region {
     Region {
-      x: Math.round(root.sidebarSurfaceX)
-      y: 0
-      width: root.panelWidth + root.surfaceRightInset
-      height: root.height
+      x: Math.round(root.sidebarMaskX)
+      y: Math.round(root.sidebarMaskY)
+      width: Math.round(Math.max(0, root.sidebarMaskWidth))
+      height: Math.round(Math.max(0, root.sidebarMaskHeight))
     }
 
     Region {
-      x: root.itemX(root.activeConnectorItem)
-      y: root.itemY(root.activeConnectorItem)
-      width: root.itemWidth(root.activeConnectorItem)
-      height: root.itemHeight(root.activeConnectorItem)
+      x: Math.round(root.connectorMaskX)
+      y: Math.round(root.connectorMaskY)
+      width: Math.round(Math.max(0, root.connectorMaskWidth))
+      height: Math.round(Math.max(0, root.connectorMaskHeight))
     }
 
     Region {
-      x: root.itemX(root.activeFlyoutItem)
-      y: root.itemY(root.activeFlyoutItem)
-      width: root.itemWidth(root.activeFlyoutItem)
-      height: root.itemHeight(root.activeFlyoutItem)
+      x: Math.round(root.flyoutMaskX)
+      y: Math.round(root.flyoutMaskY)
+      width: Math.round(Math.max(0, root.flyoutMaskWidth))
+      height: Math.round(Math.max(0, root.flyoutMaskHeight))
     }
   }
 
   HyprlandFocusGrab {
-    active: root.menuOpen && root.flyoutOpen
+    active: root.menuOpen && root.flyoutInteractive
     windows: [root]
     onCleared: root.focusGrabCleared()
   }

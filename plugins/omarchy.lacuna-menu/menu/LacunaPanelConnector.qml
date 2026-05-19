@@ -6,15 +6,20 @@ Item {
   id: root
 
   property bool open: false
+  property bool renderable: open
+  property real progress: open ? 1 : 0
   property int connectorWidth: 18
   property int contentHeight: 0
   property color panelColor: "#101315"
 
   readonly property real curveKappa: 0.5522847498
+  readonly property real clampedProgress: Math.max(0, Math.min(1, progress))
 
   width: connectorWidth
   height: contentHeight + connectorWidth * 2
-  visible: open
+  visible: renderable && clampedProgress > 0.001 && connectorWidth > 0 && contentHeight > 0
+  opacity: clampedProgress
+  enabled: false
 
   LacunaRect {
     x: 0

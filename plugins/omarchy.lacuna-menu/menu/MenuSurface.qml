@@ -24,7 +24,7 @@ Item {
   property color panelColor: "#101315"
   property color foreground: "#d8dee9"
   property var designTokens: fallbackDesignTokens
-  property real openProgress: open ? 1 : 0
+  property real progress: open ? 1 : 0
 
   readonly property int bodyTop: barBottomY
   readonly property int joinTop: bodyTop - 1
@@ -32,17 +32,13 @@ Item {
 
   width: panelWidth + bodyRightInset
 
-  Behavior on openProgress {
-    LacunaAnim {}
-  }
-
   LacunaRect {
     id: surface
 
     anchors.top: parent.top
     anchors.bottom: parent.bottom
     width: root.panelWidth + root.bodyRightInset
-    x: -surface.width * (1 - root.openProgress)
+    x: -surface.width * (1 - Math.max(0, Math.min(1, root.progress)))
 
     Shape {
       id: surfaceShape

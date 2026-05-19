@@ -61,6 +61,7 @@ Item {
   readonly property bool appPickerOpen: panelController.isFlyoutOpen("appPicker")
   readonly property bool appPickerVisible: panelController.isFlyoutVisible("appPicker")
   readonly property bool flyoutOpen: panelController.flyoutOpen
+  readonly property bool flyoutInteractive: panelController.flyoutInteractive
   property string appPickerMode: "customQuickLaunchApp"
   property string preferredAppPickerRole: ""
   property int appPickerWidth: compact ? 260 : 300
@@ -646,13 +647,23 @@ Item {
     menuOpen: root.menuState.open
     panelVisible: root.panelVisible
     flyoutOpen: root.flyoutOpen
+    flyoutInteractive: root.flyoutInteractive
     exclusive: sidebarState.exclusive
     panelWidth: root.panelWidth
     surfaceRightInset: root.surfaceRightInset
     flyoutLaneWidth: root.flyoutLaneWidth
-    sidebarSurfaceX: surface.surfaceX
-    activeFlyoutItem: root.settingsPanelVisible ? settingsFlyout : root.appPickerVisible ? appPicker : null
-    activeConnectorItem: root.settingsPanelVisible ? settingsConnector : root.appPickerVisible ? appPickerConnector : null
+    sidebarMaskX: Math.max(0, surface.surfaceX)
+    sidebarMaskY: 0
+    sidebarMaskWidth: Math.max(0, root.panelWidth + root.surfaceRightInset + Math.min(0, surface.surfaceX))
+    sidebarMaskHeight: height
+    connectorMaskX: root.settingsPanelVisible ? settingsConnector.x : root.appPickerVisible ? appPickerConnector.x : 0
+    connectorMaskY: root.settingsPanelVisible ? settingsConnector.y : root.appPickerVisible ? appPickerConnector.y : 0
+    connectorMaskWidth: root.settingsPanelVisible && settingsConnector.visible ? settingsConnector.width : root.appPickerVisible && appPickerConnector.visible ? appPickerConnector.width : 0
+    connectorMaskHeight: root.settingsPanelVisible && settingsConnector.visible ? settingsConnector.height : root.appPickerVisible && appPickerConnector.visible ? appPickerConnector.height : 0
+    flyoutMaskX: root.settingsPanelVisible ? settingsFlyout.bodyMaskX : root.appPickerVisible ? appPicker.bodyMaskX : 0
+    flyoutMaskY: root.settingsPanelVisible ? settingsFlyout.bodyMaskY : root.appPickerVisible ? appPicker.bodyMaskY : 0
+    flyoutMaskWidth: root.settingsPanelVisible ? settingsFlyout.bodyMaskWidth : root.appPickerVisible ? appPicker.bodyMaskWidth : 0
+    flyoutMaskHeight: root.settingsPanelVisible ? settingsFlyout.bodyMaskHeight : root.appPickerVisible ? appPicker.bodyMaskHeight : 0
     onFocusGrabCleared: root.closeFlyouts()
 
     MenuSurface {
@@ -662,6 +673,7 @@ Item {
       anchors.bottom: parent.bottom
       panelWidth: root.panelWidth
       open: root.menuState.open
+      progress: panelController.menuProgress
       barHeight: root.barHeight
       barBottomY: root.barBottomY
       joinRadius: root.joinRadius
@@ -746,6 +758,9 @@ Item {
       readonly property int targetHeight: root.settingsFlyoutHeight()
 
       open: root.settingsPanelOpen
+      renderable: root.settingsPanelVisible
+      interactive: root.settingsPanelOpen && root.flyoutInteractive
+      progress: root.settingsPanelVisible ? panelController.flyoutProgress : 0
       openX: root.attachedFlyoutLeftX
       openY: root.settingsFlyoutY(targetHeight)
       panelWidth: root.settingsPanelWidth
@@ -784,7 +799,9 @@ Item {
     LacunaPanelConnector {
       id: settingsConnector
 
-      open: root.menuState.open && root.settingsPanelOpen && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      open: root.settingsPanelOpen
+      renderable: root.settingsPanelVisible && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      progress: Math.min(panelController.menuProgress, panelController.flyoutProgress)
       x: root.panelWidth
       y: settingsFlyout.y - root.settingsConnectorWidth
       connectorWidth: root.settingsConnectorWidth
@@ -795,7 +812,9 @@ Item {
     LacunaPanelConnector {
       id: appPickerConnector
 
-      open: root.menuState.open && root.appPickerOpen && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      open: root.appPickerOpen
+      renderable: root.appPickerVisible && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      progress: Math.min(panelController.menuProgress, panelController.flyoutProgress)
       x: root.panelWidth
       y: appPicker.y - root.settingsConnectorWidth
       connectorWidth: root.settingsConnectorWidth
@@ -823,7 +842,10 @@ Item {
         return list
       }
 
-      open: root.menuState.open && root.appPickerOpen
+      open: root.appPickerOpen
+      renderable: root.appPickerVisible
+      interactive: root.appPickerOpen && root.flyoutInteractive
+      progress: root.appPickerVisible ? panelController.flyoutProgress : 0
       openX: root.attachedFlyoutLeftX
       openY: root.appPickerFlyoutY()
       panelWidth: root.appPickerWidth

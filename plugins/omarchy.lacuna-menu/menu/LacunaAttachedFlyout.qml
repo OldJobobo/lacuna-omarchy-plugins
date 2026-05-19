@@ -9,6 +9,9 @@ Item {
   default property alias content: contentHost.data
 
   property bool open: false
+  property bool renderable: open
+  property bool interactive: open
+  property real progress: open ? 1 : 0
   property real openX: 0
   property real openY: 0
   property int panelWidth: 300
@@ -20,9 +23,14 @@ Item {
 
   readonly property real curveKappa: 0.5522847498
   readonly property real closedOffset: panelWidth
+  readonly property real clampedProgress: Math.max(0, Math.min(1, progress))
+  readonly property real bodyMaskX: x + Math.max(0, panelBody.x)
+  readonly property real bodyMaskY: y
+  readonly property real bodyMaskWidth: Math.max(0, Math.min(width, panelWidth + panelBody.x))
+  readonly property real bodyMaskHeight: height
 
-  visible: open || panelBody.x > -closedOffset + 0.5
-  enabled: open
+  visible: renderable && clampedProgress > 0.001
+  enabled: interactive
   x: openX
   y: openY
   width: panelWidth
@@ -32,14 +40,10 @@ Item {
   Item {
     id: panelBody
 
-    x: root.open ? 0 : -root.closedOffset
+    x: -root.closedOffset * (1 - root.clampedProgress)
     y: 0
     width: root.panelWidth
     height: root.panelHeight
-
-    Behavior on x {
-      LacunaAnim { motion: "normal" }
-    }
 
     Shape {
       anchors.fill: parent
