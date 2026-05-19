@@ -24,8 +24,26 @@ Item {
     return value === undefined || value === null ? fallback : value
   }
 
+  function shellQuote(value) {
+    if (bar && bar.shellQuote) return bar.shellQuote(value)
+    return "'" + String(value).replace(/'/g, "'\\''") + "'"
+  }
+
+  function omarchyPath() {
+    if (bar && bar.omarchyPath) return bar.omarchyPath
+    return Quickshell.env("OMARCHY_PATH") || (Quickshell.env("HOME") + "/.local/share/omarchy")
+  }
+
+  function shellIpcCommand(target, method, args) {
+    var path = omarchyPath()
+    var command = "OMARCHY_PATH=" + shellQuote(path) + " " + shellQuote(path + "/bin/omarchy-shell")
+      + " " + shellQuote(target) + " " + shellQuote(method)
+    for (var i = 0; i < args.length; i++) command += " " + shellQuote(args[i])
+    return command
+  }
+
   function openMenu() {
-    if (bar) bar.run("omarchy-shell-ipc shell toggle omarchy.lacuna-menu '{}'")
+    if (bar) bar.run(shellIpcCommand("shell", "toggle", ["omarchy.lacuna-menu", "{}"]))
   }
 
   ColorProfile {

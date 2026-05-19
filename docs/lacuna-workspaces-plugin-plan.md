@@ -109,7 +109,7 @@ The plugin should appear in Omarchy Settings under the `Lacuna` category.
 Manual validation target:
 
 1. Symlink the plugin into `~/.config/omarchy/plugins/`.
-2. Run `omarchy-shell-ipc shell rescanPlugins`.
+2. Run `omarchy-shell shell rescanPlugins`.
 3. Place the widget in `~/.config/omarchy/shell.json`.
 4. Confirm workspace focus, occupied, empty, urgent, hover, and restart
    behavior inside Omarchy shell.

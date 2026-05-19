@@ -157,9 +157,9 @@ qmllint plugins/omarchy.lacuna-menu/services/PanelController.qml plugins/omarchy
 ```
 
 ```sh
-omarchy-shell-ipc shell rescanPlugins
+omarchy-shell shell rescanPlugins
 ```
 
 ```sh
-omarchy-shell-ipc shell summon omarchy.lacuna-menu "{}"
+omarchy-shell shell summon omarchy.lacuna-menu "{}"
 ```

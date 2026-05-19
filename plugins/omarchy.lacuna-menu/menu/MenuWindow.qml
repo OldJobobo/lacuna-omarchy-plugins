@@ -88,6 +88,18 @@ Item {
     return decodeURIComponent(value)
   }
 
+  function resolvedOmarchyPath() {
+    return root.omarchyPath || Quickshell.env("OMARCHY_PATH") || (Quickshell.env("HOME") + "/.local/share/omarchy")
+  }
+
+  function shellIpcCommand(target, method, args) {
+    var path = resolvedOmarchyPath()
+    var command = "OMARCHY_PATH=" + commands.quote(path) + " " + commands.quote(path + "/bin/omarchy-shell")
+      + " " + commands.quote(target) + " " + commands.quote(method)
+    for (var i = 0; i < args.length; i++) command += " " + commands.quote(args[i])
+    return command
+  }
+
   function positiveInt(value, fallback) {
     var parsed = Number(value)
     return isFinite(parsed) && parsed > 0 ? Math.round(parsed) : fallback
@@ -352,7 +364,7 @@ Item {
       return
     }
 
-    commands.run("omarchy-shell-ipc shell setPluginEnabled " + id + " " + (enabled ? "true" : "false"))
+    commands.run(shellIpcCommand("shell", "setPluginEnabled", [id, enabled ? "true" : "false"]))
     pluginStateRevision++
   }
 
@@ -530,7 +542,8 @@ Item {
 
     if (entry.action === "open-screenrecord-menu") {
       panelController.closeMenu()
-      commands.run("omarchy-capture-screenrecording --stop-recording || omarchy-shell-ipc menu summon trigger.capture.screenrecord")
+      commands.run("omarchy-capture-screenrecording --stop-recording || "
+        + shellIpcCommand("menu", "toggle", ["trigger.capture.screenrecord"]))
       return
     }
 

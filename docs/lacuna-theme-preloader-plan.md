@@ -73,9 +73,9 @@ The plugin may read:
 Expose:
 
 ```bash
-omarchy-shell-ipc lacuna-theme-preloader warm
-omarchy-shell-ipc lacuna-theme-preloader status
-omarchy-shell-ipc lacuna-theme-preloader ping
+omarchy-shell lacuna-theme-preloader warm
+omarchy-shell lacuna-theme-preloader status
+omarchy-shell lacuna-theme-preloader ping
 ```
 
 `warm` starts a preload if one is not already running. `status` returns a small JSON object describing whether the service is running and the last exit code.
@@ -88,9 +88,9 @@ Use:
 qmllint plugins/omarchy.lacuna-theme-preloader/Service.qml
 bash -n plugins/omarchy.lacuna-theme-preloader/scripts/preload-theme-switcher.sh
 plugins/omarchy.lacuna-theme-preloader/scripts/preload-theme-switcher.sh
-omarchy-shell-ipc shell rescanPlugins
+omarchy-shell shell rescanPlugins
 omarchy restart shell
-quickshell log --path ~/.local/share/omarchy/default/quickshell/omarchy-shell --tail 100 --newest
+quickshell log --path ~/.local/share/omarchy/shell --tail 100 --newest
 ```
 
 Success criteria:

@@ -17,8 +17,8 @@ There is no build system or automated test command yet. Use shell inspection whi
 
 - `rg --files`: list tracked source-like files quickly.
 - `find plugins -maxdepth 3 -print`: inspect plugin layout.
-- `omarchy-shell-ipc shell rescanPlugins`: ask Omarchy shell to reload installed plugins.
-- `omarchy-shell-ipc shell summon omarchy.lacuna-menu "{}"`: smoke-test the menu plugin once implemented.
+- `OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell rescanPlugins`: ask Omarchy shell to reload installed plugins.
+- `OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell summon omarchy.lacuna-menu "{}"`: smoke-test the menu plugin once implemented.
 
 For local testing, copy or symlink a plugin directory into `~/.config/omarchy/plugins/<plugin-id>/`, then rescan or restart Omarchy shell. No plugin should start a second Quickshell process.
 

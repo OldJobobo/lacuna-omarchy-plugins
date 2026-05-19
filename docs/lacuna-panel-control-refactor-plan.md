@@ -34,7 +34,7 @@ Refactor Lacuna's menu and attached flyout control so Omarchy/Quickshell behavio
 ## Manual Test Checklist
 
 - Run `qmllint` on changed QML files.
-- Reload plugins with `omarchy-shell-ipc shell rescanPlugins`.
+- Reload plugins with `omarchy-shell shell rescanPlugins`.
 - Summon and hide `omarchy.lacuna-menu`.
 - Open settings flyout, click outside it, and confirm the flyout slides closed while the sidebar remains open.
 - Open app picker, then settings, and confirm only one flyout is visible.

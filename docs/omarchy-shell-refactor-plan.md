@@ -26,7 +26,7 @@ treatment, or workflow that Omarchy does not already have.
 The future Omarchy shell lives under:
 
 ```text
-../omarchy/default/quickshell/omarchy-shell/
+../omarchy/shell/
 ```
 
 Important constraints from that implementation:
@@ -41,7 +41,7 @@ Important constraints from that implementation:
 8. Bar widgets receive injected `bar`, `moduleName`, and `settings`.
 9. Shared registries and services are owned by the host and injected into
    plugins.
-10. IPC goes through `omarchy-shell-ipc`, not ad hoc process launches.
+10. IPC goes through `omarchy-shell`, not ad hoc process launches.
 
 ## Current Omarchy Compatibility Notes
 
@@ -438,7 +438,7 @@ Install/test shape for user plugins:
 
 1. Copy or symlink each plugin directory from the new repo into
    `~/.config/omarchy/plugins/<plugin-id>/`.
-2. Run `omarchy-shell-ipc shell rescanPlugins` or restart the shell.
+2. Run `omarchy-shell shell rescanPlugins` or restart the shell.
 3. Enable the plugin through Omarchy Settings or by adding its id to
    `~/.config/omarchy/shell.json`.
 4. Keep bar-widget options in the manifest schema and inline `shell.json`
@@ -531,7 +531,7 @@ With plugin-safe equivalents:
 ```text
 manifest.__sourceDir
 omarchyPath
-omarchy-shell-ipc shell hide omarchy.lacuna-menu
+omarchy-shell shell hide omarchy.lacuna-menu
 omarchy restart shell
 ```
 
@@ -615,9 +615,9 @@ Validation:
 
 - `python3 -m json.tool plugins/omarchy.lacuna-menu/manifest.json`
 - `qmllint plugins/omarchy.lacuna-menu/Menu.qml plugins/omarchy.lacuna-menu/menu/*.qml plugins/omarchy.lacuna-menu/modules/*.qml plugins/omarchy.lacuna-menu/services/*.qml plugins/omarchy.lacuna-menu/components/*.qml`
-- `omarchy-shell-ipc shell rescanPlugins`
-- `omarchy-shell-ipc shell summon omarchy.lacuna-menu '{}'`
-- `omarchy-shell-ipc shell hide omarchy.lacuna-menu`
+- `omarchy-shell shell rescanPlugins`
+- `omarchy-shell shell summon omarchy.lacuna-menu '{}'`
+- `omarchy-shell shell hide omarchy.lacuna-menu`
 - `hyprctl layers` before and after hide to confirm the `lacuna-menu` layer is created and removed.
 
 Implemented notes:
@@ -632,16 +632,16 @@ Implemented notes:
 4. Add a `manifest.json` for `omarchy.lacuna-menu`.
 5. Install or link the plugin directory to
    `~/.config/omarchy/plugins/omarchy.lacuna-menu/`.
-6. Run `omarchy-shell-ipc shell rescanPlugins` or restart the shell.
+6. Run `omarchy-shell shell rescanPlugins` or restart the shell.
 7. Enable the plugin through Omarchy Settings or add
    `{ "id": "omarchy.lacuna-menu" }` to `plugins[]` in `shell.json`.
-8. Test through `omarchy-shell-ipc shell summon`; use standalone harnesses only
+8. Test through `omarchy-shell shell summon`; use standalone harnesses only
    for isolated local development outside the running Omarchy session.
 
 Success criteria:
 
-- `omarchy-shell-ipc shell summon omarchy.lacuna-menu "{}"` opens the sidebar.
-- `omarchy-shell-ipc shell hide omarchy.lacuna-menu` closes it.
+- `omarchy-shell shell summon omarchy.lacuna-menu "{}"` opens the sidebar.
+- `omarchy-shell shell hide omarchy.lacuna-menu` closes it.
 - Closing the sidebar from inside Lacuna also clears the host open state.
 - Sidebar view stack, rail mode, and corner pieces still work.
 
@@ -653,9 +653,9 @@ Validation:
 
 - `rg -n 'LACUNA_PATH|PWD|\.\./\.\.|import "/|import components|background-switcher|currentColor' plugins/omarchy.lacuna-menu plugins/*/assets/tabler docs/omarchy-shell-refactor-plan.md`
 - `qmllint plugins/omarchy.lacuna-menu/Menu.qml plugins/omarchy.lacuna-menu/menu/*.qml plugins/omarchy.lacuna-menu/modules/*.qml plugins/omarchy.lacuna-menu/services/*.qml plugins/omarchy.lacuna-menu/components/*.qml`
-- `omarchy-shell-ipc shell rescanPlugins`
-- `omarchy-shell-ipc shell summon omarchy.lacuna-menu '{}'`
-- `omarchy-shell-ipc shell hide omarchy.lacuna-menu`
+- `omarchy-shell shell rescanPlugins`
+- `omarchy-shell shell summon omarchy.lacuna-menu '{}'`
+- `omarchy-shell shell hide omarchy.lacuna-menu`
 - `hyprctl layers` before and after hide to confirm the `lacuna-menu` layer is created and removed.
 
 1. Move reusable Lacuna primitives into a plugin-local import path.
@@ -694,8 +694,8 @@ Validation:
 - `qmllint plugins/omarchy.lacuna-script-pill/Widget.qml plugins/omarchy.lacuna-compact-pill/Widget.qml plugins/omarchy.lacuna-system-stats/Widget.qml plugins/omarchy.lacuna-temperature/Widget.qml`
 - temperature sensor discovery command returns a readable millidegree value
 - `omarchy restart shell`
-- `omarchy-shell-ipc shell listPlugins`
-- `quickshell log --path /home/oldjobobo/.local/share/omarchy/default/quickshell/omarchy-shell --tail 250 --newest`
+- `omarchy-shell shell listPlugins`
+- `quickshell log --path /home/oldjobobo/.local/share/omarchy/shell --tail 250 --newest`
 
 After the menu and shared primitives are packaged, harden the first-pass
 topbar modules and decide whether any additional Lacuna bar features deserve

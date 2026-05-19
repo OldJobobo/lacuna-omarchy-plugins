@@ -167,7 +167,7 @@ Item {
 
   function omarchyShellPath() {
     var omarchyPath = Quickshell.env("OMARCHY_PATH") || ((Quickshell.env("HOME") || "") + "/.local/share/omarchy")
-    return omarchyPath + "/default/quickshell/omarchy-shell"
+    return omarchyPath + "/shell"
   }
 
   function switchThemeCommand() {

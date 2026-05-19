@@ -42,8 +42,8 @@ Enable panel, overlay, and menu plugins in `~/.config/omarchy/shell.json`,
 then reload:
 
 ```bash
-omarchy-shell-ipc shell rescanPlugins
-omarchy-shell-ipc shell setPluginEnabled omarchy.lacuna-desktop-clock true
+OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell rescanPlugins
+OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-desktop-clock true
 omarchy restart shell
 ```
 
@@ -64,8 +64,8 @@ Use `qmllint` for changed QML and validate manifests with
 `python3 -m json.tool`. Smoke test loaded plugins with:
 
 ```bash
-omarchy-shell-ipc shell listPlugins
-omarchy-shell-ipc shell toggle omarchy.lacuna-menu '{}'
+OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell listPlugins
+OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell toggle omarchy.lacuna-menu '{}'
 hyprctl layers
 ```
 
