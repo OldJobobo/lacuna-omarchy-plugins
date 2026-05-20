@@ -9,6 +9,7 @@ Item {
   property bool sidebarCollapsed: false
   property bool sidebarCornerPieces: true
   property bool compact: false
+  property string barSizeMode: "theme"
   property bool desktopClockEnabled: false
   property string desktopClockAnchor: "bottom-right"
   property int desktopClockOffsetX: 0
@@ -214,6 +215,18 @@ Item {
     if (root.designStyle === "omarchy") return "Native Omarchy borders and containment"
     if (root.designStyle === "material") return "Softer tonal surfaces and clearer states"
     return "Flat compact Lacuna linework"
+  }
+
+  function barSizeModeName() {
+    if (root.barSizeMode === "compact") return "Compact"
+    if (root.barSizeMode === "full") return "Full"
+    return "Theme"
+  }
+
+  function barSizeModeHint() {
+    if (root.barSizeMode === "compact") return "Override host bar to 26 / 28"
+    if (root.barSizeMode === "full") return "Override host bar to 32 / 34"
+    return "Use the active Omarchy theme bar size"
   }
 
   function anchorHorizontal() {
@@ -508,7 +521,12 @@ Item {
         item("item", "list-check", "Preferred Apps", "Files, editor, email, and Discord launch targets", "lacuna-preferred-apps", "", "lacuna", "primary", "row", false, "lacuna"),
         item("item", "clock", "Desktop Clock", clockPositionHint(), "lacuna-clock", "", "lacuna", "primary", "row", false, "lacuna"),
         item("item", "color-swatch", root.colorProfile === "colorful" ? "Colorful Profile" : "Semantic Profile", root.colorProfile === "colorful" ? "Use theme colors across Lacuna topbar modules" : "Use foreground with semantic colors only", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-color-profile", "", true, root.colorProfile === "colorful"),
-        item("item", root.compact ? "density-compact" : "density-normal", root.compact ? "Compact Density" : "Normal Density", root.compact ? "Use tighter Lacuna UI spacing" : "Use standard Lacuna UI spacing", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-bar-density", "", true, root.compact),
+        item("item", root.compact ? "density-compact" : "density-normal", root.compact ? "Compact Lacuna Density" : "Normal Lacuna Density", root.compact ? "Use tighter Lacuna UI spacing" : "Use standard Lacuna UI spacing", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-lacuna-density", "", true, root.compact),
+        optionControl("density-normal", "Bar Size", barSizeModeHint(), "lacuna", root.barSizeMode, [
+          { value: "theme", label: "Theme" },
+          { value: "compact", label: "Compact" },
+          { value: "full", label: "Full" }
+        ], "set-bar-size-mode-"),
         item("item", root.sidebarCollapsed ? "sidebar-expand" : "sidebar-collapse", root.sidebarCollapsed ? "Icon Rail" : "Full Sidebar", root.sidebarCollapsed ? "Show the compact icon rail" : "Show the full sidebar surface", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-sidebar-rail", "", true, root.sidebarCollapsed),
         item("item", "sidebar-overlay", root.sidebarExclusive ? "Sidebar Overlay" : "Sidebar Docked", root.sidebarExclusive ? "Let the sidebar float over windows" : "Reserve screen space for the sidebar", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-sidebar-mode", "", true, root.sidebarExclusive),
         item("item", "corners", root.sidebarCornerPieces ? "Corner Pieces" : "Flat Edge", root.sidebarCornerPieces ? "Show the rounded connector pieces" : "Hide the rounded connector pieces", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-corner-pieces", "", true, root.sidebarCornerPieces),
@@ -562,7 +580,12 @@ Item {
         designStyleControl("layout"),
         item("item", "clock", "Desktop Clock", clockPositionHint(), "lacuna-clock", "", "lacuna", "primary", "row", false, "layout"),
         item("item", "color-swatch", root.colorProfile === "colorful" ? "Colorful Profile" : "Semantic Profile", root.colorProfile === "colorful" ? "Use theme colors across Lacuna topbar modules" : "Use foreground with semantic colors only", "", "", "lacuna", "normal", "row", false, "layout", "toggle-color-profile", "", true, root.colorProfile === "colorful"),
-        item("item", root.compact ? "density-compact" : "density-normal", root.compact ? "Compact Density" : "Normal Density", root.compact ? "Use tighter Lacuna UI spacing" : "Use standard Lacuna UI spacing", "", "", "lacuna", "normal", "row", false, "layout", "toggle-bar-density", "", true, root.compact),
+        item("item", root.compact ? "density-compact" : "density-normal", root.compact ? "Compact Lacuna Density" : "Normal Lacuna Density", root.compact ? "Use tighter Lacuna UI spacing" : "Use standard Lacuna UI spacing", "", "", "lacuna", "normal", "row", false, "layout", "toggle-lacuna-density", "", true, root.compact),
+        optionControl("density-normal", "Bar Size", barSizeModeHint(), "layout", root.barSizeMode, [
+          { value: "theme", label: "Theme" },
+          { value: "compact", label: "Compact" },
+          { value: "full", label: "Full" }
+        ], "set-bar-size-mode-"),
         item("item", root.sidebarCollapsed ? "sidebar-expand" : "sidebar-collapse", root.sidebarCollapsed ? "Icon Rail" : "Full Sidebar", root.sidebarCollapsed ? "Show the compact icon rail" : "Show the full sidebar surface", "", "", "lacuna", "normal", "row", false, "layout", "toggle-sidebar-rail", "", true, root.sidebarCollapsed),
         item("item", "sidebar-overlay", root.sidebarExclusive ? "Sidebar Overlay" : "Sidebar Docked", root.sidebarExclusive ? "Let the sidebar float over windows" : "Reserve screen space for the sidebar", "", "", "lacuna", "normal", "row", false, "layout", "toggle-sidebar-mode", "", true, root.sidebarExclusive),
         item("item", "corners", root.sidebarCornerPieces ? "Corner Pieces" : "Flat Edge", root.sidebarCornerPieces ? "Show the rounded connector pieces" : "Hide the rounded connector pieces", "", "", "lacuna", "normal", "row", false, "layout", "toggle-corner-pieces", "", true, root.sidebarCornerPieces)

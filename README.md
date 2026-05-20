@@ -24,6 +24,8 @@ styling, and workflow ideas. New Omarchy work should happen here as plugins.
 - `plugins/omarchy.lacuna-system-stats/` and
   `plugins/omarchy.lacuna-temperature/`: system status bar widgets.
 - `plugins/omarchy.lacuna-compact-pill/`: Lacuna UI density toggle.
+- `plugins/omarchy.lacuna-bar-size-pill/`: Omarchy host bar compact/full
+  toggle backed by Lacuna bar size mode.
 - `config/`: example Omarchy shell and Lacuna settings files.
 - `docs/omarchy-shell-refactor-plan.md`: implementation plan and phase status.
 
@@ -35,6 +37,7 @@ Symlink plugin directories into Omarchy's plugin directory:
 mkdir -p ~/.config/omarchy/plugins
 ln -sfn "$PWD/plugins/omarchy.lacuna-menu" ~/.config/omarchy/plugins/omarchy.lacuna-menu
 ln -sfn "$PWD/plugins/omarchy.lacuna-menu-button" ~/.config/omarchy/plugins/omarchy.lacuna-menu-button
+ln -sfn "$PWD/plugins/omarchy.lacuna-bar-size-pill" ~/.config/omarchy/plugins/omarchy.lacuna-bar-size-pill
 ln -sfn "$PWD/plugins/omarchy.lacuna-desktop-clock" ~/.config/omarchy/plugins/omarchy.lacuna-desktop-clock
 ```
 

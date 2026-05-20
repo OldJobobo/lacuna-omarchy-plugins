@@ -109,6 +109,14 @@ Item {
     return root.registry.compact ? "Compact" : "Normal"
   }
 
+  function barSizeModeName() {
+    return root.registry.barSizeModeName ? root.registry.barSizeModeName() : "Theme"
+  }
+
+  function barSizeModeHint() {
+    return root.registry.barSizeModeHint ? root.registry.barSizeModeHint() : "Use the active Omarchy theme bar size"
+  }
+
   function clockAnchorName() {
     return root.registry.desktopClockAnchor + "  x " + root.registry.desktopClockOffsetX + "  y " + root.registry.desktopClockOffsetY
   }
@@ -157,7 +165,12 @@ Item {
     if (sectionId === "layout") {
       return [
         section("Sidebar", "Keep launcher behavior separate from Lacuna settings.", "lacuna"),
-        row(root.registry.compact ? "density-compact" : "density-normal", "Density", root.registry.compact ? "Use tighter spacing across Lacuna" : "Use standard spacing across Lacuna", densityName(), "lacuna", "toggle-bar-density", "toggle", root.registry.compact),
+        row(root.registry.compact ? "density-compact" : "density-normal", "Lacuna Density", root.registry.compact ? "Use tighter spacing across Lacuna" : "Use standard spacing across Lacuna", densityName(), "lacuna", "toggle-lacuna-density", "toggle", root.registry.compact),
+        row("density-normal", "Bar Size", barSizeModeHint(), barSizeModeName(), "shell", "", "segments", false, [
+          { value: "theme", label: "Theme" },
+          { value: "compact", label: "Compact" },
+          { value: "full", label: "Full" }
+        ], root.registry.barSizeMode, "set-bar-size-mode-"),
         row(root.registry.sidebarCollapsed ? "sidebar-expand" : "sidebar-collapse", "Sidebar Display", root.registry.sidebarCollapsed ? "Only show the icon rail" : "Show the full sidebar", sidebarShapeName(), "lacuna", "toggle-sidebar-rail", "toggle", root.registry.sidebarCollapsed),
         row("sidebar-overlay", "Window Mode", root.registry.sidebarExclusive ? "Float over windows" : "Reserve screen space", sidebarModeName(), "lacuna", "toggle-sidebar-mode", "toggle", root.registry.sidebarExclusive),
         row("corners", "Corner Pieces", root.registry.sidebarCornerPieces ? "Rounded connector pieces are visible" : "Use a flat sidebar edge", root.registry.sidebarCornerPieces ? "On" : "Off", "lacuna", "toggle-corner-pieces", "toggle", root.registry.sidebarCornerPieces)

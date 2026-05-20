@@ -10,7 +10,7 @@ SETTINGS_PATH = Path.home() / ".config" / "omarchy" / "lacuna" / "settings.json"
 
 def load_settings():
     if not SETTINGS_PATH.exists():
-        return {"version": 1, "colorProfile": "semantic", "compact": False, "sidebar": {"collapsed": False, "exclusive": True, "cornerPieces": True}}
+        return {"version": 1, "colorProfile": "semantic", "compact": False, "barSizeMode": "theme", "sidebar": {"collapsed": False, "exclusive": True, "cornerPieces": True}}
     try:
         data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
     except Exception:
@@ -21,6 +21,8 @@ def load_settings():
     if data.get("colorProfile") not in ("semantic", "colorful"):
         data["colorProfile"] = "semantic"
     data.setdefault("compact", False)
+    if data.get("barSizeMode") not in ("theme", "compact", "full"):
+        data["barSizeMode"] = "theme"
     sidebar = data.setdefault("sidebar", {})
     if not isinstance(sidebar, dict):
         data["sidebar"] = {"collapsed": False, "exclusive": True, "cornerPieces": True}

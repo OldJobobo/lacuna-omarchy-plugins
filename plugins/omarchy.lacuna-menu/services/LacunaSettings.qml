@@ -17,6 +17,8 @@ Item {
       designStyle: "carbon",
       colorProfile: "semantic",
       compact: false,
+      barSizeMode: "theme",
+      barSizeSnapshot: null,
       customQuickLaunchApps: [],
       customQuickLaunchNames: {},
       preferredApps: {
@@ -40,6 +42,8 @@ Item {
       next.designStyle = normalizeDesignStyle(value.designStyle)
       next.colorProfile = String(value.colorProfile || "").toLowerCase() === "colorful" ? "colorful" : "semantic"
       next.compact = value.compact === true
+      next.barSizeMode = normalizeBarSizeMode(value.barSizeMode)
+      next.barSizeSnapshot = normalizeBarSizeSnapshot(value.barSizeSnapshot)
       next.customQuickLaunchApps = normalizeCustomQuickLaunchApps(value.customQuickLaunchApps || value.quickLaunch)
       next.customQuickLaunchNames = normalizeCustomQuickLaunchNames(value.customQuickLaunchNames || value.quickLaunchNames, next.customQuickLaunchApps)
       next.preferredApps = normalizePreferredApps(value.preferredApps || value.defaultLaunchers || value.appDefaults)
@@ -50,6 +54,29 @@ Item {
       }
     }
     return next
+  }
+
+  function normalizeBarSizeMode(value) {
+    var mode = String(value || "").toLowerCase()
+    if (mode === "compact" || mode === "full") return mode
+    return "theme"
+  }
+
+  function normalizeBarSizeSnapshot(value) {
+    if (!value || typeof value !== "object") return null
+
+    var themeName = String(value.themeName || "").trim()
+    var sizeHorizontal = Math.round(Number(value.sizeHorizontal))
+    var sizeVertical = Math.round(Number(value.sizeVertical))
+
+    if (themeName === "" || !isFinite(sizeHorizontal) || !isFinite(sizeVertical)) return null
+    if (sizeHorizontal <= 0 || sizeVertical <= 0) return null
+
+    return {
+      themeName: themeName,
+      sizeHorizontal: sizeHorizontal,
+      sizeVertical: sizeVertical
+    }
   }
 
   function normalizeCustomQuickLaunchApps(value) {

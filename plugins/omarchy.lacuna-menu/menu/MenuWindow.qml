@@ -481,6 +481,16 @@ Item {
       return
     }
 
+    if (entry.action === "toggle-lacuna-density") {
+      compactState.toggle()
+      return
+    }
+
+    if (entry.action.indexOf("set-bar-size-mode-") === 0) {
+      barSizeModeService.setMode(entry.action.substring("set-bar-size-mode-".length))
+      return
+    }
+
     if (entry.action === "open-custom-quick-launch-picker") {
       openCustomQuickLaunchPicker()
       return
@@ -615,6 +625,14 @@ Item {
     settingsService: lacunaSettings
   }
 
+  BarSizeMode {
+    id: barSizeModeService
+    settingsService: lacunaSettings
+    commandRunner: commands
+    themeName: menuTheme.themeName
+    omarchyPath: root.resolvedOmarchyPath()
+  }
+
   AppCatalog {
     id: appCatalog
     lacunaPath: root.lacunaPath
@@ -662,6 +680,7 @@ Item {
     sidebarCollapsed: sidebarState.collapsed
     sidebarCornerPieces: sidebarState.cornerPieces
     compact: root.compact
+    barSizeMode: barSizeModeService.barSizeMode
     designStyle: root.designStyle
     colorProfile: lacunaSettings.data && lacunaSettings.data.colorProfile ? lacunaSettings.data.colorProfile : "semantic"
     desktopClockEnabled: root.desktopClockEnabled

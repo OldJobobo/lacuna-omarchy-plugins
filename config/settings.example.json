@@ -3,6 +3,7 @@
   "designStyle": "carbon",
   "colorProfile": "semantic",
   "compact": false,
+  "barSizeMode": "theme",
   "customQuickLaunchApps": [],
   "preferredApps": {
     "files": "system",

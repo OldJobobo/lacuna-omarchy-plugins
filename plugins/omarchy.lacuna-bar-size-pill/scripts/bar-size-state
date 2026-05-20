@@ -1,0 +1,261 @@
+#!/usr/bin/env python3
+
+import base64
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+HOME = Path.home()
+CONFIG_HOME = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config"))
+OMARCHY_PATH = Path(os.environ.get("OMARCHY_PATH", HOME / ".local/share/omarchy"))
+SETTINGS_PATH = CONFIG_HOME / "omarchy" / "lacuna" / "settings.json"
+THEME_DIR = CONFIG_HOME / "omarchy" / "current" / "theme"
+THEME_NAME_PATH = CONFIG_HOME / "omarchy" / "current" / "theme.name"
+COLORS_PATH = THEME_DIR / "colors.toml"
+SHELL_PATH = THEME_DIR / "shell.toml"
+
+
+def default_settings():
+    return {
+        "version": 1,
+        "colorProfile": "semantic",
+        "compact": False,
+        "barSizeMode": "theme",
+        "barSizeSnapshot": None,
+        "sidebar": {"collapsed": False, "exclusive": True, "cornerPieces": True},
+    }
+
+
+def load_settings():
+    if not SETTINGS_PATH.exists():
+        return default_settings()
+
+    try:
+        data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        data = {}
+
+    if not isinstance(data, dict):
+        data = {}
+
+    data.setdefault("version", 1)
+    if data.get("colorProfile") not in ("semantic", "colorful"):
+        data["colorProfile"] = "semantic"
+    data["compact"] = bool(data.get("compact", False))
+    if data.get("barSizeMode") not in ("theme", "compact", "full"):
+        data["barSizeMode"] = "theme"
+    if not isinstance(data.get("barSizeSnapshot"), dict):
+        data["barSizeSnapshot"] = None
+
+    sidebar = data.setdefault("sidebar", {})
+    if not isinstance(sidebar, dict):
+        data["sidebar"] = {"collapsed": False, "exclusive": True, "cornerPieces": True}
+    else:
+        sidebar.setdefault("collapsed", False)
+        sidebar.setdefault("exclusive", True)
+        sidebar.setdefault("cornerPieces", True)
+
+    return data
+
+
+def save_settings(data):
+    SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp = SETTINGS_PATH.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(SETTINGS_PATH)
+
+
+def theme_name():
+    try:
+        return THEME_NAME_PATH.read_text(encoding="utf-8").strip()
+    except Exception:
+        return ""
+
+
+def parse_bar_values(raw):
+    section = ""
+    result = {"sizeHorizontal": 0, "sizeVertical": 0, "valid": False}
+
+    for line in raw.splitlines():
+        section_match = re.match(r"^\s*\[([^\]]+)\]\s*(#.*)?$", line)
+        if section_match:
+            section = section_match.group(1).strip()
+            continue
+
+        if section != "bar":
+            continue
+
+        horizontal_match = re.match(r"^\s*size-horizontal\s*=\s*([0-9]+)\s*(#.*)?$", line)
+        if horizontal_match:
+            result["sizeHorizontal"] = int(horizontal_match.group(1))
+            continue
+
+        vertical_match = re.match(r"^\s*size-vertical\s*=\s*([0-9]+)\s*(#.*)?$", line)
+        if vertical_match:
+            result["sizeVertical"] = int(vertical_match.group(1))
+
+    result["valid"] = result["sizeHorizontal"] > 0 and result["sizeVertical"] > 0
+    return result
+
+
+def patch_bar_values(raw, size_horizontal, size_vertical):
+    lines = raw.splitlines()
+    bar_found = False
+    in_bar = False
+    horizontal_found = False
+    vertical_found = False
+    insert_index = len(lines)
+
+    for index, line in enumerate(lines):
+        section_match = re.match(r"^\s*\[([^\]]+)\]\s*(#.*)?$", line)
+        if section_match:
+            if in_bar:
+                insert_index = index
+                break
+            in_bar = section_match.group(1).strip() == "bar"
+            if in_bar:
+                bar_found = True
+            continue
+
+        if not in_bar:
+            continue
+
+        if re.match(r"^\s*size-horizontal\s*=", line):
+            lines[index] = f"size-horizontal = {size_horizontal}"
+            horizontal_found = True
+        elif re.match(r"^\s*size-vertical\s*=", line):
+            lines[index] = f"size-vertical = {size_vertical}"
+            vertical_found = True
+
+    if bar_found:
+        additions = []
+        if not horizontal_found:
+            additions.append(f"size-horizontal = {size_horizontal}")
+        if not vertical_found:
+            additions.append(f"size-vertical = {size_vertical}")
+        if additions:
+            lines[insert_index:insert_index] = additions
+    else:
+        if lines and lines[-1].strip():
+            lines.append("")
+        lines.extend(["[bar]", f"size-horizontal = {size_horizontal}", f"size-vertical = {size_vertical}"])
+
+    return "\n".join(lines) + "\n"
+
+
+def desired_values(mode):
+    if mode == "full":
+        return {"sizeHorizontal": 32, "sizeVertical": 34}
+    return {"sizeHorizontal": 26, "sizeVertical": 28}
+
+
+def snapshot_matches(snapshot, current_theme):
+    return (
+        isinstance(snapshot, dict)
+        and snapshot.get("themeName") == current_theme
+        and int(snapshot.get("sizeHorizontal", 0)) > 0
+        and int(snapshot.get("sizeVertical", 0)) > 0
+    )
+
+
+def values_match(values, desired):
+    return (
+        values.get("valid")
+        and values.get("sizeHorizontal") == desired.get("sizeHorizontal")
+        and values.get("sizeVertical") == desired.get("sizeVertical")
+    )
+
+
+def reload_shell_theme():
+    shell_bin = OMARCHY_PATH / "bin" / "omarchy-shell"
+    try:
+        colors_b64 = base64.b64encode(COLORS_PATH.read_bytes()).decode("ascii")
+        shell_b64 = base64.b64encode(SHELL_PATH.read_bytes()).decode("ascii")
+        env = os.environ.copy()
+        env["OMARCHY_PATH"] = str(OMARCHY_PATH)
+        subprocess.run(
+            [str(shell_bin), "shell", "applyTheme", colors_b64, shell_b64],
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except Exception:
+        pass
+
+
+def apply_mode(data, mode):
+    mode = mode if mode in ("theme", "compact", "full") else "theme"
+    current_theme = theme_name()
+
+    try:
+        raw = SHELL_PATH.read_text(encoding="utf-8")
+    except Exception:
+        data["barSizeMode"] = mode
+        save_settings(data)
+        return data
+
+    current_values = parse_bar_values(raw)
+    snapshot = data.get("barSizeSnapshot")
+    next_raw = raw
+
+    if mode == "theme":
+        if snapshot_matches(snapshot, current_theme):
+            next_raw = patch_bar_values(raw, int(snapshot["sizeHorizontal"]), int(snapshot["sizeVertical"]))
+            data["barSizeSnapshot"] = None
+    else:
+        if not snapshot_matches(snapshot, current_theme) and current_values["valid"] and current_theme:
+            data["barSizeSnapshot"] = {
+                "themeName": current_theme,
+                "sizeHorizontal": current_values["sizeHorizontal"],
+                "sizeVertical": current_values["sizeVertical"],
+            }
+
+        desired = desired_values(mode)
+        if not values_match(current_values, desired):
+            next_raw = patch_bar_values(raw, desired["sizeHorizontal"], desired["sizeVertical"])
+
+    data["barSizeMode"] = mode
+    save_settings(data)
+
+    if next_raw != raw:
+        tmp = SHELL_PATH.with_suffix(".toml.tmp")
+        tmp.write_text(next_raw, encoding="utf-8")
+        tmp.replace(SHELL_PATH)
+        reload_shell_theme()
+
+    return data
+
+
+def tooltip(mode):
+    if mode == "full":
+        return "<b>Lacuna Bar Size</b><br/>Mode: full<br/>Click for compact"
+    if mode == "compact":
+        return "<b>Lacuna Bar Size</b><br/>Mode: compact<br/>Click for full"
+    return "<b>Lacuna Bar Size</b><br/>Mode: theme<br/>Click for full"
+
+
+def emit(data):
+    mode = data.get("barSizeMode") if data.get("barSizeMode") in ("theme", "compact", "full") else "theme"
+    print(json.dumps({"mode": mode, "tooltip": tooltip(mode)}, separators=(",", ":")))
+
+
+def main():
+    data = load_settings()
+    action = sys.argv[1] if len(sys.argv) > 1 else "get"
+
+    if action == "toggle":
+        next_mode = "compact" if data.get("barSizeMode") == "full" else "full"
+        data = apply_mode(data, next_mode)
+    elif action in ("theme", "compact", "full"):
+        data = apply_mode(data, action)
+
+    emit(data)
+
+
+if __name__ == "__main__":
+    main()

@@ -10,7 +10,8 @@
         { "id": "omarchy.lacuna-codex-usage", "interval": 300000, "showIcon": true },
         { "id": "omarchy.lacuna-claude-usage", "interval": 30000, "showIcon": true },
         { "id": "omarchy.lacuna-mpris", "maxTextLength": 34, "sweepOnPlaying": true },
-        { "id": "omarchy.lacuna-compact-pill" }
+        { "id": "omarchy.lacuna-compact-pill" },
+        { "id": "omarchy.lacuna-bar-size-pill" }
       ],
       "center": [
         { "id": "calendar" }

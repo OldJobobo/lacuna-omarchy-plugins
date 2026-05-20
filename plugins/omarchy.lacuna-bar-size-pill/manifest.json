@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "omarchy.lacuna-bar-size-pill",
+  "name": "Lacuna Bar Size Pill",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Toggle Omarchy host bar size between compact and full Lacuna modes.",
+  "kinds": ["bar-widget"],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lacuna Bar Size",
+    "description": "Toggles the host Omarchy bar between Lacuna compact and full sizes.",
+    "category": "Lacuna",
+    "allowMultiple": false,
+    "defaults": {
+      "interval": 1000
+    },
+    "schema": [
+      { "key": "interval", "type": "integer", "label": "Refresh interval (ms)", "min": 1000, "step": 1000 },
+      { "key": "colorProfile", "type": "enum", "label": "Color profile", "options": ["semantic", "colorful"], "description": "Override the global Lacuna color profile for this widget." }
+    ]
+  }
+}
