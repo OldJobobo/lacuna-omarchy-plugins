@@ -214,6 +214,7 @@ Column {
         stateColor: root.accent
         hoverOpacity: root.designTokens.hoverOpacity
         pressOpacity: root.designTokens.activeOpacity
+        acceptWheel: true
         onTriggered: root.systemSelected()
         onScrolled: function(delta) {
           appPickerFlick.scrollBy(delta)
@@ -298,6 +299,7 @@ Column {
           stateColor: root.accent
           hoverOpacity: root.designTokens.hoverOpacity
           pressOpacity: root.designTokens.activeOpacity
+          acceptWheel: true
           onTriggered: root.appSelected(modelData.id)
           onScrolled: function(delta) {
             appPickerFlick.scrollBy(delta)

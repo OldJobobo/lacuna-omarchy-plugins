@@ -34,6 +34,12 @@ Item {
     save()
   }
 
+  function setDisplay(mode) {
+    var value = String(mode || "full").toLowerCase()
+    collapsed = value === "rail"
+    save()
+  }
+
   function save() {
     if (!settingsService || !settingsService.save) return
     var next = settingsService.normalize ? settingsService.normalize(settingsService.data) : settingsService.data

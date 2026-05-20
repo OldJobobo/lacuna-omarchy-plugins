@@ -12,6 +12,7 @@ MouseArea {
   property real hoverOpacity: 0.06
   property real pressOpacity: 0.11
   property bool showFill: true
+  property bool acceptWheel: false
   property real reveal: pressed || containsMouse ? 1 : 0
 
   anchors.fill: parent
@@ -30,6 +31,7 @@ MouseArea {
 
   onWheel: function(wheel) {
     root.scrolled(wheel.angleDelta.y)
+    wheel.accepted = root.acceptWheel
   }
 
   Rectangle {

@@ -116,6 +116,7 @@ Item {
 
   function beginMenuOpening() {
     hostClosing = false
+    var wasPanelVisible = panelVisible
     panelVisible = true
     if (menuProgress >= 0.999) {
       menuProgress = 1
@@ -126,10 +127,18 @@ Item {
     }
 
     menuStateName = "openingMenu"
+    if (!wasPanelVisible && menuProgress <= 0.001) {
+      menuAnimationRevision = -1
+      menuAnimationTarget = 1
+      deferredMenuOpenTimer.restart()
+      return
+    }
+
     animateMenu(1)
   }
 
   function beginMenuClosing() {
+    deferredMenuOpenTimer.stop()
     menuStateName = "closingMenu"
     closeActiveFlyout()
     animateMenu(0)
@@ -233,6 +242,18 @@ Item {
 
       root.beginMenuClosing()
       if (!root.hostClosing) root.hostHideRequested()
+    }
+  }
+
+  Timer {
+    id: deferredMenuOpenTimer
+
+    interval: 16
+    repeat: false
+    onTriggered: {
+      if (root.menuOpen && root.panelVisible && root.menuStateName === "openingMenu") {
+        root.animateMenu(1)
+      }
     }
   }
 

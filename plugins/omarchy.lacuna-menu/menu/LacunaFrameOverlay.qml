@@ -46,6 +46,7 @@ Item {
   readonly property bool frameEnabled: mode === "sidebar" || mode === "fullframe"
   readonly property bool fullFrame: mode === "fullframe"
   readonly property real clampedProgress: Math.max(0, Math.min(1, progress))
+  readonly property real edgeProgress: smoothEdgeProgress(clampedProgress)
   readonly property int t: Math.max(1, frameThickness)
   readonly property int effectiveBarSize: Math.max(0, barSize)
   readonly property real effectiveFrameWidth: frameWidth > 0 ? frameWidth : width
@@ -64,7 +65,11 @@ Item {
 
   visible: frameEnabled && clampedProgress > 0.001
   enabled: false
-  opacity: clampedProgress
+
+  function smoothEdgeProgress(value) {
+    var p = Math.max(0, Math.min(1, value))
+    return p * p * p * (p * (p * 6 - 15) + 10)
+  }
 
     Item {
       id: frameSource
@@ -111,7 +116,7 @@ Item {
       Rectangle {
         visible: root.fullFrame && !root.topBar
       x: 0
-      y: 0
+      y: -root.t + root.t * root.edgeProgress
       width: root.effectiveFrameWidth
       height: root.t
       color: root.frameColor
@@ -120,7 +125,7 @@ Item {
     Rectangle {
       visible: root.fullFrame && !root.bottomBar
       x: 0
-      y: Math.max(0, parent.height - root.t)
+      y: parent.height - root.t * root.edgeProgress
       width: root.effectiveFrameWidth
       height: root.t
       color: root.frameColor
@@ -128,16 +133,53 @@ Item {
 
     Rectangle {
       visible: root.fullFrame && !root.leftBar && !root.leftEdgeOccupied
-      x: 0
+      x: -root.t + root.t * root.edgeProgress
       y: 0
       width: root.t
       height: parent.height
       color: root.frameColor
     }
 
+    Shape {
+      id: fullFrameTopLeftCorner
+
+      visible: root.fullFrame && root.topBar && !root.leftBar && !root.leftEdgeOccupied && root.cornerSize > 0
+      x: -root.cornerSize + (root.t + root.cornerSize) * root.edgeProgress
+      y: 0
+      width: root.cornerSize
+      height: root.cornerSize
+      asynchronous: false
+      antialiasing: true
+      preferredRendererType: Shape.CurveRenderer
+
+      ShapePath {
+        fillColor: root.frameColor
+        strokeWidth: 0
+        startX: 0
+        startY: 0
+
+        PathLine {
+          x: 0
+          y: root.cornerSize
+        }
+        PathCubic {
+          x: root.cornerSize
+          y: 0
+          control1X: 0
+          control1Y: root.cornerSize * (1 - root.curveKappa)
+          control2X: root.cornerSize * root.curveKappa
+          control2Y: 0
+        }
+        PathLine {
+          x: 0
+          y: 0
+        }
+      }
+    }
+
     Rectangle {
       visible: root.fullFrame && !root.rightBar && !root.rightEdgeOccupied
-      x: Math.max(0, root.effectiveFrameWidth - root.t)
+      x: root.effectiveFrameWidth - root.t * root.edgeProgress
       y: 0
       width: root.t
       height: parent.height
@@ -148,7 +190,7 @@ Item {
       id: fullFrameTopRightCorner
 
       visible: root.fullFrame && root.topBar && !root.rightBar && !root.rightEdgeOccupied && root.cornerSize > 0
-      x: root.effectiveFrameWidth - root.t - root.cornerSize
+      x: root.effectiveFrameWidth - (root.t + root.cornerSize) * root.edgeProgress
       y: 0
       width: root.cornerSize
       height: root.cornerSize
@@ -185,8 +227,8 @@ Item {
       id: fullFrameBottomRightCorner
 
       visible: root.fullFrame && !root.bottomBar && !root.rightBar && !root.rightEdgeOccupied && root.cornerSize > 0
-      x: root.effectiveFrameWidth - root.t - root.cornerSize
-      y: parent.height - root.t - root.cornerSize
+      x: root.effectiveFrameWidth - (root.t + root.cornerSize) * root.edgeProgress
+      y: parent.height - (root.t + root.cornerSize) * root.edgeProgress
       width: root.cornerSize
       height: root.cornerSize
       asynchronous: false
@@ -223,7 +265,44 @@ Item {
 
       visible: root.fullFrame && !root.bottomBar && root.leftEdgeOccupied && root.sidebarCornerVisible && root.cornerSize > 0
       x: root.sidebarX + root.sidebarWidth
-      y: parent.height - root.t - root.cornerSize
+      y: parent.height - (root.t + root.cornerSize) * root.edgeProgress
+      width: root.cornerSize
+      height: root.cornerSize
+      asynchronous: false
+      antialiasing: true
+      preferredRendererType: Shape.CurveRenderer
+
+      ShapePath {
+        fillColor: root.frameColor
+        strokeWidth: 0
+        startX: 0
+        startY: root.cornerSize
+
+        PathLine {
+          x: root.cornerSize
+          y: root.cornerSize
+        }
+        PathCubic {
+          x: 0
+          y: 0
+          control1X: root.cornerSize * (1 - root.curveKappa)
+          control1Y: root.cornerSize
+          control2X: 0
+          control2Y: root.cornerSize * (1 - root.curveKappa)
+        }
+        PathLine {
+          x: 0
+          y: root.cornerSize
+        }
+      }
+    }
+
+    Shape {
+      id: fullFrameBottomLeftEdgeCorner
+
+      visible: root.fullFrame && !root.bottomBar && !root.leftBar && !root.leftEdgeOccupied && root.cornerSize > 0
+      x: -root.cornerSize + (root.t + root.cornerSize) * root.edgeProgress
+      y: parent.height - (root.t + root.cornerSize) * root.edgeProgress
       width: root.cornerSize
       height: root.cornerSize
       asynchronous: false
@@ -258,7 +337,7 @@ Item {
     Rectangle {
       id: sidebarSilhouette
 
-      x: root.sidebarX
+      x: root.sidebarX - root.sidebarWidth * (1 - root.edgeProgress)
       y: root.sidebarY
       width: Math.max(0, root.sidebarWidth)
       height: Math.max(0, root.sidebarHeight)
@@ -269,7 +348,7 @@ Item {
       id: sidebarCornerPiece
 
       visible: root.sidebarCornerVisible && root.sidebarCornerWidth > 0 && root.sidebarJoinHeight > 0
-      x: root.sidebarX + root.sidebarWidth
+      x: root.sidebarX + root.sidebarWidth - root.sidebarWidth * (1 - root.edgeProgress)
       y: root.sidebarY + root.sidebarJoinTop
       width: root.sidebarCornerWidth
       height: root.sidebarJoinHeight
@@ -428,9 +507,9 @@ Item {
     Rectangle {
       visible: root.topBar
       x: 0
-      y: Math.max(0, root.barBottomY)
+      y: root.barBottomY
       width: root.effectiveFrameWidth + root.barEdgeCasterOverrun
-      height: root.barEdgeCasterSize
+      height: root.barEdgeCasterSize * root.edgeProgress
       gradient: Gradient {
         orientation: Gradient.Vertical
         GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, root.barEdgeShadowOpacity * 0.66) }
@@ -442,7 +521,7 @@ Item {
     Rectangle {
       visible: root.bottomBar
       x: 0
-      y: Math.max(0, parent.height - root.barEdgeCasterSize)
+      y: parent.height - root.barEdgeCasterSize * root.edgeProgress
       width: root.effectiveFrameWidth + root.barEdgeCasterOverrun
       height: root.barEdgeCasterSize
       gradient: Gradient {
@@ -455,7 +534,7 @@ Item {
 
     Rectangle {
       visible: root.leftBar
-      x: 0
+      x: -root.barEdgeCasterSize + root.barEdgeCasterSize * root.edgeProgress
       y: 0
       width: root.barEdgeCasterSize
       height: parent.height
@@ -469,7 +548,7 @@ Item {
 
     Rectangle {
       visible: root.rightBar
-      x: Math.max(0, root.effectiveFrameWidth - root.barEdgeCasterSize)
+      x: root.effectiveFrameWidth - root.barEdgeCasterSize * root.edgeProgress
       y: 0
       width: root.barEdgeCasterSize
       height: parent.height

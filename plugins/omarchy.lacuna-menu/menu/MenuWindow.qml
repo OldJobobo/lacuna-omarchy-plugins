@@ -12,6 +12,7 @@ Item {
   property var shell: null
   property var manifest: null
   property var pluginRegistry: null
+  property var barWidgetRegistry: null
   property string pluginId: manifest && manifest.id ? manifest.id : "omarchy.lacuna-menu"
   property var menuState: localMenuState
   property string lacunaPath: manifest && manifest.__sourceDir ? manifest.__sourceDir : localPath(Qt.resolvedUrl(".."))
@@ -41,14 +42,15 @@ Item {
   // Lacuna is its own left sidebar. The Omarchy bar position only affects
   // offsets and sizing, not which edge Lacuna owns.
   readonly property bool panelOnRight: false
-  readonly property bool effectiveCornerPieces: sidebarState.cornerPieces && !panelOnRight
+  readonly property bool sidebarSurfaceVisible: panelController.menuRenderable
+  readonly property bool effectiveCornerPieces: sidebarSurfaceVisible && sidebarState.cornerPieces && !panelOnRight
   property int fullPanelWidth: compact ? 270 : 310
   property int barControlSize: currentBarSize()
   property int railButtonWidth: railCompact ? 24 : barControlSize
   property int railLeftInset: railDesignTokens.railLeftInset
   property int railRightInset: railDesignTokens.railRightInset
   property int railPanelWidth: railButtonWidth + railLeftInset + railRightInset
-  property int panelWidth: sidebarState.collapsed ? railPanelWidth : fullPanelWidth
+  property int panelWidth: sidebarSurfaceVisible ? (sidebarState.collapsed ? railPanelWidth : fullPanelWidth) : 0
   property int defaultTopBarHeight: 26
   property int barHeight: topBarHeight()
   property int joinRadius: effectiveCornerPieces ? (compact ? 14 : 18) : 0
@@ -58,6 +60,7 @@ Item {
   property int settingsConnectorWidth: effectiveCornerPieces ? joinRadius : 0
   property int barEdgeCasterSize: 3
   property int frameReservePadding: 4
+  property int sidebarReserveExtra: 6
   property int flyoutLaneWidth: panelController.menuRenderable ? maxFlyoutLaneWidth : 0
   // In exclusive mode the compositor already places this window below the top
   // bar, so the bar edge is local y=0. In overlay mode the window starts at
@@ -67,6 +70,9 @@ Item {
   readonly property bool settingsPanelOpen: panelController.isFlyoutOpen("settings")
   readonly property bool settingsPanelVisible: panelController.isFlyoutVisible("settings")
   property int settingsPanelWidth: compact ? 360 : 400
+  readonly property bool shellSettingsPanelOpen: panelController.isFlyoutOpen("shellSettings")
+  readonly property bool shellSettingsPanelVisible: panelController.isFlyoutVisible("shellSettings")
+  property int shellSettingsPanelWidth: compact ? 390 : 440
   readonly property bool appPickerOpen: panelController.isFlyoutOpen("appPicker")
   readonly property bool appPickerVisible: panelController.isFlyoutVisible("appPicker")
   readonly property bool flyoutOpen: panelController.flyoutOpen
@@ -74,21 +80,23 @@ Item {
   property string appPickerMode: "customQuickLaunchApp"
   property string preferredAppPickerRole: ""
   property int appPickerWidth: compact ? 260 : 300
-  readonly property int maxFlyoutLaneWidth: Math.max(settingsPanelWidth, appPickerWidth)
+  readonly property int maxFlyoutLaneWidth: Math.max(settingsPanelWidth, shellSettingsPanelWidth, appPickerWidth)
   readonly property string visibleFlyout: panelController.visibleFlyout
   readonly property string outgoingFlyout: panelController.outgoingFlyout
   readonly property bool activeFlyoutSettings: visibleFlyout === "settings"
+  readonly property bool activeFlyoutShellSettings: visibleFlyout === "shellSettings"
   readonly property bool activeFlyoutAppPicker: visibleFlyout === "appPicker"
   readonly property bool renderSettingsContent: settingsPanelVisible || outgoingFlyout === "settings"
+  readonly property bool renderShellSettingsContent: shellSettingsPanelVisible || outgoingFlyout === "shellSettings"
   readonly property bool renderAppPickerContent: appPickerVisible || outgoingFlyout === "appPicker"
-  readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : 0
-  readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : 0
-  readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : 0
+  readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutShellSettings ? shellSettingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : 0
+  readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutShellSettings ? shellSettingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : 0
+  readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutShellSettings ? shellSettingsFlyoutY(shellSettingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : 0
   readonly property int frameOverlayWidth: frameMode === "off" ? 0 : ((sidebarScreen ? sidebarScreen.width : 0) + 100)
-  readonly property bool frameReserveActive: sidebarState.exclusive && panelController.menuRenderable && frameMode !== "off"
-  readonly property bool sidebarReserveActive: sidebarState.exclusive && panelController.menuRenderable
+  readonly property bool frameReserveActive: sidebarState.exclusive && (panelController.menuRenderable || frameMode === "fullframe") && frameMode !== "off"
+  readonly property bool sidebarReserveActive: sidebarState.exclusive && panelController.menuRenderable && sidebarSurfaceVisible
   readonly property int reservePadding: frameMode !== "off" ? frameReservePadding : 0
-  readonly property int sidebarReserveSize: sidebarReserveActive ? panelWidth + reservePadding : 0
+  readonly property int sidebarReserveSize: sidebarReserveActive ? panelWidth + reservePadding + sidebarReserveExtra : 0
   readonly property int visualTopInset: sidebarState.exclusive && root.topBar ? root.barHeight : 0
   readonly property int visualBottomInset: sidebarState.exclusive && root.bottomBar ? root.barHeight : 0
   readonly property int visualLeftInset: sidebarState.exclusive && root.leftBar ? root.barControlSize : 0
@@ -96,12 +104,17 @@ Item {
   readonly property int frameShadowRightReserve: frameShadow ? Math.max(0, frameShadowOffsetX) : 0
   readonly property int frameReserveTop: frameReserveActive && frameMode === "fullframe" && !root.topBar ? frameThickness + reservePadding : 0
   readonly property int frameReserveBottom: frameReserveActive && frameMode === "fullframe" && !root.bottomBar ? frameThickness + reservePadding : 0
-  readonly property int frameReserveLeft: frameReserveActive && frameMode === "fullframe" && root.panelOnRight && !root.leftBar ? frameThickness + reservePadding : 0
+  readonly property int frameReserveLeft: frameReserveActive && frameMode === "fullframe" && !root.leftBar && (root.panelOnRight || !root.sidebarSurfaceVisible) ? frameThickness + reservePadding : 0
   readonly property int frameReserveRight: frameReserveActive && frameMode === "fullframe" && !root.panelOnRight && !root.rightBar ? frameThickness + frameShadowRightReserve + reservePadding : 0
   readonly property int topBarShadowReserve: frameReserveActive && root.frameShadow && root.topBar ? root.barEdgeCasterSize + reservePadding : 0
+  readonly property real frameOverlayProgress: frameMode === "fullframe" ? 1 : panelController.menuProgress
   property string pendingFlyoutFocus: ""
   property int pluginStateRevision: 0
   readonly property var shellConfig: shell && shell.shellConfig ? shell.shellConfig : ({})
+  readonly property var shellBarConfig: shellConfig && shellConfig.bar ? shellConfig.bar : ({})
+  readonly property var shellIdleConfig: shellConfig && shellConfig.idle ? shellConfig.idle : ({})
+  readonly property int shellIdleScreensaver: positiveInt(shellIdleConfig.screensaver, 150)
+  readonly property int shellIdleLock: positiveInt(shellIdleConfig.lock, 300)
   readonly property var desktopClockSettings: shellPluginSettings("omarchy.lacuna-desktop-clock", {
     anchor: "bottom-right",
     offsetX: 0,
@@ -191,6 +204,17 @@ Item {
   function settingsFlyoutY(panelHeight) {
     var topLimit = barBottomY + designTokens.topInset
     var lift = compact ? 72 : 112
+    return Math.max(topLimit, menuWindow.height - panelHeight - designTokens.bottomInset - lift)
+  }
+
+  function shellSettingsFlyoutHeight() {
+    var availableHeight = menuWindow.height - barBottomY - designTokens.topInset - designTokens.bottomInset
+    return Math.max(300, Math.min(availableHeight, compact ? 480 : 560))
+  }
+
+  function shellSettingsFlyoutY(panelHeight) {
+    var topLimit = barBottomY + designTokens.topInset
+    var lift = compact ? 54 : 78
     return Math.max(topLimit, menuWindow.height - panelHeight - designTokens.bottomInset - lift)
   }
 
@@ -296,6 +320,12 @@ Item {
   }
 
   function openCustomQuickLaunchPicker() {
+    if (appPickerOpen && appPickerMode === "customQuickLaunchApp") {
+      pendingFlyoutFocus = ""
+      panelController.closeFlyout("appPicker")
+      return
+    }
+
     if (!appCatalog.ready) appCatalog.reload()
     appPickerContent.resetSearch()
     appPickerMode = "customQuickLaunchApp"
@@ -323,6 +353,14 @@ Item {
     }
   }
 
+  function toggleShellSettingsPanel() {
+    panelController.toggleFlyout("shellSettings")
+    if (shellSettingsPanelOpen) {
+      if (!menuState.open) panelController.openMenu()
+      requestFlyoutFocus("shellSettings")
+    }
+  }
+
   function requestFlyoutFocus(id) {
     pendingFlyoutFocus = String(id || "")
     Qt.callLater(applyPendingFlyoutFocus)
@@ -335,6 +373,9 @@ Item {
       pendingFlyoutFocus = ""
     } else if (pendingFlyoutFocus === "settings" && settingsPanelOpen) {
       settingsPanel.forceActiveFocus()
+      pendingFlyoutFocus = ""
+    } else if (pendingFlyoutFocus === "shellSettings" && shellSettingsPanelOpen) {
+      shellSettingsPanel.forceActiveFocus()
       pendingFlyoutFocus = ""
     }
   }
@@ -397,6 +438,10 @@ Item {
     var next = lacunaSettings.normalize(lacunaSettings.data)
     next.frame.shadow = !next.frame.shadow
     lacunaSettings.save(next)
+  }
+
+  function setSidebarDisplay(mode) {
+    sidebarState.setDisplay(mode)
   }
 
   function validClockAnchor(value) {
@@ -504,6 +549,150 @@ Item {
     })
   }
 
+  function validShellBarPosition(value) {
+    var position = String(value || "top").toLowerCase()
+    if (position === "top" || position === "right" || position === "bottom" || position === "left") return position
+    return "top"
+  }
+
+  function defaultShellBarConfig() {
+    return {
+      position: "top",
+      transparent: false,
+      centerAnchor: "calendar",
+      layout: {
+        left: [{ id: "omarchy" }, { id: "workspaces" }],
+        center: [
+          { id: "calendar", format: "dddd HH:mm", formatAlt: "dd MMMM 'W'ww yyyy", verticalFormat: "HH\n\u2014\nmm" },
+          { id: "weather" },
+          { id: "update" },
+          { id: "voxtype" },
+          { id: "screenRecording" },
+          { id: "idleInhibitor" },
+          { id: "notifications" }
+        ],
+        right: [
+          { id: "tray" },
+          { id: "bluetoothPanel" },
+          { id: "networkPanel" },
+          { id: "audioPanel" },
+          { id: "monitorPanel" },
+          { id: "powerPanel" }
+        ]
+      }
+    }
+  }
+
+  function ensureShellBarShape(config) {
+    if (!config.bar || typeof config.bar !== "object") config.bar = defaultShellBarConfig()
+    if (!config.bar.layout || typeof config.bar.layout !== "object") config.bar.layout = { left: [], center: [], right: [] }
+    if (!Array.isArray(config.bar.layout.left)) config.bar.layout.left = []
+    if (!Array.isArray(config.bar.layout.center)) config.bar.layout.center = []
+    if (!Array.isArray(config.bar.layout.right)) config.bar.layout.right = []
+    return config.bar
+  }
+
+  function mutateOmarchyShellConfig(mutator) {
+    if (shell && typeof shell.mutateShellConfig === "function") {
+      shell.mutateShellConfig(function(config) {
+        ensureShellBarShape(config)
+        mutator(config)
+      })
+      pluginStateRevision++
+      return true
+    }
+
+    commands.run("notify-send 'Lacuna' 'Omarchy shell settings require the live shell config mutator'")
+    return false
+  }
+
+  function setShellBarPosition(position) {
+    mutateOmarchyShellConfig(function(config) {
+      ensureShellBarShape(config).position = validShellBarPosition(position)
+    })
+  }
+
+  function toggleShellBarTransparent() {
+    mutateOmarchyShellConfig(function(config) {
+      var bar = ensureShellBarShape(config)
+      bar.transparent = !(bar.transparent === true)
+    })
+  }
+
+  function setShellBarCenterAnchor(anchor) {
+    mutateOmarchyShellConfig(function(config) {
+      ensureShellBarShape(config).centerAnchor = anchor === "none" ? "" : String(anchor || "")
+    })
+  }
+
+  function resetShellBarDefaults() {
+    mutateOmarchyShellConfig(function(config) {
+      config.bar = defaultShellBarConfig()
+    })
+  }
+
+  function setShellIdleTimeout(kind, seconds) {
+    var value = positiveInt(seconds, kind === "lock" ? 300 : 150)
+    mutateOmarchyShellConfig(function(config) {
+      if (!config.idle || typeof config.idle !== "object") config.idle = {}
+      config.idle[kind] = value
+    })
+  }
+
+  function mutateShellBarSection(section, mutator) {
+    var sectionId = String(section || "")
+    if (sectionId !== "left" && sectionId !== "center" && sectionId !== "right") return
+
+    mutateOmarchyShellConfig(function(config) {
+      var bar = ensureShellBarShape(config)
+      var list = bar.layout[sectionId].slice()
+      mutator(list, bar)
+      bar.layout[sectionId] = list
+      if (sectionId === "center" && bar.centerAnchor) {
+        var anchorFound = false
+        for (var i = 0; i < list.length; i++) {
+          if (list[i] && String(list[i].id || "") === String(bar.centerAnchor)) {
+            anchorFound = true
+            break
+          }
+        }
+        if (!anchorFound) bar.centerAnchor = ""
+      }
+    })
+  }
+
+  function moveShellBarWidget(section, index, direction) {
+    mutateShellBarSection(section, function(list) {
+      var from = Math.round(Number(index) || 0)
+      var to = direction === "up" ? from - 1 : from + 1
+      if (from < 0 || from >= list.length || to < 0 || to >= list.length) return
+      var entry = list[from]
+      list.splice(from, 1)
+      list.splice(to, 0, entry)
+    })
+  }
+
+  function removeShellBarWidget(section, index) {
+    mutateShellBarSection(section, function(list) {
+      var at = Math.round(Number(index) || 0)
+      if (at < 0 || at >= list.length) return
+      list.splice(at, 1)
+    })
+  }
+
+  function addShellBarWidget(section, id) {
+    var widgetId = String(id || "").trim()
+    if (widgetId === "") return
+    mutateShellBarSection(section, function(list) {
+      list.push({ id: widgetId })
+    })
+  }
+
+  function runOmarchyCommand(command) {
+    if (!command) return
+    commands.run(command)
+  }
+
   function activate(entry) {
     if (!entry || entry.kind === "header") return
 
@@ -514,6 +703,11 @@ Item {
 
     if (entry.action === "toggle-sidebar-rail") {
       sidebarState.toggleCollapsed()
+      return
+    }
+
+    if (entry.action.indexOf("set-sidebar-display-") === 0) {
+      setSidebarDisplay(entry.action.substring("set-sidebar-display-".length))
       return
     }
 
@@ -534,6 +728,131 @@ Item {
 
     if (entry.action.indexOf("set-bar-size-mode-") === 0) {
       barSizeModeService.setMode(entry.action.substring("set-bar-size-mode-".length))
+      return
+    }
+
+    if (entry.action.indexOf("set-shell-bar-position-") === 0) {
+      setShellBarPosition(entry.action.substring("set-shell-bar-position-".length))
+      return
+    }
+
+    if (entry.action.indexOf("set-default-terminal-") === 0) {
+      runOmarchyCommand("omarchy default terminal " + commands.quote(entry.action.substring("set-default-terminal-".length)))
+      return
+    }
+
+    if (entry.action.indexOf("set-default-browser-") === 0) {
+      runOmarchyCommand("omarchy default browser " + commands.quote(entry.action.substring("set-default-browser-".length)))
+      return
+    }
+
+    if (entry.action.indexOf("set-default-editor-") === 0) {
+      runOmarchyCommand("omarchy default editor " + commands.quote(entry.action.substring("set-default-editor-".length)))
+      return
+    }
+
+    if (entry.action === "toggle-window-gaps") {
+      runOmarchyCommand("omarchy hyprland window gaps toggle")
+      return
+    }
+
+    if (entry.action === "toggle-single-window-square") {
+      runOmarchyCommand("omarchy hyprland window single square aspect toggle")
+      return
+    }
+
+    if (entry.action === "toggle-omarchy-bar") {
+      runOmarchyCommand("omarchy toggle bar")
+      return
+    }
+
+    if (entry.action.indexOf("set-monitor-scaling-") === 0) {
+      runOmarchyCommand("omarchy hyprland monitor scaling " + commands.quote(entry.action.substring("set-monitor-scaling-".length)))
+      return
+    }
+
+    if (entry.action.indexOf("set-omarchy-font-") === 0) {
+      runOmarchyCommand("omarchy font set " + commands.quote(entry.action.substring("set-omarchy-font-".length)))
+      return
+    }
+
+    if (entry.action.indexOf("set-power-profile-") === 0) {
+      runOmarchyCommand("powerprofilesctl set " + commands.quote(entry.action.substring("set-power-profile-".length)))
+      return
+    }
+
+    if (entry.action === "toggle-nightlight") {
+      runOmarchyCommand("omarchy toggle nightlight")
+      return
+    }
+
+    if (entry.action === "toggle-idle") {
+      runOmarchyCommand("omarchy toggle idle")
+      return
+    }
+
+    if (entry.action === "toggle-screensaver") {
+      runOmarchyCommand("omarchy toggle screensaver")
+      return
+    }
+
+    if (entry.action === "toggle-notification-silencing") {
+      runOmarchyCommand("omarchy toggle notification silencing")
+      return
+    }
+
+    if (entry.action === "toggle-suspend") {
+      runOmarchyCommand("omarchy toggle suspend")
+      return
+    }
+
+    if (entry.action.indexOf("set-shell-idle-screensaver-") === 0) {
+      setShellIdleTimeout("screensaver", entry.action.substring("set-shell-idle-screensaver-".length))
+      return
+    }
+
+    if (entry.action.indexOf("set-shell-idle-lock-") === 0) {
+      setShellIdleTimeout("lock", entry.action.substring("set-shell-idle-lock-".length))
+      return
+    }
+
+    if (entry.action.indexOf("toggle-shell-plugin-") === 0) {
+      var pluginId = entry.action.substring("toggle-shell-plugin-".length)
+      setShellPluginEnabled(pluginId, !shellPluginEnabled(pluginId))
+      return
+    }
+
+    if (entry.action === "toggle-shell-bar-transparent") {
+      toggleShellBarTransparent()
+      return
+    }
+
+    if (entry.action.indexOf("set-shell-bar-center-anchor-") === 0) {
+      setShellBarCenterAnchor(entry.action.substring("set-shell-bar-center-anchor-".length))
+      return
+    }
+
+    if (entry.action === "reset-shell-bar-defaults") {
+      resetShellBarDefaults()
+      return
+    }
+
+    if (entry.action.indexOf("move-shell-bar-widget-") === 0) {
+      var moveParts = entry.action.substring("move-shell-bar-widget-".length).split("-")
+      if (moveParts.length >= 3) moveShellBarWidget(moveParts[0], moveParts[1], moveParts[2])
+      return
+    }
+
+    if (entry.action.indexOf("remove-shell-bar-widget-") === 0) {
+      var removeParts = entry.action.substring("remove-shell-bar-widget-".length).split("-")
+      if (removeParts.length >= 2) removeShellBarWidget(removeParts[0], removeParts[1])
+      return
+    }
+
+    if (entry.action.indexOf("add-shell-bar-widget-") === 0) {
+      var addPayload = entry.action.substring("add-shell-bar-widget-".length)
+      var sectionEnd = addPayload.indexOf("-")
+      if (sectionEnd > 0) addShellBarWidget(addPayload.substring(0, sectionEnd), addPayload.substring(sectionEnd + 1))
       return
     }
 
@@ -741,6 +1060,15 @@ Item {
     colorProfile: lacunaSettings.data && lacunaSettings.data.colorProfile ? lacunaSettings.data.colorProfile : "semantic"
     frameMode: root.frameMode
     frameShadow: root.frameShadow
+    shellBarConfig: root.shellBarConfig
+    shellBarPosition: root.barPosition
+    shellBarTransparent: root.shellBarConfig && root.shellBarConfig.transparent === true
+    shellBarCenterAnchor: root.shellBarConfig && root.shellBarConfig.centerAnchor ? String(root.shellBarConfig.centerAnchor) : ""
+    shellIdleScreensaver: root.shellIdleScreensaver
+    shellIdleLock: root.shellIdleLock
+    shellPlugins: root.shellConfig && Array.isArray(root.shellConfig.plugins) ? root.shellConfig.plugins : []
+    barWidgetRegistry: root.barWidgetRegistry
+    pluginRegistry: root.pluginRegistry
     desktopClockEnabled: root.desktopClockEnabled
     desktopClockAnchor: root.desktopClockAnchor
     desktopClockOffsetX: root.desktopClockOffsetX
@@ -763,6 +1091,7 @@ Item {
     onFlyoutInteractiveChanged: root.applyPendingFlyoutFocus()
     onActiveFlyoutChanged: root.applyPendingFlyoutFocus()
     onHostHideRequested: {
+      if (root.frameMode === "fullframe") return
       if (root.shell && root.shell.hide) root.shell.hide(root.pluginId)
     }
   }
@@ -771,12 +1100,23 @@ Item {
     id: commands
   }
 
+  OmarchyShellSettings {
+    id: shellSettingsService
+    lacunaPath: root.lacunaPath
+    commandRunner: commands
+    shell: root.shell
+    pluginRegistry: root.pluginRegistry
+    shellConfig: root.shellConfig
+    onPluginStateChanged: root.pluginStateRevision++
+  }
+
   LacunaPanelWindow {
     id: menuWindow
 
     targetScreen: root.sidebarScreen
     menuOpen: root.menuState.open
     panelVisible: root.panelVisible
+    keepMapped: root.frameMode !== "off"
     flyoutOpen: root.flyoutOpen
     flyoutInteractive: root.flyoutInteractive
     exclusive: sidebarState.exclusive
@@ -812,7 +1152,7 @@ Item {
       sidebarHeight: menuWindow.height
       anchorRight: root.panelOnRight
       connectorWidth: root.settingsConnectorWidth
-      connectorRenderable: panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      connectorRenderable: root.sidebarSurfaceVisible && panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
       flyoutY: root.activeFlyoutY
       flyoutWidth: Math.max(0, root.activeFlyoutWidth)
       flyoutHeight: Math.max(0, root.activeFlyoutHeight)
@@ -832,23 +1172,23 @@ Item {
       frameWidth: root.sidebarScreen ? root.sidebarScreen.width : menuWindow.width
       frameThickness: root.frameThickness
       frameRadius: root.frameRadius
-      progress: panelController.menuProgress
+      progress: root.frameOverlayProgress
       frameColor: root.panelColor
       shadowOffsetX: root.frameShadowOffsetX
       shadowOffsetY: root.frameShadowOffsetY
       sidebarX: panelHost.sidebarMaskX
       sidebarY: panelHost.sidebarMaskY
-      sidebarWidth: root.panelWidth
+      sidebarWidth: root.sidebarSurfaceVisible ? root.panelWidth : 0
       sidebarHeight: panelHost.sidebarMaskHeight
       sidebarCornerWidth: root.surfaceRightInset
-      sidebarCornerVisible: root.effectiveCornerPieces && root.surfaceRightInset > 0
-      leftEdgeOccupied: !root.panelOnRight
-      rightEdgeOccupied: root.panelOnRight
+      sidebarCornerVisible: root.sidebarSurfaceVisible && root.effectiveCornerPieces && root.surfaceRightInset > 0
+      leftEdgeOccupied: root.sidebarSurfaceVisible && !root.panelOnRight
+      rightEdgeOccupied: root.sidebarSurfaceVisible && root.panelOnRight
       connectorX: panelHost.connectorX
       connectorY: panelHost.connectorY
       connectorWidth: panelHost.effectiveConnectorWidth
       connectorHeight: panelHost.effectiveFlyoutHeight + panelHost.effectiveConnectorWidth * 2
-      connectorVisible: panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      connectorVisible: root.sidebarSurfaceVisible && panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
       flyoutX: panelHost.flyoutMaskX
       flyoutY: panelHost.flyoutMaskY
       flyoutWidth: panelHost.flyoutMaskWidth
@@ -859,6 +1199,7 @@ Item {
     MenuSurface {
       id: surface
 
+      visible: root.sidebarSurfaceVisible
       anchors.top: parent.top
       anchors.bottom: parent.bottom
       x: panelHost.sidebarX
@@ -877,7 +1218,7 @@ Item {
       designTokens: designTokens
 
       MenuContent {
-        visible: !sidebarState.collapsed
+        visible: root.sidebarSurfaceVisible && !sidebarState.collapsed
         anchors.fill: parent
         anchors.leftMargin: designTokens.contentInset
         anchors.rightMargin: designTokens.contentInset
@@ -909,11 +1250,12 @@ Item {
           root.renameCustomQuickLaunchApp(appId, label)
         }
         onSettingsRequested: root.toggleSettingsPanel()
+        onShellSettingsRequested: root.toggleShellSettingsPanel()
         onCollapseRequested: sidebarState.toggleCollapsed()
       }
 
       MenuRail {
-        visible: sidebarState.collapsed
+        visible: root.sidebarSurfaceVisible && sidebarState.collapsed
         anchors.top: parent.top
         anchors.topMargin: root.barBottomY + (root.railCompact ? 6 : 10)
         anchors.bottom: parent.bottom
@@ -941,6 +1283,7 @@ Item {
           root.activate(entry)
         }
         onSettingsRequested: root.toggleSettingsPanel()
+        onShellSettingsRequested: root.toggleShellSettingsPanel()
       }
     }
 
@@ -948,7 +1291,7 @@ Item {
       id: flyoutConnector
 
       open: root.flyoutOpen
-      renderable: panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      renderable: root.sidebarSurfaceVisible && panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
       progress: Math.min(panelController.menuProgress, panelController.flyoutProgress)
       x: panelHost.connectorX
       y: panelHost.connectorY
@@ -1001,6 +1344,33 @@ Item {
           root.activate(entry)
         }
         onCloseRequested: panelController.closeFlyout("settings")
+      }
+
+      OmarchyShellSettingsWindow {
+        id: shellSettingsPanel
+
+        anchors.fill: parent
+        visible: root.renderShellSettingsContent
+        enabled: root.shellSettingsPanelOpen
+        opacity: root.shellSettingsPanelOpen ? 1 : 0
+        open: root.shellSettingsPanelOpen
+        compact: root.compact
+        drawBackground: false
+        designTokens: designTokens
+        registry: registry
+        settingsService: shellSettingsService
+        foreground: root.foreground
+        background: root.background
+        accent: root.accent
+        shellAccent: root.shellAccent
+        sessionAccent: root.sessionAccent
+        dangerAccent: root.dangerAccent
+        navAccent: root.navAccent
+        muted: root.muted
+        onActivated: function(entry) {
+          root.activate(entry)
+        }
+        onCloseRequested: panelController.closeFlyout("shellSettings")
       }
 
       FlyoutAppPickerContent {

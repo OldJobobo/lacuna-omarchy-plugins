@@ -142,6 +142,26 @@ The first implementation should use one of these safer approximations:
   push the upper-right full-frame corner down.
 - Increased only the topbar caster gradient opacity to make the bar shadow read
   stronger without changing reserve geometry or other frame-edge shadows.
+- Added a 6px sidebar-only reserve adjustment so Hyprland clients keep a better
+  left gap from the Lacuna sidebar in full-frame mode.
+- Changed frame overlay animation from a full-layer fade to edge-local motion:
+  full-frame pieces slide in from their respective screen edges and the sidebar
+  shadow silhouette slides from the sidebar edge.
+- Changed the topbar shadow caster animation to stay pinned to the top edge and
+  grow/shrink downward, so it no longer appears to animate from its lower edge.
+- Kept the Lacuna layer surface mapped in frame modes with an empty input mask
+  while closed, so the compositor does not add a parent surface map animation on
+  top of the edge-local frame animation.
+- Deferred the first opening animation by one frame after a closed panel becomes
+  renderable, giving the layer surface a stable geometry before frame progress
+  starts moving.
+- Replaced the very front-loaded panel easing curve with a smoother single
+  segment ease-out and applied a local smootherstep curve to frame-edge progress
+  so edge pieces accelerate and settle less abruptly.
+- Changed the menu-button closed state to preserve full-frame mode. When the
+  sidebar/rail is closed and `fullframe` is active, the overlay keeps drawing
+  the perimeter, adds a fake left frame edge, and Hyprland gets a left frame
+  reserve instead of a sidebar reserve.
 
 Validated:
 

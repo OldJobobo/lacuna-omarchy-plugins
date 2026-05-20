@@ -10,6 +10,7 @@ Column {
   signal expandRequested()
   signal compactToggleRequested()
   signal settingsRequested()
+  signal shellSettingsRequested()
 
   required property var menuState
   required property var registry
@@ -156,7 +157,7 @@ Column {
 
   Item {
     width: root.railWidth
-    height: Math.max(0, root.height - y - settingsDivider.height - settingsButton.height - root.spacing * 2)
+    height: Math.max(0, root.height - y - settingsDivider.height - shellSettingsButton.height - settingsButton.height - root.spacing * 3)
   }
 
   LacunaRect {
@@ -165,6 +166,22 @@ Column {
     width: root.railWidth
     height: 1
     color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
+  }
+
+  MenuRailButton {
+    id: shellSettingsButton
+
+    shape: "settings"
+    muted: root.foreground
+    hoverAccent: root.shellAccent
+    buttonSize: root.railWidth
+    buttonRadius: root.designTokens.controlRadius
+    hoverOpacity: root.designTokens.hoverOpacity
+    pressOpacity: root.designTokens.activeOpacity
+    iconSize: root.compact ? 20 : 22
+    onHoveredChanged: if (hovered) root.showTooltipText(this, "Omarchy Shell Settings", root.shellAccent)
+                    else root.hideTooltip(this)
+    onTriggered: root.shellSettingsRequested()
   }
 
   MenuRailButton {
@@ -177,7 +194,7 @@ Column {
     buttonRadius: root.designTokens.controlRadius
     hoverOpacity: root.designTokens.hoverOpacity
     pressOpacity: root.designTokens.activeOpacity
-    iconSize: root.compact ? 16 : 18
+    iconSize: root.compact ? 20 : 22
     onHoveredChanged: if (hovered) root.showTooltipText(this, "Lacuna Settings", root.accent)
                     else root.hideTooltip(this)
     onTriggered: root.settingsRequested()

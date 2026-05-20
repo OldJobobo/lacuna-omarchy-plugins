@@ -13,6 +13,7 @@ PanelWindow {
   property var targetScreen: null
   property bool menuOpen: false
   property bool panelVisible: false
+  property bool keepMapped: false
   property bool flyoutOpen: false
   property bool exclusive: false
   property int panelWidth: 0
@@ -38,8 +39,9 @@ PanelWindow {
   property bool flyoutInteractive: false
   property bool anchorRight: false
   property string layerNamespace: "lacuna-menu"
+  readonly property bool inputActive: panelVisible
 
-  visible: panelVisible
+  visible: panelVisible || keepMapped
   screen: targetScreen
   color: "transparent"
   implicitWidth: Math.max(panelWidth + surfaceRightInset + flyoutLaneWidth, visualWidth)
@@ -59,22 +61,22 @@ PanelWindow {
     Region {
       x: Math.round(root.sidebarMaskX)
       y: Math.round(root.sidebarMaskY)
-      width: Math.round(Math.max(0, root.sidebarMaskWidth))
-      height: Math.round(Math.max(0, root.sidebarMaskHeight))
+      width: Math.round(root.inputActive ? Math.max(0, root.sidebarMaskWidth) : 0)
+      height: Math.round(root.inputActive ? Math.max(0, root.sidebarMaskHeight) : 0)
     }
 
     Region {
       x: Math.round(root.connectorMaskX)
       y: Math.round(root.connectorMaskY)
-      width: Math.round(Math.max(0, root.connectorMaskWidth))
-      height: Math.round(Math.max(0, root.connectorMaskHeight))
+      width: Math.round(root.inputActive ? Math.max(0, root.connectorMaskWidth) : 0)
+      height: Math.round(root.inputActive ? Math.max(0, root.connectorMaskHeight) : 0)
     }
 
     Region {
       x: Math.round(root.flyoutMaskX)
       y: Math.round(root.flyoutMaskY)
-      width: Math.round(Math.max(0, root.flyoutMaskWidth))
-      height: Math.round(Math.max(0, root.flyoutMaskHeight))
+      width: Math.round(root.inputActive ? Math.max(0, root.flyoutMaskWidth) : 0)
+      height: Math.round(root.inputActive ? Math.max(0, root.flyoutMaskHeight) : 0)
     }
   }
 

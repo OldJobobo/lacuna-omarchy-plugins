@@ -20,10 +20,27 @@ Item {
   property string colorProfile: "semantic"
   property string frameMode: "off"
   property bool frameShadow: false
+  property var shellBarConfig: ({})
+  property string shellBarPosition: "top"
+  property bool shellBarTransparent: false
+  property string shellBarCenterAnchor: ""
+  property int shellIdleScreensaver: 150
+  property int shellIdleLock: 300
+  property var shellPlugins: []
+  property var barWidgetRegistry: null
+  property var pluginRegistry: null
+  property int catalogRevision: 0
   property var appCatalog: null
   property var customQuickLaunchApps: []
   property var customQuickLaunchNames: ({})
   property var preferredApps: ({})
+
+  onBarWidgetRegistryChanged: catalogRevision++
+
+  Connections {
+    target: root.barWidgetRegistry
+    function onChanged() { root.catalogRevision++ }
+  }
 
   function item(kind, icon, label, hint, view, command, tone, priority, layout, danger, group, action, iconSource, switchVisible, switchChecked) {
     return {
@@ -168,6 +185,23 @@ Item {
     return terminalCommand("cd " + shellQuote(root.lacunaPath) + " && ${EDITOR:-nvim} .", "Lacuna Plugin", false)
   }
 
+  function editShellConfigCommand() {
+    var path = (Quickshell.env("HOME") || "") + "/.config/omarchy/shell.json"
+    return terminalCommand("${EDITOR:-nvim} " + shellQuote(path), "Omarchy Shell Config", false)
+  }
+
+  function fontListCommand() {
+    return terminalCommand("omarchy font current; printf '\\n'; omarchy font list; printf '\\nCommand exited. Press Enter to close...'; read -r _", "Omarchy Fonts", false)
+  }
+
+  function debugCommand() {
+    return terminalCommand("omarchy debug --print --no-sudo; printf '\\nCommand exited. Press Enter to close...'; read -r _", "Omarchy Debug", false)
+  }
+
+  function debugIdleCommand() {
+    return terminalCommand("omarchy debug idle; printf '\\nCommand exited. Press Enter to close...'; read -r _", "Omarchy Idle Debug", false)
+  }
+
   function omarchyShellPath() {
     var omarchyPath = Quickshell.env("OMARCHY_PATH") || ((Quickshell.env("HOME") || "") + "/.local/share/omarchy")
     return omarchyPath + "/shell"
@@ -229,6 +263,192 @@ Item {
     if (root.barSizeMode === "compact") return "Override host bar to 26 / 28"
     if (root.barSizeMode === "full") return "Override host bar to 32 / 34"
     return "Use the active Omarchy theme bar size"
+  }
+
+  function shellBarPositionHint() {
+    if (root.shellBarPosition === "right") return "Bar is anchored to the right edge"
+    if (root.shellBarPosition === "bottom") return "Bar is anchored to the bottom edge"
+    if (root.shellBarPosition === "left") return "Bar is anchored to the left edge"
+    return "Bar is anchored to the top edge"
+  }
+
+  function shellBarLayoutSection(section) {
+    var bar = root.shellBarConfig || {}
+    var layout = bar.layout || {}
+    var list = layout[String(section || "")]
+    return Array.isArray(list) ? list : []
+  }
+
+  function shellBarSectionSummary(section) {
+    var count = shellBarLayoutSection(section).length
+    if (count === 0) return "Empty"
+    if (count === 1) return "1 widget"
+    return count + " widgets"
+  }
+
+  function secondsName(value) {
+    var seconds = Math.max(0, Math.round(Number(value) || 0))
+    if (seconds % 60 === 0) return String(seconds / 60) + "m"
+    return String(seconds) + "s"
+  }
+
+  function shellIdleScreensaverName() {
+    return secondsName(root.shellIdleScreensaver)
+  }
+
+  function shellIdleLockName() {
+    return secondsName(root.shellIdleLock)
+  }
+
+  function shellPluginEnabled(id) {
+    var plugins = Array.isArray(root.shellPlugins) ? root.shellPlugins : []
+    for (var i = 0; i < plugins.length; i++) {
+      if (plugins[i] && String(plugins[i].id || "") === String(id || "")) return true
+    }
+    return false
+  }
+
+  function installedShellPluginRows() {
+    if (!root.pluginRegistry || !root.pluginRegistry.installedPlugins) return []
+    var plugins = root.pluginRegistry.installedPlugins
+    var rows = []
+    for (var id in plugins) {
+      var manifest = plugins[id]
+      if (!manifest || manifest.__isFirstParty) continue
+      if (id === "omarchy.lacuna-menu") continue
+      rows.push({
+        id: id,
+        name: manifest.name || id,
+        description: manifest.description || id,
+        enabled: shellPluginEnabled(id)
+      })
+    }
+    rows.sort(function(a, b) { return a.name.localeCompare(b.name) })
+    return rows
+  }
+
+  readonly property var builtinWidgetMeta: ({
+    "omarchy": { name: "Omarchy menu", description: "Launches the Omarchy menu", category: "Compositor" },
+    "workspaces": { name: "Workspaces", description: "Workspace number indicators", category: "Compositor" },
+    "clock": { name: "Clock", description: "Date and time text", category: "Time" },
+    "update": { name: "Updates", description: "Indicates available system updates", category: "System" },
+    "voxtype": { name: "Voxtype", description: "Voxtype dictation state", category: "Status" },
+    "screenRecording": { name: "Screen recording", description: "Active recording indicator", category: "Status" },
+    "notifications": { name: "DND", description: "Do-not-disturb indicator", category: "Status" },
+    "tray": { name: "System tray", description: "Status notifier items", category: "Status" }
+  })
+
+  function canonicalWidgetId(id) {
+    switch (String(id || "")) {
+    case "idle": return "idleInhibitor"
+    case "weatherFlyout": return "weather"
+    default: return String(id || "")
+    }
+  }
+
+  function shellBarWidgetMetadata(id) {
+    var key = String(id || "")
+    var canonicalKey = canonicalWidgetId(key)
+    if (root.barWidgetRegistry && root.barWidgetRegistry.has(canonicalKey))
+      return root.barWidgetRegistry.metadataFor(canonicalKey) || {}
+    if (builtinWidgetMeta[canonicalKey]) return builtinWidgetMeta[canonicalKey]
+
+    var manifest = root.pluginRegistry && root.pluginRegistry.installedPlugins ? root.pluginRegistry.installedPlugins[key] : null
+    if (manifest) {
+      var meta = manifest.barWidget || {}
+      return {
+        displayName: meta.displayName || manifest.name || key,
+        name: meta.displayName || manifest.name || key,
+        description: meta.description || manifest.description || "",
+        category: meta.category || "Plugin",
+        allowMultiple: meta.allowMultiple === true,
+        source: "plugin"
+      }
+    }
+
+    return {}
+  }
+
+  function shellBarWidgetName(id) {
+    var rev = root.catalogRevision
+    var meta = shellBarWidgetMetadata(id)
+    return meta.displayName || meta.name || String(id || "")
+  }
+
+  function shellBarWidgetDescription(id) {
+    var rev = root.catalogRevision
+    var meta = shellBarWidgetMetadata(id)
+    return meta.description || ""
+  }
+
+  function shellBarWidgetAllowsMultiple(id) {
+    var meta = shellBarWidgetMetadata(id)
+    if (meta.allowMultiple === true) return true
+    return String(id || "") === "spacer"
+  }
+
+  function shellBarWidgetIcon(id) {
+    var key = canonicalWidgetId(id)
+    if (key === "calendar" || key === "clock") return "clock"
+    if (key === "weather") return "world"
+    if (key === "update") return "refresh"
+    if (key === "tray") return "apps"
+    if (key === "bluetoothPanel") return "bluetooth"
+    if (key === "networkPanel") return "wifi"
+    if (key === "audioPanel" || key === "microphone") return "volume"
+    if (key === "monitorPanel") return "photo"
+    if (key === "powerPanel") return "power"
+    if (key === "screenRecording") return "video"
+    if (key === "idleInhibitor") return "moon"
+    if (key === "omarchy") return "lacuna"
+    if (key === "workspaces") return "apps"
+    return "settings"
+  }
+
+  function shellBarCatalogIds() {
+    var rev = root.catalogRevision
+    var ids = {}
+    if (root.barWidgetRegistry) {
+      var registered = root.barWidgetRegistry.availableIds()
+      for (var i = 0; i < registered.length; i++) ids[registered[i]] = true
+    }
+    if (root.pluginRegistry && root.pluginRegistry.installedPlugins) {
+      var plugins = root.pluginRegistry.installedPlugins
+      for (var pid in plugins) {
+        var manifest = plugins[pid]
+        if (manifest && Array.isArray(manifest.kinds) && manifest.kinds.indexOf("bar-widget") !== -1) ids[pid] = true
+      }
+    }
+    for (var key in builtinWidgetMeta) ids[key] = true
+    return Object.keys(ids)
+  }
+
+  function shellBarWidgetExistsAnywhere(id) {
+    var sections = ["left", "center", "right"]
+    for (var s = 0; s < sections.length; s++) {
+      var list = shellBarLayoutSection(sections[s])
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] && String(list[i].id || "") === String(id || "")) return true
+      }
+    }
+    return false
+  }
+
+  function availableShellBarWidgets(section) {
+    var ids = shellBarCatalogIds().sort(function(a, b) {
+      return shellBarWidgetName(a).localeCompare(shellBarWidgetName(b))
+    })
+    var result = []
+    for (var i = 0; i < ids.length; i++) {
+      var id = ids[i]
+      if (!shellBarWidgetAllowsMultiple(id) && shellBarWidgetExistsAnywhere(id)) continue
+      result.push({
+        id: id,
+        name: shellBarWidgetName(id),
+        description: shellBarWidgetDescription(id)
+      })
+    }
+    return result
   }
 
   function anchorHorizontal() {
@@ -471,6 +691,18 @@ Item {
     ])
   }
 
+  function sidebarDisplayMode() {
+    return root.sidebarCollapsed ? "rail" : "full"
+  }
+
+  function sidebarDisplayName() {
+    return root.sidebarCollapsed ? "Icon Rail" : "Full"
+  }
+
+  function sidebarDisplayHint() {
+    return root.sidebarCollapsed ? "Only show the icon rail" : "Show the full sidebar surface"
+  }
+
   function itemsFor(view) {
     if (view === "apps") {
       var rows = [item("header", "", "Categories", "", "", "", "lacuna", "normal", "section", false, "apps")]
@@ -529,7 +761,10 @@ Item {
           { value: "compact", label: "Compact" },
           { value: "full", label: "Full" }
         ], "set-bar-size-mode-"),
-        item("item", root.sidebarCollapsed ? "sidebar-expand" : "sidebar-collapse", root.sidebarCollapsed ? "Icon Rail" : "Full Sidebar", root.sidebarCollapsed ? "Show the compact icon rail" : "Show the full sidebar surface", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-sidebar-rail", "", true, root.sidebarCollapsed),
+        optionControl(root.sidebarCollapsed ? "sidebar-expand" : "sidebar-collapse", "Sidebar Display", sidebarDisplayHint(), "lacuna", sidebarDisplayMode(), [
+          { value: "full", label: "Full" },
+          { value: "rail", label: "Rail" }
+        ], "set-sidebar-display-"),
         item("item", "sidebar-overlay", root.sidebarExclusive ? "Sidebar Overlay" : "Sidebar Docked", root.sidebarExclusive ? "Let the sidebar float over windows" : "Reserve screen space for the sidebar", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-sidebar-mode", "", true, root.sidebarExclusive),
         item("item", "corners", root.sidebarCornerPieces ? "Corner Pieces" : "Flat Edge", root.sidebarCornerPieces ? "Show the rounded connector pieces" : "Hide the rounded connector pieces", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-corner-pieces", "", true, root.sidebarCornerPieces),
         item("item", "refresh", "Reload app catalog", "Rescan desktop launchers", "", "", "shell", "normal", "row", false, "apps", "reload-apps")
@@ -588,7 +823,10 @@ Item {
           { value: "compact", label: "Compact" },
           { value: "full", label: "Full" }
         ], "set-bar-size-mode-"),
-        item("item", root.sidebarCollapsed ? "sidebar-expand" : "sidebar-collapse", root.sidebarCollapsed ? "Icon Rail" : "Full Sidebar", root.sidebarCollapsed ? "Show the compact icon rail" : "Show the full sidebar surface", "", "", "lacuna", "normal", "row", false, "layout", "toggle-sidebar-rail", "", true, root.sidebarCollapsed),
+        optionControl(root.sidebarCollapsed ? "sidebar-expand" : "sidebar-collapse", "Sidebar Display", sidebarDisplayHint(), "layout", sidebarDisplayMode(), [
+          { value: "full", label: "Full" },
+          { value: "rail", label: "Rail" }
+        ], "set-sidebar-display-"),
         item("item", "sidebar-overlay", root.sidebarExclusive ? "Sidebar Overlay" : "Sidebar Docked", root.sidebarExclusive ? "Let the sidebar float over windows" : "Reserve screen space for the sidebar", "", "", "lacuna", "normal", "row", false, "layout", "toggle-sidebar-mode", "", true, root.sidebarExclusive),
         item("item", "corners", root.sidebarCornerPieces ? "Corner Pieces" : "Flat Edge", root.sidebarCornerPieces ? "Show the rounded connector pieces" : "Hide the rounded connector pieces", "", "", "lacuna", "normal", "row", false, "layout", "toggle-corner-pieces", "", true, root.sidebarCornerPieces)
       ]

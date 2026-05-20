@@ -184,7 +184,10 @@ Item {
           { value: "compact", label: "Compact" },
           { value: "full", label: "Full" }
         ], root.registry.barSizeMode, "set-bar-size-mode-"),
-        row(root.registry.sidebarCollapsed ? "sidebar-expand" : "sidebar-collapse", "Sidebar Display", root.registry.sidebarCollapsed ? "Only show the icon rail" : "Show the full sidebar", sidebarShapeName(), "lacuna", "toggle-sidebar-rail", "toggle", root.registry.sidebarCollapsed),
+        row(root.registry.sidebarCollapsed ? "sidebar-expand" : "sidebar-collapse", "Sidebar Display", root.registry.sidebarDisplayHint(), sidebarShapeName(), "lacuna", "", "segments", false, [
+          { value: "full", label: "Full" },
+          { value: "rail", label: "Rail" }
+        ], root.registry.sidebarDisplayMode(), "set-sidebar-display-"),
         row("sidebar-overlay", "Window Mode", root.registry.sidebarExclusive ? "Float over windows" : "Reserve screen space", sidebarModeName(), "lacuna", "toggle-sidebar-mode", "toggle", root.registry.sidebarExclusive),
         row("corners", "Corner Pieces", root.registry.sidebarCornerPieces ? "Rounded connector pieces are visible" : "Use a flat sidebar edge", root.registry.sidebarCornerPieces ? "On" : "Off", "lacuna", "toggle-corner-pieces", "toggle", root.registry.sidebarCornerPieces)
       ]

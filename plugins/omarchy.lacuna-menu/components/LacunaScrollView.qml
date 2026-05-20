@@ -29,6 +29,18 @@ Flickable {
   interactive: true
   ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
+  WheelHandler {
+    target: null
+    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+    onWheel: function(event) {
+      var delta = event.angleDelta.y !== 0 ? event.angleDelta.y : event.pixelDelta.y
+      if (delta === 0) return
+
+      root.scrollBy(delta)
+      event.accepted = true
+    }
+  }
+
   function clampContentY(value) {
     return Math.max(0, Math.min(value, Math.max(0, contentHeight - height)))
   }

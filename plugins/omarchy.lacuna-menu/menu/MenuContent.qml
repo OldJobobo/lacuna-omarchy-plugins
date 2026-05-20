@@ -11,6 +11,7 @@ Column {
   signal quickLaunchMoveRequested(string appId, int targetIndex)
   signal quickLaunchRenameRequested(string appId, string label)
   signal settingsRequested()
+  signal shellSettingsRequested()
 
   required property var menuState
   required property var registry
@@ -64,6 +65,10 @@ Column {
 
   function openSettings() {
     root.settingsRequested()
+  }
+
+  function openShellSettings() {
+    root.shellSettingsRequested()
   }
 
   function sectionKey(entry, index) {
@@ -598,7 +603,8 @@ Column {
       anchors.left: parent.left
       anchors.right: parent.right
       anchors.bottom: parent.bottom
-      height: root.compact ? 28 : 32
+      height: root.compact ? 34 : 38
+      spacing: root.compact ? 6 : 8
 
       LacunaIconButton {
         id: settingsButton
@@ -609,12 +615,29 @@ Column {
         muted: root.muted
         accent: root.accent
         hoverAccent: root.accent
-        buttonSize: root.compact ? 26 : 30
+        buttonSize: root.compact ? 32 : 36
         buttonRadius: root.designTokens.controlRadius
         hoverOpacity: root.designTokens.hoverOpacity
         pressOpacity: root.designTokens.activeOpacity
-        iconSize: root.compact ? 14 : 16
+        iconSize: root.compact ? 18 : 20
         onTriggered: root.openSettings()
+      }
+
+      LacunaIconButton {
+        id: shellSettingsButton
+
+        anchors.verticalCenter: parent.verticalCenter
+        icon: "settings"
+        foreground: root.foreground
+        muted: root.muted
+        accent: root.shellAccent
+        hoverAccent: root.shellAccent
+        buttonSize: root.compact ? 32 : 36
+        buttonRadius: root.designTokens.controlRadius
+        hoverOpacity: root.designTokens.hoverOpacity
+        pressOpacity: root.designTokens.activeOpacity
+        iconSize: root.compact ? 18 : 20
+        onTriggered: root.openShellSettings()
       }
     }
 
@@ -646,6 +669,42 @@ Column {
         anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter
         text: "Lacuna Settings"
+        color: root.foreground
+        fontFamily: root.bodyFontFamily
+        font.pixelSize: 11
+        font.weight: Font.DemiBold
+        elide: Text.ElideRight
+      }
+    }
+
+    LacunaRect {
+      visible: shellSettingsButton.hovered
+      x: settingsRow.x + shellSettingsButton.x + shellSettingsButton.width + 8
+      y: settingsRow.y + shellSettingsButton.y - height - 4
+      width: 142
+      height: 28
+      radius: root.designTokens.tooltipTreatment === "tonal" ? root.designTokens.radius : 0
+      color: root.background
+      border.width: root.designTokens.tooltipTreatment === "accent-strip" ? 1 : root.designTokens.borderWidth
+      border.color: root.designTokens.tooltipTreatment === "bordered" ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.22) : Qt.rgba(root.shellAccent.r, root.shellAccent.g, root.shellAccent.b, 0.24)
+
+      LacunaRect {
+        visible: root.designTokens.tooltipTreatment === "accent-strip"
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: 2
+        color: root.shellAccent
+        opacity: 0.82
+      }
+
+      LacunaText {
+        anchors.left: parent.left
+        anchors.leftMargin: 12
+        anchors.right: parent.right
+        anchors.rightMargin: 10
+        anchors.verticalCenter: parent.verticalCenter
+        text: "Omarchy Shell Settings"
         color: root.foreground
         fontFamily: root.bodyFontFamily
         font.pixelSize: 11
