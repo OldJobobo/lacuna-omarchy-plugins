@@ -66,6 +66,10 @@ Item {
     role: "codex"
   }
 
+  MotionTokens {
+    id: motionTokens
+  }
+
   Timer {
     interval: root.intervalMs
     running: true
@@ -103,6 +107,7 @@ Item {
   Item {
     id: button
 
+    property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
     readonly property int horizontalPadding: root.vertical ? 0 : 8
     readonly property int minimumWidth: root.vertical ? root.barSize : 32
 
@@ -111,6 +116,12 @@ Item {
     implicitWidth: width
     implicitHeight: height
     clip: true
+
+    Rectangle {
+      anchors.fill: parent
+      color: root.moduleColor
+      opacity: button.hoverReveal * 0.06
+    }
 
     Row {
       id: content
@@ -130,7 +141,7 @@ Item {
         fillMode: Image.PreserveAspectFit
         smooth: true
         mipmap: true
-        opacity: 0.92
+        opacity: 0.88 + button.hoverReveal * 0.12
         layer.enabled: true
         layer.effect: MultiEffect {
           colorization: 1.0
@@ -149,6 +160,13 @@ Item {
         font.underline: false
         maximumLineCount: 1
         elide: Text.ElideRight
+      }
+    }
+
+    Behavior on hoverReveal {
+      NumberAnimation {
+        duration: motionTokens.hoverDuration
+        easing.type: Easing.OutCubic
       }
     }
 

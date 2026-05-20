@@ -1,8 +1,6 @@
 import Quickshell
 import Quickshell.Io
-import Quickshell.Widgets
 import QtQuick
-import QtQuick.Controls
 import "../services"
 import "../components"
 import "../settings"
@@ -23,7 +21,7 @@ Item {
   readonly property var sidebarState: sharedSidebarState || localSidebarState
   property color foreground: menuTheme.foreground
   property color background: menuTheme.background
-  property color panelColor: menuTheme.background
+  property color panelColor: menuTheme.panelBackground
   property color accent: menuTheme.accent
   property color shellAccent: menuTheme.color("color6")
   property color sessionAccent: menuTheme.color("color11")
@@ -35,21 +33,26 @@ Item {
   property bool forceCompactRail: false
   property bool railCompact: forceCompactRail ? true : compact
   property string designStyle: lacunaSettings.data && lacunaSettings.data.designStyle ? lacunaSettings.data.designStyle : "carbon"
+  readonly property string barPosition: currentBarPosition()
+  // Lacuna is its own left sidebar. The Omarchy bar position only affects
+  // offsets and sizing, not which edge Lacuna owns.
+  readonly property bool panelOnRight: false
+  readonly property bool effectiveCornerPieces: sidebarState.cornerPieces && !panelOnRight
   property int fullPanelWidth: compact ? 270 : 310
-  property int railButtonWidth: railCompact ? 24 : barHeight
+  property int barControlSize: currentBarSize()
+  property int railButtonWidth: railCompact ? 24 : barControlSize
   property int railLeftInset: railDesignTokens.railLeftInset
   property int railRightInset: railDesignTokens.railRightInset
   property int railPanelWidth: railButtonWidth + railLeftInset + railRightInset
   property int panelWidth: sidebarState.collapsed ? railPanelWidth : fullPanelWidth
   property int defaultTopBarHeight: 26
   property int barHeight: topBarHeight()
-  property int joinRadius: sidebarState.cornerPieces ? (compact ? 14 : 18) : 0
-  property int connectorOverlap: sidebarState.cornerPieces ? (compact ? 25 : 33) : 0
-  property int bodyRightInset: sidebarState.cornerPieces ? joinRadius : 0
+  property int joinRadius: effectiveCornerPieces ? (compact ? 14 : 18) : 0
+  property int connectorOverlap: effectiveCornerPieces ? (compact ? 25 : 33) : 0
+  property int bodyRightInset: effectiveCornerPieces ? joinRadius : 0
   property int surfaceRightInset: bodyRightInset
-  property int settingsConnectorWidth: sidebarState.cornerPieces ? joinRadius : 0
-  property int attachedFlyoutLeftX: panelWidth + settingsConnectorWidth
-  property int flyoutLaneWidth: settingsPanelVisible ? settingsPanelWidth : appPickerVisible ? appPickerWidth : 0
+  property int settingsConnectorWidth: effectiveCornerPieces ? joinRadius : 0
+  property int flyoutLaneWidth: panelController.menuRenderable ? maxFlyoutLaneWidth : 0
   // In exclusive mode the compositor already places this window below the top
   // bar, so the bar edge is local y=0. In overlay mode the window starts at
   // screen top and the bar edge is the live bar height.
@@ -65,6 +68,17 @@ Item {
   property string appPickerMode: "customQuickLaunchApp"
   property string preferredAppPickerRole: ""
   property int appPickerWidth: compact ? 260 : 300
+  readonly property int maxFlyoutLaneWidth: Math.max(settingsPanelWidth, appPickerWidth)
+  readonly property string visibleFlyout: panelController.visibleFlyout
+  readonly property string outgoingFlyout: panelController.outgoingFlyout
+  readonly property bool activeFlyoutSettings: visibleFlyout === "settings"
+  readonly property bool activeFlyoutAppPicker: visibleFlyout === "appPicker"
+  readonly property bool renderSettingsContent: settingsPanelVisible || outgoingFlyout === "settings"
+  readonly property bool renderAppPickerContent: appPickerVisible || outgoingFlyout === "appPicker"
+  readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : 0
+  readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : 0
+  readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : 0
+  property string pendingFlyoutFocus: ""
   property int pluginStateRevision: 0
   readonly property var shellConfig: shell && shell.shellConfig ? shell.shellConfig : ({})
   readonly property var desktopClockSettings: shellPluginSettings("omarchy.lacuna-desktop-clock", {
@@ -111,11 +125,28 @@ Item {
     return positiveInt(barConfig.height !== undefined ? barConfig.height : barConfig.size, defaultTopBarHeight)
   }
 
-  function topBarHeight() {
+  function currentBarSize() {
+    var liveBar = shell && shell.bar ? shell.bar : null
+    var verticalFallback = (barPosition === "left" || barPosition === "right") ? 28 : configBarHeight()
+    if (liveBar && liveBar.barSize !== undefined) return positiveInt(liveBar.barSize, verticalFallback)
+    return verticalFallback
+  }
+
+  function currentBarPosition() {
     var liveBar = shell && shell.bar ? shell.bar : null
     var livePosition = liveBar && liveBar.position ? String(liveBar.position) : ""
-    var configPosition = shell && shell.barConfig && shell.barConfig.position ? String(shell.barConfig.position) : "top"
-    var position = livePosition || configPosition
+    var configPosition = shell && shell.barConfig && shell.barConfig.position ? String(shell.barConfig.position) : ""
+    var shellConfigPosition = shell && shell.shellConfig && shell.shellConfig.bar && shell.shellConfig.bar.position
+      ? String(shell.shellConfig.bar.position) : ""
+
+    // shell.bar can briefly expose its default before the persisted config is
+    // applied. Prefer the config source for offset and size decisions.
+    return configPosition || shellConfigPosition || livePosition || "top"
+  }
+
+  function topBarHeight() {
+    var liveBar = shell && shell.bar ? shell.bar : null
+    var position = currentBarPosition()
 
     if (position !== "top") return 0
     if (liveBar && !liveBar.barHidden && liveBar.barSize !== undefined) {
@@ -152,10 +183,12 @@ Item {
   }
 
   function close() {
+    pendingFlyoutFocus = ""
     panelController.closeMenu()
   }
 
   function closeFlyouts() {
+    pendingFlyoutFocus = ""
     panelController.closeActiveFlyout()
   }
 
@@ -225,12 +258,6 @@ Item {
     lacunaSettings.save(next)
   }
 
-  function preferredAppValue(role) {
-    var defaults = lacunaSettings.data && lacunaSettings.data.preferredApps ? lacunaSettings.data.preferredApps : {}
-    var value = String(defaults[role] || "").trim()
-    return value === "" ? "system" : value
-  }
-
   function setPreferredApp(role, id) {
     if (!role) return
 
@@ -242,37 +269,45 @@ Item {
 
   function openCustomQuickLaunchPicker() {
     if (!appCatalog.ready) appCatalog.reload()
-    appPicker.query = ""
-    searchInput.text = ""
+    appPickerContent.resetSearch()
     appPickerMode = "customQuickLaunchApp"
     preferredAppPickerRole = ""
     panelController.openFlyout("appPicker")
     if (sidebarState.collapsed) sidebarState.expand()
-    Qt.callLater(function() {
-      searchInput.forceActiveFocus()
-    })
+    requestFlyoutFocus("appPicker")
   }
 
   function openPreferredAppPicker(role) {
     if (!appCatalog.ready) appCatalog.reload()
-    appPicker.query = ""
-    searchInput.text = ""
+    appPickerContent.resetSearch()
     appPickerMode = "preferredApp"
     preferredAppPickerRole = role
     panelController.openFlyout("appPicker")
     if (sidebarState.collapsed) sidebarState.expand()
-    Qt.callLater(function() {
-      searchInput.forceActiveFocus()
-    })
+    requestFlyoutFocus("appPicker")
   }
 
   function toggleSettingsPanel() {
     panelController.toggleFlyout("settings")
     if (settingsPanelOpen) {
       if (!menuState.open) panelController.openMenu()
-      Qt.callLater(function() {
-        settingsPanel.forceActiveFocus()
-      })
+      requestFlyoutFocus("settings")
+    }
+  }
+
+  function requestFlyoutFocus(id) {
+    pendingFlyoutFocus = String(id || "")
+    Qt.callLater(applyPendingFlyoutFocus)
+  }
+
+  function applyPendingFlyoutFocus() {
+    if (pendingFlyoutFocus === "" || !panelController.flyoutInteractive) return
+    if (pendingFlyoutFocus === "appPicker" && appPickerOpen) {
+      appPickerContent.forceSearchFocus()
+      pendingFlyoutFocus = ""
+    } else if (pendingFlyoutFocus === "settings" && settingsPanelOpen) {
+      settingsPanel.forceActiveFocus()
+      pendingFlyoutFocus = ""
     }
   }
 
@@ -644,6 +679,12 @@ Item {
   PanelController {
     id: panelController
     menuState: root.menuState
+    onFlyoutOpenChanged: {
+      if (!flyoutOpen) root.pendingFlyoutFocus = ""
+      else root.applyPendingFlyoutFocus()
+    }
+    onFlyoutInteractiveChanged: root.applyPendingFlyoutFocus()
+    onActiveFlyoutChanged: root.applyPendingFlyoutFocus()
     onHostHideRequested: {
       if (root.shell && root.shell.hide) root.shell.hide(root.pluginId)
     }
@@ -665,25 +706,44 @@ Item {
     panelWidth: root.panelWidth
     surfaceRightInset: root.surfaceRightInset
     flyoutLaneWidth: root.flyoutLaneWidth
-    sidebarMaskX: Math.max(0, surface.surfaceX)
-    sidebarMaskY: 0
-    sidebarMaskWidth: Math.max(0, root.panelWidth + root.surfaceRightInset + Math.min(0, surface.surfaceX))
-    sidebarMaskHeight: height
-    connectorMaskX: root.settingsPanelVisible ? settingsConnector.x : root.appPickerVisible ? appPickerConnector.x : 0
-    connectorMaskY: root.settingsPanelVisible ? settingsConnector.y : root.appPickerVisible ? appPickerConnector.y : 0
-    connectorMaskWidth: root.settingsPanelVisible && settingsConnector.visible ? settingsConnector.width : root.appPickerVisible && appPickerConnector.visible ? appPickerConnector.width : 0
-    connectorMaskHeight: root.settingsPanelVisible && settingsConnector.visible ? settingsConnector.height : root.appPickerVisible && appPickerConnector.visible ? appPickerConnector.height : 0
-    flyoutMaskX: root.settingsPanelVisible ? settingsFlyout.bodyMaskX : root.appPickerVisible ? appPicker.bodyMaskX : 0
-    flyoutMaskY: root.settingsPanelVisible ? settingsFlyout.bodyMaskY : root.appPickerVisible ? appPicker.bodyMaskY : 0
-    flyoutMaskWidth: root.settingsPanelVisible ? settingsFlyout.bodyMaskWidth : root.appPickerVisible ? appPicker.bodyMaskWidth : 0
-    flyoutMaskHeight: root.settingsPanelVisible ? settingsFlyout.bodyMaskHeight : root.appPickerVisible ? appPicker.bodyMaskHeight : 0
+    anchorRight: root.panelOnRight
+    sidebarMaskX: panelHost.sidebarMaskX
+    sidebarMaskY: panelHost.sidebarMaskY
+    sidebarMaskWidth: panelHost.sidebarMaskWidth
+    sidebarMaskHeight: panelHost.sidebarMaskHeight
+    connectorMaskX: panelHost.connectorMaskX
+    connectorMaskY: panelHost.connectorMaskY
+    connectorMaskWidth: panelHost.connectorMaskWidth
+    connectorMaskHeight: panelHost.connectorMaskHeight
+    flyoutMaskX: panelHost.flyoutMaskX
+    flyoutMaskY: panelHost.flyoutMaskY
+    flyoutMaskWidth: panelHost.flyoutMaskWidth
+    flyoutMaskHeight: panelHost.flyoutMaskHeight
     onFocusGrabCleared: root.closeFlyouts()
+
+    LacunaPanelHost {
+      id: panelHost
+
+      panelWidth: root.panelWidth
+      surfaceRightInset: root.surfaceRightInset
+      surfaceX: surface.x + surface.surfaceX
+      sidebarHeight: menuWindow.height
+      anchorRight: root.panelOnRight
+      connectorWidth: root.settingsConnectorWidth
+      connectorRenderable: panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      flyoutY: root.activeFlyoutY
+      flyoutWidth: Math.max(0, root.activeFlyoutWidth)
+      flyoutHeight: Math.max(0, root.activeFlyoutHeight)
+      flyoutProgress: panelController.flyoutProgress
+      flyoutRenderable: panelController.flyoutRenderable
+    }
 
     MenuSurface {
       id: surface
 
       anchors.top: parent.top
       anchors.bottom: parent.bottom
+      x: panelHost.sidebarX
       panelWidth: root.panelWidth
       open: root.menuState.open
       progress: panelController.menuProgress
@@ -692,7 +752,8 @@ Item {
       joinRadius: root.joinRadius
       connectorOverlap: root.connectorOverlap
       bodyRightInset: root.surfaceRightInset
-      cornerPieces: sidebarState.cornerPieces
+      cornerPieces: root.effectiveCornerPieces
+      openFromRight: root.panelOnRight
       panelColor: root.panelColor
       foreground: root.foreground
       designTokens: designTokens
@@ -719,7 +780,7 @@ Item {
         dangerAccent: root.dangerAccent
         navAccent: root.navAccent
         muted: root.muted
-        iconRailWidth: root.barHeight
+        iconRailWidth: root.barControlSize
         onActivated: function(entry) {
           root.activate(entry)
         }
@@ -765,19 +826,32 @@ Item {
       }
     }
 
+    LacunaPanelConnector {
+      id: flyoutConnector
+
+      open: root.flyoutOpen
+      renderable: panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      progress: Math.min(panelController.menuProgress, panelController.flyoutProgress)
+      x: panelHost.connectorX
+      y: panelHost.connectorY
+      connectorWidth: panelHost.effectiveConnectorWidth
+      contentHeight: panelHost.effectiveFlyoutHeight
+      panelColor: root.panelColor
+    }
+
     LacunaAttachedFlyout {
-      id: settingsFlyout
+      id: attachedFlyout
 
-      readonly property int targetHeight: root.settingsFlyoutHeight()
-
-      open: root.settingsPanelOpen
-      renderable: root.settingsPanelVisible
-      interactive: root.settingsPanelOpen && root.flyoutInteractive
-      progress: root.settingsPanelVisible ? panelController.flyoutProgress : 0
-      openX: root.attachedFlyoutLeftX
-      openY: root.settingsFlyoutY(targetHeight)
-      panelWidth: root.settingsPanelWidth
-      panelHeight: targetHeight
+      open: root.flyoutOpen
+      renderable: panelController.flyoutRenderable
+      interactive: root.flyoutOpen && root.flyoutInteractive
+      progress: panelController.flyoutRenderable ? panelController.flyoutProgress : 0
+      contentProgress: panelController.contentProgress
+      openX: panelHost.flyoutX
+      openY: panelHost.effectiveFlyoutY
+      openToLeft: root.panelOnRight
+      panelWidth: panelHost.effectiveFlyoutWidth
+      panelHeight: panelHost.effectiveFlyoutHeight
       panelRadius: Math.max(designTokens.radius, root.compact ? 10 : 14)
       panelColor: root.panelColor
       foreground: root.foreground
@@ -787,6 +861,9 @@ Item {
         id: settingsPanel
 
         anchors.fill: parent
+        visible: root.renderSettingsContent
+        enabled: root.settingsPanelOpen
+        opacity: root.settingsPanelOpen ? 1 : 0
         open: root.settingsPanelOpen
         compact: root.compact
         drawBackground: false
@@ -807,321 +884,30 @@ Item {
         }
         onCloseRequested: panelController.closeFlyout("settings")
       }
-    }
 
-    LacunaPanelConnector {
-      id: settingsConnector
+      FlyoutAppPickerContent {
+        id: appPickerContent
 
-      open: root.settingsPanelOpen
-      renderable: root.settingsPanelVisible && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
-      progress: Math.min(panelController.menuProgress, panelController.flyoutProgress)
-      x: root.panelWidth
-      y: settingsFlyout.y - root.settingsConnectorWidth
-      connectorWidth: root.settingsConnectorWidth
-      contentHeight: settingsFlyout.height
-      panelColor: root.panelColor
-    }
-
-    LacunaPanelConnector {
-      id: appPickerConnector
-
-      open: root.appPickerOpen
-      renderable: root.appPickerVisible && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
-      progress: Math.min(panelController.menuProgress, panelController.flyoutProgress)
-      x: root.panelWidth
-      y: appPicker.y - root.settingsConnectorWidth
-      connectorWidth: root.settingsConnectorWidth
-      contentHeight: appPicker.height
-      panelColor: root.panelColor
-    }
-
-    LacunaAttachedFlyout {
-      id: appPicker
-
-      property string query: ""
-
-      function filteredApps() {
-        var apps = appCatalog.apps || []
-        var needle = query.toLowerCase().trim()
-        var list = []
-
-        for (var i = 0; i < apps.length; i++) {
-          var app = apps[i]
-          var haystack = String((app.Name || "") + " " + (app.GenericName || "") + " " + (app.Comment || "") + " " + (app.Categories || "")).toLowerCase()
-          if (needle === "" || haystack.indexOf(needle) >= 0) list.push(app)
-          if (list.length >= 80) break
-        }
-
-        return list
-      }
-
-      open: root.appPickerOpen
-      renderable: root.appPickerVisible
-      interactive: root.appPickerOpen && root.flyoutInteractive
-      progress: root.appPickerVisible ? panelController.flyoutProgress : 0
-      openX: root.attachedFlyoutLeftX
-      openY: root.appPickerFlyoutY()
-      panelWidth: root.appPickerWidth
-      panelHeight: root.appPickerHeightFor(openY)
-      panelRadius: Math.max(designTokens.radius, root.compact ? 10 : 14)
-      panelColor: root.panelColor
-      foreground: root.foreground
-      designTokens: designTokens
-
-      Column {
         anchors.fill: parent
-        anchors.margins: root.compact ? 10 : 12
-        spacing: root.compact ? 8 : 10
-
-        Row {
-          width: parent.width
-          height: root.compact ? 26 : 30
-          spacing: 8
-
-          LacunaText {
-            width: parent.width - closePicker.width - parent.spacing
-            anchors.verticalCenter: parent.verticalCenter
-            text: root.appPickerMode === "preferredApp" ? "Set " + registry.roleMeta(root.preferredAppPickerRole).label + " App" : "Add Quick Launch App"
-            color: root.foreground
-            fontFamily: "Tektur"
-            font.pixelSize: root.compact ? 13 : 15
-            font.weight: Font.DemiBold
-          }
-
-          LacunaIconButton {
-            id: closePicker
-
-            icon: "x"
-            foreground: root.foreground
-            muted: root.muted
-            accent: root.accent
-            hoverAccent: root.accent
-            buttonSize: root.compact ? 24 : 28
-            buttonRadius: designTokens.controlRadius
-            hoverOpacity: designTokens.hoverOpacity
-            pressOpacity: designTokens.activeOpacity
-            iconSize: root.compact ? 13 : 15
-            onTriggered: panelController.closeFlyout("appPicker")
-          }
-        }
-
-        LacunaRect {
-          width: parent.width
-          height: root.compact ? 28 : 32
-          radius: designTokens.material ? height / 2 : designTokens.controlRadius
-          color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.07)
-          border.width: 1
-          border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.14)
-
-          LacunaText {
-            visible: searchInput.text === ""
-            anchors.left: parent.left
-            anchors.leftMargin: 10
-            anchors.verticalCenter: parent.verticalCenter
-            text: "Search apps"
-            color: root.muted
-            fontFamily: "JetBrains Mono"
-            font.pixelSize: root.compact ? 10 : 11
-          }
-
-          TextInput {
-            id: searchInput
-
-            anchors.fill: parent
-            anchors.leftMargin: 10
-            anchors.rightMargin: 10
-            focus: root.appPickerOpen
-            activeFocusOnPress: true
-            color: root.foreground
-            selectedTextColor: root.background
-            selectionColor: root.accent
-            font.family: "JetBrains Mono"
-            font.pixelSize: root.compact ? 10 : 11
-            verticalAlignment: TextInput.AlignVCenter
-            clip: true
-            onTextChanged: appPicker.query = text
-          }
-        }
-
-        Flickable {
-          id: appPickerFlick
-
-          width: parent.width
-          height: Math.max(0, parent.height - y)
-          contentWidth: width
-          contentHeight: appPickerList.implicitHeight
-          clip: true
-          boundsBehavior: Flickable.StopAtBounds
-          flickableDirection: Flickable.VerticalFlick
-          interactive: true
-          ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
-
-          function scrollBy(delta) {
-            contentY = Math.max(0, Math.min(contentHeight - height, contentY - delta))
-          }
-
-          Column {
-            id: appPickerList
-
-            width: parent.width
-            spacing: root.compact ? 4 : 5
-
-            LacunaRect {
-              visible: root.appPickerMode === "preferredApp"
-              width: parent.width
-              height: visible ? (root.compact ? 32 : 38) : 0
-              radius: designTokens.radius
-              color: systemPickerMouse.containsMouse ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.10) : "transparent"
-              border.width: root.preferredAppValue(root.preferredAppPickerRole) === "system" && !designTokens.carbon ? 1 : 0
-              border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.30)
-              clip: true
-
-              LacunaTablerIcon {
-                anchors.left: parent.left
-                anchors.leftMargin: 10
-                anchors.verticalCenter: parent.verticalCenter
-                width: 22
-                height: 22
-                name: "settings"
-                color: root.accent
-                iconSize: root.compact ? 13 : 15
-              }
-
-              LacunaText {
-                anchors.left: parent.left
-                anchors.leftMargin: 42
-                anchors.right: systemState.left
-                anchors.rightMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-                text: registry.roleMeta(root.preferredAppPickerRole).systemHint
-                color: root.foreground
-                fontFamily: "JetBrains Mono"
-                font.pixelSize: root.compact ? 10 : 11
-                font.weight: systemPickerMouse.containsMouse ? Font.DemiBold : Font.Normal
-                elide: Text.ElideRight
-                maximumLineCount: 1
-              }
-
-              Item {
-                id: systemState
-
-                anchors.right: parent.right
-                anchors.rightMargin: 10
-                anchors.verticalCenter: parent.verticalCenter
-                width: 18
-                height: 18
-
-                LacunaTablerIcon {
-                  visible: root.preferredAppValue(root.preferredAppPickerRole) === "system"
-                  anchors.centerIn: parent
-                  name: "check"
-                  color: root.accent
-                  iconSize: root.compact ? 12 : 14
-                }
-              }
-
-              LacunaStateLayer {
-                id: systemPickerMouse
-
-                anchors.fill: parent
-                stateColor: root.accent
-                hoverOpacity: designTokens.hoverOpacity
-                pressOpacity: designTokens.activeOpacity
-                onTriggered: root.setPreferredApp(root.preferredAppPickerRole, "system")
-                onScrolled: function(delta) {
-                  appPickerFlick.scrollBy(delta)
-                }
-              }
-            }
-
-            Repeater {
-              model: root.appPickerVisible ? appPicker.filteredApps() : []
-
-              LacunaRect {
-                required property var modelData
-
-                readonly property bool alreadyAdded: root.appPickerMode === "customQuickLaunchApp" && root.customQuickLaunchContains(modelData.id)
-                readonly property bool selectedOverride: root.appPickerMode === "preferredApp" && root.preferredAppValue(root.preferredAppPickerRole) === String(modelData.id)
-                width: parent.width
-                height: root.compact ? 32 : 38
-                radius: designTokens.radius
-                color: pickerMouse.containsMouse ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.10) : "transparent"
-                border.width: (alreadyAdded || selectedOverride) && !designTokens.carbon ? 1 : 0
-                border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.26)
-                clip: true
-
-                IconImage {
-                  id: pickerIcon
-
-                  anchors.left: parent.left
-                  anchors.leftMargin: 8
-                  anchors.verticalCenter: parent.verticalCenter
-                  width: root.compact ? 15 : 18
-                  height: width
-                  implicitSize: width
-                  source: registry.appIconSource(modelData)
-                  visible: source !== "" && status !== Image.Error
-                }
-
-                LacunaTablerIcon {
-                  anchors.centerIn: pickerIcon
-                  visible: pickerIcon.source === "" || pickerIcon.status === Image.Error
-                  name: registry.appIcon(modelData)
-                  color: alreadyAdded ? root.muted : root.accent
-                  iconSize: root.compact ? 13 : 15
-                }
-
-                LacunaText {
-                  anchors.left: pickerIcon.right
-                  anchors.leftMargin: 8
-                  anchors.right: addState.left
-                  anchors.rightMargin: 8
-                  anchors.verticalCenter: parent.verticalCenter
-                  text: modelData.Name || modelData.id
-                  color: alreadyAdded ? root.muted : root.foreground
-                  fontFamily: "JetBrains Mono"
-                  font.pixelSize: root.compact ? 10 : 11
-                  font.weight: pickerMouse.containsMouse ? Font.DemiBold : Font.Normal
-                  elide: Text.ElideRight
-                  maximumLineCount: 1
-                }
-
-                Item {
-                  id: addState
-
-                  anchors.right: parent.right
-                  anchors.rightMargin: 10
-                  anchors.verticalCenter: parent.verticalCenter
-                  width: 18
-                  height: 18
-
-                  LacunaTablerIcon {
-                    visible: alreadyAdded || selectedOverride || root.appPickerMode === "customQuickLaunchApp"
-                    anchors.centerIn: parent
-                    name: alreadyAdded || selectedOverride ? "check" : "plus"
-                    color: alreadyAdded ? root.muted : root.accent
-                    iconSize: root.compact ? 12 : 14
-                  }
-                }
-
-                LacunaStateLayer {
-                  id: pickerMouse
-
-                  anchors.fill: parent
-                  stateColor: root.accent
-                  hoverOpacity: designTokens.hoverOpacity
-                  pressOpacity: designTokens.activeOpacity
-                  onTriggered: {
-                    if (root.appPickerMode === "preferredApp") root.setPreferredApp(root.preferredAppPickerRole, modelData.id)
-                    else root.addCustomQuickLaunchApp(modelData.id)
-                  }
-                  onScrolled: function(delta) {
-                    appPickerFlick.scrollBy(delta)
-                  }
-                }
-              }
-            }
-          }
+        registry: registry
+        appCatalog: appCatalog
+        customQuickLaunchApps: lacunaSettings.data && lacunaSettings.data.customQuickLaunchApps ? lacunaSettings.data.customQuickLaunchApps : []
+        preferredApps: lacunaSettings.data && lacunaSettings.data.preferredApps ? lacunaSettings.data.preferredApps : ({})
+        compact: root.compact
+        open: root.appPickerOpen
+        contentVisible: root.renderAppPickerContent
+        mode: root.appPickerMode
+        preferredRole: root.preferredAppPickerRole
+        designTokens: designTokens
+        foreground: root.foreground
+        background: root.background
+        accent: root.accent
+        muted: root.muted
+        onCloseRequested: panelController.closeFlyout("appPicker")
+        onSystemSelected: root.setPreferredApp(root.preferredAppPickerRole, "system")
+        onAppSelected: function(appId) {
+          if (root.appPickerMode === "preferredApp") root.setPreferredApp(root.preferredAppPickerRole, appId)
+          else root.addCustomQuickLaunchApp(appId)
         }
       }
     }

@@ -48,6 +48,11 @@ Column {
   property int quickLaunchDropIndex: -1
   property real quickLaunchDropY: 0
   property int sectionRevision: 0
+  property MotionTokens motionTokens: defaultMotionTokens
+
+  MotionTokens {
+    id: defaultMotionTokens
+  }
 
   function toneAccent(tone) {
     if (tone === "lacuna") return root.accent
@@ -199,7 +204,7 @@ Column {
     target: root
     property: "viewProgress"
     to: 1
-    duration: 180
+    duration: root.motionTokens.legacyNormal
     easing.type: Easing.OutCubic
   }
 

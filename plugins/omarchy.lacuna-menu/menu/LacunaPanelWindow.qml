@@ -31,6 +31,7 @@ PanelWindow {
   property real flyoutMaskWidth: 0
   property real flyoutMaskHeight: 0
   property bool flyoutInteractive: false
+  property bool anchorRight: false
   property string layerNamespace: "lacuna-menu"
 
   visible: panelVisible
@@ -75,7 +76,8 @@ PanelWindow {
   anchors {
     top: true
     bottom: true
-    left: true
+    left: !root.anchorRight
+    right: root.anchorRight
   }
 
   Item {

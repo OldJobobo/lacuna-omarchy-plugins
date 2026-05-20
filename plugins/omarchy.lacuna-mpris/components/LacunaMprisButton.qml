@@ -29,10 +29,15 @@ Item {
   property string fontFamily: "JetBrains Mono"
   property int labelFontWeight: active ? Font.DemiBold : Font.Normal
   property real hoverPulseAmount: 0
-  property real hoverRevealAmount: 0
   property var tooltipHost: null
+  property MotionTokens motionTokens: defaultMotionTokens
+
+  MotionTokens {
+    id: defaultMotionTokens
+  }
 
   readonly property bool hovered: clickArea.containsMouse
+  readonly property real hoverRevealAmount: clickArea.reveal
   readonly property real labelAnimatedScale: 1 + hoverRevealAmount * (0.08 + hoverPulseAmount * 0.025)
   readonly property real hoverGlowOpacity: sweepActive ? 0 : hoverRevealAmount * (0.28 + hoverPulseAmount * 0.18)
   readonly property real hoverHighlightOpacity: sweepActive ? 0 : hoverRevealAmount * 0.035
@@ -42,10 +47,6 @@ Item {
   implicitWidth: width
   implicitHeight: height
   clip: true
-
-  Behavior on hoverRevealAmount {
-    LacunaAnim { motion: "normal" }
-  }
 
   function showTooltip() {
     if (tooltipHost && tooltip !== "") tooltipHost.showTooltip(root, tooltip)
@@ -83,7 +84,7 @@ Item {
   NumberAnimation on sweepPosition {
     from: -0.35
     to: 1.35
-    duration: 2400
+    duration: root.motionTokens.sweepDuration
     loops: Animation.Infinite
     running: root.sweepActive && root.visible
   }
@@ -258,7 +259,6 @@ Item {
     stateColor: root.accent
     showFill: false
     onContainsMouseChanged: {
-      root.hoverRevealAmount = containsMouse ? 1 : 0
       if (containsMouse) root.showTooltip()
       else root.hideTooltip()
     }
@@ -278,7 +278,7 @@ Item {
       property: "hoverPulseAmount"
       from: 0
       to: 1
-      duration: 900
+      duration: root.motionTokens.pulseDuration
       easing.type: Easing.InOutSine
     }
 
@@ -287,7 +287,7 @@ Item {
       property: "hoverPulseAmount"
       from: 1
       to: 0
-      duration: 900
+      duration: root.motionTokens.pulseDuration
       easing.type: Easing.InOutSine
     }
 

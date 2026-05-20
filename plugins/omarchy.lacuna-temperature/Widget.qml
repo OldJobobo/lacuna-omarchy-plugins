@@ -55,6 +55,10 @@ Item {
     role: "temperature"
   }
 
+  MotionTokens {
+    id: motionTokens
+  }
+
   function tooltip() {
     return "<b>CPU Temperature</b><br/>Current: " + temperatureF + " F<br/>Status: " + status + "<br/>Warm: " + warmF + " F<br/>Critical: " + criticalF + " F"
   }
@@ -79,11 +83,19 @@ Item {
   Item {
     id: button
 
+    property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
     readonly property int horizontalPadding: root.vertical ? 0 : 8
+
     width: root.vertical ? root.barSize : Math.max(36, content.implicitWidth + horizontalPadding * 2)
     height: root.vertical ? Math.max(root.barSize, content.implicitHeight + 10) : root.barSize
     implicitWidth: width
     implicitHeight: height
+
+    Rectangle {
+      anchors.fill: parent
+      color: root.statusColor
+      opacity: button.hoverReveal * 0.06
+    }
 
     Row {
       id: content
@@ -118,7 +130,16 @@ Item {
       }
     }
 
+    Behavior on hoverReveal {
+      NumberAnimation {
+        duration: motionTokens.hoverDuration
+        easing.type: Easing.OutCubic
+      }
+    }
+
     MouseArea {
+      id: mouseArea
+
       anchors.fill: parent
       hoverEnabled: true
       acceptedButtons: Qt.LeftButton

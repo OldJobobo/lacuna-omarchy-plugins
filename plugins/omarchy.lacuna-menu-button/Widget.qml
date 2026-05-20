@@ -53,13 +53,25 @@ Item {
     role: "menu"
   }
 
+  MotionTokens {
+    id: motionTokens
+  }
+
   Item {
     id: button
+
+    property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
 
     width: root.barSize
     height: root.barSize
     implicitWidth: width
     implicitHeight: height
+
+    Rectangle {
+      anchors.fill: parent
+      color: root.moduleColor
+      opacity: button.hoverReveal * 0.07
+    }
 
     Image {
       anchors.centerIn: parent
@@ -70,11 +82,18 @@ Item {
       sourceSize.height: height
       smooth: true
       mipmap: true
-      opacity: mouseArea.containsMouse ? 1.0 : 0.9
+      opacity: 0.88 + button.hoverReveal * 0.12
       layer.enabled: true
       layer.effect: MultiEffect {
         colorization: 1.0
         colorizationColor: root.moduleColor
+      }
+    }
+
+    Behavior on hoverReveal {
+      NumberAnimation {
+        duration: motionTokens.hoverDuration
+        easing.type: Easing.OutCubic
       }
     }
 

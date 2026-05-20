@@ -42,7 +42,7 @@ LacunaRect {
     mipmap: true
     smooth: true
     visible: root.iconSource !== "" && status === Image.Ready
-    opacity: stateLayer.containsMouse ? 1 : 0.86
+    opacity: 0.86 + stateLayer.reveal * 0.14
   }
 
   LacunaTablerIcon {
@@ -51,7 +51,7 @@ LacunaRect {
     anchors.centerIn: parent
     visible: root.iconSource === "" && valid
     name: iconLabel.text
-    color: stateLayer.containsMouse ? root.hoverAccent : root.muted
+    color: stateLayer.reveal > 0 ? root.hoverAccent : root.muted
     iconSize: root.iconSize
   }
 
@@ -60,7 +60,7 @@ LacunaRect {
 
     anchors.centerIn: parent
     visible: (root.iconSource === "" && !iconShape.valid) || (root.iconSource !== "" && iconImage.status !== Image.Ready)
-    color: stateLayer.containsMouse ? root.hoverAccent : root.muted
+    color: stateLayer.reveal > 0 ? root.hoverAccent : root.muted
     fontFamily: root.fontFamily
     font.pixelSize: root.iconSize
     horizontalAlignment: Text.AlignHCenter

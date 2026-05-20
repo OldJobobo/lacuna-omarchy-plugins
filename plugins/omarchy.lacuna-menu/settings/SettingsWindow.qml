@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Shapes
 import "../components"
 import "../services"
@@ -333,14 +332,11 @@ Item {
         color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
       }
 
-      Flickable {
+      LacunaScrollView {
         width: parent.width
         height: Math.max(0, parent.height - y)
-        contentWidth: width
-        contentHeight: itemList.implicitHeight
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+        showEdgeMasks: true
+        edgeMaskColor: root.background
 
         Column {
           id: itemList

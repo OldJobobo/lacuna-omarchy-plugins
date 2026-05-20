@@ -51,6 +51,10 @@ Item {
     role: "density"
   }
 
+  MotionTokens {
+    id: motionTokens
+  }
+
   Timer {
     interval: root.intervalMs
     running: true
@@ -91,10 +95,18 @@ Item {
   Item {
     id: button
 
+    property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
+
     width: root.barSize
     height: root.barSize
     implicitWidth: width
     implicitHeight: height
+
+    Rectangle {
+      anchors.fill: parent
+      color: root.moduleColor
+      opacity: button.hoverReveal * 0.07
+    }
 
     Image {
       anchors.centerIn: parent
@@ -110,9 +122,19 @@ Item {
         colorization: 1.0
         colorizationColor: root.moduleColor
       }
+      opacity: 0.88 + button.hoverReveal * 0.12
+    }
+
+    Behavior on hoverReveal {
+      NumberAnimation {
+        duration: motionTokens.hoverDuration
+        easing.type: Easing.OutCubic
+      }
     }
 
     MouseArea {
+      id: mouseArea
+
       anchors.fill: parent
       hoverEnabled: true
       acceptedButtons: Qt.LeftButton

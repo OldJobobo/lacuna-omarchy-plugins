@@ -28,10 +28,15 @@ Item {
   property string fontFamily: "BlexMono Nerd Font Propo"
   property int labelFontWeight: active ? Font.DemiBold : Font.Normal
   property real hoverPulseAmount: 0
-  property real hoverRevealAmount: 0
   property var tooltipHost: null
+  property MotionTokens motionTokens: defaultMotionTokens
+
+  MotionTokens {
+    id: defaultMotionTokens
+  }
 
   readonly property bool hovered: clickArea.containsMouse
+  readonly property real hoverRevealAmount: clickArea.reveal
   readonly property bool omarchyStyle: designStyle === "omarchy"
   readonly property bool materialStyle: designStyle === "material"
   readonly property real labelAnimatedScale: omarchyStyle ? 1 : 1 + hoverRevealAmount * ((materialStyle ? 0.035 : 0.18) + hoverPulseAmount * (materialStyle ? 0 : 0.045))
@@ -53,10 +58,6 @@ Item {
   implicitWidth: width
   implicitHeight: height
   clip: true
-
-  Behavior on hoverRevealAmount {
-    LacunaAnim {}
-  }
 
   function showTooltip() {
     if (tooltipHost && tooltip !== "") tooltipHost.showTooltip(root, tooltip)
@@ -101,7 +102,7 @@ Item {
 
     Behavior on color {
       ColorAnimation {
-        duration: 140
+        duration: root.motionTokens.colorDuration
         easing.type: Easing.OutCubic
       }
     }
@@ -109,7 +110,7 @@ Item {
     Behavior on width {
       enabled: root.materialStyle
       NumberAnimation {
-        duration: 180
+        duration: root.motionTokens.animationNormal
         easing.type: Easing.OutCubic
       }
     }
@@ -128,7 +129,7 @@ Item {
 
     Behavior on width {
       NumberAnimation {
-        duration: 180
+        duration: root.motionTokens.animationNormal
         easing.type: Easing.OutCubic
       }
     }
@@ -146,14 +147,14 @@ Item {
 
     Behavior on width {
       NumberAnimation {
-        duration: 180
+        duration: root.motionTokens.animationNormal
         easing.type: Easing.OutCubic
       }
     }
 
     Behavior on opacity {
       NumberAnimation {
-        duration: 120
+        duration: root.motionTokens.animationFast
         easing.type: Easing.OutCubic
       }
     }
@@ -255,7 +256,6 @@ Item {
     stateColor: root.accent
     showFill: false
     onContainsMouseChanged: {
-      root.hoverRevealAmount = containsMouse ? 1 : 0
       if (containsMouse) root.showTooltip()
       else root.hideTooltip()
     }
@@ -275,7 +275,7 @@ Item {
       property: "hoverPulseAmount"
       from: 0
       to: 1
-      duration: 900
+      duration: root.motionTokens.pulseDuration
       easing.type: Easing.InOutSine
     }
 
@@ -284,7 +284,7 @@ Item {
       property: "hoverPulseAmount"
       from: 1
       to: 0
-      duration: 900
+      duration: root.motionTokens.pulseDuration
       easing.type: Easing.InOutSine
     }
   }

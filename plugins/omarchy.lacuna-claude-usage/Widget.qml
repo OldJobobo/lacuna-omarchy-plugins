@@ -67,6 +67,10 @@ Item {
     role: "claude"
   }
 
+  MotionTokens {
+    id: motionTokens
+  }
+
   Timer {
     interval: root.intervalMs
     running: true
@@ -104,6 +108,7 @@ Item {
   Rectangle {
     id: button
 
+    property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
     readonly property int horizontalPadding: root.vertical ? 0 : 8
     readonly property int minimumWidth: root.vertical ? root.barSize : 32
 
@@ -112,9 +117,25 @@ Item {
     implicitWidth: width
     implicitHeight: height
     radius: 0
-    color: root.activeState ? Qt.rgba(root.activeColor.r, root.activeColor.g, root.activeColor.b, 0.08) : "transparent"
+    color: root.activeState || hoverReveal > 0
+      ? Qt.rgba(root.activeColor.r, root.activeColor.g, root.activeColor.b, root.activeState ? 0.08 + hoverReveal * 0.04 : hoverReveal * 0.06)
+      : "transparent"
     border.width: 0
     clip: true
+
+    Behavior on color {
+      ColorAnimation {
+        duration: motionTokens.colorDuration
+        easing.type: Easing.OutCubic
+      }
+    }
+
+    Behavior on hoverReveal {
+      NumberAnimation {
+        duration: motionTokens.hoverDuration
+        easing.type: Easing.OutCubic
+      }
+    }
 
     Row {
       id: content
@@ -134,7 +155,7 @@ Item {
         fillMode: Image.PreserveAspectFit
         smooth: true
         mipmap: true
-        opacity: 0.92
+        opacity: 0.88 + button.hoverReveal * 0.12
         layer.enabled: true
         layer.effect: MultiEffect {
           colorization: 1.0
@@ -156,6 +177,8 @@ Item {
     }
 
     MouseArea {
+      id: mouseArea
+
       anchors.fill: parent
       hoverEnabled: true
       acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton

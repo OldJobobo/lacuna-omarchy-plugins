@@ -34,7 +34,7 @@ LacunaRect {
   width: parent ? parent.width : implicitWidth
   height: rowHeight
   radius: designTokens ? designTokens.controlRadius : 0
-  color: Qt.rgba(foreground.r, foreground.g, foreground.b, stateLayer.containsMouse ? 0.055 : 0.025)
+  color: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.025 + stateLayer.reveal * 0.03)
   border.width: designTokens && designTokens.omarchy && stateLayer.containsMouse ? 1 : 0
   border.color: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.14)
   clip: true
@@ -57,7 +57,7 @@ LacunaRect {
     anchors.bottom: parent.bottom
     width: 3
     color: root.toneAccent
-    opacity: stateLayer.containsMouse || root.checked ? 0.78 : 0.22
+    opacity: root.checked ? 0.78 : 0.22 + stateLayer.reveal * 0.56
   }
 
   Row {
@@ -163,7 +163,7 @@ LacunaRect {
         width: parent.width
         height: root.compact ? 24 : 26
         radius: root.designTokens ? root.designTokens.controlRadius : 0
-        color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, stateLayer.containsMouse ? 0.20 : 0.10)
+        color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.10 + stateLayer.reveal * 0.10)
         border.width: root.designTokens && root.designTokens.carbon ? 0 : 1
         border.color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.30)
 
@@ -196,7 +196,7 @@ LacunaRect {
             width: Math.max(24, (parent.width - Math.max(0, root.options.length - 1) * parent.spacing) / Math.max(1, root.options.length))
             height: parent.height
             radius: root.designTokens ? root.designTokens.controlRadius : 0
-            color: selected ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.22) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, segmentLayer.containsMouse ? 0.08 : 0.04)
+            color: selected ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.22) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.04 + segmentLayer.reveal * 0.04)
             border.width: selected || (root.designTokens && !root.designTokens.carbon) ? 1 : 0
             border.color: selected ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.46) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
             clip: true

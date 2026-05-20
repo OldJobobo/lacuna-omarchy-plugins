@@ -1,8 +1,7 @@
 import QtQuick
+import "../services"
 
 ColorAnimation {
-  readonly property int animColor: 160
-
-  duration: animColor
+  duration: 160
   easing.type: Easing.OutCubic
 }

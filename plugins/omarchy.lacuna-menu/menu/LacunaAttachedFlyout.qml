@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Shapes
 import "../components"
 import "../services"
 
@@ -12,6 +11,8 @@ Item {
   property bool renderable: open
   property bool interactive: open
   property real progress: open ? 1 : 0
+  property real contentProgress: Math.max(0, Math.min(1, (progress - 0.45) / 0.55))
+  property bool openToLeft: false
   property real openX: 0
   property real openY: 0
   property int panelWidth: 300
@@ -22,12 +23,9 @@ Item {
   property var designTokens: fallbackDesignTokens
 
   readonly property real curveKappa: 0.5522847498
-  readonly property real closedOffset: panelWidth
   readonly property real clampedProgress: Math.max(0, Math.min(1, progress))
-  readonly property real bodyMaskX: x + Math.max(0, panelBody.x)
-  readonly property real bodyMaskY: y
-  readonly property real bodyMaskWidth: Math.max(0, Math.min(width, panelWidth + panelBody.x))
-  readonly property real bodyMaskHeight: height
+  readonly property real currentWidth: Math.max(0, panelWidth * clampedProgress)
+  readonly property real contentOpacity: Math.max(0, Math.min(1, contentProgress))
 
   visible: renderable && clampedProgress > 0.001
   enabled: interactive
@@ -40,49 +38,29 @@ Item {
   Item {
     id: panelBody
 
-    x: -root.closedOffset * (1 - root.clampedProgress)
+    x: root.openToLeft ? root.panelWidth - root.currentWidth : 0
     y: 0
-    width: root.panelWidth
+    width: root.currentWidth
     height: root.panelHeight
+    clip: true
 
-    Shape {
+    LacunaShapeSurface {
       anchors.fill: parent
-      asynchronous: true
-      antialiasing: true
-      preferredRendererType: Shape.CurveRenderer
-
-      ShapePath {
-        fillColor: root.panelColor
-        strokeWidth: 0
-        startX: 0
-        startY: 0
-
-        PathLine { x: root.width - root.panelRadius; y: 0 }
-        PathCubic {
-          x: root.width
-          y: root.panelRadius
-          control1X: root.width - root.panelRadius * (1 - root.curveKappa)
-          control1Y: 0
-          control2X: root.width
-          control2Y: root.panelRadius * (1 - root.curveKappa)
-        }
-        PathLine { x: root.width; y: root.height - root.panelRadius }
-        PathCubic {
-          x: root.width - root.panelRadius
-          y: root.height
-          control1X: root.width
-          control1Y: root.height - root.panelRadius * (1 - root.curveKappa)
-          control2X: root.width - root.panelRadius * (1 - root.curveKappa)
-          control2Y: root.height
-        }
-        PathLine { x: 0; y: root.height }
-        PathLine { x: 0; y: 0 }
-      }
+      panelColor: root.panelColor
+      panelRadius: root.panelRadius
+      topLeftCornerState: -1
+      bottomLeftCornerState: -1
+      topRightCornerState: 0
+      bottomRightCornerState: 0
     }
 
     Item {
       id: contentHost
-      anchors.fill: parent
+      width: root.panelWidth
+      height: root.panelHeight
+      x: root.openToLeft ? -panelBody.x : 0
+      opacity: root.contentOpacity
+      enabled: root.interactive && root.contentOpacity > 0.98
     }
   }
 

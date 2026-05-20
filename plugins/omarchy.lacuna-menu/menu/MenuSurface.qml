@@ -21,6 +21,7 @@ Item {
   property int connectorOverlap: 33
   property int bodyRightInset: joinRadius
   property bool cornerPieces: true
+  property bool openFromRight: false
   property color panelColor: "#101315"
   property color foreground: "#d8dee9"
   property var designTokens: fallbackDesignTokens
@@ -38,39 +39,59 @@ Item {
     anchors.top: parent.top
     anchors.bottom: parent.bottom
     width: root.panelWidth + root.bodyRightInset
-    x: -surface.width * (1 - Math.max(0, Math.min(1, root.progress)))
+    x: (root.openFromRight ? 1 : -1) * surface.width * (1 - Math.max(0, Math.min(1, root.progress)))
+
+    LacunaShapeSurface {
+      x: 0
+      y: 0
+      width: root.panelWidth
+      height: surface.height
+      panelColor: root.panelColor
+      panelRadius: 0
+      topLeftCornerState: -1
+      topRightCornerState: -1
+      bottomRightCornerState: -1
+      bottomLeftCornerState: -1
+    }
 
     Shape {
-      id: surfaceShape
+      id: barJoinShape
 
-      anchors.fill: parent
-      asynchronous: true
+      visible: root.cornerPieces && root.bodyRightInset > 0
+      width: root.bodyRightInset
+      height: Math.max(0, surface.height - root.joinTop)
+      x: root.panelWidth
+      y: root.joinTop
+      asynchronous: false
       antialiasing: true
       preferredRendererType: Shape.CurveRenderer
 
       ShapePath {
         fillColor: root.panelColor
-        strokeColor: root.panelColor
-        strokeWidth: 1
-        capStyle: ShapePath.RoundCap
-        joinStyle: ShapePath.RoundJoin
+        strokeWidth: 0
         startX: 0
         startY: 0
 
-        PathLine { x: root.panelWidth; y: 0 }
-        PathLine { x: root.panelWidth; y: root.joinTop }
-        PathLine { x: root.panelWidth + root.bodyRightInset; y: root.joinTop }
-        PathCubic {
-          x: root.panelWidth
-          y: root.joinTop + root.bodyRightInset
-          control1X: root.panelWidth + root.bodyRightInset * (1 - root.curveKappa)
-          control1Y: root.joinTop
-          control2X: root.panelWidth
-          control2Y: root.joinTop + root.bodyRightInset * (1 - root.curveKappa)
+        PathLine {
+          x: root.bodyRightInset
+          y: 0
         }
-        PathLine { x: root.panelWidth; y: surfaceShape.height }
-        PathLine { x: 0; y: surfaceShape.height }
-        PathLine { x: 0; y: 0 }
+        PathCubic {
+          x: 0
+          y: root.bodyRightInset
+          control1X: root.bodyRightInset * (1 - root.curveKappa)
+          control1Y: 0
+          control2X: 0
+          control2Y: root.bodyRightInset * (1 - root.curveKappa)
+        }
+        PathLine {
+          x: 0
+          y: barJoinShape.height
+        }
+        PathLine {
+          x: 0
+          y: 0
+        }
       }
     }
 

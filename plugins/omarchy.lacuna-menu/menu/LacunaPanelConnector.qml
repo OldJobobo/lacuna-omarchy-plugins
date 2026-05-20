@@ -32,14 +32,13 @@ Item {
   Shape {
     width: root.connectorWidth
     height: root.connectorWidth
-    asynchronous: true
+    asynchronous: false
     antialiasing: true
     preferredRendererType: Shape.CurveRenderer
 
     ShapePath {
       fillColor: root.panelColor
-      strokeColor: root.panelColor
-      strokeWidth: 1
+      strokeWidth: 0
       startX: 0
       startY: root.connectorWidth
 
@@ -60,14 +59,13 @@ Item {
     y: root.connectorWidth + root.contentHeight
     width: root.connectorWidth
     height: root.connectorWidth
-    asynchronous: true
+    asynchronous: false
     antialiasing: true
     preferredRendererType: Shape.CurveRenderer
 
     ShapePath {
       fillColor: root.panelColor
-      strokeColor: root.panelColor
-      strokeWidth: 1
+      strokeWidth: 0
       startX: 0
       startY: 0
 

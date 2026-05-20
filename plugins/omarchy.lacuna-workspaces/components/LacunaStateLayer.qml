@@ -12,6 +12,7 @@ MouseArea {
   property real hoverOpacity: 0.06
   property real pressOpacity: 0.11
   property bool showFill: true
+  property real reveal: pressed || containsMouse ? 1 : 0
 
   anchors.fill: parent
   acceptedButtons: Qt.LeftButton | Qt.RightButton
@@ -31,10 +32,14 @@ MouseArea {
   Rectangle {
     anchors.fill: parent
     color: root.stateColor
-    opacity: root.showFill ? (root.pressed ? root.pressOpacity : root.containsMouse ? root.hoverOpacity : 0) : 0
+    opacity: root.showFill ? root.reveal * (root.pressed ? root.pressOpacity : root.hoverOpacity) : 0
 
     Behavior on opacity {
       LacunaAnim { motion: "fast" }
     }
+  }
+
+  Behavior on reveal {
+    LacunaAnim { motion: "fast" }
   }
 }

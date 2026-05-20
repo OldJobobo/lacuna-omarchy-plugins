@@ -77,6 +77,10 @@ Item {
     role: "script"
   }
 
+  MotionTokens {
+    id: motionTokens
+  }
+
   Timer {
     interval: root.intervalMs
     running: root.command.length > 0
@@ -115,12 +119,20 @@ Item {
   Item {
     id: button
 
+    property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
     readonly property int horizontalPadding: root.vertical ? 0 : 8
+
     width: root.vertical ? root.barSize : Math.max(32, label.implicitWidth + horizontalPadding * 2)
     height: root.vertical ? Math.max(root.barSize, label.implicitHeight + 10) : root.barSize
     implicitWidth: width
     implicitHeight: height
     clip: true
+
+    Rectangle {
+      anchors.fill: parent
+      color: root.accent
+      opacity: button.hoverReveal * 0.06
+    }
 
     Text {
       id: label
@@ -134,7 +146,16 @@ Item {
       elide: Text.ElideRight
     }
 
+    Behavior on hoverReveal {
+      NumberAnimation {
+        duration: motionTokens.hoverDuration
+        easing.type: Easing.OutCubic
+      }
+    }
+
     MouseArea {
+      id: mouseArea
+
       anchors.fill: parent
       hoverEnabled: true
       acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton

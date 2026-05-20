@@ -299,9 +299,9 @@ LacunaRect {
       width: root.trailingActionWidth
       height: width
       radius: root.designTokens.material ? height / 2 : root.designTokens.controlRadius
-      color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, trailingActionLayer.containsMouse ? 0.18 : 0.08)
+      color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.08 + trailingActionLayer.reveal * 0.10)
       border.width: root.designTokens.carbon ? 0 : 1
-      border.color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, trailingActionLayer.containsMouse ? 0.46 : 0.22)
+      border.color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.22 + trailingActionLayer.reveal * 0.24)
 
       LacunaTablerIcon {
         anchors.centerIn: parent

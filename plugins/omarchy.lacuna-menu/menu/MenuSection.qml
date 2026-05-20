@@ -28,7 +28,7 @@ Item {
     visible: root.band
     anchors.fill: parent
     color: root.accent
-    opacity: 0.035 + (stateLayer.containsMouse ? 0.035 : 0)
+    opacity: 0.035 + stateLayer.reveal * 0.035
   }
 
   LacunaRect {
@@ -70,7 +70,7 @@ Item {
     radius: root.designTokens && root.designTokens.material ? height / 2 : (root.designTokens ? root.designTokens.controlRadius : 0)
     color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, root.collapsed ? 0.16 : 0.10)
     border.width: 1
-    border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, stateLayer.containsMouse ? 0.38 : 0.24)
+    border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.24 + stateLayer.reveal * 0.14)
 
     LacunaText {
       id: countText

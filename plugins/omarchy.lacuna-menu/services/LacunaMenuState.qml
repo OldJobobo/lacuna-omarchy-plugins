@@ -86,12 +86,13 @@ Item {
 
     onExited: {
       var lines = loadProc.output.trim().split(/\r?\n/)
+      var wasOpen = root.open
       var restoredStack = lines.slice(1).filter(function(view) {
         return view !== ""
       })
 
       root.stack = restoredStack.length > 0 ? restoredStack : ["main"]
-      root.open = false
+      root.open = wasOpen
     }
   }
 

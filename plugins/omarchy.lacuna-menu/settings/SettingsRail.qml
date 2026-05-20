@@ -30,7 +30,7 @@ Column {
       width: root.width
       height: root.compact ? 34 : 38
       radius: root.designTokens ? root.designTokens.controlRadius : 0
-      color: active ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, layer.containsMouse ? 0.06 : 0)
+      color: active ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, layer.reveal * 0.06)
       border.width: active && root.designTokens && !root.designTokens.carbon ? 1 : 0
       border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.35)
       clip: true

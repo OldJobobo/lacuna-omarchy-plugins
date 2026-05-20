@@ -44,6 +44,10 @@ Item {
     role: "cpu"
   }
 
+  MotionTokens {
+    id: motionTokens
+  }
+
   function parseCpu(raw) {
     var fields = String(raw || "").trim().split(/\s+/)
     if (fields.length < 8 || fields[0] !== "cpu") return
@@ -130,6 +134,7 @@ Item {
       accent: colorProfile.roleColor("disk", root.foreground)
       vertical: root.vertical
       barSize: root.barSize
+      hoverDuration: motionTokens.hoverDuration
     }
 
     StatButton {
@@ -141,6 +146,7 @@ Item {
       accent: root.memoryPercent >= 90 ? root.urgent : colorProfile.roleColor("memory", root.foreground)
       vertical: root.vertical
       barSize: root.barSize
+      hoverDuration: motionTokens.hoverDuration
     }
 
     StatButton {
@@ -152,6 +158,7 @@ Item {
       accent: root.cpuPercent >= 90 ? root.urgent : colorProfile.roleColor("cpu", root.foreground)
       vertical: root.vertical
       barSize: root.barSize
+      hoverDuration: motionTokens.hoverDuration
     }
   }
 
@@ -163,11 +170,19 @@ Item {
     property color accent: "#d8dee9"
     property bool vertical: false
     property int barSize: 26
+    property int hoverDuration: 150
+    property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
 
     width: vertical ? barSize : Math.max(36, content.implicitWidth + 12)
     height: vertical ? Math.max(barSize, content.implicitHeight + 10) : barSize
     implicitWidth: width
     implicitHeight: height
+
+    Rectangle {
+      anchors.fill: parent
+      color: parent.accent
+      opacity: parent.hoverReveal * 0.06
+    }
 
     Row {
       id: content
@@ -201,7 +216,16 @@ Item {
       }
     }
 
+    Behavior on hoverReveal {
+      NumberAnimation {
+        duration: hoverDuration
+        easing.type: Easing.OutCubic
+      }
+    }
+
     MouseArea {
+      id: mouseArea
+
       anchors.fill: parent
       hoverEnabled: true
       acceptedButtons: Qt.LeftButton

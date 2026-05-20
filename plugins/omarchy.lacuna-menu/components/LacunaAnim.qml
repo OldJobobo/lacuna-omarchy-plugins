@@ -1,12 +1,15 @@
 import QtQuick
+import "../services"
 
 NumberAnimation {
   property string motion: "normal"
 
-  readonly property int animFast: 120
-  readonly property int animNormal: 180
-  readonly property int animSlow: 260
+  function durationFor(value) {
+    if (value === "fast") return 120
+    if (value === "slow") return 260
+    return 180
+  }
 
-  duration: motion === "fast" ? animFast : motion === "slow" ? animSlow : animNormal
+  duration: durationFor(motion)
   easing.type: Easing.OutCubic
 }
