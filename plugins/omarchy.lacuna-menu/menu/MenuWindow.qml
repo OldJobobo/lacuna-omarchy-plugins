@@ -78,6 +78,7 @@ Item {
   readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : 0
   readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : 0
   readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : 0
+  readonly property int frameOverlayWidth: frameMode === "off" ? 0 : ((sidebarScreen ? sidebarScreen.width : 0) + 100)
   property string pendingFlyoutFocus: ""
   property int pluginStateRevision: 0
   readonly property var shellConfig: shell && shell.shellConfig ? shell.shellConfig : ({})
@@ -94,6 +95,13 @@ Item {
   readonly property int desktopClockOffsetY: numberSetting(desktopClockSettings.offsetY, 0)
   readonly property real desktopClockScale: numberSetting(desktopClockSettings.scale, 1)
   readonly property bool desktopClockUse12Hour: boolSetting(desktopClockSettings.use12Hour, false)
+  readonly property var frameSettings: lacunaSettings.data && lacunaSettings.data.frame ? lacunaSettings.data.frame : ({})
+  readonly property string frameMode: validFrameMode(frameSettings.mode)
+  readonly property bool frameShadow: boolSetting(frameSettings.shadow, false)
+  readonly property int frameThickness: positiveInt(frameSettings.thickness, 8)
+  readonly property int frameRadius: Math.max(0, positiveInt(frameSettings.radius, 14))
+  readonly property int frameShadowOffsetX: numberSetting(frameSettings.shadowOffsetX, 2)
+  readonly property int frameShadowOffsetY: numberSetting(frameSettings.shadowOffsetY, 3)
   readonly property var sidebarScreen: Quickshell.screens && Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
 
   function localPath(url) {
@@ -353,6 +361,24 @@ Item {
     return fallback
   }
 
+  function validFrameMode(value) {
+    var mode = String(value || "off").toLowerCase()
+    if (mode === "sidebar" || mode === "fullframe") return mode
+    return "off"
+  }
+
+  function setFrameMode(mode) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    next.frame.mode = validFrameMode(mode)
+    lacunaSettings.save(next)
+  }
+
+  function toggleFrameShadow() {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    next.frame.shadow = !next.frame.shadow
+    lacunaSettings.save(next)
+  }
+
   function validClockAnchor(value) {
     var anchor = String(value || "bottom-right").toLowerCase()
     var valid = {
@@ -488,6 +514,16 @@ Item {
 
     if (entry.action.indexOf("set-bar-size-mode-") === 0) {
       barSizeModeService.setMode(entry.action.substring("set-bar-size-mode-".length))
+      return
+    }
+
+    if (entry.action.indexOf("set-frame-mode-") === 0) {
+      setFrameMode(entry.action.substring("set-frame-mode-".length))
+      return
+    }
+
+    if (entry.action === "toggle-frame-shadow") {
+      toggleFrameShadow()
       return
     }
 
@@ -683,6 +719,8 @@ Item {
     barSizeMode: barSizeModeService.barSizeMode
     designStyle: root.designStyle
     colorProfile: lacunaSettings.data && lacunaSettings.data.colorProfile ? lacunaSettings.data.colorProfile : "semantic"
+    frameMode: root.frameMode
+    frameShadow: root.frameShadow
     desktopClockEnabled: root.desktopClockEnabled
     desktopClockAnchor: root.desktopClockAnchor
     desktopClockOffsetX: root.desktopClockOffsetX
@@ -725,6 +763,7 @@ Item {
     panelWidth: root.panelWidth
     surfaceRightInset: root.surfaceRightInset
     flyoutLaneWidth: root.flyoutLaneWidth
+    visualWidth: root.frameOverlayWidth
     anchorRight: root.panelOnRight
     sidebarMaskX: panelHost.sidebarMaskX
     sidebarMaskY: panelHost.sidebarMaskY
@@ -755,6 +794,42 @@ Item {
       flyoutHeight: Math.max(0, root.activeFlyoutHeight)
       flyoutProgress: panelController.flyoutProgress
       flyoutRenderable: panelController.flyoutRenderable
+    }
+
+    LacunaFrameOverlay {
+      id: frameOverlay
+
+      anchors.fill: parent
+      mode: root.frameMode
+      shadowEnabled: root.frameShadow && root.frameMode !== "off"
+      barPosition: root.barPosition
+      barSize: root.barControlSize
+      barBottomY: root.barBottomY
+      frameWidth: root.sidebarScreen ? root.sidebarScreen.width : menuWindow.width
+      frameThickness: root.frameThickness
+      frameRadius: root.frameRadius
+      progress: panelController.menuProgress
+      frameColor: root.panelColor
+      shadowOffsetX: root.frameShadowOffsetX
+      shadowOffsetY: root.frameShadowOffsetY
+      sidebarX: panelHost.sidebarMaskX
+      sidebarY: panelHost.sidebarMaskY
+      sidebarWidth: root.panelWidth
+      sidebarHeight: panelHost.sidebarMaskHeight
+      sidebarCornerWidth: root.surfaceRightInset
+      sidebarCornerVisible: root.effectiveCornerPieces && root.surfaceRightInset > 0
+      leftEdgeOccupied: !root.panelOnRight
+      rightEdgeOccupied: root.panelOnRight
+      connectorX: panelHost.connectorX
+      connectorY: panelHost.connectorY
+      connectorWidth: panelHost.effectiveConnectorWidth
+      connectorHeight: panelHost.effectiveFlyoutHeight + panelHost.effectiveConnectorWidth * 2
+      connectorVisible: panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      flyoutX: panelHost.flyoutMaskX
+      flyoutY: panelHost.flyoutMaskY
+      flyoutWidth: panelHost.flyoutMaskWidth
+      flyoutHeight: panelHost.flyoutMaskHeight
+      flyoutVisible: panelController.flyoutRenderable
     }
 
     MenuSurface {

@@ -31,6 +31,15 @@ Item {
         collapsed: false,
         exclusive: true,
         cornerPieces: true
+      },
+      frame: {
+        mode: "off",
+        shadow: false,
+        thickness: 8,
+        radius: 14,
+        shadowDirection: "bottom_right",
+        shadowOffsetX: 2,
+        shadowOffsetY: 3
       }
     }
   }
@@ -52,8 +61,59 @@ Item {
         next.sidebar.exclusive = value.sidebar.exclusive !== false
         next.sidebar.cornerPieces = value.sidebar.cornerPieces !== false
       }
+      if (value.frame && typeof value.frame === "object") {
+        next.frame.mode = normalizeFrameMode(value.frame.mode)
+        next.frame.shadow = value.frame.shadow === true
+        next.frame.thickness = boundedInt(value.frame.thickness, 8, 2, 24)
+        next.frame.radius = boundedInt(value.frame.radius, 14, 0, 32)
+        next.frame.shadowDirection = normalizeShadowDirection(value.frame.shadowDirection)
+        var offset = shadowOffsetFor(next.frame.shadowDirection)
+        next.frame.shadowOffsetX = boundedInt(value.frame.shadowOffsetX, offset.x, -8, 8)
+        next.frame.shadowOffsetY = boundedInt(value.frame.shadowOffsetY, offset.y, -8, 8)
+      }
     }
     return next
+  }
+
+  function boundedInt(value, fallback, minimum, maximum) {
+    var parsed = Math.round(Number(value))
+    if (!isFinite(parsed)) return fallback
+    return Math.max(minimum, Math.min(maximum, parsed))
+  }
+
+  function normalizeFrameMode(value) {
+    var mode = String(value || "").toLowerCase()
+    if (mode === "sidebar" || mode === "fullframe") return mode
+    return "off"
+  }
+
+  function normalizeShadowDirection(value) {
+    var direction = String(value || "").toLowerCase()
+    var valid = {
+      top_left: true,
+      top: true,
+      top_right: true,
+      left: true,
+      center: true,
+      right: true,
+      bottom_left: true,
+      bottom: true,
+      bottom_right: true
+    }
+    return valid[direction] ? direction : "bottom_right"
+  }
+
+  function shadowOffsetFor(value) {
+    var direction = normalizeShadowDirection(value)
+    if (direction === "top_left") return Qt.point(-2, -2)
+    if (direction === "top") return Qt.point(0, -3)
+    if (direction === "top_right") return Qt.point(2, -2)
+    if (direction === "left") return Qt.point(-3, 0)
+    if (direction === "center") return Qt.point(0, 0)
+    if (direction === "right") return Qt.point(3, 0)
+    if (direction === "bottom_left") return Qt.point(-2, 2)
+    if (direction === "bottom") return Qt.point(0, 3)
+    return Qt.point(2, 3)
   }
 
   function normalizeBarSizeMode(value) {

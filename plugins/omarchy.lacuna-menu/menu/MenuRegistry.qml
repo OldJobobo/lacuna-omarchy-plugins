@@ -18,6 +18,8 @@ Item {
   property bool desktopClockUse12Hour: false
   property string designStyle: "carbon"
   property string colorProfile: "semantic"
+  property string frameMode: "off"
+  property bool frameShadow: false
   property var appCatalog: null
   property var customQuickLaunchApps: []
   property var customQuickLaunchNames: ({})

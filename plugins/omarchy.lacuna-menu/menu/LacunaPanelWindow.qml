@@ -18,6 +18,7 @@ PanelWindow {
   property int panelWidth: 0
   property int surfaceRightInset: 0
   property int flyoutLaneWidth: 0
+  property int visualWidth: 0
   property real sidebarMaskX: 0
   property real sidebarMaskY: 0
   property real sidebarMaskWidth: panelWidth + surfaceRightInset
@@ -37,7 +38,7 @@ PanelWindow {
   visible: panelVisible
   screen: targetScreen
   color: "transparent"
-  implicitWidth: panelWidth + surfaceRightInset + flyoutLaneWidth
+  implicitWidth: Math.max(panelWidth + surfaceRightInset + flyoutLaneWidth, visualWidth)
   exclusiveZone: exclusive && menuOpen ? panelWidth : 0
   exclusionMode: exclusive ? ExclusionMode.Normal : ExclusionMode.Ignore
   WlrLayershell.namespace: layerNamespace

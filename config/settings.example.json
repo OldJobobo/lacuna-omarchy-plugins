@@ -15,5 +15,14 @@
     "collapsed": false,
     "exclusive": true,
     "cornerPieces": true
+  },
+  "frame": {
+    "mode": "off",
+    "shadow": false,
+    "thickness": 8,
+    "radius": 14,
+    "shadowDirection": "bottom_right",
+    "shadowOffsetX": 2,
+    "shadowOffsetY": 3
   }
 }

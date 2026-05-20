@@ -97,6 +97,12 @@ Item {
     return root.registry.colorProfile === "colorful" ? "Colorful" : "Semantic"
   }
 
+  function frameModeName() {
+    if (root.registry.frameMode === "sidebar") return "Sidebar"
+    if (root.registry.frameMode === "fullframe") return "Full Frame"
+    return "Off"
+  }
+
   function sidebarModeName() {
     return root.registry.sidebarExclusive ? "Overlay" : "Docked"
   }
@@ -155,6 +161,13 @@ Item {
           { value: "material", label: "Material" }
         ], root.registry.designStyle, "set-design-style-"),
         row("color-swatch", "Color Profile", root.registry.colorProfile === "colorful" ? "Use theme colors across Lacuna surfaces" : "Use semantic accents with restrained color", colorProfileName(), "lacuna", "toggle-color-profile", "toggle", root.registry.colorProfile === "colorful"),
+        section("Frame", "Fake fullscreen frame and unified shadow treatment.", "lacuna"),
+        row("corners", "Frame Mode", "Draw Lacuna-owned frame pieces around the sidebar and screen perimeter", frameModeName(), "lacuna", "", "segments", false, [
+          { value: "off", label: "Off" },
+          { value: "sidebar", label: "Side" },
+          { value: "fullframe", label: "Full" }
+        ], root.registry.frameMode, "set-frame-mode-"),
+        row("photo", "Frame Shadow", root.registry.frameShadow ? "Apply one cohesive shadow pass to the frame layer" : "Keep frame pieces fill-only", root.registry.frameShadow ? "On" : "Off", "lacuna", "toggle-frame-shadow", "toggle", root.registry.frameShadow),
         section("Omarchy", "Shortcuts for the host theme workflow.", "shell"),
         commandRow("palette", "Theme", "Switch Omarchy theme", root.registry.switchThemeCommand(), "shell"),
         commandRow("background", "Background", "Switch the active theme background", root.registry.switchBackgroundCommand(), "shell"),
