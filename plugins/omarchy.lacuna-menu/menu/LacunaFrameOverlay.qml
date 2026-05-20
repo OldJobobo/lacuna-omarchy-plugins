@@ -16,9 +16,9 @@ Item {
   property real progress: 1
   property color frameColor: "#101315"
   property color shadowColor: "black"
-  property real shadowOpacity: 0.55
-  property real shadowBlur: 1.0
-  property int shadowBlurMax: 22
+  property real shadowOpacity: 0.88
+  property real shadowBlur: 0.85
+  property int shadowBlurMax: 28
   property real shadowOffsetX: 2
   property real shadowOffsetY: 3
 
@@ -56,11 +56,10 @@ Item {
   readonly property real curveKappa: 0.5522847498
   readonly property real cornerSize: Math.max(t, sidebarCornerWidth)
   readonly property real shadowExtent: Math.max(14, shadowBlurMax + Math.max(Math.abs(shadowOffsetX), Math.abs(shadowOffsetY)))
-  readonly property real barEdgeCasterSize: 3
+  readonly property real barEdgeCasterSize: 7
   readonly property real barEdgeCasterOverrun: 100
-  readonly property real topOccupiedInset: shadowEnabled && topBar ? barEdgeCasterSize : 0
-  readonly property real barEdgeShadowOpacity: Math.min(1, shadowOpacity * 1.55)
-  readonly property real sidebarJoinTop: Math.max(-sidebarCornerWidth, barBottomY + topOccupiedInset - 1)
+  readonly property real barEdgeShadowOpacity: Math.min(1, shadowOpacity * 1.35)
+  readonly property real sidebarJoinTop: Math.max(-sidebarCornerWidth, barBottomY - 1)
   readonly property real sidebarJoinHeight: Math.max(0, sidebarHeight - sidebarJoinTop)
 
   visible: frameEnabled && clampedProgress > 0.001
@@ -150,7 +149,7 @@ Item {
 
       visible: root.fullFrame && root.topBar && !root.rightBar && !root.rightEdgeOccupied && root.cornerSize > 0
       x: root.effectiveFrameWidth - root.t - root.cornerSize
-      y: root.topOccupiedInset
+      y: 0
       width: root.cornerSize
       height: root.cornerSize
       asynchronous: false
@@ -420,11 +419,11 @@ Item {
   }
 
   Item {
-    id: barEdgeShadowSource
+    id: barEdgeShadowLayer
 
     anchors.fill: parent
     visible: root.shadowEnabled
-    z: -3
+    z: -1
 
     Rectangle {
       visible: root.topBar
@@ -432,7 +431,12 @@ Item {
       y: Math.max(0, root.barBottomY)
       width: root.effectiveFrameWidth + root.barEdgeCasterOverrun
       height: root.barEdgeCasterSize
-      color: root.frameColor
+      gradient: Gradient {
+        orientation: Gradient.Vertical
+        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, root.barEdgeShadowOpacity * 0.66) }
+        GradientStop { position: 0.45; color: Qt.rgba(0, 0, 0, root.barEdgeShadowOpacity * 0.32) }
+        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0) }
+      }
     }
 
     Rectangle {
@@ -441,7 +445,12 @@ Item {
       y: Math.max(0, parent.height - root.barEdgeCasterSize)
       width: root.effectiveFrameWidth + root.barEdgeCasterOverrun
       height: root.barEdgeCasterSize
-      color: root.frameColor
+      gradient: Gradient {
+        orientation: Gradient.Vertical
+        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0) }
+        GradientStop { position: 0.55; color: Qt.rgba(0, 0, 0, root.barEdgeShadowOpacity * 0.24) }
+        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, root.barEdgeShadowOpacity * 0.52) }
+      }
     }
 
     Rectangle {
@@ -450,7 +459,12 @@ Item {
       y: 0
       width: root.barEdgeCasterSize
       height: parent.height
-      color: root.frameColor
+      gradient: Gradient {
+        orientation: Gradient.Horizontal
+        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, root.barEdgeShadowOpacity * 0.52) }
+        GradientStop { position: 0.45; color: Qt.rgba(0, 0, 0, root.barEdgeShadowOpacity * 0.24) }
+        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0) }
+      }
     }
 
     Rectangle {
@@ -459,19 +473,12 @@ Item {
       y: 0
       width: root.barEdgeCasterSize
       height: parent.height
-      color: root.frameColor
+      gradient: Gradient {
+        orientation: Gradient.Horizontal
+        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0) }
+        GradientStop { position: 0.55; color: Qt.rgba(0, 0, 0, root.barEdgeShadowOpacity * 0.24) }
+        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, root.barEdgeShadowOpacity * 0.52) }
+      }
     }
-  }
-
-  LacunaDropShadow {
-    source: barEdgeShadowSource
-    shadowEnabled: root.shadowEnabled
-    shadowColor: root.shadowColor
-    shadowOpacity: root.barEdgeShadowOpacity
-    shadowBlur: root.shadowBlur
-    blurMax: root.shadowBlurMax
-    shadowHorizontalOffset: root.shadowOffsetX
-    shadowVerticalOffset: root.shadowOffsetY
-    z: -1
   }
 }

@@ -115,6 +115,34 @@ The first implementation should use one of these safer approximations:
 - Wired the overlay behind `MenuSurface`, `LacunaPanelConnector`, and
   `LacunaAttachedFlyout` in `MenuWindow.qml`.
 
+2026-05-20 follow-up:
+
+- Expanded the sidebar exclusive reservation to include the visible molding
+  inset.
+- Added reserve-only frame edge windows using `ExclusionMode.Auto` so visible
+  frame pieces can reserve compositor workarea without adding input regions.
+- Added a matching reserve-only topbar shadow caster window so the top workarea
+  includes the Lacuna-owned shadow strip below Omarchy's real top bar.
+- Moved the visible Lacuna panel window to `ExclusionMode.Ignore` and added a
+  separate sidebar reserve window so frame/shadow workarea reservations do not
+  push Lacuna's own surfaces away from the bar edge.
+- Tuned reserve widths so the left sidebar reserve excludes the decorative
+  molding inset and the right full-frame reserve includes rightward shadow
+  offset.
+- Added a 4px uniform reserve padding around active Lacuna frame edges so
+  tiled clients keep a consistent gap from the visual frame/shadow.
+- Increased the single flattened frame shadow pass so full-frame mode reads
+  with stronger depth without adding stacked internal shadows.
+- Tightened and darkened the flattened frame shadow so it reads more opaque
+  and less diffuse around full-frame edges.
+- Replaced the bar-edge shadow caster's `MultiEffect` strip with a directional
+  gradient shadow so it no longer reads as a hard offset line.
+- Decoupled the bar-edge shadow caster height from corner placement so stronger
+  topbar shadow treatment does not create a second, lower upper-left corner or
+  push the upper-right full-frame corner down.
+- Increased only the topbar caster gradient opacity to make the bar shadow read
+  stronger without changing reserve geometry or other frame-edge shadows.
+
 Validated:
 
 - `find plugins -name '*.qml' -print0 | xargs -0 qmllint`

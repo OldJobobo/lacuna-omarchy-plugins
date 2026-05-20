@@ -19,6 +19,10 @@ PanelWindow {
   property int surfaceRightInset: 0
   property int flyoutLaneWidth: 0
   property int visualWidth: 0
+  property int visualTopInset: 0
+  property int visualBottomInset: 0
+  property int visualLeftInset: 0
+  property int visualRightInset: 0
   property real sidebarMaskX: 0
   property real sidebarMaskY: 0
   property real sidebarMaskWidth: panelWidth + surfaceRightInset
@@ -39,11 +43,17 @@ PanelWindow {
   screen: targetScreen
   color: "transparent"
   implicitWidth: Math.max(panelWidth + surfaceRightInset + flyoutLaneWidth, visualWidth)
-  exclusiveZone: exclusive && menuOpen ? panelWidth : 0
-  exclusionMode: exclusive ? ExclusionMode.Normal : ExclusionMode.Ignore
+  exclusionMode: ExclusionMode.Ignore
   WlrLayershell.namespace: layerNamespace
   WlrLayershell.layer: exclusive ? WlrLayer.Top : WlrLayer.Overlay
   WlrLayershell.keyboardFocus: flyoutInteractive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+  margins {
+    top: root.visualTopInset
+    bottom: root.visualBottomInset
+    left: root.visualLeftInset
+    right: root.visualRightInset
+  }
 
   mask: Region {
     Region {

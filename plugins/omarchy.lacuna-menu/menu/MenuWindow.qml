@@ -34,6 +34,10 @@ Item {
   property bool railCompact: forceCompactRail ? true : compact
   property string designStyle: lacunaSettings.data && lacunaSettings.data.designStyle ? lacunaSettings.data.designStyle : "carbon"
   readonly property string barPosition: currentBarPosition()
+  readonly property bool topBar: barPosition === "top"
+  readonly property bool bottomBar: barPosition === "bottom"
+  readonly property bool leftBar: barPosition === "left"
+  readonly property bool rightBar: barPosition === "right"
   // Lacuna is its own left sidebar. The Omarchy bar position only affects
   // offsets and sizing, not which edge Lacuna owns.
   readonly property bool panelOnRight: false
@@ -52,6 +56,8 @@ Item {
   property int bodyRightInset: effectiveCornerPieces ? joinRadius : 0
   property int surfaceRightInset: bodyRightInset
   property int settingsConnectorWidth: effectiveCornerPieces ? joinRadius : 0
+  property int barEdgeCasterSize: 3
+  property int frameReservePadding: 4
   property int flyoutLaneWidth: panelController.menuRenderable ? maxFlyoutLaneWidth : 0
   // In exclusive mode the compositor already places this window below the top
   // bar, so the bar edge is local y=0. In overlay mode the window starts at
@@ -79,6 +85,20 @@ Item {
   readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : 0
   readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : 0
   readonly property int frameOverlayWidth: frameMode === "off" ? 0 : ((sidebarScreen ? sidebarScreen.width : 0) + 100)
+  readonly property bool frameReserveActive: sidebarState.exclusive && panelController.menuRenderable && frameMode !== "off"
+  readonly property bool sidebarReserveActive: sidebarState.exclusive && panelController.menuRenderable
+  readonly property int reservePadding: frameMode !== "off" ? frameReservePadding : 0
+  readonly property int sidebarReserveSize: sidebarReserveActive ? panelWidth + reservePadding : 0
+  readonly property int visualTopInset: sidebarState.exclusive && root.topBar ? root.barHeight : 0
+  readonly property int visualBottomInset: sidebarState.exclusive && root.bottomBar ? root.barHeight : 0
+  readonly property int visualLeftInset: sidebarState.exclusive && root.leftBar ? root.barControlSize : 0
+  readonly property int visualRightInset: sidebarState.exclusive && root.rightBar ? root.barControlSize : 0
+  readonly property int frameShadowRightReserve: frameShadow ? Math.max(0, frameShadowOffsetX) : 0
+  readonly property int frameReserveTop: frameReserveActive && frameMode === "fullframe" && !root.topBar ? frameThickness + reservePadding : 0
+  readonly property int frameReserveBottom: frameReserveActive && frameMode === "fullframe" && !root.bottomBar ? frameThickness + reservePadding : 0
+  readonly property int frameReserveLeft: frameReserveActive && frameMode === "fullframe" && root.panelOnRight && !root.leftBar ? frameThickness + reservePadding : 0
+  readonly property int frameReserveRight: frameReserveActive && frameMode === "fullframe" && !root.panelOnRight && !root.rightBar ? frameThickness + frameShadowRightReserve + reservePadding : 0
+  readonly property int topBarShadowReserve: frameReserveActive && root.frameShadow && root.topBar ? root.barEdgeCasterSize + reservePadding : 0
   property string pendingFlyoutFocus: ""
   property int pluginStateRevision: 0
   readonly property var shellConfig: shell && shell.shellConfig ? shell.shellConfig : ({})
@@ -764,6 +784,10 @@ Item {
     surfaceRightInset: root.surfaceRightInset
     flyoutLaneWidth: root.flyoutLaneWidth
     visualWidth: root.frameOverlayWidth
+    visualTopInset: root.visualTopInset
+    visualBottomInset: root.visualBottomInset
+    visualLeftInset: root.visualLeftInset
+    visualRightInset: root.visualRightInset
     anchorRight: root.panelOnRight
     sidebarMaskX: panelHost.sidebarMaskX
     sidebarMaskY: panelHost.sidebarMaskY
@@ -1005,5 +1029,53 @@ Item {
         }
       }
     }
+  }
+
+  LacunaFrameReserveWindow {
+    targetScreen: root.sidebarScreen
+    active: root.sidebarReserveSize > 0
+    edge: root.panelOnRight ? "right" : "left"
+    reserveSize: root.sidebarReserveSize
+    layerNamespace: root.pluginId + "-sidebar-reserve"
+  }
+
+  LacunaFrameReserveWindow {
+    targetScreen: root.sidebarScreen
+    active: root.frameReserveTop > 0
+    edge: "top"
+    reserveSize: root.frameReserveTop
+    layerNamespace: root.pluginId + "-frame-reserve"
+  }
+
+  LacunaFrameReserveWindow {
+    targetScreen: root.sidebarScreen
+    active: root.topBarShadowReserve > 0
+    edge: "top"
+    reserveSize: root.topBarShadowReserve
+    layerNamespace: root.pluginId + "-topbar-shadow-reserve"
+  }
+
+  LacunaFrameReserveWindow {
+    targetScreen: root.sidebarScreen
+    active: root.frameReserveBottom > 0
+    edge: "bottom"
+    reserveSize: root.frameReserveBottom
+    layerNamespace: root.pluginId + "-frame-reserve"
+  }
+
+  LacunaFrameReserveWindow {
+    targetScreen: root.sidebarScreen
+    active: root.frameReserveLeft > 0
+    edge: "left"
+    reserveSize: root.frameReserveLeft
+    layerNamespace: root.pluginId + "-frame-reserve"
+  }
+
+  LacunaFrameReserveWindow {
+    targetScreen: root.sidebarScreen
+    active: root.frameReserveRight > 0
+    edge: "right"
+    reserveSize: root.frameReserveRight
+    layerNamespace: root.pluginId + "-frame-reserve"
   }
 }
