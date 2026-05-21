@@ -40,10 +40,12 @@ Item {
   readonly property bool bottomBar: barPosition === "bottom"
   readonly property bool leftBar: barPosition === "left"
   readonly property bool rightBar: barPosition === "right"
+  readonly property bool hostBarHidden: shell && shell.bar && shell.bar.barHidden === true
+  readonly property bool lacunaEnabled: !hostBarHidden
   // Lacuna is its own left sidebar. The Omarchy bar position only affects
   // offsets and sizing, not which edge Lacuna owns.
   readonly property bool panelOnRight: false
-  readonly property bool sidebarSurfaceVisible: panelController.menuRenderable
+  readonly property bool sidebarSurfaceVisible: lacunaEnabled && panelController.menuRenderable
   readonly property bool effectiveCornerPieces: sidebarSurfaceVisible && sidebarState.cornerPieces && !panelOnRight
   property int fullPanelWidth: Math.round(sizeMix(310, 270))
   property real barControlSize: currentBarSize()
@@ -64,7 +66,7 @@ Item {
   property int barEdgeCasterSize: 3
   property int frameReservePadding: 4
   property int sidebarReserveExtra: 6
-  property int flyoutLaneWidth: panelController.menuRenderable ? maxFlyoutLaneWidth : 0
+  property int flyoutLaneWidth: lacunaEnabled && panelController.menuRenderable ? maxFlyoutLaneWidth : 0
   // In exclusive mode the compositor already places this window below the top
   // bar, so the bar edge is local y=0. In overlay mode the window starts at
   // screen top and the bar edge is the live bar height.
@@ -95,22 +97,22 @@ Item {
   readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutShellSettings ? shellSettingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : 0
   readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutShellSettings ? shellSettingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : 0
   readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutShellSettings ? shellSettingsFlyoutY(shellSettingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : 0
-  readonly property int frameOverlayWidth: frameMode === "off" ? 0 : ((sidebarScreen ? sidebarScreen.width : 0) + 100)
-  readonly property bool frameReserveActive: sidebarState.exclusive && (panelController.menuRenderable || frameMode === "fullframe") && frameMode !== "off"
-  readonly property bool sidebarReserveActive: sidebarState.exclusive && panelController.menuRenderable && sidebarSurfaceVisible
-  readonly property int reservePadding: frameMode !== "off" ? frameReservePadding : 0
+  readonly property int frameOverlayWidth: !lacunaEnabled || frameMode === "off" ? 0 : ((sidebarScreen ? sidebarScreen.width : 0) + 100)
+  readonly property bool frameReserveActive: lacunaEnabled && sidebarState.exclusive && (panelController.menuRenderable || frameMode === "fullframe") && frameMode !== "off"
+  readonly property bool sidebarReserveActive: lacunaEnabled && sidebarState.exclusive && panelController.menuRenderable && sidebarSurfaceVisible
+  readonly property int reservePadding: lacunaEnabled && frameMode !== "off" ? frameReservePadding : 0
   readonly property int sidebarReserveSize: sidebarReserveActive ? panelWidth + reservePadding + sidebarReserveExtra : 0
-  readonly property int visualTopInset: sidebarState.exclusive && root.topBar ? root.barHeight : 0
-  readonly property int visualBottomInset: sidebarState.exclusive && root.bottomBar ? root.barHeight : 0
-  readonly property int visualLeftInset: sidebarState.exclusive && root.leftBar ? root.barControlSize : 0
-  readonly property int visualRightInset: sidebarState.exclusive && root.rightBar ? root.barControlSize : 0
+  readonly property int visualTopInset: lacunaEnabled && sidebarState.exclusive && root.topBar ? root.barHeight : 0
+  readonly property int visualBottomInset: lacunaEnabled && sidebarState.exclusive && root.bottomBar ? root.barHeight : 0
+  readonly property int visualLeftInset: lacunaEnabled && sidebarState.exclusive && root.leftBar ? root.barControlSize : 0
+  readonly property int visualRightInset: lacunaEnabled && sidebarState.exclusive && root.rightBar ? root.barControlSize : 0
   readonly property int frameShadowRightReserve: frameShadow ? Math.max(0, frameShadowOffsetX) : 0
   readonly property int frameReserveTop: frameReserveActive && frameMode === "fullframe" && !root.topBar ? frameThickness + reservePadding : 0
   readonly property int frameReserveBottom: frameReserveActive && frameMode === "fullframe" && !root.bottomBar ? frameThickness + reservePadding : 0
   readonly property int frameReserveLeft: frameReserveActive && frameMode === "fullframe" && !root.leftBar && (root.panelOnRight || !root.sidebarSurfaceVisible) ? frameThickness + reservePadding : 0
   readonly property int frameReserveRight: frameReserveActive && frameMode === "fullframe" && !root.panelOnRight && !root.rightBar ? frameThickness + frameShadowRightReserve + reservePadding : 0
   readonly property int topBarShadowReserve: frameReserveActive && root.frameShadow && root.topBar ? root.barEdgeCasterSize + reservePadding : 0
-  readonly property real frameOverlayProgress: frameMode === "fullframe" ? 1 : panelController.menuProgress
+  readonly property real frameOverlayProgress: !lacunaEnabled ? 0 : frameMode === "fullframe" ? 1 : panelController.menuProgress
   property string pendingFlyoutFocus: ""
   property int pluginStateRevision: 0
   readonly property var shellConfig: shell && shell.shellConfig ? shell.shellConfig : ({})
@@ -131,6 +133,7 @@ Item {
   readonly property int desktopClockOffsetY: numberSetting(desktopClockSettings.offsetY, 0)
   readonly property real desktopClockScale: numberSetting(desktopClockSettings.scale, 1)
   readonly property bool desktopClockUse12Hour: boolSetting(desktopClockSettings.use12Hour, false)
+  readonly property var backgroundEffectsSettings: lacunaSettings.data && lacunaSettings.data.backgroundEffects ? lacunaSettings.data.backgroundEffects : ({})
   readonly property var frameSettings: lacunaSettings.data && lacunaSettings.data.frame ? lacunaSettings.data.frame : ({})
   readonly property string frameMode: validFrameMode(frameSettings.mode)
   readonly property bool frameShadow: boolSetting(frameSettings.shadow, false)
@@ -151,6 +154,13 @@ Item {
     NumberAnimation {
       duration: 180
       easing.type: Easing.OutCubic
+    }
+  }
+
+  onLacunaEnabledChanged: {
+    if (!lacunaEnabled) {
+      pendingFlyoutFocus = ""
+      panelController.closeMenu()
     }
   }
 
@@ -252,6 +262,7 @@ Item {
   }
 
   function open(payloadJson) {
+    if (!lacunaEnabled) return
     panelController.openMenu()
   }
 
@@ -341,6 +352,8 @@ Item {
   }
 
   function openCustomQuickLaunchPicker() {
+    if (!lacunaEnabled) return
+
     if (appPickerOpen && appPickerMode === "customQuickLaunchApp") {
       pendingFlyoutFocus = ""
       panelController.closeFlyout("appPicker")
@@ -357,6 +370,8 @@ Item {
   }
 
   function openPreferredAppPicker(role) {
+    if (!lacunaEnabled) return
+
     if (!appCatalog.ready) appCatalog.reload()
     appPickerContent.resetSearch()
     appPickerMode = "preferredApp"
@@ -367,6 +382,7 @@ Item {
   }
 
   function toggleSettingsPanel() {
+    if (!lacunaEnabled) return
     panelController.toggleFlyout("settings")
     if (settingsPanelOpen) {
       if (!menuState.open) panelController.openMenu()
@@ -374,7 +390,23 @@ Item {
     }
   }
 
+  function openSettingsSection(sectionId) {
+    if (!lacunaEnabled) return
+
+    var nextSection = String(sectionId || "overview")
+    if (settingsPanelOpen && settingsPanel.currentSection === nextSection) {
+      panelController.closeFlyout("settings")
+      return
+    }
+
+    settingsPanel.currentSection = nextSection
+    panelController.openFlyout("settings")
+    if (sidebarState.collapsed) sidebarState.expand()
+    requestFlyoutFocus("settings")
+  }
+
   function toggleShellSettingsPanel() {
+    if (!lacunaEnabled) return
     panelController.toggleFlyout("shellSettings")
     if (shellSettingsPanelOpen) {
       if (!menuState.open) panelController.openMenu()
@@ -383,11 +415,18 @@ Item {
   }
 
   function requestFlyoutFocus(id) {
+    if (!lacunaEnabled) return
+
     pendingFlyoutFocus = String(id || "")
     Qt.callLater(applyPendingFlyoutFocus)
   }
 
   function applyPendingFlyoutFocus() {
+    if (!lacunaEnabled) {
+      pendingFlyoutFocus = ""
+      return
+    }
+
     if (pendingFlyoutFocus === "" || !panelController.flyoutInteractive) return
     if (pendingFlyoutFocus === "appPicker" && appPickerOpen) {
       appPickerContent.forceSearchFocus()
@@ -452,6 +491,18 @@ Item {
   function setFrameMode(mode) {
     var next = lacunaSettings.normalize(lacunaSettings.data)
     next.frame.mode = validFrameMode(mode)
+    lacunaSettings.save(next)
+  }
+
+  function setBackgroundEffectEnabled(effectId, enabled) {
+    var id = String(effectId || "").trim()
+    if (id === "") return
+
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    if (!next.backgroundEffects || typeof next.backgroundEffects !== "object") next.backgroundEffects = lacunaSettings.normalizeBackgroundEffects({})
+    if (!next.backgroundEffects.effects || typeof next.backgroundEffects.effects !== "object") next.backgroundEffects.effects = {}
+    next.backgroundEffects.enabled = true
+    next.backgroundEffects.effects[id] = { enabled: enabled === true }
     lacunaSettings.save(next)
   }
 
@@ -714,6 +765,7 @@ Item {
 
   function activate(entry) {
     if (!entry || entry.kind === "header") return
+    if (!lacunaEnabled) return
 
     if (entry.action === "toggle-sidebar-mode") {
       sidebarState.toggle()
@@ -882,6 +934,17 @@ Item {
 
     if (entry.action === "toggle-frame-shadow") {
       toggleFrameShadow()
+      return
+    }
+
+    if (entry.action.indexOf("toggle-background-effect-") === 0) {
+      var effectId = entry.action.substring("toggle-background-effect-".length)
+      setBackgroundEffectEnabled(effectId, !registry.backgroundEffectEnabled(effectId))
+      return
+    }
+
+    if (entry.action.indexOf("open-settings-section-") === 0) {
+      openSettingsSection(entry.action.substring("open-settings-section-".length))
       return
     }
 
@@ -1081,6 +1144,7 @@ Item {
     colorProfile: lacunaSettings.data && lacunaSettings.data.colorProfile ? lacunaSettings.data.colorProfile : "semantic"
     frameMode: root.frameMode
     frameShadow: root.frameShadow
+    backgroundEffects: root.backgroundEffectsSettings
     shellBarConfig: root.shellBarConfig
     shellBarPosition: root.barPosition
     shellBarTransparent: root.shellBarConfig && root.shellBarConfig.transparent === true
@@ -1136,10 +1200,10 @@ Item {
 
     targetScreen: root.sidebarScreen
     menuOpen: root.menuState.open
-    panelVisible: root.panelVisible
-    keepMapped: root.frameMode !== "off"
-    flyoutOpen: root.flyoutOpen
-    flyoutInteractive: root.flyoutInteractive
+    panelVisible: root.lacunaEnabled && root.panelVisible
+    keepMapped: root.lacunaEnabled && root.frameMode !== "off"
+    flyoutOpen: root.lacunaEnabled && root.flyoutOpen
+    flyoutInteractive: root.lacunaEnabled && root.flyoutInteractive
     exclusive: sidebarState.exclusive
     panelWidth: root.panelWidth
     surfaceRightInset: root.surfaceRightInset
@@ -1173,20 +1237,20 @@ Item {
       sidebarHeight: menuWindow.height
       anchorRight: root.panelOnRight
       connectorWidth: root.settingsConnectorWidth
-      connectorRenderable: root.sidebarSurfaceVisible && panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      connectorRenderable: root.lacunaEnabled && root.sidebarSurfaceVisible && panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
       flyoutY: root.activeFlyoutY
       flyoutWidth: Math.max(0, root.activeFlyoutWidth)
       flyoutHeight: Math.max(0, root.activeFlyoutHeight)
       flyoutProgress: panelController.flyoutProgress
-      flyoutRenderable: panelController.flyoutRenderable
+      flyoutRenderable: root.lacunaEnabled && panelController.flyoutRenderable
     }
 
     LacunaFrameOverlay {
       id: frameOverlay
 
       anchors.fill: parent
-      mode: root.frameMode
-      shadowEnabled: root.frameShadow && root.frameMode !== "off"
+      mode: root.lacunaEnabled ? root.frameMode : "off"
+      shadowEnabled: root.lacunaEnabled && root.frameShadow && root.frameMode !== "off"
       barPosition: root.barPosition
       barSize: root.barControlSize
       barBottomY: root.barBottomY

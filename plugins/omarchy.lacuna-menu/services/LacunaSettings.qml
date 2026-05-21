@@ -39,6 +39,14 @@ Item {
         exclusive: true,
         cornerPieces: true
       },
+      backgroundEffects: {
+        enabled: true,
+        effects: {
+          trackingLines: {
+            enabled: true
+          }
+        }
+      },
       frame: {
         mode: "off",
         shadow: false,
@@ -69,6 +77,7 @@ Item {
         next.sidebar.exclusive = value.sidebar.exclusive !== false
         next.sidebar.cornerPieces = value.sidebar.cornerPieces !== false
       }
+      next.backgroundEffects = normalizeBackgroundEffects(value.backgroundEffects || value.bgEffects)
       if (value.frame && typeof value.frame === "object") {
         next.frame.mode = normalizeFrameMode(value.frame.mode)
         next.frame.shadow = value.frame.shadow === true
@@ -80,6 +89,35 @@ Item {
         next.frame.shadowOffsetY = boundedInt(value.frame.shadowOffsetY, offset.y, -8, 8)
       }
     }
+    return next
+  }
+
+  function normalizeBackgroundEffects(value) {
+    var defaults = defaultData().backgroundEffects
+    var next = {
+      enabled: true,
+      effects: {}
+    }
+
+    for (var defaultId in defaults.effects) {
+      next.effects[defaultId] = { enabled: defaults.effects[defaultId].enabled !== false }
+    }
+
+    if (value && typeof value === "object") {
+      next.enabled = value.enabled !== false
+
+      var sourceEffects = value.effects && typeof value.effects === "object" ? value.effects : {}
+      for (var effectId in sourceEffects) {
+        var sourceEffect = sourceEffects[effectId]
+        if (sourceEffect && typeof sourceEffect === "object") {
+          next.effects[effectId] = { enabled: sourceEffect.enabled !== false }
+        } else {
+          next.effects[effectId] = { enabled: sourceEffect === true }
+        }
+      }
+    }
+
+    if (!next.effects.trackingLines) next.effects.trackingLines = { enabled: true }
     return next
   }
 

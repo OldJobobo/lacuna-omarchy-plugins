@@ -594,9 +594,53 @@ Column {
         readonly property int gap: root.compact ? 7 : 8
         readonly property int tileWidth: Math.floor((width - gap * (columns - 1)) / columns)
         readonly property int tileHeight: root.compact ? 62 : 72
+        property var tooltipTarget: null
+        property string tooltipText: ""
+        property color tooltipAccent: root.sessionAccent
+        property var tooltipPendingTarget: null
+        property var tooltipPendingEntry: null
+        property color tooltipPendingAccent: root.sessionAccent
+
+        function showTileTooltip(item, entry, accentColor) {
+          if (!item || !entry || !entry.label) return
+
+          tooltipTarget = item
+          tooltipText = entry.label
+          tooltipAccent = accentColor
+        }
+
+        function scheduleTileTooltip(item, entry, accentColor) {
+          tooltipPendingTarget = item
+          tooltipPendingEntry = entry
+          tooltipPendingAccent = accentColor
+          tooltipDelayTimer.restart()
+        }
+
+        function cancelTileTooltip(item) {
+          if (item && tooltipPendingTarget === item) {
+            tooltipDelayTimer.stop()
+            tooltipPendingTarget = null
+            tooltipPendingEntry = null
+          }
+          hideTileTooltip(item)
+        }
+
+        function hideTileTooltip(item) {
+          if (item && tooltipTarget !== item) return
+          tooltipTarget = null
+          tooltipText = ""
+        }
 
         width: parent.width
         height: toolGrid.implicitHeight
+
+        Timer {
+          id: tooltipDelayTimer
+
+          interval: 1400
+          repeat: false
+          onTriggered: gridRoot.showTileTooltip(gridRoot.tooltipPendingTarget, gridRoot.tooltipPendingEntry, gridRoot.tooltipPendingAccent)
+        }
 
         Grid {
           id: toolGrid
@@ -618,6 +662,8 @@ Column {
               readonly property bool itemDanger: modelData.danger === true
               readonly property bool hovered: stateLayer.containsMouse
               readonly property real reveal: stateLayer.reveal
+              property bool pulseActive: false
+              property real breath: 0
 
               width: gridRoot.tileWidth
               height: gridRoot.tileHeight
@@ -642,14 +688,21 @@ Column {
               }
 
               LacunaRect {
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: root.compact ? 9 : 11
-                width: root.compact ? 27 : 31
+                id: iconBubble
+
+                anchors.centerIn: parent
+                width: root.compact ? 38 : 44
                 height: width
+                scale: 1 + tile.reveal * 0.12 + tile.breath * 0.35
                 radius: root.designTokens.material ? width / 2 : root.designTokens.controlRadius
                 color: Qt.rgba(tile.itemAccent.r, tile.itemAccent.g, tile.itemAccent.b, 0.12 + tile.reveal * 0.12)
                 border.width: root.designTokens.lacuna ? 0 : 1
                 border.color: Qt.rgba(tile.itemAccent.r, tile.itemAccent.g, tile.itemAccent.b, 0.24 + tile.reveal * 0.24)
+                transformOrigin: Item.Center
+
+                Behavior on scale {
+                  LacunaAnim { motion: "fast" }
+                }
 
                 LacunaTablerIcon {
                   id: gridIcon
@@ -657,7 +710,9 @@ Column {
                   anchors.centerIn: parent
                   name: tile.modelData.icon || ""
                   color: tile.hovered ? root.foreground : tile.itemAccent
-                  iconSize: root.compact ? 15 : 17
+                  iconSize: root.compact ? 22 : 25
+                  scale: 1 + tile.reveal * 0.28 + tile.breath
+                  transformOrigin: Item.Center
                   visible: valid
                 }
 
@@ -668,26 +723,46 @@ Column {
                   text: tile.modelData.icon || ""
                   color: tile.hovered ? root.foreground : tile.itemAccent
                   fontFamily: root.bodyFontFamily
-                  font.pixelSize: root.compact ? 12 : 13
+                  font.pixelSize: root.compact ? 15 : 17
                   horizontalAlignment: Text.AlignHCenter
+                  scale: 1 + tile.reveal * 0.24 + tile.breath
+                  transformOrigin: Item.Center
                 }
               }
 
-              LacunaText {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                anchors.leftMargin: 6
-                anchors.rightMargin: 6
-                anchors.bottomMargin: root.compact ? 8 : 9
-                text: tile.modelData.label || ""
-                color: tile.hovered ? root.foreground : root.muted
-                fontFamily: root.bodyFontFamily
-                font.pixelSize: root.compact ? 9 : 10
-                font.weight: tile.hovered ? Font.DemiBold : Font.Normal
-                horizontalAlignment: Text.AlignHCenter
-                elide: Text.ElideRight
-                maximumLineCount: 1
+              Timer {
+                id: pulseDelayTimer
+
+                interval: root.motionTokens.duration(180)
+                repeat: false
+                onTriggered: tile.pulseActive = tile.hovered
+              }
+
+              SequentialAnimation {
+                running: tile.pulseActive
+                loops: Animation.Infinite
+
+                NumberAnimation {
+                  target: tile
+                  property: "breath"
+                  from: 0
+                  to: 0.18
+                  duration: root.motionTokens.duration(1100)
+                  easing.type: Easing.OutSine
+                }
+
+                PauseAnimation { duration: root.motionTokens.duration(120) }
+
+                NumberAnimation {
+                  target: tile
+                  property: "breath"
+                  from: 0.18
+                  to: 0
+                  duration: root.motionTokens.duration(1450)
+                  easing.type: Easing.InOutSine
+                }
+
+                PauseAnimation { duration: root.motionTokens.duration(220) }
               }
 
               LacunaStateLayer {
@@ -699,8 +774,62 @@ Column {
                 pressOpacity: root.designTokens.activeOpacity
                 showFill: !root.designTokens.lacuna
                 onTriggered: root.activated(tile.modelData)
+                onContainsMouseChanged: {
+                  if (containsMouse) {
+                    gridRoot.scheduleTileTooltip(tile, tile.modelData, tile.itemAccent)
+                    pulseDelayTimer.restart()
+                  } else {
+                    gridRoot.cancelTileTooltip(tile)
+                    pulseDelayTimer.stop()
+                    tile.pulseActive = false
+                    tile.breath = 0
+                  }
+                }
               }
             }
+          }
+        }
+
+        LacunaRect {
+          id: gridTooltip
+
+          readonly property point targetPoint: gridRoot.tooltipTarget
+            ? gridRoot.mapFromItem(gridRoot.tooltipTarget, gridRoot.tooltipTarget.width / 2, 0)
+            : Qt.point(0, 0)
+
+          visible: gridRoot.tooltipText !== ""
+          z: 20
+          x: Math.max(0, Math.min(gridRoot.width - width, targetPoint.x - width / 2))
+          y: Math.max(0, targetPoint.y - height - 6)
+          width: Math.max(82, Math.min(142, gridRoot.tooltipText.length * 8 + 28))
+          height: 28
+          radius: root.designTokens.tooltipTreatment === "tonal" ? root.designTokens.radius : 0
+          color: root.background
+          border.width: root.designTokens.tooltipTreatment === "accent-strip" ? 1 : root.designTokens.borderWidth
+          border.color: root.designTokens.tooltipTreatment === "bordered" ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.22) : Qt.rgba(gridRoot.tooltipAccent.r, gridRoot.tooltipAccent.g, gridRoot.tooltipAccent.b, 0.24)
+
+          LacunaRect {
+            visible: root.designTokens.tooltipTreatment === "accent-strip"
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: 2
+            color: gridRoot.tooltipAccent
+            opacity: 0.82
+          }
+
+          LacunaText {
+            anchors.left: parent.left
+            anchors.leftMargin: 12
+            anchors.right: parent.right
+            anchors.rightMargin: 10
+            anchors.verticalCenter: parent.verticalCenter
+            text: gridRoot.tooltipText
+            color: root.foreground
+            fontFamily: root.bodyFontFamily
+            font.pixelSize: 11
+            font.weight: Font.DemiBold
+            elide: Text.ElideRight
           }
         }
       }

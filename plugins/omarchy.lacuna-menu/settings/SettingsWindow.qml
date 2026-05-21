@@ -165,6 +165,8 @@ Item {
           { value: "fullframe", label: "On" }
         ], root.registry.frameMode, "set-frame-mode-"),
         row("photo", "Frame Shadow", root.registry.frameShadow ? "Apply one cohesive shadow pass to the frame layer" : "Keep frame pieces fill-only", root.registry.frameShadow ? "On" : "Off", "lacuna", "toggle-frame-shadow", "toggle", root.registry.frameShadow),
+        section("Background Effects", "Wallpaper-layer animation effects controlled by Lacuna.", "lacuna"),
+        row("background", root.registry.backgroundEffectName("trackingLines"), root.registry.backgroundEffectHint("trackingLines"), root.registry.backgroundEffectEnabled("trackingLines") ? "On" : "Off", "lacuna", "toggle-background-effect-trackingLines", "toggle", root.registry.backgroundEffectEnabled("trackingLines")),
         section("Omarchy", "Shortcuts for the host theme workflow.", "shell"),
         commandRow("palette", "Theme", "Switch Omarchy theme", root.registry.switchThemeCommand(), "shell"),
         commandRow("background", "Background", "Switch the active theme background", root.registry.switchBackgroundCommand(), "shell"),

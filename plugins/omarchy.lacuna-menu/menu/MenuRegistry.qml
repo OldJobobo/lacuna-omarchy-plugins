@@ -20,6 +20,7 @@ Item {
   property string colorProfile: "semantic"
   property string frameMode: "off"
   property bool frameShadow: false
+  property var backgroundEffects: ({})
   property var shellBarConfig: ({})
   property string shellBarPosition: "top"
   property bool shellBarTransparent: false
@@ -309,6 +310,29 @@ Item {
 
   function shellIdleLockName() {
     return secondsName(root.shellIdleLock)
+  }
+
+  function backgroundEffectsEnabled() {
+    return !root.backgroundEffects || root.backgroundEffects.enabled !== false
+  }
+
+  function backgroundEffectEnabled(effectId) {
+    var effects = root.backgroundEffects && root.backgroundEffects.effects ? root.backgroundEffects.effects : ({})
+    var effect = effects[String(effectId || "")]
+    if (!effect || typeof effect !== "object") return false
+    return backgroundEffectsEnabled() && effect.enabled !== false
+  }
+
+  function backgroundEffectName(effectId) {
+    if (effectId === "trackingLines") return "Tracking Lines"
+    return "Background Effect"
+  }
+
+  function backgroundEffectHint(effectId) {
+    if (effectId === "trackingLines") {
+      return backgroundEffectEnabled(effectId) ? "Animated wallpaper tracking lines are visible" : "Animated wallpaper tracking lines are hidden"
+    }
+    return backgroundEffectEnabled(effectId) ? "Effect is visible" : "Effect is hidden"
   }
 
   function shellPluginEnabled(id) {
@@ -863,16 +887,20 @@ Item {
     ]).concat(preferredAppItems("normal")).concat([
       item("item", "terminal", "Terminal", "Open a terminal", "", openTerminalCommand(), "nav", "primary", "row"),
       item("item", "world", "Browser", "Launch browser", "", "omarchy launch browser", "nav", "primary", "row"),
+      item("header", "", "Lacuna Tools", "", "", "", "lacuna"),
+      grid("lacuna", [
+        item("item", "clock", "Clock Settings", "Open desktop clock settings", "", "", "lacuna", "normal", "row", false, "lacuna", "open-settings-section-desktop-clock")
+      ]),
       item("header", "", "System Tools", "", "", "", "session"),
       grid("session", [
         item("item", "wifi", "Wi-Fi", "Open Wi-Fi controls", "", shellIpcCommand("panels.network", "toggle"), "session"),
         item("item", "bluetooth", "Bluetooth", "Open Bluetooth controls", "", shellIpcCommand("panels.bluetooth", "toggle"), "session"),
         item("item", "volume", "Audio", "Open audio mixer", "", shellIpcCommand("panels.audio", "toggle"), "session"),
+        item("item", "camera", "Screenshot", "Capture screen or region", "", "omarchy-capture-screenshot", "session"),
         item("item", "video", "Record", "Choose screen recording mode", "", "", "session", "normal", "row", false, "session", "open-screenrecord-menu"),
         item("item", "idle", "Idle", "Toggle idle behavior", "", "omarchy toggle idle", "session")
       ]),
       item("header", "", "Maintenance", "", "", "", "shell"),
-      item("item", "update", "Update Lacuna", "Pull the Lacuna git repo", "", updateLacunaCommand(), "shell"),
       item("item", "refresh", "Restart shell", "Reload Omarchy shell", "", restartLacunaCommand(), "shell")
     ])
   }

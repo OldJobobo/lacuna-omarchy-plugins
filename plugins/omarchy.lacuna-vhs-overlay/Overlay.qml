@@ -12,10 +12,14 @@ Item {
   property bool runtimeEnabled: true
   property real runtimeIntensity: -1
   property int noiseTick: 0
+  property var lacunaSettings: ({})
 
+  readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy/lacuna"
+  readonly property string settingsFile: configDir + "/settings.json"
   readonly property var overlaySettings: pluginSettings()
   readonly property bool configuredEnabled: boolSetting("effectEnabled", true)
-  readonly property bool effectVisible: configuredEnabled && runtimeEnabled && effectiveIntensity > 0.001
+  readonly property bool lacunaTrackingLinesEnabled: backgroundEffectEnabled("trackingLines", true)
+  readonly property bool effectVisible: configuredEnabled && lacunaTrackingLinesEnabled && runtimeEnabled && effectiveIntensity > 0.001
   readonly property real configuredIntensity: clamp(numberSetting("intensity", 0.68), 0, 1)
   readonly property real effectiveIntensity: runtimeIntensity >= 0 ? clamp(runtimeIntensity, 0, 1) : configuredIntensity
   readonly property real speed: clamp(numberSetting("speed", 1), 0.15, 4)
@@ -72,6 +76,26 @@ Item {
     return fallbackValue
   }
 
+  function backgroundEffectEnabled(effectId, fallbackValue) {
+    var settings = lacunaSettings && typeof lacunaSettings === "object" ? lacunaSettings : {}
+    var backgroundEffects = settings.backgroundEffects && typeof settings.backgroundEffects === "object" ? settings.backgroundEffects : null
+    if (!backgroundEffects) return fallbackValue
+    if (backgroundEffects.enabled === false) return false
+
+    var effects = backgroundEffects.effects && typeof backgroundEffects.effects === "object" ? backgroundEffects.effects : {}
+    var effect = effects[String(effectId || "")]
+    if (!effect || typeof effect !== "object") return fallbackValue
+    return effect.enabled !== false
+  }
+
+  function loadLacunaSettings(raw) {
+    try {
+      lacunaSettings = JSON.parse(raw || "{}")
+    } catch (error) {
+      lacunaSettings = {}
+    }
+  }
+
   function parsePayload(payloadJson) {
     try {
       return payloadJson ? JSON.parse(payloadJson) : {}
@@ -103,6 +127,17 @@ Item {
     repeat: true
     running: root.effectVisible && root.noiseAmount > 0
     onTriggered: root.noiseTick += 1
+  }
+
+  FileView {
+    id: lacunaSettingsWatcher
+
+    path: root.settingsFile
+    watchChanges: true
+    printErrors: false
+    onLoaded: root.loadLacunaSettings(text())
+    onFileChanged: reload()
+    onLoadFailed: root.lacunaSettings = {}
   }
 
   Variants {

@@ -16,6 +16,14 @@
     "exclusive": true,
     "cornerPieces": true
   },
+  "backgroundEffects": {
+    "enabled": true,
+    "effects": {
+      "trackingLines": {
+        "enabled": true
+      }
+    }
+  },
   "frame": {
     "mode": "off",
     "shadow": false,

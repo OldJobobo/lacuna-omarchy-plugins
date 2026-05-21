@@ -65,6 +65,8 @@ LacunaRect {
   property int contentLeftMargin: Math.round(reveal * (featured ? 3 : 2))
   property bool reorderHandlePressed: false
   property real lineworkProgress: 0
+  readonly property int lineworkWidth: compact ? 26 : 34
+  readonly property int lineworkHeight: 2
 
   width: parent ? parent.width : implicitWidth
   height: header ? (compact ? 24 : 30) : rowHeight
@@ -105,8 +107,8 @@ LacunaRect {
     visible: !root.header && root.designTokens.decorativeLinework && root.reveal > 0
     x: 9 + Math.round(Math.max(0, root.width - width - 18) * root.lineworkProgress)
     y: 0
-    width: root.featured ? 46 : root.primary ? 34 : 22
-    height: 1
+    width: root.lineworkWidth
+    height: root.lineworkHeight
     color: root.toneAccent
     opacity: root.reveal * 0.42
   }
@@ -117,8 +119,8 @@ LacunaRect {
     visible: !root.header && root.designTokens.decorativeLinework && root.reveal > 0
     x: 8 + Math.round(Math.max(0, root.width - width - 16) * (1 - root.lineworkProgress))
     y: root.height - height
-    width: root.featured ? 32 : root.primary ? 26 : 14
-    height: 1
+    width: root.lineworkWidth
+    height: root.lineworkHeight
     color: root.toneAccent
     opacity: root.reveal * 0.32
   }
