@@ -289,6 +289,24 @@ Item {
     lacunaSettings.save(nextStyleSettings)
   }
 
+  function setControlsLayout(layout) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    next.controlsLayout = layout === "list" ? "list" : "grid"
+    lacunaSettings.save(next)
+  }
+
+  function setDailyLaunchLayout(layout) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    next.dailyLaunchLayout = layout === "grid" ? "grid" : "list"
+    lacunaSettings.save(next)
+  }
+
+  function setQuickLaunchLayout(layout) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    next.quickLaunchLayout = layout === "grid" ? "grid" : "list"
+    lacunaSettings.save(next)
+  }
+
   function customQuickLaunchContains(id) {
     var ids = lacunaSettings.data && lacunaSettings.data.customQuickLaunchApps ? lacunaSettings.data.customQuickLaunchApps : []
     for (var i = 0; i < ids.length; i++) {
@@ -763,290 +781,328 @@ Item {
     commands.run(command)
   }
 
-  function activate(entry) {
-    if (!entry || entry.kind === "header") return
-    if (!lacunaEnabled) return
-
+  function handleSidebarAction(entry) {
     if (entry.action === "toggle-sidebar-mode") {
       sidebarState.toggle()
-      return
+      return true
     }
 
     if (entry.action === "toggle-sidebar-rail") {
       sidebarState.toggleCollapsed()
-      return
+      return true
     }
 
     if (entry.action.indexOf("set-sidebar-display-") === 0) {
       setSidebarDisplay(entry.action.substring("set-sidebar-display-".length))
-      return
+      return true
     }
 
     if (entry.action === "toggle-corner-pieces") {
       sidebarState.toggleCornerPieces()
-      return
+      return true
     }
 
     if (entry.action === "toggle-bar-density") {
       compactState.toggle()
-      return
+      return true
     }
 
     if (entry.action === "toggle-lacuna-density") {
       compactState.toggle()
-      return
+      return true
     }
 
     if (entry.action.indexOf("set-bar-size-mode-") === 0) {
       barSizeModeService.setMode(entry.action.substring("set-bar-size-mode-".length))
-      return
+      return true
     }
 
+    if (entry.action.indexOf("set-controls-layout-") === 0) {
+      setControlsLayout(entry.action.substring("set-controls-layout-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-daily-launch-layout-") === 0) {
+      setDailyLaunchLayout(entry.action.substring("set-daily-launch-layout-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-quick-launch-layout-") === 0) {
+      setQuickLaunchLayout(entry.action.substring("set-quick-launch-layout-".length))
+      return true
+    }
+
+    return false
+  }
+
+  function handleShellSettingsAction(entry) {
     if (entry.action.indexOf("set-shell-bar-position-") === 0) {
       setShellBarPosition(entry.action.substring("set-shell-bar-position-".length))
-      return
+      return true
     }
 
     if (entry.action.indexOf("set-default-terminal-") === 0) {
       runOmarchyCommand("omarchy default terminal " + commands.quote(entry.action.substring("set-default-terminal-".length)))
-      return
+      return true
     }
 
     if (entry.action.indexOf("set-default-browser-") === 0) {
       runOmarchyCommand("omarchy default browser " + commands.quote(entry.action.substring("set-default-browser-".length)))
-      return
+      return true
     }
 
     if (entry.action.indexOf("set-default-editor-") === 0) {
       runOmarchyCommand("omarchy default editor " + commands.quote(entry.action.substring("set-default-editor-".length)))
-      return
+      return true
     }
 
     if (entry.action === "toggle-window-gaps") {
       runOmarchyCommand("omarchy hyprland window gaps toggle")
-      return
+      return true
     }
 
     if (entry.action === "toggle-single-window-square") {
       runOmarchyCommand("omarchy hyprland window single square aspect toggle")
-      return
+      return true
     }
 
     if (entry.action === "toggle-omarchy-bar") {
       runOmarchyCommand("omarchy toggle bar")
-      return
+      return true
     }
 
     if (entry.action.indexOf("set-monitor-scaling-") === 0) {
       runOmarchyCommand("omarchy hyprland monitor scaling " + commands.quote(entry.action.substring("set-monitor-scaling-".length)))
-      return
+      return true
     }
 
     if (entry.action.indexOf("set-omarchy-font-") === 0) {
       runOmarchyCommand("omarchy font set " + commands.quote(entry.action.substring("set-omarchy-font-".length)))
-      return
+      return true
     }
 
     if (entry.action.indexOf("set-power-profile-") === 0) {
       runOmarchyCommand("powerprofilesctl set " + commands.quote(entry.action.substring("set-power-profile-".length)))
-      return
+      return true
     }
 
     if (entry.action === "toggle-nightlight") {
       runOmarchyCommand("omarchy toggle nightlight")
-      return
+      return true
     }
 
     if (entry.action === "toggle-idle") {
       runOmarchyCommand("omarchy toggle idle")
-      return
+      return true
     }
 
     if (entry.action === "toggle-screensaver") {
       runOmarchyCommand("omarchy toggle screensaver")
-      return
+      return true
     }
 
     if (entry.action === "toggle-notification-silencing") {
       runOmarchyCommand("omarchy toggle notification silencing")
-      return
+      return true
     }
 
     if (entry.action === "toggle-suspend") {
       runOmarchyCommand("omarchy toggle suspend")
-      return
+      return true
     }
 
     if (entry.action.indexOf("set-shell-idle-screensaver-") === 0) {
       setShellIdleTimeout("screensaver", entry.action.substring("set-shell-idle-screensaver-".length))
-      return
+      return true
     }
 
     if (entry.action.indexOf("set-shell-idle-lock-") === 0) {
       setShellIdleTimeout("lock", entry.action.substring("set-shell-idle-lock-".length))
-      return
+      return true
     }
 
     if (entry.action.indexOf("toggle-shell-plugin-") === 0) {
       var pluginId = entry.action.substring("toggle-shell-plugin-".length)
       setShellPluginEnabled(pluginId, !shellPluginEnabled(pluginId))
-      return
+      return true
     }
 
     if (entry.action === "toggle-shell-bar-transparent") {
       toggleShellBarTransparent()
-      return
+      return true
     }
 
     if (entry.action.indexOf("set-shell-bar-center-anchor-") === 0) {
       setShellBarCenterAnchor(entry.action.substring("set-shell-bar-center-anchor-".length))
-      return
+      return true
     }
 
     if (entry.action === "reset-shell-bar-defaults") {
       resetShellBarDefaults()
-      return
+      return true
     }
 
     if (entry.action.indexOf("move-shell-bar-widget-") === 0) {
       var moveParts = entry.action.substring("move-shell-bar-widget-".length).split("-")
       if (moveParts.length >= 3) moveShellBarWidget(moveParts[0], moveParts[1], moveParts[2])
-      return
+      return true
     }
 
     if (entry.action.indexOf("remove-shell-bar-widget-") === 0) {
       var removeParts = entry.action.substring("remove-shell-bar-widget-".length).split("-")
       if (removeParts.length >= 2) removeShellBarWidget(removeParts[0], removeParts[1])
-      return
+      return true
     }
 
     if (entry.action.indexOf("add-shell-bar-widget-") === 0) {
       var addPayload = entry.action.substring("add-shell-bar-widget-".length)
       var sectionEnd = addPayload.indexOf("-")
       if (sectionEnd > 0) addShellBarWidget(addPayload.substring(0, sectionEnd), addPayload.substring(sectionEnd + 1))
-      return
+      return true
     }
 
+    return false
+  }
+
+  function handleLacunaSettingsAction(entry) {
     if (entry.action.indexOf("set-frame-mode-") === 0) {
       setFrameMode(entry.action.substring("set-frame-mode-".length))
-      return
+      return true
     }
 
     if (entry.action === "toggle-frame-shadow") {
       toggleFrameShadow()
-      return
+      return true
     }
 
     if (entry.action.indexOf("toggle-background-effect-") === 0) {
       var effectId = entry.action.substring("toggle-background-effect-".length)
       setBackgroundEffectEnabled(effectId, !registry.backgroundEffectEnabled(effectId))
-      return
+      return true
     }
 
     if (entry.action.indexOf("open-settings-section-") === 0) {
       openSettingsSection(entry.action.substring("open-settings-section-".length))
-      return
-    }
-
-    if (entry.action === "open-custom-quick-launch-picker") {
-      openCustomQuickLaunchPicker()
-      return
-    }
-
-    if (entry.action === "add-custom-quick-launch-app") {
-      addCustomQuickLaunchApp(entry.appId)
-      return
+      return true
     }
 
     if (entry.action === "toggle-color-profile") {
       var next = lacunaSettings.normalize(lacunaSettings.data)
       next.colorProfile = next.colorProfile === "colorful" ? "semantic" : "colorful"
       lacunaSettings.save(next)
-      return
+      return true
     }
 
     if (entry.action === "toggle-desktop-clock") {
       setShellPluginEnabled("omarchy.lacuna-desktop-clock", !desktopClockEnabled)
-      return
+      return true
     }
 
     if (entry.action === "toggle-clock-12-hour") {
       setDesktopClockSettings({ use12Hour: !root.desktopClockUse12Hour })
-      return
+      return true
     }
 
     if (entry.action.indexOf("set-clock-anchor-x-") === 0) {
       setDesktopClockAnchorAxis("x", entry.action.substring("set-clock-anchor-x-".length))
-      return
+      return true
     }
 
     if (entry.action.indexOf("set-clock-anchor-y-") === 0) {
       setDesktopClockAnchorAxis("y", entry.action.substring("set-clock-anchor-y-".length))
-      return
+      return true
     }
 
     if (entry.action === "nudge-clock-left") {
       nudgeDesktopClock(-24, 0)
-      return
+      return true
     }
 
     if (entry.action === "scale-clock-down") {
       scaleDesktopClock(-0.1)
-      return
+      return true
     }
 
     if (entry.action === "scale-clock-up") {
       scaleDesktopClock(0.1)
-      return
+      return true
     }
 
     if (entry.action === "nudge-clock-right") {
       nudgeDesktopClock(24, 0)
-      return
+      return true
     }
 
     if (entry.action === "nudge-clock-up") {
       nudgeDesktopClock(0, -24)
-      return
+      return true
     }
 
     if (entry.action === "nudge-clock-down") {
       nudgeDesktopClock(0, 24)
-      return
+      return true
     }
 
     if (entry.action === "reset-clock-position") {
       resetDesktopClockPosition()
-      return
+      return true
     }
 
     if (entry.action === "cycle-design-style") {
       var nextStyleSettings = lacunaSettings.normalize(lacunaSettings.data)
       nextStyleSettings.designStyle = lacunaSettings.nextDesignStyle(nextStyleSettings.designStyle)
       lacunaSettings.save(nextStyleSettings)
-      return
+      return true
     }
 
     if (entry.action.indexOf("set-design-style-") === 0) {
       setDesignStyle(entry.action.substring("set-design-style-".length))
-      return
+      return true
+    }
+
+    return false
+  }
+
+  function handleQuickAccessAction(entry) {
+    if (entry.action === "open-custom-quick-launch-picker") {
+      openCustomQuickLaunchPicker()
+      return true
+    }
+
+    if (entry.action === "add-custom-quick-launch-app") {
+      addCustomQuickLaunchApp(entry.appId)
+      return true
     }
 
     if (entry.action.indexOf("choose-preferred-app-") === 0) {
       openPreferredAppPicker(entry.action.substring("choose-preferred-app-".length))
-      return
+      return true
     }
 
     if (entry.action === "reload-apps") {
       appCatalog.reload()
-      return
+      return true
     }
 
     if (entry.action === "open-screenrecord-menu") {
       panelController.closeMenu()
       commands.run("omarchy-capture-screenrecording --stop-recording || "
         + shellIpcCommand("menu", "toggle", ["trigger.capture.screenrecord"]))
-      return
+      return true
+    }
+
+    return false
+  }
+
+  function activate(entry) {
+    if (!entry || entry.kind === "header") return
+    if (!lacunaEnabled) return
+
+    if (entry.action) {
+      if (handleSidebarAction(entry)) return
+      if (handleShellSettingsAction(entry)) return
+      if (handleLacunaSettingsAction(entry)) return
+      if (handleQuickAccessAction(entry)) return
     }
 
     if (entry.view) {
@@ -1142,6 +1198,9 @@ Item {
     barSizeMode: barSizeModeService.barSizeMode
     designStyle: root.designStyle
     colorProfile: lacunaSettings.data && lacunaSettings.data.colorProfile ? lacunaSettings.data.colorProfile : "semantic"
+    quickLaunchLayout: lacunaSettings.data && lacunaSettings.data.quickLaunchLayout ? lacunaSettings.data.quickLaunchLayout : "list"
+    dailyLaunchLayout: lacunaSettings.data && lacunaSettings.data.dailyLaunchLayout ? lacunaSettings.data.dailyLaunchLayout : "list"
+    controlsLayout: lacunaSettings.data && lacunaSettings.data.controlsLayout ? lacunaSettings.data.controlsLayout : "grid"
     frameMode: root.frameMode
     frameShadow: root.frameShadow
     backgroundEffects: root.backgroundEffectsSettings

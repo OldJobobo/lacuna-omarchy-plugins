@@ -4,6 +4,9 @@
   "colorProfile": "semantic",
   "compact": false,
   "barSizeMode": "theme",
+  "quickLaunchLayout": "list",
+  "dailyLaunchLayout": "list",
+  "controlsLayout": "grid",
   "customQuickLaunchApps": [],
   "preferredApps": {
     "files": "system",

@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Widgets
 import "../components"
 import "../modules"
 import "../services"
@@ -490,12 +491,22 @@ Column {
         collapsible: parent.entry.sectionCount > 0
         collapsed: parent.entry.sectionCollapsed || false
         count: parent.entry.sectionCount || 0
+        options: parent.entry.options || []
+        optionValue: parent.entry.optionValue || ""
         compact: root.compact
         designTokens: root.designTokens
         fontFamily: root.bodyFontFamily
         hoverOpacity: root.designTokens.hoverOpacity
         pressOpacity: root.designTokens.activeOpacity
         onToggled: root.toggleSection(parent.entry.sectionKey)
+        onOptionSelected: function(value) {
+          root.activated({
+            kind: "item",
+            action: (parent.entry.optionActionPrefix || "") + value,
+            view: "",
+            command: ""
+          })
+        }
       }
     }
 
@@ -660,6 +671,7 @@ Column {
 
               readonly property color itemAccent: root.toneAccent(modelData.tone || "session")
               readonly property bool itemDanger: modelData.danger === true
+              readonly property bool hasIconSource: String(modelData.iconSource || "") !== ""
               readonly property bool hovered: stateLayer.containsMouse
               readonly property real reveal: stateLayer.reveal
               property bool pulseActive: false
@@ -704,6 +716,20 @@ Column {
                   LacunaAnim { motion: "fast" }
                 }
 
+                IconImage {
+                  id: gridIconImage
+
+                  anchors.centerIn: parent
+                  width: root.compact ? 22 : 25
+                  height: width
+                  implicitSize: width
+                  source: tile.modelData.iconSource || ""
+                  visible: tile.hasIconSource && status === Image.Ready
+                  opacity: tile.hovered ? 1 : 0.92
+                  scale: 1 + tile.reveal * 0.24 + tile.breath
+                  transformOrigin: Item.Center
+                }
+
                 LacunaTablerIcon {
                   id: gridIcon
 
@@ -713,13 +739,13 @@ Column {
                   iconSize: root.compact ? 22 : 25
                   scale: 1 + tile.reveal * 0.28 + tile.breath
                   transformOrigin: Item.Center
-                  visible: valid
+                  visible: (!tile.hasIconSource || gridIconImage.status === Image.Error) && valid
                 }
 
                 LacunaText {
                   anchors.centerIn: parent
                   width: parent.width
-                  visible: !gridIcon.valid
+                  visible: (!tile.hasIconSource || gridIconImage.status === Image.Error) && !gridIcon.valid
                   text: tile.modelData.icon || ""
                   color: tile.hovered ? root.foreground : tile.itemAccent
                   fontFamily: root.bodyFontFamily

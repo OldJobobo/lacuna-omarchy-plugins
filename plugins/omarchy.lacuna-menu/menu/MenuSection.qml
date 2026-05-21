@@ -5,6 +5,7 @@ Item {
   id: root
 
   signal toggled()
+  signal optionSelected(string value)
 
   property string title: ""
   property color foreground: "#d8dee9"
@@ -14,6 +15,8 @@ Item {
   property bool collapsible: true
   property bool collapsed: false
   property int count: 0
+  property var options: []
+  property string optionValue: ""
   property string fontFamily: "JetBrains Mono"
   property bool compact: false
   property var designTokens: null
@@ -23,6 +26,16 @@ Item {
   width: parent ? parent.width : implicitWidth
   height: compact ? (band ? 28 : 24) : (band ? 34 : 30)
   clip: true
+
+  LacunaStateLayer {
+    id: stateLayer
+
+    disabled: !root.collapsible
+    stateColor: root.accent
+    hoverOpacity: root.hoverOpacity
+    pressOpacity: root.pressOpacity
+    onTriggered: root.toggled()
+  }
 
   LacunaRect {
     visible: root.band
@@ -46,7 +59,7 @@ Item {
 
     anchors.left: parent.left
     anchors.leftMargin: root.compact ? (root.band ? 28 : 20) : (root.band ? 34 : 26)
-    anchors.right: countPill.visible ? countPill.left : chevron.left
+    anchors.right: countPill.visible ? countPill.left : optionRow.visible ? optionRow.left : chevron.left
     anchors.rightMargin: 8
     anchors.bottom: parent.bottom
     anchors.bottomMargin: root.compact ? (root.band ? 7 : 4) : (root.band ? 9 : 5)
@@ -62,7 +75,7 @@ Item {
     id: countPill
 
     visible: root.count > 0
-    anchors.right: chevron.left
+    anchors.right: optionRow.visible ? optionRow.left : chevron.left
     anchors.rightMargin: 6
     anchors.verticalCenter: label.verticalCenter
     width: Math.max(root.compact ? 18 : 20, countText.implicitWidth + 10)
@@ -85,6 +98,48 @@ Item {
     }
   }
 
+  Row {
+    id: optionRow
+
+    visible: root.options.length > 0
+    anchors.right: chevron.left
+    anchors.rightMargin: 6
+    anchors.verticalCenter: label.verticalCenter
+    height: root.compact ? 18 : 20
+    spacing: 2
+
+    Repeater {
+      model: root.options
+
+      LacunaRect {
+        required property var modelData
+
+        readonly property bool selected: String(modelData.value) === root.optionValue
+        width: optionRow.height
+        height: optionRow.height
+        radius: root.designTokens && root.designTokens.material ? height / 2 : (root.designTokens ? root.designTokens.controlRadius : 0)
+        color: selected ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.20) : "transparent"
+        border.width: selected && root.designTokens && !root.designTokens.lacuna ? 1 : 0
+        border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.34)
+
+        LacunaTablerIcon {
+          anchors.centerIn: parent
+          name: modelData.icon || ""
+          color: parent.selected ? root.foreground : root.muted
+          iconSize: root.compact ? 11 : 12
+        }
+
+        LacunaStateLayer {
+          anchors.fill: parent
+          stateColor: root.accent
+          hoverOpacity: root.hoverOpacity
+          pressOpacity: root.pressOpacity
+          onTriggered: root.optionSelected(String(parent.modelData.value || ""))
+        }
+      }
+    }
+  }
+
   LacunaTablerIcon {
     id: chevron
 
@@ -100,15 +155,5 @@ Item {
     Behavior on rotation {
       LacunaAnim { motion: "fast" }
     }
-  }
-
-  LacunaStateLayer {
-    id: stateLayer
-
-    disabled: !root.collapsible
-    stateColor: root.accent
-    hoverOpacity: root.hoverOpacity
-    pressOpacity: root.pressOpacity
-    onTriggered: root.toggled()
   }
 }

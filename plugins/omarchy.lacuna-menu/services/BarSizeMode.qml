@@ -256,7 +256,7 @@ Item {
     onLoaded: {
       root.colorsRaw = text()
       root.colorsLoaded = true
-      root.applyTimer.restart()
+      applyTimer.restart()
     }
     onFileChanged: reload()
     onLoadFailed: {
@@ -275,7 +275,7 @@ Item {
     onLoaded: {
       root.shellRaw = text()
       root.shellLoaded = true
-      root.applyTimer.restart()
+      applyTimer.restart()
     }
     onFileChanged: reload()
     onLoadFailed: {

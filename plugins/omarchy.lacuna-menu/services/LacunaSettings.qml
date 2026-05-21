@@ -21,6 +21,9 @@ Item {
       colorProfile: "semantic",
       compact: false,
       barSizeMode: "full",
+      quickLaunchLayout: "list",
+      dailyLaunchLayout: "list",
+      controlsLayout: "grid",
       barSizeSnapshot: null,
       sizeTransition: {
         holdCompact: false,
@@ -65,6 +68,9 @@ Item {
       next.version = Number(value.version || 1)
       next.designStyle = normalizeDesignStyle(value.designStyle)
       next.colorProfile = String(value.colorProfile || "").toLowerCase() === "colorful" ? "colorful" : "semantic"
+      next.quickLaunchLayout = normalizeLayoutMode(value.quickLaunchLayout || value.quickLaunchView, "list")
+      next.dailyLaunchLayout = normalizeLayoutMode(value.dailyLaunchLayout || value.launchLayout || value.dailyLaunchView, "list")
+      next.controlsLayout = normalizeControlsLayout(value.controlsLayout || value.controlLayout || value.controlsView)
       next.barSizeMode = normalizeBarSizeMode(value.barSizeMode, value.compact === true)
       next.compact = next.barSizeMode === "compact"
       next.barSizeSnapshot = normalizeBarSizeSnapshot(value.barSizeSnapshot)
@@ -166,6 +172,16 @@ Item {
     var mode = String(value || "").toLowerCase()
     if (mode === "compact" || mode === "full") return mode
     return compactFallback === true ? "compact" : "full"
+  }
+
+  function normalizeControlsLayout(value) {
+    return normalizeLayoutMode(value, "grid")
+  }
+
+  function normalizeLayoutMode(value, fallback) {
+    var layout = String(value || "").toLowerCase()
+    if (layout === "grid" || layout === "list") return layout
+    return fallback === "list" ? "list" : "grid"
   }
 
   function normalizeBarSizeSnapshot(value) {
