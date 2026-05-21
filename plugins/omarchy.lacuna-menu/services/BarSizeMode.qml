@@ -18,30 +18,35 @@ Item {
   property bool colorsLoaded: false
   property bool shellLoaded: false
   property bool suppressApply: false
+  property string pendingMode: ""
 
   function currentMode() {
-    if (!settingsService || !settingsService.data) return "theme"
-    if (settingsService.normalizeBarSizeMode) return settingsService.normalizeBarSizeMode(settingsService.data.barSizeMode)
+    if (pendingMode !== "") return pendingMode
+    if (!settingsService || !settingsService.data) return "full"
+    if (settingsService.normalizeBarSizeMode) return settingsService.normalizeBarSizeMode(settingsService.data.barSizeMode, settingsService.data.compact === true)
 
     var mode = String(settingsService.data.barSizeMode || "").toLowerCase()
-    return mode === "compact" || mode === "full" ? mode : "theme"
+    if (mode === "compact" || mode === "full") return mode
+    return settingsService.data.compact === true ? "compact" : "full"
+  }
+
+  function settingsLoaded() {
+    return settingsService && settingsService.hasLoaded === true
   }
 
   function setMode(mode) {
     var nextMode = normalizeMode(mode)
     if (!settingsService || !settingsService.save) return
 
-    var next = settingsService.normalize ? settingsService.normalize(settingsService.data) : settingsService.data
-    if (!next || typeof next !== "object") next = { version: 1 }
-    next.barSizeMode = nextMode
-    settingsService.save(next)
+    pendingMode = nextMode
     applyTimer.restart()
+    saveModeTimer.restart()
   }
 
   function normalizeMode(mode) {
     var value = String(mode || "").toLowerCase()
     if (value === "compact" || value === "full") return value
-    return "theme"
+    return "full"
   }
 
   function desiredValues(mode) {
@@ -154,7 +159,7 @@ Item {
   }
 
   function savePatch(patch) {
-    if (!settingsService || !settingsService.save) return
+    if (!settingsLoaded() || !settingsService.save) return
 
     var next = settingsService.normalize ? settingsService.normalize(settingsService.data) : settingsService.data
     if (!next || typeof next !== "object") next = { version: 1 }
@@ -163,6 +168,7 @@ Item {
   }
 
   function applyCurrentMode() {
+    if (!settingsLoaded()) return
     if (!colorsLoaded || !shellLoaded || suppressApply) return
 
     var mode = currentMode()
@@ -281,9 +287,31 @@ Item {
   Timer {
     id: applyTimer
 
-    interval: 100
+    interval: 16
     repeat: false
     onTriggered: root.applyCurrentMode()
+  }
+
+  Timer {
+    id: saveModeTimer
+
+    interval: 56
+    repeat: false
+    onTriggered: {
+      if (!root.settingsLoaded() || !root.settingsService.save || root.pendingMode === "") return
+
+      var mode = root.pendingMode
+      var next = root.settingsService.normalize ? root.settingsService.normalize(root.settingsService.data) : root.settingsService.data
+      if (!next || typeof next !== "object") next = { version: 1 }
+      next.barSizeMode = mode
+      next.compact = mode === "compact"
+      next.sizeTransition = {
+        holdCompact: root.settingsService.data && root.settingsService.data.compact === true,
+        holdUntil: Date.now() + 56
+      }
+      root.pendingMode = ""
+      root.settingsService.save(next)
+    }
   }
 
   Timer {

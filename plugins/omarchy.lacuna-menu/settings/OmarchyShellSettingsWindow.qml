@@ -173,8 +173,9 @@ Item {
     if (sectionId === "windows") {
       return [
         section("Tiling", "Hyprland layout toggles for application windows.", "shell"),
-        actionRow("density-normal", "Window Gaps", "Toggle global tiled-window gaps", "toggle-window-gaps", "shell", "Toggle"),
-        actionRow("corners", "Single-Window Square", "Toggle square aspect for one tiled window", "toggle-single-window-square", "shell", "Toggle"),
+        toggleRow("density-normal", "Window Gaps", "Enable tiled-window gaps and borders", "windowGapsEnabled", service.hyprValue("windowGapsEnabled", null), "shell"),
+        toggleRow("corners", "Rounded Windows", "Switch Hyprland application windows between square and rounded corners", "roundedWindows", service.hyprValue("roundedWindows", null), "shell"),
+        toggleRow("sidebar-overlay", "Single-Window Square", "Constrain one tiled window to a square aspect ratio", "singleWindowAspect", service.hyprValue("singleWindowAspect", null), "shell"),
         section("Shell Bar", "Visibility only. Bar layout remains in Omarchy's bar settings.", "shell"),
         toggleRow("sidebar-overlay", "Omarchy Bar", "Show or hide the host bar without killing shell", "barVisible", service.toggleValue("barVisible", true), "shell"),
         section("Focused Monitor Scale", "Set the scale for the currently focused Hyprland monitor.", "shell"),
@@ -514,7 +515,7 @@ Item {
 
   DesignTokens {
     id: fallbackDesignTokens
-    designStyle: "carbon"
+    designStyle: "lacuna"
     compact: root.compact
     foreground: root.foreground
     background: root.background

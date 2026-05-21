@@ -9,7 +9,7 @@ Item {
   property var widgetSettings: ({})
   property string role: "mpris"
   property string settingsProfile: "semantic"
-  property string designStyle: "carbon"
+  property string designStyle: "lacuna"
   property var palette: ({})
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
@@ -37,8 +37,9 @@ Item {
 
   function normalizeDesignStyle(value) {
     var style = String(value || "").toLowerCase()
+    if (style === "lacuna" || style === "carbon") return "lacuna"
     if (style === "omarchy" || style === "material") return style
-    return "carbon"
+    return "lacuna"
   }
 
   function themeColor(name, fallbackColor) {
@@ -81,10 +82,10 @@ Item {
     try {
       var data = JSON.parse(String(raw || "{}"))
       settingsProfile = normalizeProfile(data.colorProfile || "semantic")
-      designStyle = normalizeDesignStyle(data.designStyle || "carbon")
+      designStyle = normalizeDesignStyle(data.designStyle || "lacuna")
     } catch (e) {
       settingsProfile = "semantic"
-      designStyle = "carbon"
+      designStyle = "lacuna"
     }
   }
 

@@ -1,4 +1,5 @@
 import Quickshell.Io
+import Quickshell
 import QtQuick
 
 Item {
@@ -14,6 +15,8 @@ Item {
   property bool loading: false
   property string errorText: ""
   property var state: defaultState()
+  readonly property string homeDir: Quickshell.env("HOME") || ""
+  readonly property int roundedWindowRadius: 12
 
   readonly property string currentTerminal: stringAt(state, ["defaults", "terminal"])
   readonly property string currentBrowser: stringAt(state, ["defaults", "browser"])
@@ -34,6 +37,15 @@ Item {
       monitor: { name: "", scale: "" },
       powerProfile: "",
       powerAvailable: false,
+      hypr: {
+        windowGapsEnabled: null,
+        roundedWindows: null,
+        singleWindowAspect: null,
+        gapsIn: -1,
+        gapsOut: -1,
+        borderSize: -1,
+        rounding: -1
+      },
       toggles: {
         barVisible: true,
         screensaverEnabled: true,
@@ -152,6 +164,37 @@ Item {
     return boolAt(state, ["toggles", name], fallback)
   }
 
+  function hyprValue(name, fallback) {
+    return boolAt(state, ["hypr", name], fallback)
+  }
+
+  function hyprNumber(name, fallback) {
+    var value = state && state.hypr ? state.hypr[name] : undefined
+    var parsed = Number(value)
+    return isFinite(parsed) ? parsed : fallback
+  }
+
+  function copyState() {
+    return JSON.parse(JSON.stringify(state || defaultState()))
+  }
+
+  function setOptimisticToggle(name, value) {
+    var next = copyState()
+    if (!next.toggles || typeof next.toggles !== "object") next.toggles = {}
+    next.toggles[name] = value === true
+    state = next
+  }
+
+  function setOptimisticHypr(name, value, patch) {
+    var next = copyState()
+    if (!next.hypr || typeof next.hypr !== "object") next.hypr = {}
+    next.hypr[name] = value === true
+    if (patch && typeof patch === "object") {
+      for (var key in patch) next.hypr[key] = patch[key]
+    }
+    state = next
+  }
+
   function refresh() {
     if (loading || lacunaPath === "") return
     loading = true
@@ -188,22 +231,127 @@ Item {
     run("omarchy hyprland monitor scaling " + quote(value))
   }
 
+  function omarchyPathPrefix() {
+    return "OMARCHY_PATH=${OMARCHY_PATH:-$HOME/.local/share/omarchy}"
+  }
+
+  function setHyprFlag(flag, enabled) {
+    run(omarchyPathPrefix() + " omarchy-hyprland-toggle " + quote(flag) + " " + (enabled ? "on" : "off"))
+  }
+
+  function setWindowGapsEnabled(enabled) {
+    var want = enabled === true
+    var dir = homeDir + "/.local/state/omarchy/toggles/hypr"
+    var stockFile = dir + "/window-no-gaps.lua"
+    var oldLacunaFile = dir + "/zz-lacuna-window-no-gaps.lua"
+    var lacunaFile = dir + "/zz-lacuna-window-gaps.lua"
+    var gapsIn = want ? 5 : 0
+    var gapsOut = want ? 10 : 0
+    var borderSize = want ? 2 : 0
+    setOptimisticHypr("windowGapsEnabled", want, {
+      gapsIn: gapsIn,
+      gapsOut: gapsOut,
+      borderSize: borderSize
+    })
+    var body = "-- Lacuna: Own Hyprland window gaps without changing corner rounding.\n"
+      + "hl.config({\n"
+      + "  general = {\n"
+      + "    gaps_out = " + gapsOut + ",\n"
+      + "    gaps_in = " + gapsIn + ",\n"
+      + "    border_size = " + borderSize + ",\n"
+      + "  },\n"
+      + "})\n"
+    var liveConfig = "hl.config({ general = { gaps_out = " + gapsOut
+      + ", gaps_in = " + gapsIn
+      + ", border_size = " + borderSize + " } })"
+    run("mkdir -p " + quote(dir)
+      + "; rm -f " + quote(stockFile) + " " + quote(oldLacunaFile)
+      + "; printf %s " + quote(body) + " > " + quote(lacunaFile)
+      + "; hyprctl reload >/dev/null"
+      + "; hyprctl eval " + quote(liveConfig) + " >/dev/null")
+  }
+
+  function setSingleWindowAspect(enabled) {
+    var want = enabled === true
+    var dir = homeDir + "/.local/state/omarchy/toggles/hypr"
+    var stockFile = dir + "/single-window-aspect-ratio.lua"
+    var lacunaFile = dir + "/zz-lacuna-single-window-aspect.lua"
+    var x = want ? 1 : 0
+    var y = want ? 1 : 0
+    setOptimisticHypr("singleWindowAspect", want, {})
+    var body = "-- Lacuna: Own single-window aspect behavior explicitly.\n"
+      + "hl.config({\n"
+      + "  layout = {\n"
+      + "    single_window_aspect_ratio = { " + x + ", " + y + " },\n"
+      + "  },\n"
+      + "})\n"
+    var liveConfig = "hl.config({ layout = { single_window_aspect_ratio = { " + x + ", " + y + " } } })"
+    run("mkdir -p " + quote(dir)
+      + "; rm -f " + quote(stockFile)
+      + "; printf %s " + quote(body) + " > " + quote(lacunaFile)
+      + "; hyprctl reload >/dev/null"
+      + "; hyprctl eval " + quote(liveConfig) + " >/dev/null")
+  }
+
+  function setRoundedWindows(enabled) {
+    var want = enabled === true
+    var file = homeDir + "/.local/state/omarchy/toggles/hypr/zz-lacuna-window-rounded.lua"
+    var dir = homeDir + "/.local/state/omarchy/toggles/hypr"
+    var radius = want ? root.roundedWindowRadius : 0
+    setOptimisticHypr("roundedWindows", want, { rounding: radius })
+    var body = "-- Lacuna: Own Hyprland window corner rounding explicitly.\n"
+      + "hl.config({\n"
+      + "  decoration = {\n"
+      + "    rounding = " + radius + ",\n"
+      + "  },\n"
+      + "})\n"
+    var liveConfig = "hl.config({ decoration = { rounding = " + radius + " } })"
+    run("mkdir -p " + quote(dir)
+      + "; printf %s " + quote(body) + " > " + quote(file)
+      + "; hyprctl reload >/dev/null"
+      + "; hyprctl eval " + quote(liveConfig) + " >/dev/null")
+  }
+
   function setToggle(name, desired) {
     var key = String(name || "")
     var want = desired === true
     if (key === "barVisible") {
+      setOptimisticToggle("barVisible", want)
       run("omarchy toggle bar " + (want ? "show" : "hide"))
+      return
+    }
+    if (key === "windowGapsEnabled") {
+      setWindowGapsEnabled(want)
+      return
+    }
+    if (key === "roundedWindows") {
+      setRoundedWindows(want)
+      return
+    }
+    if (key === "singleWindowAspect") {
+      setSingleWindowAspect(want)
       return
     }
 
     var current = toggleValue(key, null)
     if (current !== null && current === want) return
 
-    if (key === "screensaverEnabled") run("omarchy toggle screensaver")
-    else if (key === "suspendEnabled") run("omarchy toggle suspend")
-    else if (key === "idleEnabled") run("omarchy toggle idle")
-    else if (key === "notificationSilencing") run("omarchy toggle notification silencing")
-    else if (key === "nightlight") run("omarchy toggle nightlight")
+    if (key === "screensaverEnabled") {
+      setOptimisticToggle("screensaverEnabled", want)
+      run("omarchy toggle screensaver")
+    } else if (key === "suspendEnabled") {
+      setOptimisticToggle("suspendEnabled", want)
+      run("omarchy toggle suspend")
+    } else if (key === "idleEnabled") {
+      setOptimisticToggle("idleEnabled", want)
+      run("omarchy toggle idle")
+    } else if (key === "notificationSilencing") {
+      setOptimisticToggle("notificationSilencing", want)
+      run("omarchy toggle notification silencing")
+    } else if (key === "nightlight") {
+      setOptimisticToggle("nightlight", want)
+      run("omarchy toggle nightlight")
+    }
   }
 
   function mutateShellConfig(mutator) {

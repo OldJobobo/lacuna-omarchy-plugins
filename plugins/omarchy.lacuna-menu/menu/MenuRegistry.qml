@@ -9,14 +9,14 @@ Item {
   property bool sidebarCollapsed: false
   property bool sidebarCornerPieces: true
   property bool compact: false
-  property string barSizeMode: "theme"
+  property string barSizeMode: "full"
   property bool desktopClockEnabled: false
   property string desktopClockAnchor: "bottom-right"
   property int desktopClockOffsetX: 0
   property int desktopClockOffsetY: 0
   property real desktopClockScale: 1
   property bool desktopClockUse12Hour: false
-  property string designStyle: "carbon"
+  property string designStyle: "lacuna"
   property string colorProfile: "semantic"
   property string frameMode: "off"
   property bool frameShadow: false
@@ -67,6 +67,14 @@ Item {
     }
   }
 
+  function grid(group, rows) {
+    return {
+      kind: "grid",
+      group: group || "",
+      gridItems: rows || []
+    }
+  }
+
   function designStyleControl(group) {
     return {
       kind: "item",
@@ -86,7 +94,7 @@ Item {
       switchChecked: false,
       optionValue: root.designStyle,
       options: [
-        { value: "carbon", label: "Carbon" },
+        { value: "lacuna", label: "Lacuna" },
         { value: "omarchy", label: "Omarchy" },
         { value: "material", label: "Material" }
       ]
@@ -141,6 +149,11 @@ Item {
 
   function hyprExec(command) {
     return "hyprctl dispatch " + shellDoubleQuote("hl.dsp.exec_cmd([[" + command + "]])")
+  }
+
+  function shellIpcCommand(target, method) {
+    var path = Quickshell.env("OMARCHY_PATH") || ((Quickshell.env("HOME") || "") + "/.local/share/omarchy")
+    return "OMARCHY_PATH=" + shellQuote(path) + " " + shellQuote(path + "/bin/omarchy-shell") + " " + shellQuote(target) + " " + shellQuote(method)
   }
 
   function terminalCommand(command, title, holdOpen) {
@@ -244,7 +257,7 @@ Item {
   function designStyleName() {
     if (root.designStyle === "omarchy") return "Omarchy"
     if (root.designStyle === "material") return "Material"
-    return "Carbon"
+    return "Lacuna"
   }
 
   function designStyleHint() {
@@ -255,14 +268,12 @@ Item {
 
   function barSizeModeName() {
     if (root.barSizeMode === "compact") return "Compact"
-    if (root.barSizeMode === "full") return "Full"
-    return "Theme"
+    return "Full"
   }
 
   function barSizeModeHint() {
-    if (root.barSizeMode === "compact") return "Override host bar to 26 / 28"
-    if (root.barSizeMode === "full") return "Override host bar to 32 / 34"
-    return "Use the active Omarchy theme bar size"
+    if (root.barSizeMode === "compact") return "Compact topbar, sidebar, and rail sizing"
+    return "Full topbar, sidebar, and rail sizing"
   }
 
   function shellBarPositionHint() {
@@ -755,9 +766,7 @@ Item {
         item("item", "list-check", "Preferred Apps", "Files, editor, email, and Discord launch targets", "lacuna-preferred-apps", "", "lacuna", "primary", "row", false, "lacuna"),
         item("item", "clock", "Desktop Clock", clockPositionHint(), "lacuna-clock", "", "lacuna", "primary", "row", false, "lacuna"),
         item("item", "color-swatch", root.colorProfile === "colorful" ? "Colorful Profile" : "Semantic Profile", root.colorProfile === "colorful" ? "Use theme colors across Lacuna topbar modules" : "Use foreground with semantic colors only", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-color-profile", "", true, root.colorProfile === "colorful"),
-        item("item", root.compact ? "density-compact" : "density-normal", root.compact ? "Compact Lacuna Density" : "Normal Lacuna Density", root.compact ? "Use tighter Lacuna UI spacing" : "Use standard Lacuna UI spacing", "", "", "lacuna", "normal", "row", false, "lacuna", "toggle-lacuna-density", "", true, root.compact),
-        optionControl("density-normal", "Bar Size", barSizeModeHint(), "lacuna", root.barSizeMode, [
-          { value: "theme", label: "Theme" },
+        optionControl(root.compact ? "density-compact" : "density-normal", "Lacuna Size", barSizeModeHint(), "lacuna", root.barSizeMode, [
           { value: "compact", label: "Compact" },
           { value: "full", label: "Full" }
         ], "set-bar-size-mode-"),
@@ -817,9 +826,7 @@ Item {
         designStyleControl("layout"),
         item("item", "clock", "Desktop Clock", clockPositionHint(), "lacuna-clock", "", "lacuna", "primary", "row", false, "layout"),
         item("item", "color-swatch", root.colorProfile === "colorful" ? "Colorful Profile" : "Semantic Profile", root.colorProfile === "colorful" ? "Use theme colors across Lacuna topbar modules" : "Use foreground with semantic colors only", "", "", "lacuna", "normal", "row", false, "layout", "toggle-color-profile", "", true, root.colorProfile === "colorful"),
-        item("item", root.compact ? "density-compact" : "density-normal", root.compact ? "Compact Lacuna Density" : "Normal Lacuna Density", root.compact ? "Use tighter Lacuna UI spacing" : "Use standard Lacuna UI spacing", "", "", "lacuna", "normal", "row", false, "layout", "toggle-lacuna-density", "", true, root.compact),
-        optionControl("density-normal", "Bar Size", barSizeModeHint(), "layout", root.barSizeMode, [
-          { value: "theme", label: "Theme" },
+        optionControl(root.compact ? "density-compact" : "density-normal", "Lacuna Size", barSizeModeHint(), "layout", root.barSizeMode, [
           { value: "compact", label: "Compact" },
           { value: "full", label: "Full" }
         ], "set-bar-size-mode-"),
@@ -857,11 +864,13 @@ Item {
       item("item", "terminal", "Terminal", "Open a terminal", "", openTerminalCommand(), "nav", "primary", "row"),
       item("item", "world", "Browser", "Launch browser", "", "omarchy launch browser", "nav", "primary", "row"),
       item("header", "", "System Tools", "", "", "", "session"),
-      item("item", "wifi", "Wi-Fi", "Open Wi-Fi controls", "", "hyprctl dispatch 'hl.dsp.exec_cmd([[omarchy launch wifi]])'", "session"),
-      item("item", "bluetooth", "Bluetooth", "Open Bluetooth controls", "", "hyprctl dispatch 'hl.dsp.exec_cmd([[omarchy launch bluetooth]])'", "session"),
-      item("item", "volume", "Audio", "Open audio mixer", "", "hyprctl dispatch 'hl.dsp.exec_cmd([[omarchy launch audio]])'", "session"),
-      item("item", "video", "Record screen", "Choose screen recording mode", "", "", "session", "normal", "row", false, "session", "open-screenrecord-menu"),
-      item("item", "idle", "Idle", "Toggle idle behavior", "", "omarchy toggle idle", "session"),
+      grid("session", [
+        item("item", "wifi", "Wi-Fi", "Open Wi-Fi controls", "", shellIpcCommand("panels.network", "toggle"), "session"),
+        item("item", "bluetooth", "Bluetooth", "Open Bluetooth controls", "", shellIpcCommand("panels.bluetooth", "toggle"), "session"),
+        item("item", "volume", "Audio", "Open audio mixer", "", shellIpcCommand("panels.audio", "toggle"), "session"),
+        item("item", "video", "Record", "Choose screen recording mode", "", "", "session", "normal", "row", false, "session", "open-screenrecord-menu"),
+        item("item", "idle", "Idle", "Toggle idle behavior", "", "omarchy toggle idle", "session")
+      ]),
       item("header", "", "Maintenance", "", "", "", "shell"),
       item("item", "update", "Update Lacuna", "Pull the Lacuna git repo", "", updateLacunaCommand(), "shell"),
       item("item", "refresh", "Restart shell", "Reload Omarchy shell", "", restartLacunaCommand(), "shell")

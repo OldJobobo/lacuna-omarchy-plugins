@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "designStyle": "carbon",
+  "colorProfile": "semantic",
+  "compact": false,
+  "barSizeMode": "theme",
+  "barSizeSnapshot": {
+    "themeName": "fixture-theme",
+    "sizeHorizontal": 30,
+    "sizeVertical": 32
+  },
+  "sizeTransition": {
+    "holdCompact": false,
+    "holdUntil": 0
+  },
+  "customQuickLaunchApps": [
+    "firefox.desktop",
+    "org.wezfurlong.wezterm.desktop",
+    "code.desktop"
+  ],
+  "customQuickLaunchNames": {
+    "firefox.desktop": "Browser",
+    "org.wezfurlong.wezterm.desktop": "Terminal",
+    "code.desktop": "Editor"
+  },
+  "preferredApps": {
+    "files": "org.gnome.Nautilus.desktop",
+    "editor": "code.desktop",
+    "email": "thunderbird.desktop",
+    "discord": "vesktop.desktop"
+  },
+  "sidebar": {
+    "collapsed": true,
+    "exclusive": false,
+    "cornerPieces": false
+  },
+  "frame": {
+    "mode": "fullframe",
+    "shadow": true,
+    "thickness": 10,
+    "radius": 16,
+    "shadowDirection": "bottom_right",
+    "shadowOffsetX": 2,
+    "shadowOffsetY": 3
+  }
+}

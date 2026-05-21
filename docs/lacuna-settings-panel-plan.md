@@ -261,7 +261,7 @@ Purpose: visual style and color behavior.
 
 Content:
 
-1. Design style: `Carbon`, `Omarchy`, `Material`.
+1. Design style: `Lacuna`, `Omarchy`, `Material`.
 2. Color profile: `Semantic`, `Colorful`.
 3. Theme shortcut.
 4. Background shortcut.

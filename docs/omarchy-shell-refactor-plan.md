@@ -747,7 +747,7 @@ Status: complete in the current plugin pass.
    `~/.config/omarchy/lacuna/settings.json`.
 2. Expose settings that matter:
    - Lacuna UI density (`compact` compatibility key)
-   - Lacuna design style (`carbon`, `omarchy`, or `material`)
+   - Lacuna design style (`lacuna`, `omarchy`, or `material`; legacy `carbon` settings are normalized to `lacuna`)
    - Lacuna color profile (`semantic` or `colorful`)
    - sidebar collapsed
    - sidebar exclusive/overlay

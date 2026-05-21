@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 
@@ -24,8 +25,9 @@ def default_settings():
         "version": 1,
         "colorProfile": "semantic",
         "compact": False,
-        "barSizeMode": "theme",
+        "barSizeMode": "full",
         "barSizeSnapshot": None,
+        "sizeTransition": {"holdCompact": False, "holdUntil": 0},
         "sidebar": {"collapsed": False, "exclusive": True, "cornerPieces": True},
     }
 
@@ -45,9 +47,10 @@ def load_settings():
     data.setdefault("version", 1)
     if data.get("colorProfile") not in ("semantic", "colorful"):
         data["colorProfile"] = "semantic"
-    data["compact"] = bool(data.get("compact", False))
-    if data.get("barSizeMode") not in ("theme", "compact", "full"):
-        data["barSizeMode"] = "theme"
+    compact_fallback = bool(data.get("compact", False))
+    if data.get("barSizeMode") not in ("compact", "full"):
+        data["barSizeMode"] = "compact" if compact_fallback else "full"
+    data["compact"] = data["barSizeMode"] == "compact"
     if not isinstance(data.get("barSizeSnapshot"), dict):
         data["barSizeSnapshot"] = None
 
@@ -189,37 +192,44 @@ def reload_shell_theme():
 
 
 def apply_mode(data, mode):
-    mode = mode if mode in ("theme", "compact", "full") else "theme"
+    mode = mode if mode in ("compact", "full") else "full"
     current_theme = theme_name()
 
     try:
         raw = SHELL_PATH.read_text(encoding="utf-8")
     except Exception:
+        old_compact = bool(data.get("compact", False))
         data["barSizeMode"] = mode
+        data["compact"] = mode == "compact"
+        data["sizeTransition"] = {
+            "holdCompact": old_compact,
+            "holdUntil": int((time.time() + 0.056) * 1000),
+        }
         save_settings(data)
         return data
 
+    old_compact = bool(data.get("compact", False))
     current_values = parse_bar_values(raw)
     snapshot = data.get("barSizeSnapshot")
     next_raw = raw
 
-    if mode == "theme":
-        if snapshot_matches(snapshot, current_theme):
-            next_raw = patch_bar_values(raw, int(snapshot["sizeHorizontal"]), int(snapshot["sizeVertical"]))
-            data["barSizeSnapshot"] = None
-    else:
-        if not snapshot_matches(snapshot, current_theme) and current_values["valid"] and current_theme:
-            data["barSizeSnapshot"] = {
-                "themeName": current_theme,
-                "sizeHorizontal": current_values["sizeHorizontal"],
-                "sizeVertical": current_values["sizeVertical"],
-            }
+    if not snapshot_matches(snapshot, current_theme) and current_values["valid"] and current_theme:
+        data["barSizeSnapshot"] = {
+            "themeName": current_theme,
+            "sizeHorizontal": current_values["sizeHorizontal"],
+            "sizeVertical": current_values["sizeVertical"],
+        }
 
-        desired = desired_values(mode)
-        if not values_match(current_values, desired):
-            next_raw = patch_bar_values(raw, desired["sizeHorizontal"], desired["sizeVertical"])
+    desired = desired_values(mode)
+    if not values_match(current_values, desired):
+        next_raw = patch_bar_values(raw, desired["sizeHorizontal"], desired["sizeVertical"])
 
     data["barSizeMode"] = mode
+    data["compact"] = mode == "compact"
+    data["sizeTransition"] = {
+        "holdCompact": old_compact,
+        "holdUntil": int((time.time() + 0.056) * 1000),
+    }
     save_settings(data)
 
     if next_raw != raw:
@@ -233,14 +243,12 @@ def apply_mode(data, mode):
 
 def tooltip(mode):
     if mode == "full":
-        return "<b>Lacuna Bar Size</b><br/>Mode: full<br/>Click for compact"
-    if mode == "compact":
-        return "<b>Lacuna Bar Size</b><br/>Mode: compact<br/>Click for full"
-    return "<b>Lacuna Bar Size</b><br/>Mode: theme<br/>Click for full"
+        return "<b>Lacuna Size</b><br/>Mode: full<br/>Click for compact"
+    return "<b>Lacuna Size</b><br/>Mode: compact<br/>Click for full"
 
 
 def emit(data):
-    mode = data.get("barSizeMode") if data.get("barSizeMode") in ("theme", "compact", "full") else "theme"
+    mode = data.get("barSizeMode") if data.get("barSizeMode") in ("compact", "full") else "full"
     print(json.dumps({"mode": mode, "tooltip": tooltip(mode)}, separators=(",", ":")))
 
 
@@ -251,7 +259,7 @@ def main():
     if action == "toggle":
         next_mode = "compact" if data.get("barSizeMode") == "full" else "full"
         data = apply_mode(data, next_mode)
-    elif action in ("theme", "compact", "full"):
+    elif action in ("compact", "full"):
         data = apply_mode(data, action)
 
     emit(data)

@@ -9,7 +9,7 @@ Refactor Lacuna's menu and attached flyout control so Omarchy/Quickshell behavio
 - The sidebar remains a click-through shell surface: only visible Lacuna regions receive input.
 - Clicking outside an attached flyout dismisses that flyout and does not leave a stale input-blocking overlay.
 - Only one attached flyout is active at a time.
-- Lacuna visuals stay Lacuna-owned, including Carbon/Material/Omarchy style differences, molding connectors, panel radii, and `LacunaAnim` motion.
+- Lacuna visuals stay Lacuna-owned, including Lacuna/Material/Omarchy style differences, molding connectors, panel radii, and `LacunaAnim` motion.
 - The public Omarchy plugin lifecycle remains `open(payloadJson)` and `close()`.
 
 ## Implementation Outline

@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "id": "omarchy.lacuna-vhs-overlay",
+  "name": "Lacuna VHS Overlay",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Subtle bottom-layer VHS tracking lines for animated wallpaper ambience.",
+  "kinds": ["overlay"],
+  "activation": "persistent",
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "Overlay.qml"
+  },
+  "defaults": {
+    "effectEnabled": true,
+    "intensity": 0.68,
+    "speed": 1,
+    "lineSpacing": 4,
+    "trackingBands": 4,
+    "noiseAmount": 0.42,
+    "glitchAmount": 0.34,
+    "chromaBleed": true,
+    "vignette": true
+  },
+  "schema": [
+    {
+      "key": "effectEnabled",
+      "type": "boolean",
+      "label": "Effect enabled"
+    },
+    {
+      "key": "intensity",
+      "type": "number",
+      "label": "Intensity"
+    },
+    {
+      "key": "speed",
+      "type": "number",
+      "label": "Speed"
+    },
+    {
+      "key": "lineSpacing",
+      "type": "number",
+      "label": "Scanline spacing"
+    },
+    {
+      "key": "trackingBands",
+      "type": "number",
+      "label": "Tracking bands"
+    },
+    {
+      "key": "noiseAmount",
+      "type": "number",
+      "label": "Noise amount"
+    },
+    {
+      "key": "glitchAmount",
+      "type": "number",
+      "label": "Glitch amount"
+    },
+    {
+      "key": "chromaBleed",
+      "type": "boolean",
+      "label": "Chroma bleed"
+    },
+    {
+      "key": "vignette",
+      "type": "boolean",
+      "label": "Vignette"
+    }
+  ]
+}

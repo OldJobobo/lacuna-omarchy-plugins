@@ -10,15 +10,22 @@ Item {
   readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy/lacuna"
   readonly property string settingsFile: configDir + "/settings.json"
   property var data: defaultData()
+  property var lastLoadedData: defaultData()
+  property var pendingSave: null
+  property bool hasLoaded: false
 
   function defaultData() {
     return {
       version: 1,
-      designStyle: "carbon",
+      designStyle: "lacuna",
       colorProfile: "semantic",
       compact: false,
-      barSizeMode: "theme",
+      barSizeMode: "full",
       barSizeSnapshot: null,
+      sizeTransition: {
+        holdCompact: false,
+        holdUntil: 0
+      },
       customQuickLaunchApps: [],
       customQuickLaunchNames: {},
       preferredApps: {
@@ -50,9 +57,10 @@ Item {
       next.version = Number(value.version || 1)
       next.designStyle = normalizeDesignStyle(value.designStyle)
       next.colorProfile = String(value.colorProfile || "").toLowerCase() === "colorful" ? "colorful" : "semantic"
-      next.compact = value.compact === true
-      next.barSizeMode = normalizeBarSizeMode(value.barSizeMode)
+      next.barSizeMode = normalizeBarSizeMode(value.barSizeMode, value.compact === true)
+      next.compact = next.barSizeMode === "compact"
       next.barSizeSnapshot = normalizeBarSizeSnapshot(value.barSizeSnapshot)
+      next.sizeTransition = normalizeSizeTransition(value.sizeTransition)
       next.customQuickLaunchApps = normalizeCustomQuickLaunchApps(value.customQuickLaunchApps || value.quickLaunch)
       next.customQuickLaunchNames = normalizeCustomQuickLaunchNames(value.customQuickLaunchNames || value.quickLaunchNames, next.customQuickLaunchApps)
       next.preferredApps = normalizePreferredApps(value.preferredApps || value.defaultLaunchers || value.appDefaults)
@@ -83,7 +91,7 @@ Item {
 
   function normalizeFrameMode(value) {
     var mode = String(value || "").toLowerCase()
-    if (mode === "sidebar" || mode === "fullframe") return mode
+    if (mode === "fullframe" || mode === "on" || mode === "true" || mode === "1") return "fullframe"
     return "off"
   }
 
@@ -116,10 +124,10 @@ Item {
     return Qt.point(2, 3)
   }
 
-  function normalizeBarSizeMode(value) {
+  function normalizeBarSizeMode(value, compactFallback) {
     var mode = String(value || "").toLowerCase()
     if (mode === "compact" || mode === "full") return mode
-    return "theme"
+    return compactFallback === true ? "compact" : "full"
   }
 
   function normalizeBarSizeSnapshot(value) {
@@ -136,6 +144,14 @@ Item {
       themeName: themeName,
       sizeHorizontal: sizeHorizontal,
       sizeVertical: sizeVertical
+    }
+  }
+
+  function normalizeSizeTransition(value) {
+    if (!value || typeof value !== "object") return defaultData().sizeTransition
+    return {
+      holdCompact: value.holdCompact === true,
+      holdUntil: boundedInt(value.holdUntil, 0, 0, 9999999999999)
     }
   }
 
@@ -188,15 +204,16 @@ Item {
 
   function normalizeDesignStyle(value) {
     var style = String(value || "").toLowerCase()
+    if (style === "lacuna" || style === "carbon") return "lacuna"
     if (style === "omarchy" || style === "material") return style
-    return "carbon"
+    return "lacuna"
   }
 
   function nextDesignStyle(value) {
     var style = normalizeDesignStyle(value)
-    if (style === "carbon") return "omarchy"
+    if (style === "lacuna") return "omarchy"
     if (style === "omarchy") return "material"
-    return "carbon"
+    return "lacuna"
   }
 
   function load() {
@@ -207,10 +224,29 @@ Item {
   }
 
   function save(next) {
+    if (!hasLoaded) {
+      pendingSave = normalize(next)
+      load()
+      return
+    }
+
     data = normalize(next)
     var json = JSON.stringify(data, null, 2) + "\n"
     saveProc.command = ["bash", "-lc", "mkdir -p " + quote(configDir) + "; tmp=$(mktemp); printf %s " + quote(json) + " > \"$tmp\"; mv \"$tmp\" " + quote(settingsFile)]
     saveProc.running = true
+  }
+
+  function mergePendingSave(base, queued) {
+    var merged = normalize(queued)
+    var loadedBase = normalize(base)
+
+    if ((!merged.customQuickLaunchApps || merged.customQuickLaunchApps.length === 0)
+        && loadedBase.customQuickLaunchApps && loadedBase.customQuickLaunchApps.length > 0) {
+      merged.customQuickLaunchApps = loadedBase.customQuickLaunchApps
+      merged.customQuickLaunchNames = loadedBase.customQuickLaunchNames || {}
+    }
+
+    return merged
   }
 
   function quote(value) {
@@ -236,11 +272,28 @@ Item {
       } catch (e) {
         root.data = root.defaultData()
       }
+      root.lastLoadedData = root.data
+      root.hasLoaded = true
       root.loaded()
+      if (root.pendingSave) {
+        var queued = root.mergePendingSave(root.lastLoadedData, root.pendingSave)
+        root.pendingSave = null
+        root.save(queued)
+      }
     }
   }
 
   Process {
     id: saveProc
+  }
+
+  FileView {
+    id: settingsWatcher
+
+    path: root.settingsFile
+    watchChanges: true
+    printErrors: false
+    onFileChanged: root.load()
+    onLoadFailed: {}
   }
 }

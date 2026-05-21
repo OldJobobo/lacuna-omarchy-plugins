@@ -102,7 +102,7 @@ Column {
         counts[activeKey] = 0
         headerIndex++
       } else if (activeKey !== "") {
-        counts[activeKey]++
+        counts[activeKey] += sourceEntry.kind === "grid" && sourceEntry.gridItems ? sourceEntry.gridItems.length : 1
       }
     }
 
@@ -267,7 +267,7 @@ Column {
           property var entry: modelData
 
           width: parent.width
-          sourceComponent: entry.kind === "header" ? sectionDelegate : itemDelegate
+          sourceComponent: entry.kind === "header" ? sectionDelegate : (entry.kind === "grid" ? gridDelegate : itemDelegate)
         }
       }
     }
@@ -326,7 +326,7 @@ Column {
       height: root.compact ? 56 : 62
       radius: root.designTokens.material ? 8 : root.designTokens.controlRadius
       color: root.background
-      border.width: root.designTokens.carbon ? 0 : 1
+      border.width: root.designTokens.lacuna ? 0 : 1
       border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.28)
       clip: true
 
@@ -410,7 +410,7 @@ Column {
       height: root.compact ? 34 : 38
       radius: root.designTokens.material ? 9 : root.designTokens.controlRadius
       color: root.background
-      border.width: root.designTokens.carbon ? 0 : 1
+      border.width: root.designTokens.lacuna ? 0 : 1
       border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.34)
       clip: true
 
@@ -581,6 +581,130 @@ Column {
         }
       }
     }
+
+    Component {
+      id: gridDelegate
+
+      Item {
+        id: gridRoot
+
+        property var entry: parent.entry
+        readonly property var gridItems: entry.gridItems || []
+        readonly property int columns: 3
+        readonly property int gap: root.compact ? 7 : 8
+        readonly property int tileWidth: Math.floor((width - gap * (columns - 1)) / columns)
+        readonly property int tileHeight: root.compact ? 62 : 72
+
+        width: parent.width
+        height: toolGrid.implicitHeight
+
+        Grid {
+          id: toolGrid
+
+          width: parent.width
+          columns: gridRoot.columns
+          columnSpacing: gridRoot.gap
+          rowSpacing: gridRoot.gap
+
+          Repeater {
+            model: gridRoot.gridItems
+
+            LacunaRect {
+              id: tile
+
+              required property var modelData
+
+              readonly property color itemAccent: root.toneAccent(modelData.tone || "session")
+              readonly property bool itemDanger: modelData.danger === true
+              readonly property bool hovered: stateLayer.containsMouse
+              readonly property real reveal: stateLayer.reveal
+
+              width: gridRoot.tileWidth
+              height: gridRoot.tileHeight
+              radius: root.designTokens.material ? 8 : root.designTokens.radius
+              color: Qt.rgba(itemAccent.r, itemAccent.g, itemAccent.b, itemDanger ? 0.08 + reveal * 0.08 : 0.06 + reveal * 0.07)
+              border.width: root.designTokens.lacuna ? 0 : 1
+              border.color: Qt.rgba(itemAccent.r, itemAccent.g, itemAccent.b, hovered ? 0.42 : 0.20)
+              clip: true
+
+              Behavior on color {
+                LacunaColorAnim {}
+              }
+
+              LacunaRect {
+                visible: root.designTokens.accentStrips
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                height: 2
+                color: tile.itemAccent
+                opacity: tile.hovered ? 0.82 : 0.34
+              }
+
+              LacunaRect {
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: root.compact ? 9 : 11
+                width: root.compact ? 27 : 31
+                height: width
+                radius: root.designTokens.material ? width / 2 : root.designTokens.controlRadius
+                color: Qt.rgba(tile.itemAccent.r, tile.itemAccent.g, tile.itemAccent.b, 0.12 + tile.reveal * 0.12)
+                border.width: root.designTokens.lacuna ? 0 : 1
+                border.color: Qt.rgba(tile.itemAccent.r, tile.itemAccent.g, tile.itemAccent.b, 0.24 + tile.reveal * 0.24)
+
+                LacunaTablerIcon {
+                  id: gridIcon
+
+                  anchors.centerIn: parent
+                  name: tile.modelData.icon || ""
+                  color: tile.hovered ? root.foreground : tile.itemAccent
+                  iconSize: root.compact ? 15 : 17
+                  visible: valid
+                }
+
+                LacunaText {
+                  anchors.centerIn: parent
+                  width: parent.width
+                  visible: !gridIcon.valid
+                  text: tile.modelData.icon || ""
+                  color: tile.hovered ? root.foreground : tile.itemAccent
+                  fontFamily: root.bodyFontFamily
+                  font.pixelSize: root.compact ? 12 : 13
+                  horizontalAlignment: Text.AlignHCenter
+                }
+              }
+
+              LacunaText {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.leftMargin: 6
+                anchors.rightMargin: 6
+                anchors.bottomMargin: root.compact ? 8 : 9
+                text: tile.modelData.label || ""
+                color: tile.hovered ? root.foreground : root.muted
+                fontFamily: root.bodyFontFamily
+                font.pixelSize: root.compact ? 9 : 10
+                font.weight: tile.hovered ? Font.DemiBold : Font.Normal
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
+                maximumLineCount: 1
+              }
+
+              LacunaStateLayer {
+                id: stateLayer
+
+                anchors.fill: parent
+                stateColor: tile.itemAccent
+                hoverOpacity: root.designTokens.hoverOpacity
+                pressOpacity: root.designTokens.activeOpacity
+                showFill: !root.designTokens.lacuna
+                onTriggered: root.activated(tile.modelData)
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   Item {
@@ -716,7 +840,7 @@ Column {
 
   DesignTokens {
     id: fallbackDesignTokens
-    designStyle: "carbon"
+    designStyle: "lacuna"
     compact: root.compact
     foreground: root.foreground
     background: root.background

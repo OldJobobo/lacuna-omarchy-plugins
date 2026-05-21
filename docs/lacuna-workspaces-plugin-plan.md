@@ -7,7 +7,7 @@ switcher design inside the Omarchy shell plugin model.
 
 The plugin exists because Lacuna's original workspace module has a specific
 visual and interaction treatment that the native Omarchy workspace module does
-not provide: numbered rectangular controls, active underline, muted empty
+not provide: numbered rectangular controls, muted empty
 states, occupied workspace color, urgent override, and hover pulse.
 
 ## Plugin
@@ -60,7 +60,7 @@ First pass:
 5. Dispatch left-clicks through `Hyprland.dispatch`.
 6. Refresh workspace state on Hyprland workspace/window/focused-monitor/urgent
    events with a short debounce.
-7. Keep active underline and Lacuna hover pulse treatment.
+7. Keep Lacuna hover pulse treatment while selected state stays text-only.
 
 Optional behavior exposed through settings:
 
@@ -72,8 +72,8 @@ Optional behavior exposed through settings:
 The widget also follows Lacuna's global `designStyle` setting from
 `~/.config/omarchy/lacuna/settings.json`:
 
-1. `carbon`: original Lacuna workspace design with numbered rectangular
-   buttons, active underline, hover pulse, occupied color, and dim empty text.
+1. `lacuna`: original Lacuna workspace design with numbered rectangular
+   buttons, hover pulse, occupied color, and dim empty text.
 2. `omarchy`: native Omarchy workspace treatment with fixed-width minimal
    buttons, focused workspace glyph, and opacity-based empty state.
 3. `material`: stable rounded state chips with a filled tonal selected state,
@@ -87,8 +87,9 @@ The visual target is the original Lacuna topbar workspace group:
 1. Rectangular buttons, radius `0`.
 2. Compact size follows `bar.barSize`, with a minimum width close to the old
    `24` compact / `32` regular rhythm.
-3. Active workspace uses accent color and low-opacity accent fill.
-4. Active workspace has a 2px bottom underline.
+3. Active workspace uses accent color and heavier label weight.
+4. Active workspace is selected through accent text and weight, without a fill
+   or underline.
 5. Occupied inactive workspace uses a secondary alive color.
 6. Empty workspace uses a semantic muted foreground color with an opaque
    contrast-safe mix, not a decorative palette accent.

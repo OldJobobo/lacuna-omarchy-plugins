@@ -164,7 +164,7 @@ LacunaRect {
         height: root.compact ? 24 : 26
         radius: root.designTokens ? root.designTokens.controlRadius : 0
         color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.10 + stateLayer.reveal * 0.10)
-        border.width: root.designTokens && root.designTokens.carbon ? 0 : 1
+        border.width: root.designTokens && root.designTokens.lacuna ? 0 : 1
         border.color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.30)
 
         LacunaText {
@@ -197,7 +197,7 @@ LacunaRect {
             height: parent.height
             radius: root.designTokens ? root.designTokens.controlRadius : 0
             color: selected ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.22) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.04 + segmentLayer.reveal * 0.04)
-            border.width: selected || (root.designTokens && !root.designTokens.carbon) ? 1 : 0
+            border.width: selected || (root.designTokens && !root.designTokens.lacuna) ? 1 : 0
             border.color: selected ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.46) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
             clip: true
 

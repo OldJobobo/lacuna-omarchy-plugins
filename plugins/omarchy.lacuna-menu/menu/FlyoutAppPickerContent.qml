@@ -159,7 +159,7 @@ Column {
       height: visible ? (root.compact ? 32 : 38) : 0
       radius: root.designTokens.radius
       color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, systemPickerMouse.reveal * 0.10)
-      border.width: root.roleValue(root.preferredRole) === "system" && !root.designTokens.carbon ? 1 : 0
+      border.width: root.roleValue(root.preferredRole) === "system" && !root.designTokens.lacuna ? 1 : 0
       border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.30)
       clip: true
 
@@ -234,7 +234,7 @@ Column {
         height: root.compact ? 32 : 38
         radius: root.designTokens.radius
         color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, pickerMouse.reveal * 0.10)
-        border.width: (alreadyAdded || selectedOverride) && !root.designTokens.carbon ? 1 : 0
+        border.width: (alreadyAdded || selectedOverride) && !root.designTokens.lacuna ? 1 : 0
         border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.26)
         clip: true
 

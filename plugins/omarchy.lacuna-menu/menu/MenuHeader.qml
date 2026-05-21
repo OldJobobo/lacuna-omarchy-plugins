@@ -26,6 +26,7 @@ Item {
   readonly property bool hasVersion: version !== ""
   readonly property int controlSize: compact ? 24 : tokens.controlSmall
   readonly property int backButtonWidth: canGoBack ? controlSize : 0
+  property real ruleHighlightProgress: 0
 
   width: parent ? parent.width : implicitWidth
   height: compact ? (hasSubtitle || hasVersion ? 50 : 36) : (hasSubtitle || hasVersion ? 62 : 46) + (designTokens.material ? 2 : 0)
@@ -153,6 +154,8 @@ Item {
   }
 
   LacunaRect {
+    id: headerRule
+
     anchors.left: headerGlyph.left
     anchors.right: parent.right
     anchors.bottom: parent.bottom
@@ -162,13 +165,38 @@ Item {
   }
 
   LacunaRect {
+    id: headerRuleHighlight
+
     visible: root.designTokens.decorativeLinework
-    anchors.left: headerGlyph.left
-    anchors.bottom: parent.bottom
+    x: headerRule.x + Math.round(Math.max(0, headerRule.width - width) * root.ruleHighlightProgress)
+    y: parent.height - height
     width: root.compact ? 26 : 34
     height: 2
     color: root.accent
     opacity: 0.75
+  }
+
+  SequentialAnimation {
+    running: root.designTokens.decorativeLinework && root.visible && headerRule.width > headerRuleHighlight.width
+    loops: Animation.Infinite
+
+    NumberAnimation {
+      target: root
+      property: "ruleHighlightProgress"
+      from: 0
+      to: 1
+      duration: root.compact ? 3200 : 3800
+      easing.type: Easing.InOutSine
+    }
+
+    NumberAnimation {
+      target: root
+      property: "ruleHighlightProgress"
+      from: 1
+      to: 0
+      duration: root.compact ? 3200 : 3800
+      easing.type: Easing.InOutSine
+    }
   }
 
   LacunaTokens {
@@ -177,7 +205,7 @@ Item {
 
   DesignTokens {
     id: fallbackDesignTokens
-    designStyle: "carbon"
+    designStyle: "lacuna"
     compact: root.compact
     foreground: root.foreground
     accent: root.accent

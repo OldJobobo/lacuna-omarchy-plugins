@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
   "id": "omarchy.lacuna-compact-pill",
-  "name": "Lacuna Density Pill",
+  "name": "Lacuna Size Pill",
   "version": "0.1.0",
   "author": "Lacuna",
-  "description": "Lacuna UI density toggle backed by Lacuna settings.",
+  "description": "Toggle Lacuna and Omarchy host bar sizing between compact and full modes.",
   "kinds": ["bar-widget"],
   "activation": "on-demand",
   "entryPoints": {
     "barWidget": "Widget.qml"
   },
   "barWidget": {
-    "displayName": "Lacuna Density",
-    "description": "Toggles Lacuna UI density. This does not change Omarchy bar height.",
+    "displayName": "Lacuna Size",
+    "description": "Toggles topbar, sidebar, and rail sizing between compact and full.",
     "category": "Lacuna",
     "allowMultiple": false,
     "defaults": {

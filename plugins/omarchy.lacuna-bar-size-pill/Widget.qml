@@ -9,13 +9,13 @@ Item {
   property var bar: null
   property string moduleName: "omarchy.lacuna-bar-size-pill"
   property var settings: ({})
-  property string mode: "theme"
+  property string mode: "full"
   property string tooltipText: ""
 
   readonly property bool vertical: bar ? bar.vertical : false
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
-  readonly property color moduleColor: mode === "theme" ? colorProfile.roleColor("density", foreground) : colorProfile.statusColor("active", "density")
+  readonly property color moduleColor: colorProfile.statusColor("active", "density")
   readonly property int intervalMs: Math.max(500, Number(setting("interval", 1000)))
   readonly property string scriptPath: localPath(Qt.resolvedUrl("scripts/bar-size-state"))
   readonly property url iconSource: mode === "full" ? Qt.resolvedUrl("assets/tabler/arrows-minimize.svg") : Qt.resolvedUrl("assets/tabler/arrows-maximize.svg")
@@ -83,10 +83,10 @@ Item {
   function applyPayload(raw) {
     try {
       var payload = JSON.parse(String(raw || "{}"))
-      mode = payload.mode || "theme"
+      mode = payload.mode || "full"
       tooltipText = payload.tooltip || ""
     } catch (e) {
-      mode = "theme"
+      mode = "full"
       tooltipText = ""
     }
   }

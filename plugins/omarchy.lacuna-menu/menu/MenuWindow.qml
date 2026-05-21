@@ -31,9 +31,10 @@ Item {
   property color muted: menuTheme.muted
   property string version: ""
   property bool compact: compactState.compact
+  property real compactProgress: compact ? 1 : 0
   property bool forceCompactRail: false
   property bool railCompact: forceCompactRail ? true : compact
-  property string designStyle: lacunaSettings.data && lacunaSettings.data.designStyle ? lacunaSettings.data.designStyle : "carbon"
+  property string designStyle: lacunaSettings.data && lacunaSettings.data.designStyle ? lacunaSettings.data.designStyle : "lacuna"
   readonly property string barPosition: currentBarPosition()
   readonly property bool topBar: barPosition === "top"
   readonly property bool bottomBar: barPosition === "bottom"
@@ -44,17 +45,19 @@ Item {
   readonly property bool panelOnRight: false
   readonly property bool sidebarSurfaceVisible: panelController.menuRenderable
   readonly property bool effectiveCornerPieces: sidebarSurfaceVisible && sidebarState.cornerPieces && !panelOnRight
-  property int fullPanelWidth: compact ? 270 : 310
-  property int barControlSize: currentBarSize()
-  property int railButtonWidth: railCompact ? 24 : barControlSize
+  property int fullPanelWidth: Math.round(sizeMix(310, 270))
+  property real barControlSize: currentBarSize()
+  property int railButtonWidth: Math.round(forceCompactRail ? 24 : sizeMix(barControlSize, 24))
   property int railLeftInset: railDesignTokens.railLeftInset
   property int railRightInset: railDesignTokens.railRightInset
   property int railPanelWidth: railButtonWidth + railLeftInset + railRightInset
   property int panelWidth: sidebarSurfaceVisible ? (sidebarState.collapsed ? railPanelWidth : fullPanelWidth) : 0
   property int defaultTopBarHeight: 26
   property int barHeight: topBarHeight()
-  property int joinRadius: effectiveCornerPieces ? (compact ? 14 : 18) : 0
-  property int connectorOverlap: effectiveCornerPieces ? (compact ? 25 : 33) : 0
+  property int lacunaJoinRadius: Math.max(frameThickness, frameRadius)
+  property int joinRadius: effectiveCornerPieces ? lacunaJoinRadius : 0
+  property int connectorOverlap: effectiveCornerPieces ? Math.round(lacunaJoinRadius * 1.85) : 0
+  property int railTopGap: Math.round(sizeMix(10, 6))
   property int bodyRightInset: effectiveCornerPieces ? joinRadius : 0
   property int surfaceRightInset: bodyRightInset
   property int settingsConnectorWidth: effectiveCornerPieces ? joinRadius : 0
@@ -69,17 +72,17 @@ Item {
   property bool panelVisible: panelController.panelVisible
   readonly property bool settingsPanelOpen: panelController.isFlyoutOpen("settings")
   readonly property bool settingsPanelVisible: panelController.isFlyoutVisible("settings")
-  property int settingsPanelWidth: compact ? 360 : 400
+  property int settingsPanelWidth: Math.round(sizeMix(400, 360))
   readonly property bool shellSettingsPanelOpen: panelController.isFlyoutOpen("shellSettings")
   readonly property bool shellSettingsPanelVisible: panelController.isFlyoutVisible("shellSettings")
-  property int shellSettingsPanelWidth: compact ? 390 : 440
+  property int shellSettingsPanelWidth: Math.round(sizeMix(440, 390))
   readonly property bool appPickerOpen: panelController.isFlyoutOpen("appPicker")
   readonly property bool appPickerVisible: panelController.isFlyoutVisible("appPicker")
   readonly property bool flyoutOpen: panelController.flyoutOpen
   readonly property bool flyoutInteractive: panelController.flyoutInteractive
   property string appPickerMode: "customQuickLaunchApp"
   property string preferredAppPickerRole: ""
-  property int appPickerWidth: compact ? 260 : 300
+  property int appPickerWidth: Math.round(sizeMix(300, 260))
   readonly property int maxFlyoutLaneWidth: Math.max(settingsPanelWidth, shellSettingsPanelWidth, appPickerWidth)
   readonly property string visibleFlyout: panelController.visibleFlyout
   readonly property string outgoingFlyout: panelController.outgoingFlyout
@@ -137,6 +140,20 @@ Item {
   readonly property int frameShadowOffsetY: numberSetting(frameSettings.shadowOffsetY, 3)
   readonly property var sidebarScreen: Quickshell.screens && Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
 
+  Behavior on compactProgress {
+    NumberAnimation {
+      duration: 180
+      easing.type: Easing.OutCubic
+    }
+  }
+
+  Behavior on barControlSize {
+    NumberAnimation {
+      duration: 180
+      easing.type: Easing.OutCubic
+    }
+  }
+
   function localPath(url) {
     var value = String(url || "")
     if (value.indexOf("file://") === 0) value = value.slice(7)
@@ -158,6 +175,10 @@ Item {
   function positiveInt(value, fallback) {
     var parsed = Number(value)
     return isFinite(parsed) && parsed > 0 ? Math.round(parsed) : fallback
+  }
+
+  function sizeMix(fullValue, compactValue) {
+    return Number(fullValue) + (Number(compactValue) - Number(fullValue)) * compactProgress
   }
 
   function configBarHeight() {
@@ -424,7 +445,7 @@ Item {
 
   function validFrameMode(value) {
     var mode = String(value || "off").toLowerCase()
-    if (mode === "sidebar" || mode === "fullframe") return mode
+    if (mode === "fullframe" || mode === "on" || mode === "true" || mode === "1") return "fullframe"
     return "off"
   }
 
@@ -561,23 +582,21 @@ Item {
       transparent: false,
       centerAnchor: "calendar",
       layout: {
-        left: [{ id: "omarchy" }, { id: "workspaces" }],
+        left: [{ id: "Omarchy" }, { id: "Workspaces" }],
         center: [
-          { id: "calendar", format: "dddd HH:mm", formatAlt: "dd MMMM 'W'ww yyyy", verticalFormat: "HH\n\u2014\nmm" },
-          { id: "weather" },
-          { id: "update" },
-          { id: "voxtype" },
-          { id: "screenRecording" },
-          { id: "idleInhibitor" },
-          { id: "notifications" }
+          { id: "Clock", format: "dddd HH:mm", formatAlt: "dd MMMM 'W'ww yyyy", verticalFormat: "HH\n\u2014\nmm" },
+          { id: "Weather" },
+          { id: "Indicators", items: ["Dnd", "NightLight", "StayAwake", "ScreenRecording", "Dictation"] },
+          { id: "SystemUpdate" },
+          { id: "NotificationCenter" }
         ],
         right: [
-          { id: "tray" },
-          { id: "bluetoothPanel" },
-          { id: "networkPanel" },
-          { id: "audioPanel" },
-          { id: "monitorPanel" },
-          { id: "powerPanel" }
+          { id: "Tray" },
+          { id: "BluetoothPanel" },
+          { id: "NetworkPanel" },
+          { id: "AudioPanel" },
+          { id: "MonitorPanel" },
+          { id: "PowerPanel" }
         ]
       }
     }
@@ -1021,6 +1040,7 @@ Item {
     id: designTokens
     designStyle: root.designStyle
     compact: root.compact
+    compactProgress: root.compactProgress
     foreground: root.foreground
     background: root.background
     accent: root.accent
@@ -1030,6 +1050,7 @@ Item {
     id: railDesignTokens
     designStyle: root.designStyle
     compact: root.railCompact
+    compactProgress: root.forceCompactRail ? 1 : root.compactProgress
     foreground: root.foreground
     background: root.background
     accent: root.accent
@@ -1172,6 +1193,7 @@ Item {
       frameWidth: root.sidebarScreen ? root.sidebarScreen.width : menuWindow.width
       frameThickness: root.frameThickness
       frameRadius: root.frameRadius
+      joinRadius: root.lacunaJoinRadius
       progress: root.frameOverlayProgress
       frameColor: root.panelColor
       shadowOffsetX: root.frameShadowOffsetX
@@ -1257,7 +1279,7 @@ Item {
       MenuRail {
         visible: root.sidebarSurfaceVisible && sidebarState.collapsed
         anchors.top: parent.top
-        anchors.topMargin: root.barBottomY + (root.railCompact ? 6 : 10)
+        anchors.topMargin: root.barBottomY + root.railTopGap
         anchors.bottom: parent.bottom
         anchors.bottomMargin: designTokens.bottomInset
         anchors.left: parent.left
@@ -1313,7 +1335,7 @@ Item {
       openToLeft: root.panelOnRight
       panelWidth: panelHost.effectiveFlyoutWidth
       panelHeight: panelHost.effectiveFlyoutHeight
-      panelRadius: Math.max(designTokens.radius, root.compact ? 10 : 14)
+      panelRadius: root.lacunaJoinRadius
       panelColor: root.panelColor
       foreground: root.foreground
       designTokens: designTokens

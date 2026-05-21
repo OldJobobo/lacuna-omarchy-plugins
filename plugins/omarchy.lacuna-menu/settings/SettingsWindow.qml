@@ -98,9 +98,7 @@ Item {
   }
 
   function frameModeName() {
-    if (root.registry.frameMode === "sidebar") return "Sidebar"
-    if (root.registry.frameMode === "fullframe") return "Full Frame"
-    return "Off"
+    return root.registry.frameMode === "fullframe" ? "On" : "Off"
   }
 
   function sidebarModeName() {
@@ -112,15 +110,15 @@ Item {
   }
 
   function densityName() {
-    return root.registry.compact ? "Compact" : "Normal"
+    return root.registry.barSizeMode === "compact" ? "Compact" : "Full"
   }
 
   function barSizeModeName() {
-    return root.registry.barSizeModeName ? root.registry.barSizeModeName() : "Theme"
+    return root.registry.barSizeModeName ? root.registry.barSizeModeName() : "Full"
   }
 
   function barSizeModeHint() {
-    return root.registry.barSizeModeHint ? root.registry.barSizeModeHint() : "Use the active Omarchy theme bar size"
+    return root.registry.barSizeModeHint ? root.registry.barSizeModeHint() : "Control topbar, sidebar, and rail size together"
   }
 
   function clockAnchorName() {
@@ -156,16 +154,15 @@ Item {
       return [
         section("Design", "Panel and sidebar visual treatment.", "lacuna"),
         row("palette", "Design Style", root.registry.designStyleHint(), "", "lacuna", "", "segments", false, [
-          { value: "carbon", label: "Carbon" },
+          { value: "lacuna", label: "Lacuna" },
           { value: "omarchy", label: "Omarchy" },
           { value: "material", label: "Material" }
         ], root.registry.designStyle, "set-design-style-"),
         row("color-swatch", "Color Profile", root.registry.colorProfile === "colorful" ? "Use theme colors across Lacuna surfaces" : "Use semantic accents with restrained color", colorProfileName(), "lacuna", "toggle-color-profile", "toggle", root.registry.colorProfile === "colorful"),
         section("Frame", "Fake fullscreen frame and unified shadow treatment.", "lacuna"),
-        row("corners", "Frame Mode", "Draw Lacuna-owned frame pieces around the sidebar and screen perimeter", frameModeName(), "lacuna", "", "segments", false, [
+        row("corners", "Frame", "Draw Lacuna-owned frame pieces around the screen perimeter", frameModeName(), "lacuna", "", "segments", false, [
           { value: "off", label: "Off" },
-          { value: "sidebar", label: "Side" },
-          { value: "fullframe", label: "Full" }
+          { value: "fullframe", label: "On" }
         ], root.registry.frameMode, "set-frame-mode-"),
         row("photo", "Frame Shadow", root.registry.frameShadow ? "Apply one cohesive shadow pass to the frame layer" : "Keep frame pieces fill-only", root.registry.frameShadow ? "On" : "Off", "lacuna", "toggle-frame-shadow", "toggle", root.registry.frameShadow),
         section("Omarchy", "Shortcuts for the host theme workflow.", "shell"),
@@ -178,9 +175,7 @@ Item {
     if (sectionId === "layout") {
       return [
         section("Sidebar", "Keep launcher behavior separate from Lacuna settings.", "lacuna"),
-        row(root.registry.compact ? "density-compact" : "density-normal", "Lacuna Density", root.registry.compact ? "Use tighter spacing across Lacuna" : "Use standard spacing across Lacuna", densityName(), "lacuna", "toggle-lacuna-density", "toggle", root.registry.compact),
-        row("density-normal", "Bar Size", barSizeModeHint(), barSizeModeName(), "shell", "", "segments", false, [
-          { value: "theme", label: "Theme" },
+        row(root.registry.compact ? "density-compact" : "density-normal", "Lacuna Size", barSizeModeHint(), barSizeModeName(), "lacuna", "", "segments", false, [
           { value: "compact", label: "Compact" },
           { value: "full", label: "Full" }
         ], root.registry.barSizeMode, "set-bar-size-mode-"),
@@ -440,7 +435,7 @@ Item {
 
   DesignTokens {
     id: fallbackDesignTokens
-    designStyle: "carbon"
+    designStyle: "lacuna"
     compact: root.compact
     foreground: root.foreground
     background: root.background

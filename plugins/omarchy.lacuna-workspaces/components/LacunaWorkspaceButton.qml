@@ -20,7 +20,7 @@ Item {
   property bool urgent: false
   property bool accentText: true
   property bool vertical: false
-  property string designStyle: "carbon"
+  property string designStyle: "lacuna"
   property int barSize: 26
   property int minButtonWidth: Math.max(24, barSize)
   property int contentHorizontalPadding: barSize <= 26 ? 8 : 16
@@ -98,7 +98,7 @@ Item {
     height: root.shapeHeight
     color: root.materialStyle ? root.materialContainerColor : root.accent
     radius: root.effectiveRadius
-    opacity: root.omarchyStyle ? 0 : root.materialStyle ? (root.active || root.occupied || root.urgent || root.hovered ? 1 : 0) : root.active ? 0.08 : root.hoverHighlightOpacity
+    opacity: root.omarchyStyle ? 0 : root.materialStyle ? (root.active || root.occupied || root.urgent || root.hovered ? 1 : 0) : root.hoverHighlightOpacity
 
     Behavior on color {
       ColorAnimation {
@@ -157,20 +157,6 @@ Item {
         duration: root.motionTokens.animationFast
         easing.type: Easing.OutCubic
       }
-    }
-  }
-
-  Rectangle {
-    visible: !root.omarchyStyle && !root.materialStyle
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.bottom: parent.bottom
-    height: 2
-    color: root.accent
-    opacity: root.active ? 0.9 : 0
-
-    Behavior on opacity {
-      LacunaAnim { motion: "fast" }
     }
   }
 

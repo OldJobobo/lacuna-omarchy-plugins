@@ -13,6 +13,7 @@ Item {
   property real frameWidth: 0
   property int frameThickness: 8
   property int frameRadius: 14
+  property int joinRadius: frameRadius
   property real progress: 1
   property color frameColor: "#101315"
   property color shadowColor: "black"
@@ -43,7 +44,7 @@ Item {
   property real flyoutHeight: 0
   property bool flyoutVisible: false
 
-  readonly property bool frameEnabled: mode === "sidebar" || mode === "fullframe"
+  readonly property bool frameEnabled: mode === "fullframe"
   readonly property bool fullFrame: mode === "fullframe"
   readonly property real clampedProgress: Math.max(0, Math.min(1, progress))
   readonly property real edgeProgress: smoothEdgeProgress(clampedProgress)
@@ -55,7 +56,7 @@ Item {
   readonly property bool leftBar: barPosition === "left"
   readonly property bool rightBar: barPosition === "right"
   readonly property real curveKappa: 0.5522847498
-  readonly property real cornerSize: Math.max(t, sidebarCornerWidth)
+  readonly property real cornerSize: Math.max(t, joinRadius)
   readonly property real shadowExtent: Math.max(14, shadowBlurMax + Math.max(Math.abs(shadowOffsetX), Math.abs(shadowOffsetY)))
   readonly property real barEdgeCasterSize: 7
   readonly property real barEdgeCasterOverrun: 100
@@ -477,7 +478,7 @@ Item {
       width: Math.max(0, root.flyoutWidth)
       height: Math.max(0, root.flyoutHeight)
       panelColor: root.frameColor
-      panelRadius: Math.max(0, root.frameRadius)
+      panelRadius: Math.max(0, root.joinRadius)
       topLeftCornerState: -1
       bottomLeftCornerState: -1
       topRightCornerState: 0

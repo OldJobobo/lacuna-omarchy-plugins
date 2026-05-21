@@ -64,6 +64,7 @@ LacunaRect {
   readonly property int iconLeftPadding: designTokens.accentStrips ? (compact ? 5 : 6) : 0
   property int contentLeftMargin: Math.round(reveal * (featured ? 3 : 2))
   property bool reorderHandlePressed: false
+  property real lineworkProgress: 0
 
   width: parent ? parent.width : implicitWidth
   height: header ? (compact ? 24 : 30) : rowHeight
@@ -82,7 +83,7 @@ LacunaRect {
   }
 
   LacunaRect {
-    visible: !root.header && root.designTokens.carbon
+    visible: !root.header && root.designTokens.lacuna
     anchors.fill: parent
     color: root.toneAccent
     opacity: root.featured ? 0.045 + root.reveal * 0.065 : root.primary ? 0.025 + root.reveal * 0.06 : root.reveal * 0.055
@@ -99,10 +100,11 @@ LacunaRect {
   }
 
   LacunaRect {
+    id: topLinework
+
     visible: !root.header && root.designTokens.decorativeLinework && root.reveal > 0
-    anchors.left: parent.left
-    anchors.leftMargin: 9
-    anchors.top: parent.top
+    x: 9 + Math.round(Math.max(0, root.width - width - 18) * root.lineworkProgress)
+    y: 0
     width: root.featured ? 46 : root.primary ? 34 : 22
     height: 1
     color: root.toneAccent
@@ -110,14 +112,38 @@ LacunaRect {
   }
 
   LacunaRect {
+    id: bottomLinework
+
     visible: !root.header && root.designTokens.decorativeLinework && root.reveal > 0
-    anchors.right: parent.right
-    anchors.rightMargin: 8
-    anchors.bottom: parent.bottom
+    x: 8 + Math.round(Math.max(0, root.width - width - 16) * (1 - root.lineworkProgress))
+    y: root.height - height
     width: root.featured ? 32 : root.primary ? 26 : 14
     height: 1
     color: root.toneAccent
     opacity: root.reveal * 0.32
+  }
+
+  SequentialAnimation {
+    running: !root.header && root.designTokens.decorativeLinework && root.reveal > 0.01 && root.visible
+    loops: Animation.Infinite
+
+    NumberAnimation {
+      target: root
+      property: "lineworkProgress"
+      from: 0
+      to: 1
+      duration: root.compact ? 2800 : 3400
+      easing.type: Easing.InOutSine
+    }
+
+    NumberAnimation {
+      target: root
+      property: "lineworkProgress"
+      from: 1
+      to: 0
+      duration: root.compact ? 2800 : 3400
+      easing.type: Easing.InOutSine
+    }
   }
 
   Row {
@@ -300,7 +326,7 @@ LacunaRect {
       height: width
       radius: root.designTokens.material ? height / 2 : root.designTokens.controlRadius
       color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.08 + trailingActionLayer.reveal * 0.10)
-      border.width: root.designTokens.carbon ? 0 : 1
+      border.width: root.designTokens.lacuna ? 0 : 1
       border.color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.22 + trailingActionLayer.reveal * 0.24)
 
       LacunaTablerIcon {
@@ -361,7 +387,7 @@ LacunaRect {
       height: root.compact ? 16 : 18
       radius: root.designTokens.material ? height / 2 : root.designTokens.controlRadius
       color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, root.designTokens.material ? 0.20 : 0.13)
-      border.width: root.designTokens.carbon ? 0 : 1
+      border.width: root.designTokens.lacuna ? 0 : 1
       border.color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, root.hovered ? 0.48 : 0.28)
 
       LacunaText {
@@ -453,7 +479,7 @@ LacunaRect {
     stateColor: root.toneAccent
     hoverOpacity: root.designTokens.hoverOpacity
     pressOpacity: root.designTokens.activeOpacity
-    showFill: !root.designTokens.carbon
+    showFill: !root.designTokens.lacuna
     onTriggered: root.triggered()
     onSecondaryClicked: function(x, y) {
       root.contextRequested(x, y)
@@ -462,7 +488,7 @@ LacunaRect {
 
   DesignTokens {
     id: fallbackDesignTokens
-    designStyle: "carbon"
+    designStyle: "lacuna"
     compact: root.compact
     foreground: root.foreground
     background: root.background

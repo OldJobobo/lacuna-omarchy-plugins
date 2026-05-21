@@ -13,6 +13,8 @@ styling, and workflow ideas. New Omarchy work should happen here as plugins.
 - `plugins/omarchy.lacuna-menu/`: Lacuna menu/sidebar plugin, settings service,
   shared components, and menu assets.
 - `plugins/omarchy.lacuna-menu-button/`: topbar launcher for the Lacuna menu.
+- `plugins/omarchy.lacuna-vhs-overlay/`: desktop-layer VHS tracking line
+  ambience overlay.
 - `plugins/omarchy.lacuna-workspaces/`: original Lacuna numbered workspace
   switcher as an Omarchy bar widget.
 - `plugins/omarchy.lacuna-mpris/`: original Lacuna media pill with playback
@@ -39,6 +41,7 @@ ln -sfn "$PWD/plugins/omarchy.lacuna-menu" ~/.config/omarchy/plugins/omarchy.lac
 ln -sfn "$PWD/plugins/omarchy.lacuna-menu-button" ~/.config/omarchy/plugins/omarchy.lacuna-menu-button
 ln -sfn "$PWD/plugins/omarchy.lacuna-bar-size-pill" ~/.config/omarchy/plugins/omarchy.lacuna-bar-size-pill
 ln -sfn "$PWD/plugins/omarchy.lacuna-desktop-clock" ~/.config/omarchy/plugins/omarchy.lacuna-desktop-clock
+ln -sfn "$PWD/plugins/omarchy.lacuna-vhs-overlay" ~/.config/omarchy/plugins/omarchy.lacuna-vhs-overlay
 ```
 
 Enable panel, overlay, and menu plugins in `~/.config/omarchy/shell.json`,
@@ -47,6 +50,7 @@ then reload:
 ```bash
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell rescanPlugins
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-desktop-clock true
+OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-vhs-overlay true
 omarchy restart shell
 ```
 
