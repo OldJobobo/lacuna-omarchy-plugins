@@ -28,6 +28,9 @@ styling, and workflow ideas. New Omarchy work should happen here as plugins.
 - `plugins/omarchy.lacuna-compact-pill/`: Lacuna UI density toggle.
 - `plugins/omarchy.lacuna-bar-size-pill/`: Omarchy host bar compact/full
   toggle backed by Lacuna bar size mode.
+- `plugins/omarchy.lacuna-settings-persistence/`: service and panel that keep
+  selected Omarchy runtime toggles, currently idle locking and nightlight,
+  across shell restarts.
 - `config/`: example Omarchy shell and Lacuna settings files.
 - `docs/omarchy-shell-refactor-plan.md`: implementation plan and phase status.
 
@@ -42,6 +45,7 @@ ln -sfn "$PWD/plugins/omarchy.lacuna-menu-button" ~/.config/omarchy/plugins/omar
 ln -sfn "$PWD/plugins/omarchy.lacuna-bar-size-pill" ~/.config/omarchy/plugins/omarchy.lacuna-bar-size-pill
 ln -sfn "$PWD/plugins/omarchy.lacuna-desktop-clock" ~/.config/omarchy/plugins/omarchy.lacuna-desktop-clock
 ln -sfn "$PWD/plugins/omarchy.lacuna-vhs-overlay" ~/.config/omarchy/plugins/omarchy.lacuna-vhs-overlay
+ln -sfn "$PWD/plugins/omarchy.lacuna-settings-persistence" ~/.config/omarchy/plugins/omarchy.lacuna-settings-persistence
 ```
 
 Enable panel, overlay, and menu plugins in `~/.config/omarchy/shell.json`,
@@ -51,6 +55,8 @@ then reload:
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell rescanPlugins
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-desktop-clock true
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-vhs-overlay true
+OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-settings-persistence true
+OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell summon omarchy.lacuna-settings-persistence "{}"
 omarchy restart shell
 ```
 

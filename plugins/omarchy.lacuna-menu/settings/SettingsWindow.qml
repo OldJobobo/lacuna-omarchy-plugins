@@ -109,6 +109,10 @@ Item {
     return root.registry.sidebarCollapsed ? "Icon Rail" : "Full"
   }
 
+  function sidebarDefaultModeName() {
+    return root.registry.sidebarDefaultModeName ? root.registry.sidebarDefaultModeName() : "Off"
+  }
+
   function densityName() {
     return root.registry.barSizeMode === "compact" ? "Compact" : "Full"
   }
@@ -142,7 +146,7 @@ Item {
       return [
         section("Status", "Fast links into each settings area.", "lacuna"),
         navRow("palette", "Appearance", root.registry.designStyleHint(), "appearance", "lacuna", root.registry.designStyleName()),
-        navRow(root.registry.compact ? "density-compact" : "density-normal", "Layout", sidebarModeName() + " / " + sidebarShapeName(), "layout", "lacuna", densityName()),
+        navRow(root.registry.compact ? "density-compact" : "density-normal", "Layout", sidebarModeName() + " / default " + sidebarDefaultModeName(), "layout", "lacuna", densityName()),
         navRow("preferred-apps", "Preferred Apps", preferredSummary(), "preferred-apps", "lacuna", "Edit"),
         navRow("clock", "Desktop Clock", clockAnchorName(), "desktop-clock", "lacuna", root.registry.desktopClockEnabled ? "On" : "Off"),
         navRow("settings", "Runtime", "Shell commands, logs, and diagnostics", "runtime", "shell", "Tools"),
@@ -181,10 +185,11 @@ Item {
           { value: "compact", label: "Compact" },
           { value: "full", label: "Full" }
         ], root.registry.barSizeMode, "set-bar-size-mode-"),
-        row(root.registry.sidebarCollapsed ? "sidebar-expand" : "sidebar-collapse", "Sidebar Display", root.registry.sidebarDisplayHint(), sidebarShapeName(), "lacuna", "", "segments", false, [
+        row("sidebar-toggle", "Sidebar Default", root.registry.sidebarDefaultModeHint(), sidebarDefaultModeName(), "lacuna", "", "segments", false, [
+          { value: "off", label: "Off" },
           { value: "full", label: "Full" },
           { value: "rail", label: "Rail" }
-        ], root.registry.sidebarDisplayMode(), "set-sidebar-display-"),
+        ], root.registry.sidebarDefaultMode, "set-sidebar-default-"),
         row("sidebar-overlay", "Window Mode", root.registry.sidebarExclusive ? "Float over windows" : "Reserve screen space", sidebarModeName(), "lacuna", "toggle-sidebar-mode", "toggle", root.registry.sidebarExclusive),
         row("corners", "Corner Pieces", root.registry.sidebarCornerPieces ? "Rounded connector pieces are visible" : "Use a flat sidebar edge", root.registry.sidebarCornerPieces ? "On" : "Off", "lacuna", "toggle-corner-pieces", "toggle", root.registry.sidebarCornerPieces)
       ]

@@ -38,6 +38,7 @@ Item {
         discord: "system"
       },
       sidebar: {
+        defaultMode: "off",
         collapsed: false,
         exclusive: true,
         cornerPieces: true
@@ -79,6 +80,7 @@ Item {
       next.customQuickLaunchNames = normalizeCustomQuickLaunchNames(value.customQuickLaunchNames || value.quickLaunchNames, next.customQuickLaunchApps)
       next.preferredApps = normalizePreferredApps(value.preferredApps || value.defaultLaunchers || value.appDefaults)
       if (value.sidebar && typeof value.sidebar === "object") {
+        next.sidebar.defaultMode = normalizeSidebarDefaultMode(value.sidebar.defaultMode)
         next.sidebar.collapsed = value.sidebar.collapsed === true
         next.sidebar.exclusive = value.sidebar.exclusive !== false
         next.sidebar.cornerPieces = value.sidebar.cornerPieces !== false
@@ -176,6 +178,12 @@ Item {
 
   function normalizeControlsLayout(value) {
     return normalizeLayoutMode(value, "grid")
+  }
+
+  function normalizeSidebarDefaultMode(value) {
+    var mode = String(value || "").toLowerCase()
+    if (mode === "off" || mode === "rail" || mode === "full") return mode
+    return "off"
   }
 
   function normalizeLayoutMode(value, fallback) {

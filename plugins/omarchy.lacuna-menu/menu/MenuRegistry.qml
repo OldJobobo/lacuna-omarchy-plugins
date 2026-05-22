@@ -7,6 +7,7 @@ Item {
   property bool sidebarExclusive: true
   property bool sidebarCollapsed: false
   property bool sidebarCornerPieces: true
+  property string sidebarDefaultMode: "off"
   property bool compact: false
   property string barSizeMode: "full"
   property bool desktopClockEnabled: false
@@ -521,7 +522,7 @@ Item {
   function railItems() {
     return [
       entries.nav({ icon: "apps", label: "Apps", hint: "Browse categorized launchers", view: "apps", tone: "nav", group: "apps" }),
-      entries.nav({ icon: "tool", label: "Controls", hint: "Wi-Fi, audio, capture, and idle controls", view: "controls", tone: "session", group: "controls" }),
+      entries.nav({ icon: "controls", label: "Controls", hint: "Wi-Fi, audio, capture, and idle controls", view: "controls", tone: "session", group: "controls" }),
       entries.nav({ icon: "palette", label: "Customize", hint: "Theme, background, and Lacuna settings", view: "customize", tone: "shell", group: "customize" }),
       entries.nav({ icon: "power", label: "System", hint: "Lock, logout, restart, shutdown", view: "system", tone: "session", group: "session" })
     ].concat(customQuickLaunchItems()).concat([
@@ -540,6 +541,18 @@ Item {
 
   function sidebarDisplayHint() {
     return root.sidebarCollapsed ? "Only show the icon rail" : "Show the full sidebar surface"
+  }
+
+  function sidebarDefaultModeName() {
+    if (root.sidebarDefaultMode === "rail") return "Rail"
+    if (root.sidebarDefaultMode === "full") return "Full"
+    return "Off"
+  }
+
+  function sidebarDefaultModeHint() {
+    if (root.sidebarDefaultMode === "rail") return "Return to the icon rail after actions and shell restart"
+    if (root.sidebarDefaultMode === "full") return "Return to the full sidebar after actions and shell restart"
+    return "Close the sidebar after actions and shell restart"
   }
 
   function itemsFor(view) {

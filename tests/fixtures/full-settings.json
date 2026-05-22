@@ -30,6 +30,7 @@
     "discord": "vesktop.desktop"
   },
   "sidebar": {
+    "defaultMode": "rail",
     "collapsed": true,
     "exclusive": false,
     "cornerPieces": false

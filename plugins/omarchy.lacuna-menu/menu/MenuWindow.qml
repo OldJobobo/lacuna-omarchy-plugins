@@ -15,6 +15,7 @@ Item {
   property var barWidgetRegistry: null
   property string pluginId: manifest && manifest.id ? manifest.id : "omarchy.lacuna-menu"
   property var menuState: localMenuState
+  property bool initialSidebarDefaultApplied: false
   property string lacunaPath: manifest && manifest.__sourceDir ? manifest.__sourceDir : localPath(Qt.resolvedUrl(".."))
   property var sharedCompactState: null
   property var sharedSidebarState: null
@@ -276,6 +277,33 @@ Item {
     panelController.closeActiveFlyout()
   }
 
+  function applySidebarDefaultState() {
+    if (!lacunaEnabled) return
+
+    var mode = sidebarState.defaultMode || "off"
+    pendingFlyoutFocus = ""
+    panelController.closeActiveFlyout()
+    if (menuState) {
+      menuState.stack = ["main"]
+      if (typeof menuState.save === "function") menuState.save()
+    }
+
+    if (mode === "rail") {
+      sidebarState.setDisplay("rail")
+      panelController.openMenu()
+      return
+    }
+
+    if (mode === "full") {
+      sidebarState.setDisplay("full")
+      panelController.openMenu()
+      return
+    }
+
+    sidebarState.setDisplay("full")
+    panelController.closeMenu()
+  }
+
   function viewToneAccent() {
     if (menuState.currentView === "system") return root.dangerAccent
     if (menuState.currentView === "lacuna-shell") return root.shellAccent
@@ -530,8 +558,9 @@ Item {
     lacunaSettings.save(next)
   }
 
-  function setSidebarDisplay(mode) {
-    sidebarState.setDisplay(mode)
+  function setSidebarDefaultMode(mode) {
+    sidebarState.setDefaultMode(mode)
+    applySidebarDefaultState()
   }
 
   function validClockAnchor(value) {
@@ -792,8 +821,8 @@ Item {
       return true
     }
 
-    if (entry.action.indexOf("set-sidebar-display-") === 0) {
-      setSidebarDisplay(entry.action.substring("set-sidebar-display-".length))
+    if (entry.action.indexOf("set-sidebar-default-") === 0) {
+      setSidebarDefaultMode(entry.action.substring("set-sidebar-default-".length))
       return true
     }
 
@@ -1085,9 +1114,9 @@ Item {
     }
 
     if (entry.action === "open-screenrecord-menu") {
-      panelController.closeMenu()
       commands.run("omarchy-capture-screenrecording --stop-recording || "
         + shellIpcCommand("menu", "toggle", ["trigger.capture.screenrecord"]))
+      applySidebarDefaultState()
       return true
     }
 
@@ -1115,6 +1144,7 @@ Item {
     if (entry.command) {
       panelController.closeActiveFlyout()
       commands.run(entry.command)
+      applySidebarDefaultState()
     }
   }
 
@@ -1126,6 +1156,11 @@ Item {
 
   LacunaSettings {
     id: lacunaSettings
+    onLoaded: {
+      if (root.initialSidebarDefaultApplied) return
+      root.initialSidebarDefaultApplied = true
+      Qt.callLater(root.applySidebarDefaultState)
+    }
   }
 
   CompactState {
@@ -1194,6 +1229,7 @@ Item {
     sidebarExclusive: sidebarState.exclusive
     sidebarCollapsed: sidebarState.collapsed
     sidebarCornerPieces: sidebarState.cornerPieces
+    sidebarDefaultMode: sidebarState.defaultMode
     compact: root.compact
     barSizeMode: barSizeModeService.barSizeMode
     designStyle: root.designStyle

@@ -231,6 +231,7 @@ Column {
     accent: root.accent
     danger: root.dangerAccent
     compact: root.compact
+    canCollapse: false
     designTokens: root.designTokens
     bodyFontFamily: root.bodyFontFamily
     onBackRequested: root.menuState.back()
@@ -866,12 +867,38 @@ Column {
     id: settingsFooter
 
     width: parent.width
-    height: root.compact ? 34 : 40
+    height: root.compact ? 68 : 78
+
+    Row {
+      id: collapseRow
+
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.top: parent.top
+      height: root.compact ? 34 : 38
+
+      LacunaIconButton {
+        id: collapseButton
+
+        anchors.verticalCenter: parent.verticalCenter
+        icon: "sidebar-collapse"
+        foreground: root.foreground
+        muted: root.muted
+        accent: root.accent
+        hoverAccent: root.accent
+        buttonSize: root.compact ? 32 : 36
+        buttonRadius: root.designTokens.controlRadius
+        hoverOpacity: root.designTokens.hoverOpacity
+        pressOpacity: root.designTokens.activeOpacity
+        iconSize: root.compact ? 18 : 20
+        onTriggered: root.collapseRequested()
+      }
+    }
 
     LacunaRect {
       anchors.left: parent.left
       anchors.right: parent.right
-      anchors.top: parent.top
+      anchors.top: collapseRow.bottom
       height: 1
       color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
     }

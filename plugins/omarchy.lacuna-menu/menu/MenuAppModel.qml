@@ -169,7 +169,7 @@ Item {
     if (value !== "system") return appLaunchCommand(value)
 
     if (role === "files") return root.commands.hyprExec("omarchy launch nautilus")
-    if (role === "editor") return root.commands.hyprExec("omarchy launch editor")
+    if (role === "editor") return root.commands.hyprExec("omarchy-launch-editor")
     if (role === "email") return root.commands.hyprExec("xdg-open mailto:")
     if (role === "discord") {
       var detected = detectedDiscordApp()

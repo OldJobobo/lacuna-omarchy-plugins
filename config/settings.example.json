@@ -15,6 +15,7 @@
     "discord": "system"
   },
   "sidebar": {
+    "defaultMode": "off",
     "collapsed": false,
     "exclusive": true,
     "cornerPieces": true

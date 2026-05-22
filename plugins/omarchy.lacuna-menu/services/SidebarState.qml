@@ -9,6 +9,8 @@ Item {
   property bool exclusive: true
   property bool collapsed: false
   property bool cornerPieces: true
+  property string defaultMode: "off"
+  property bool displayInitialized: false
 
   function load() {
     if (settingsService && settingsService.load) settingsService.load()
@@ -21,7 +23,6 @@ Item {
 
   function toggleCollapsed() {
     collapsed = !collapsed
-    save()
   }
 
   function toggleCornerPieces() {
@@ -31,13 +32,23 @@ Item {
 
   function expand() {
     collapsed = false
-    save()
   }
 
   function setDisplay(mode) {
     var value = String(mode || "full").toLowerCase()
     collapsed = value === "rail"
+  }
+
+  function setDefaultMode(mode) {
+    defaultMode = normalizeDefaultMode(mode)
+    collapsed = defaultMode === "rail"
     save()
+  }
+
+  function normalizeDefaultMode(mode) {
+    var value = String(mode || "").toLowerCase()
+    if (value === "off" || value === "rail" || value === "full") return value
+    return "off"
   }
 
   function save() {
@@ -45,7 +56,8 @@ Item {
     var next = settingsService.normalize ? settingsService.normalize(settingsService.data) : settingsService.data
     if (!next || typeof next !== "object") next = { version: 1 }
     next.sidebar = {
-      collapsed: collapsed,
+      defaultMode: defaultMode,
+      collapsed: defaultMode === "rail",
       exclusive: exclusive,
       cornerPieces: cornerPieces
     }
@@ -54,7 +66,11 @@ Item {
 
   function applySettings() {
     var sidebar = settingsService && settingsService.data ? settingsService.data.sidebar : null
-    collapsed = !!(sidebar && sidebar.collapsed === true)
+    defaultMode = normalizeDefaultMode(sidebar && sidebar.defaultMode)
+    if (!displayInitialized) {
+      collapsed = defaultMode === "rail"
+      displayInitialized = true
+    }
     exclusive = !(sidebar && sidebar.exclusive === false)
     cornerPieces = !(sidebar && sidebar.cornerPieces === false)
   }
