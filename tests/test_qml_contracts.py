@@ -31,11 +31,11 @@ class QmlContractTests(unittest.TestCase):
         self.assertNotIn("height: 2\n    color: root.accent\n    opacity: root.active", qml)
         self.assertIn('property string designStyle: "lacuna"', qml)
 
-    def test_lacuna_menu_button_uses_sidebar_icon_asset(self):
+    def test_lacuna_menu_button_uses_lacuna_icon_asset(self):
         qml = read("plugins/omarchy.lacuna-menu-button/Widget.qml")
 
-        self.assertIn("layout-sidebar-left-expand-filled.svg", qml)
-        self.assertNotIn("circle-dotted-letter-l.svg", qml)
+        self.assertIn("circle-dotted-letter-l.svg", qml)
+        self.assertNotIn("layout-sidebar-left-expand-filled.svg", qml)
 
     def test_design_token_consumers_use_lacuna_not_carbon_flag(self):
         paths = [

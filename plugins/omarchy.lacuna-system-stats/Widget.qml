@@ -171,6 +171,7 @@ Item {
     property bool vertical: false
     property int barSize: 26
     property int hoverDuration: 150
+    property int topbarIconSize: barSize >= 32 ? 18 : 14
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
 
     width: vertical ? barSize : Math.max(36, content.implicitWidth + 12)
@@ -193,8 +194,8 @@ Item {
       Image {
         anchors.verticalCenter: parent.verticalCenter
         source: content.parent.iconSource
-        width: 14
-        height: 14
+        width: content.parent.topbarIconSize
+        height: content.parent.topbarIconSize
         sourceSize.width: width
         sourceSize.height: height
         smooth: true

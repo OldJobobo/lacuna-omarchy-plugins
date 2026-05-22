@@ -18,6 +18,7 @@ Item {
   readonly property color moduleColor: colorProfile.roleColor("wallpaper", foreground)
   readonly property int maxTextLength: Math.max(4, Number(setting("maxTextLength", 18)))
   readonly property bool showIcon: setting("showIcon", true) === true
+  readonly property int topbarIconSize: barSize >= 32 ? 18 : 14
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
   readonly property string backgroundLink: configHome + "/omarchy/current/background"
   readonly property string wallpaperTitle: backgroundPath ? formatTitle(backgroundPath) : "No Wallpaper"
@@ -140,8 +141,8 @@ Item {
       Item {
         visible: root.showIcon
         anchors.verticalCenter: parent.verticalCenter
-        width: visible ? 14 : 0
-        height: 14
+        width: visible ? root.topbarIconSize : 0
+        height: root.topbarIconSize
 
         Shape {
           width: 24

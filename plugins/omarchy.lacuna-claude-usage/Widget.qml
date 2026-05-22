@@ -23,6 +23,7 @@ Item {
   readonly property int intervalMs: Math.max(1000, Number(setting("interval", 30000)))
   readonly property int maxTextLength: Math.max(4, Number(setting("maxTextLength", 32)))
   readonly property bool showIcon: setting("showIcon", true) === true
+  readonly property int topbarIconSize: barSize >= 32 ? 18 : 14
   readonly property string scriptPath: localPath(Qt.resolvedUrl("scripts/claude-code-status.sh"))
   readonly property url iconSource: Qt.resolvedUrl("assets/claude-ai.svg")
   readonly property bool activeState: cssClass === "alert" || cssClass === "low" || cssClass === "active" || cssClass === "over"
@@ -148,8 +149,8 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         visible: root.showIcon
         source: root.iconSource
-        width: 14
-        height: 14
+        width: root.topbarIconSize
+        height: root.topbarIconSize
         sourceSize.width: width
         sourceSize.height: height
         fillMode: Image.PreserveAspectFit

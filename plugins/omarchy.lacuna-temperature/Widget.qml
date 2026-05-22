@@ -19,6 +19,7 @@ Item {
   readonly property int intervalMs: Math.max(1000, Number(setting("interval", 5000)))
   readonly property int warmF: Math.max(1, Number(setting("warmF", 150)))
   readonly property int criticalF: Math.max(warmF + 1, Number(setting("criticalF", 185)))
+  readonly property int topbarIconSize: barSize >= 32 ? 18 : 14
   readonly property url iconSource: Qt.resolvedUrl("assets/tabler/temperature-plus-filled.svg")
   readonly property string status: temperatureF >= criticalF ? "Hot" : temperatureF >= warmF ? "Warm" : "Normal"
   readonly property color statusColor: colorProfile.statusColor(status.toLowerCase(), "temperature")
@@ -106,8 +107,8 @@ Item {
       Image {
         anchors.verticalCenter: parent.verticalCenter
         source: root.iconSource
-        width: 14
-        height: 14
+        width: root.topbarIconSize
+        height: root.topbarIconSize
         sourceSize.width: width
         sourceSize.height: height
         smooth: true

@@ -76,6 +76,10 @@ Column {
     tooltipVisible = true
   }
 
+  function itemAccent(entry) {
+    return root.toneAccent(entry ? entry.tone : "")
+  }
+
   function hideTooltip(item) {
     if (item && tooltipTarget !== item) return
     tooltipVisible = false
@@ -98,52 +102,14 @@ Column {
     LacunaAnim { motion: "normal" }
   }
 
-  MenuRailButton {
-    id: expandButton
-
-    shape: "sidebar-expand"
-    muted: root.foreground
-    hoverAccent: root.accent
-    buttonSize: root.railWidth
-    buttonRadius: root.designTokens.controlRadius
-    hoverOpacity: root.designTokens.hoverOpacity
-    pressOpacity: root.designTokens.activeOpacity
-    iconSize: root.compact ? 16 : 18
-    onHoveredChanged: if (hovered) root.showTooltipText(this, "Expand sidebar", root.accent)
-                    else root.hideTooltip(this)
-    onTriggered: root.expandRequested()
-  }
-
-  MenuRailButton {
-    id: compactButton
-
-    shape: root.compact ? "density-normal" : "density-compact"
-    muted: root.foreground
-    hoverAccent: root.accent
-    buttonSize: root.railWidth
-    buttonRadius: root.designTokens.controlRadius
-    hoverOpacity: root.designTokens.hoverOpacity
-    pressOpacity: root.designTokens.activeOpacity
-    iconSize: root.compact ? 16 : 18
-    onHoveredChanged: if (hovered) root.showTooltipText(this, root.compact ? "Normal density" : "Compact density", root.accent)
-                    else root.hideTooltip(this)
-    onTriggered: root.compactToggleRequested()
-  }
-
-  LacunaRect {
-    width: root.railWidth
-    height: 1
-    color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
-  }
-
   Repeater {
     model: root.railItems()
 
     MenuRailButton {
       shape: root.iconShape(modelData)
       iconSource: modelData.iconSource || ""
-      muted: root.foreground
-      hoverAccent: root.accent
+      muted: root.muted
+      hoverAccent: root.itemAccent(modelData)
       buttonSize: root.railWidth
       buttonRadius: root.designTokens.controlRadius
       hoverOpacity: root.designTokens.hoverOpacity
@@ -157,7 +123,39 @@ Column {
 
   Item {
     width: root.railWidth
-    height: Math.max(0, root.height - y - settingsDivider.height - shellSettingsButton.height - settingsButton.height - root.spacing * 3)
+    height: Math.max(0, root.height - y - compactButton.height - expandButton.height - settingsDivider.height - shellSettingsButton.height - settingsButton.height - root.spacing * 5)
+  }
+
+  MenuRailButton {
+    id: compactButton
+
+    shape: root.compact ? "arrows-maximize" : "arrows-minimize"
+    muted: root.muted
+    hoverAccent: root.accent
+    buttonSize: root.railWidth
+    buttonRadius: root.designTokens.controlRadius
+    hoverOpacity: root.designTokens.hoverOpacity
+    pressOpacity: root.designTokens.activeOpacity
+    iconSize: root.compact ? 16 : 18
+    onHoveredChanged: if (hovered) root.showTooltipText(this, root.compact ? "Normal density" : "Compact density", root.accent)
+                    else root.hideTooltip(this)
+    onTriggered: root.compactToggleRequested()
+  }
+
+  MenuRailButton {
+    id: expandButton
+
+    shape: "sidebar-expand"
+    muted: root.muted
+    hoverAccent: root.accent
+    buttonSize: root.railWidth
+    buttonRadius: root.designTokens.controlRadius
+    hoverOpacity: root.designTokens.hoverOpacity
+    pressOpacity: root.designTokens.activeOpacity
+    iconSize: root.compact ? 16 : 18
+    onHoveredChanged: if (hovered) root.showTooltipText(this, "Expand sidebar", root.accent)
+                    else root.hideTooltip(this)
+    onTriggered: root.expandRequested()
   }
 
   LacunaRect {
@@ -172,7 +170,7 @@ Column {
     id: shellSettingsButton
 
     shape: "settings"
-    muted: root.foreground
+    muted: root.muted
     hoverAccent: root.shellAccent
     buttonSize: root.railWidth
     buttonRadius: root.designTokens.controlRadius
@@ -188,7 +186,7 @@ Column {
     id: settingsButton
 
     shape: "gear"
-    muted: root.foreground
+    muted: root.muted
     hoverAccent: root.accent
     buttonSize: root.railWidth
     buttonRadius: root.designTokens.controlRadius

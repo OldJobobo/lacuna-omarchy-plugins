@@ -14,7 +14,8 @@ Item {
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.roleColor("menu", foreground)
   readonly property string tooltipText: String(setting("tooltip", "Lacuna"))
-  readonly property url iconSource: Qt.resolvedUrl("assets/tabler/layout-sidebar-left-expand-filled.svg")
+  readonly property int topbarIconSize: barSize >= 32 ? 18 : 15
+  readonly property url iconSource: Qt.resolvedUrl("assets/tabler/circle-dotted-letter-l.svg")
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -76,8 +77,8 @@ Item {
     Image {
       anchors.centerIn: parent
       source: root.iconSource
-      width: 15
-      height: 15
+      width: root.topbarIconSize
+      height: root.topbarIconSize
       sourceSize.width: width
       sourceSize.height: height
       smooth: true

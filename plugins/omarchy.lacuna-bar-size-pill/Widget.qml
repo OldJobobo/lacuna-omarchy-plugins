@@ -17,6 +17,7 @@ Item {
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.statusColor("active", "density")
   readonly property int intervalMs: Math.max(500, Number(setting("interval", 1000)))
+  readonly property int topbarIconSize: barSize >= 32 ? 18 : 15
   readonly property string scriptPath: localPath(Qt.resolvedUrl("scripts/bar-size-state"))
   readonly property url iconSource: mode === "full" ? Qt.resolvedUrl("assets/tabler/arrows-minimize.svg") : Qt.resolvedUrl("assets/tabler/arrows-maximize.svg")
 
@@ -110,8 +111,8 @@ Item {
     Image {
       anchors.centerIn: parent
       source: root.iconSource
-      width: 15
-      height: 15
+      width: root.topbarIconSize
+      height: root.topbarIconSize
       sourceSize.width: width
       sourceSize.height: height
       smooth: true
