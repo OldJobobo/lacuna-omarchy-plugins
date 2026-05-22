@@ -7,9 +7,10 @@ Item {
 
   signal pluginStateChanged()
 
-  property string lacunaPath: ""
-  property var commandRunner: null
+  property string lacunaPath: manifest && manifest.__sourceDir ? manifest.__sourceDir : localPath(Qt.resolvedUrl("."))
+  property var commandRunner: localCommandRunner
   property var shell: null
+  property var manifest: null
   property var pluginRegistry: null
   property var shellConfig: ({})
   property bool loading: false
@@ -27,6 +28,12 @@ Item {
   readonly property string focusedMonitorScale: stringAt(state, ["monitor", "scale"])
   readonly property int idleScreensaver: positiveInt(shellConfig && shellConfig.idle ? shellConfig.idle.screensaver : undefined, 150)
   readonly property int idleLock: positiveInt(shellConfig && shellConfig.idle ? shellConfig.idle.lock : undefined, 300)
+
+  function localPath(url) {
+    var value = String(url || "")
+    if (value.indexOf("file://") === 0) value = value.slice(7)
+    return decodeURIComponent(value)
+  }
 
   function defaultState() {
     return {
@@ -419,5 +426,9 @@ Item {
         root.errorText = "Unable to parse Omarchy settings state"
       }
     }
+  }
+
+  CommandRunner {
+    id: localCommandRunner
   }
 }

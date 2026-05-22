@@ -10,8 +10,11 @@ styling, and workflow ideas. New Omarchy work should happen here as plugins.
 
 ## Structure
 
-- `plugins/omarchy.lacuna-menu/`: Lacuna menu/sidebar plugin, settings service,
-  shared components, and menu assets.
+- `plugins/omarchy.lacuna-menu/`: Lacuna menu/sidebar plugin, Lacuna settings
+  panels, shared components, and menu assets.
+- `plugins/omarchy.lacuna-state/`: shared Lacuna runtime settings service.
+- `plugins/omarchy.lacuna-shell-settings/`: separate Omarchy shell settings
+  service and panel linked from the Lacuna menu.
 - `plugins/omarchy.lacuna-menu-button/`: topbar launcher for the Lacuna menu.
 - `plugins/omarchy.lacuna-vhs-overlay/`: desktop-layer VHS tracking line
   ambience overlay.
@@ -25,12 +28,15 @@ styling, and workflow ideas. New Omarchy work should happen here as plugins.
   `plugins/omarchy.lacuna-wallpaper/`: active Omarchy theme/background widgets.
 - `plugins/omarchy.lacuna-system-stats/` and
   `plugins/omarchy.lacuna-temperature/`: system status bar widgets.
-- `plugins/omarchy.lacuna-compact-pill/`: Lacuna UI density toggle.
 - `plugins/omarchy.lacuna-bar-size-pill/`: Omarchy host bar compact/full
   toggle backed by Lacuna bar size mode.
+- `plugins/omarchy.lacuna-compact-pill/`: legacy Lacuna UI density toggle,
+  retained for existing layouts; prefer `omarchy.lacuna-bar-size-pill`.
 - `plugins/omarchy.lacuna-settings-persistence/`: service and panel that keep
   selected Omarchy runtime toggles, currently idle locking and nightlight,
   across shell restarts.
+- `shared/qml/simple-bar/`: canonical vendored helper templates for simple
+  Lacuna topbar widgets.
 - `config/`: example Omarchy shell and Lacuna settings files.
 - `docs/omarchy-shell-refactor-plan.md`: implementation plan and phase status.
 
@@ -42,6 +48,8 @@ Symlink plugin directories into Omarchy's plugin directory:
 mkdir -p ~/.config/omarchy/plugins
 ln -sfn "$PWD/plugins/omarchy.lacuna-menu" ~/.config/omarchy/plugins/omarchy.lacuna-menu
 ln -sfn "$PWD/plugins/omarchy.lacuna-menu-button" ~/.config/omarchy/plugins/omarchy.lacuna-menu-button
+ln -sfn "$PWD/plugins/omarchy.lacuna-state" ~/.config/omarchy/plugins/omarchy.lacuna-state
+ln -sfn "$PWD/plugins/omarchy.lacuna-shell-settings" ~/.config/omarchy/plugins/omarchy.lacuna-shell-settings
 ln -sfn "$PWD/plugins/omarchy.lacuna-bar-size-pill" ~/.config/omarchy/plugins/omarchy.lacuna-bar-size-pill
 ln -sfn "$PWD/plugins/omarchy.lacuna-desktop-clock" ~/.config/omarchy/plugins/omarchy.lacuna-desktop-clock
 ln -sfn "$PWD/plugins/omarchy.lacuna-vhs-overlay" ~/.config/omarchy/plugins/omarchy.lacuna-vhs-overlay
@@ -53,6 +61,8 @@ then reload:
 
 ```bash
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell rescanPlugins
+OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-state true
+OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-shell-settings true
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-desktop-clock true
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-vhs-overlay true
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-settings-persistence true
@@ -67,6 +77,11 @@ Settings. Lacuna runtime state lives in
 `colorProfile` setting, `customQuickLaunchApps`, and `preferredApps`. Use
 `semantic` for the foreground-first profile or `colorful` to let Lacuna topbar
 modules draw from the active Omarchy theme colors.
+
+`omarchy.lacuna-menu` owns Lacuna panel motion and sidebar choreography.
+Specialized widgets own their own interaction animation, while simple topbar
+widgets use vendored helper templates under `shared/qml/simple-bar/` to keep
+hover/color timing consistent without cross-plugin imports.
 
 The desktop clock uses ImageMagick's `magick` command for adaptive wallpaper
 contrast sampling. Without it, the clock still renders with theme colors.

@@ -19,6 +19,7 @@ Item {
   property string lacunaPath: manifest && manifest.__sourceDir ? manifest.__sourceDir : localPath(Qt.resolvedUrl(".."))
   property var sharedCompactState: null
   property var sharedSidebarState: null
+  readonly property var lacunaSettings: resolveLacunaSettings()
   readonly property var compactState: sharedCompactState || localCompactState
   readonly property var sidebarState: sharedSidebarState || localSidebarState
   property color foreground: menuTheme.foreground
@@ -76,9 +77,6 @@ Item {
   readonly property bool settingsPanelOpen: panelController.isFlyoutOpen("settings")
   readonly property bool settingsPanelVisible: panelController.isFlyoutVisible("settings")
   property int settingsPanelWidth: Math.round(sizeMix(400, 360))
-  readonly property bool shellSettingsPanelOpen: panelController.isFlyoutOpen("shellSettings")
-  readonly property bool shellSettingsPanelVisible: panelController.isFlyoutVisible("shellSettings")
-  property int shellSettingsPanelWidth: Math.round(sizeMix(440, 390))
   readonly property bool appPickerOpen: panelController.isFlyoutOpen("appPicker")
   readonly property bool appPickerVisible: panelController.isFlyoutVisible("appPicker")
   readonly property bool flyoutOpen: panelController.flyoutOpen
@@ -86,18 +84,16 @@ Item {
   property string appPickerMode: "customQuickLaunchApp"
   property string preferredAppPickerRole: ""
   property int appPickerWidth: Math.round(sizeMix(300, 260))
-  readonly property int maxFlyoutLaneWidth: Math.max(settingsPanelWidth, shellSettingsPanelWidth, appPickerWidth)
+  readonly property int maxFlyoutLaneWidth: Math.max(settingsPanelWidth, appPickerWidth)
   readonly property string visibleFlyout: panelController.visibleFlyout
   readonly property string outgoingFlyout: panelController.outgoingFlyout
   readonly property bool activeFlyoutSettings: visibleFlyout === "settings"
-  readonly property bool activeFlyoutShellSettings: visibleFlyout === "shellSettings"
   readonly property bool activeFlyoutAppPicker: visibleFlyout === "appPicker"
   readonly property bool renderSettingsContent: settingsPanelVisible || outgoingFlyout === "settings"
-  readonly property bool renderShellSettingsContent: shellSettingsPanelVisible || outgoingFlyout === "shellSettings"
   readonly property bool renderAppPickerContent: appPickerVisible || outgoingFlyout === "appPicker"
-  readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutShellSettings ? shellSettingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : 0
-  readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutShellSettings ? shellSettingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : 0
-  readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutShellSettings ? shellSettingsFlyoutY(shellSettingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : 0
+  readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : 0
+  readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : 0
+  readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : 0
   readonly property int frameOverlayWidth: !lacunaEnabled || frameMode === "off" ? 0 : ((sidebarScreen ? sidebarScreen.width : 0) + 100)
   readonly property bool frameReserveActive: lacunaEnabled && sidebarState.exclusive && (panelController.menuRenderable || frameMode === "fullframe") && frameMode !== "off"
   readonly property bool sidebarReserveActive: lacunaEnabled && sidebarState.exclusive && panelController.menuRenderable && sidebarSurfaceVisible
@@ -175,6 +171,25 @@ Item {
     return root.omarchyPath || Quickshell.env("OMARCHY_PATH") || (Quickshell.env("HOME") + "/.local/share/omarchy")
   }
 
+  function resolveLacunaSettings() {
+    if (root.shell && typeof root.shell.ensureService === "function") {
+      var ensured = root.shell.ensureService("omarchy.lacuna-state")
+      if (ensured) return ensured
+    }
+    if (root.shell && typeof root.shell.serviceFor === "function") {
+      var service = root.shell.serviceFor("omarchy.lacuna-state")
+      if (service) return service
+    }
+    return localLacunaSettings
+  }
+
+  function applyInitialSidebarDefault() {
+    if (root.initialSidebarDefaultApplied) return
+    if (lacunaSettings && lacunaSettings.hasLoaded === false) return
+    root.initialSidebarDefaultApplied = true
+    Qt.callLater(root.applySidebarDefaultState)
+  }
+
   function shellIpcCommand(target, method, args) {
     var path = resolvedOmarchyPath()
     var command = "OMARCHY_PATH=" + commands.quote(path) + " " + commands.quote(path + "/bin/omarchy-shell")
@@ -236,17 +251,6 @@ Item {
   function settingsFlyoutY(panelHeight) {
     var topLimit = barBottomY + designTokens.topInset
     var lift = compact ? 72 : 112
-    return Math.max(topLimit, menuWindow.height - panelHeight - designTokens.bottomInset - lift)
-  }
-
-  function shellSettingsFlyoutHeight() {
-    var availableHeight = menuWindow.height - barBottomY - designTokens.topInset - designTokens.bottomInset
-    return Math.max(300, Math.min(availableHeight, compact ? 480 : 560))
-  }
-
-  function shellSettingsFlyoutY(panelHeight) {
-    var topLimit = barBottomY + designTokens.topInset
-    var lift = compact ? 54 : 78
     return Math.max(topLimit, menuWindow.height - panelHeight - designTokens.bottomInset - lift)
   }
 
@@ -388,6 +392,28 @@ Item {
     lacunaSettings.save(next)
   }
 
+  function removeCustomQuickLaunchApp(id) {
+    var appId = String(id || "")
+    if (appId === "" || !customQuickLaunchContains(appId)) return
+
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    var ids = []
+    var sourceIds = next.customQuickLaunchApps || []
+    for (var i = 0; i < sourceIds.length; i++) {
+      if (String(sourceIds[i]) !== appId) ids.push(String(sourceIds[i]))
+    }
+
+    var names = {}
+    var sourceNames = next.customQuickLaunchNames || {}
+    for (var key in sourceNames) {
+      if (String(key) !== appId) names[key] = sourceNames[key]
+    }
+
+    next.customQuickLaunchApps = ids
+    next.customQuickLaunchNames = names
+    lacunaSettings.save(next)
+  }
+
   function setPreferredApp(role, id) {
     if (!role) return
 
@@ -451,13 +477,17 @@ Item {
     requestFlyoutFocus("settings")
   }
 
-  function toggleShellSettingsPanel() {
-    if (!lacunaEnabled) return
-    panelController.toggleFlyout("shellSettings")
-    if (shellSettingsPanelOpen) {
-      if (!menuState.open) panelController.openMenu()
-      requestFlyoutFocus("shellSettings")
+  function openShellSettingsPanel(sectionId) {
+    var payload = JSON.stringify({ section: String(sectionId || "apps") })
+    if (root.shell && typeof root.shell.summon === "function") {
+      root.shell.summon("omarchy.lacuna-shell-settings", payload)
+      return
     }
+    commands.run(shellIpcCommand("shell", "summon", ["omarchy.lacuna-shell-settings", payload]))
+  }
+
+  function toggleShellSettingsPanel() {
+    openShellSettingsPanel("apps")
   }
 
   function requestFlyoutFocus(id) {
@@ -479,9 +509,6 @@ Item {
       pendingFlyoutFocus = ""
     } else if (pendingFlyoutFocus === "settings" && settingsPanelOpen) {
       settingsPanel.forceActiveFocus()
-      pendingFlyoutFocus = ""
-    } else if (pendingFlyoutFocus === "shellSettings" && shellSettingsPanelOpen) {
-      shellSettingsPanel.forceActiveFocus()
       pendingFlyoutFocus = ""
     }
   }
@@ -668,143 +695,6 @@ Item {
     })
   }
 
-  function validShellBarPosition(value) {
-    var position = String(value || "top").toLowerCase()
-    if (position === "top" || position === "right" || position === "bottom" || position === "left") return position
-    return "top"
-  }
-
-  function defaultShellBarConfig() {
-    return {
-      position: "top",
-      transparent: false,
-      centerAnchor: "calendar",
-      layout: {
-        left: [{ id: "Omarchy" }, { id: "Workspaces" }],
-        center: [
-          { id: "Clock", format: "dddd HH:mm", formatAlt: "dd MMMM 'W'ww yyyy", verticalFormat: "HH\n\u2014\nmm" },
-          { id: "Weather" },
-          { id: "Indicators", items: ["Dnd", "NightLight", "StayAwake", "ScreenRecording", "Dictation"] },
-          { id: "SystemUpdate" },
-          { id: "NotificationCenter" }
-        ],
-        right: [
-          { id: "Tray" },
-          { id: "BluetoothPanel" },
-          { id: "NetworkPanel" },
-          { id: "AudioPanel" },
-          { id: "MonitorPanel" },
-          { id: "PowerPanel" }
-        ]
-      }
-    }
-  }
-
-  function ensureShellBarShape(config) {
-    if (!config.bar || typeof config.bar !== "object") config.bar = defaultShellBarConfig()
-    if (!config.bar.layout || typeof config.bar.layout !== "object") config.bar.layout = { left: [], center: [], right: [] }
-    if (!Array.isArray(config.bar.layout.left)) config.bar.layout.left = []
-    if (!Array.isArray(config.bar.layout.center)) config.bar.layout.center = []
-    if (!Array.isArray(config.bar.layout.right)) config.bar.layout.right = []
-    return config.bar
-  }
-
-  function mutateOmarchyShellConfig(mutator) {
-    if (shell && typeof shell.mutateShellConfig === "function") {
-      shell.mutateShellConfig(function(config) {
-        ensureShellBarShape(config)
-        mutator(config)
-      })
-      pluginStateRevision++
-      return true
-    }
-
-    commands.run("notify-send 'Lacuna' 'Omarchy shell settings require the live shell config mutator'")
-    return false
-  }
-
-  function setShellBarPosition(position) {
-    mutateOmarchyShellConfig(function(config) {
-      ensureShellBarShape(config).position = validShellBarPosition(position)
-    })
-  }
-
-  function toggleShellBarTransparent() {
-    mutateOmarchyShellConfig(function(config) {
-      var bar = ensureShellBarShape(config)
-      bar.transparent = !(bar.transparent === true)
-    })
-  }
-
-  function setShellBarCenterAnchor(anchor) {
-    mutateOmarchyShellConfig(function(config) {
-      ensureShellBarShape(config).centerAnchor = anchor === "none" ? "" : String(anchor || "")
-    })
-  }
-
-  function resetShellBarDefaults() {
-    mutateOmarchyShellConfig(function(config) {
-      config.bar = defaultShellBarConfig()
-    })
-  }
-
-  function setShellIdleTimeout(kind, seconds) {
-    var value = positiveInt(seconds, kind === "lock" ? 300 : 150)
-    mutateOmarchyShellConfig(function(config) {
-      if (!config.idle || typeof config.idle !== "object") config.idle = {}
-      config.idle[kind] = value
-    })
-  }
-
-  function mutateShellBarSection(section, mutator) {
-    var sectionId = String(section || "")
-    if (sectionId !== "left" && sectionId !== "center" && sectionId !== "right") return
-
-    mutateOmarchyShellConfig(function(config) {
-      var bar = ensureShellBarShape(config)
-      var list = bar.layout[sectionId].slice()
-      mutator(list, bar)
-      bar.layout[sectionId] = list
-      if (sectionId === "center" && bar.centerAnchor) {
-        var anchorFound = false
-        for (var i = 0; i < list.length; i++) {
-          if (list[i] && String(list[i].id || "") === String(bar.centerAnchor)) {
-            anchorFound = true
-            break
-          }
-        }
-        if (!anchorFound) bar.centerAnchor = ""
-      }
-    })
-  }
-
-  function moveShellBarWidget(section, index, direction) {
-    mutateShellBarSection(section, function(list) {
-      var from = Math.round(Number(index) || 0)
-      var to = direction === "up" ? from - 1 : from + 1
-      if (from < 0 || from >= list.length || to < 0 || to >= list.length) return
-      var entry = list[from]
-      list.splice(from, 1)
-      list.splice(to, 0, entry)
-    })
-  }
-
-  function removeShellBarWidget(section, index) {
-    mutateShellBarSection(section, function(list) {
-      var at = Math.round(Number(index) || 0)
-      if (at < 0 || at >= list.length) return
-      list.splice(at, 1)
-    })
-  }
-
-  function addShellBarWidget(section, id) {
-    var widgetId = String(id || "").trim()
-    if (widgetId === "") return
-    mutateShellBarSection(section, function(list) {
-      list.push({ id: widgetId })
-    })
-  }
-
   function runOmarchyCommand(command) {
     if (!command) return
     commands.run(command)
@@ -858,135 +748,6 @@ Item {
 
     if (entry.action.indexOf("set-quick-launch-layout-") === 0) {
       setQuickLaunchLayout(entry.action.substring("set-quick-launch-layout-".length))
-      return true
-    }
-
-    return false
-  }
-
-  function handleShellSettingsAction(entry) {
-    if (entry.action.indexOf("set-shell-bar-position-") === 0) {
-      setShellBarPosition(entry.action.substring("set-shell-bar-position-".length))
-      return true
-    }
-
-    if (entry.action.indexOf("set-default-terminal-") === 0) {
-      runOmarchyCommand("omarchy default terminal " + commands.quote(entry.action.substring("set-default-terminal-".length)))
-      return true
-    }
-
-    if (entry.action.indexOf("set-default-browser-") === 0) {
-      runOmarchyCommand("omarchy default browser " + commands.quote(entry.action.substring("set-default-browser-".length)))
-      return true
-    }
-
-    if (entry.action.indexOf("set-default-editor-") === 0) {
-      runOmarchyCommand("omarchy default editor " + commands.quote(entry.action.substring("set-default-editor-".length)))
-      return true
-    }
-
-    if (entry.action === "toggle-window-gaps") {
-      runOmarchyCommand("omarchy hyprland window gaps toggle")
-      return true
-    }
-
-    if (entry.action === "toggle-single-window-square") {
-      runOmarchyCommand("omarchy hyprland window single square aspect toggle")
-      return true
-    }
-
-    if (entry.action === "toggle-omarchy-bar") {
-      runOmarchyCommand("omarchy toggle bar")
-      return true
-    }
-
-    if (entry.action.indexOf("set-monitor-scaling-") === 0) {
-      runOmarchyCommand("omarchy hyprland monitor scaling " + commands.quote(entry.action.substring("set-monitor-scaling-".length)))
-      return true
-    }
-
-    if (entry.action.indexOf("set-omarchy-font-") === 0) {
-      runOmarchyCommand("omarchy font set " + commands.quote(entry.action.substring("set-omarchy-font-".length)))
-      return true
-    }
-
-    if (entry.action.indexOf("set-power-profile-") === 0) {
-      runOmarchyCommand("powerprofilesctl set " + commands.quote(entry.action.substring("set-power-profile-".length)))
-      return true
-    }
-
-    if (entry.action === "toggle-nightlight") {
-      runOmarchyCommand("omarchy toggle nightlight")
-      return true
-    }
-
-    if (entry.action === "toggle-idle") {
-      runOmarchyCommand("omarchy toggle idle")
-      return true
-    }
-
-    if (entry.action === "toggle-screensaver") {
-      runOmarchyCommand("omarchy toggle screensaver")
-      return true
-    }
-
-    if (entry.action === "toggle-notification-silencing") {
-      runOmarchyCommand("omarchy toggle notification silencing")
-      return true
-    }
-
-    if (entry.action === "toggle-suspend") {
-      runOmarchyCommand("omarchy toggle suspend")
-      return true
-    }
-
-    if (entry.action.indexOf("set-shell-idle-screensaver-") === 0) {
-      setShellIdleTimeout("screensaver", entry.action.substring("set-shell-idle-screensaver-".length))
-      return true
-    }
-
-    if (entry.action.indexOf("set-shell-idle-lock-") === 0) {
-      setShellIdleTimeout("lock", entry.action.substring("set-shell-idle-lock-".length))
-      return true
-    }
-
-    if (entry.action.indexOf("toggle-shell-plugin-") === 0) {
-      var pluginId = entry.action.substring("toggle-shell-plugin-".length)
-      setShellPluginEnabled(pluginId, !shellPluginEnabled(pluginId))
-      return true
-    }
-
-    if (entry.action === "toggle-shell-bar-transparent") {
-      toggleShellBarTransparent()
-      return true
-    }
-
-    if (entry.action.indexOf("set-shell-bar-center-anchor-") === 0) {
-      setShellBarCenterAnchor(entry.action.substring("set-shell-bar-center-anchor-".length))
-      return true
-    }
-
-    if (entry.action === "reset-shell-bar-defaults") {
-      resetShellBarDefaults()
-      return true
-    }
-
-    if (entry.action.indexOf("move-shell-bar-widget-") === 0) {
-      var moveParts = entry.action.substring("move-shell-bar-widget-".length).split("-")
-      if (moveParts.length >= 3) moveShellBarWidget(moveParts[0], moveParts[1], moveParts[2])
-      return true
-    }
-
-    if (entry.action.indexOf("remove-shell-bar-widget-") === 0) {
-      var removeParts = entry.action.substring("remove-shell-bar-widget-".length).split("-")
-      if (removeParts.length >= 2) removeShellBarWidget(removeParts[0], removeParts[1])
-      return true
-    }
-
-    if (entry.action.indexOf("add-shell-bar-widget-") === 0) {
-      var addPayload = entry.action.substring("add-shell-bar-widget-".length)
-      var sectionEnd = addPayload.indexOf("-")
-      if (sectionEnd > 0) addShellBarWidget(addPayload.substring(0, sectionEnd), addPayload.substring(sectionEnd + 1))
       return true
     }
 
@@ -1129,7 +890,6 @@ Item {
 
     if (entry.action) {
       if (handleSidebarAction(entry)) return
-      if (handleShellSettingsAction(entry)) return
       if (handleLacunaSettingsAction(entry)) return
       if (handleQuickAccessAction(entry)) return
     }
@@ -1148,19 +908,22 @@ Item {
     }
   }
 
-  Component.onCompleted: versionFile.reload()
+  Component.onCompleted: {
+    versionFile.reload()
+    applyInitialSidebarDefault()
+  }
 
   LacunaMenuState {
     id: localMenuState
   }
 
   LacunaSettings {
-    id: lacunaSettings
-    onLoaded: {
-      if (root.initialSidebarDefaultApplied) return
-      root.initialSidebarDefaultApplied = true
-      Qt.callLater(root.applySidebarDefaultState)
-    }
+    id: localLacunaSettings
+  }
+
+  Connections {
+    target: root.lacunaSettings
+    function onLoaded() { root.applyInitialSidebarDefault() }
   }
 
   CompactState {
@@ -1278,16 +1041,6 @@ Item {
 
   CommandRunner {
     id: commands
-  }
-
-  OmarchyShellSettings {
-    id: shellSettingsService
-    lacunaPath: root.lacunaPath
-    commandRunner: commands
-    shell: root.shell
-    pluginRegistry: root.pluginRegistry
-    shellConfig: root.shellConfig
-    onPluginStateChanged: root.pluginStateRevision++
   }
 
   LacunaPanelWindow {
@@ -1430,6 +1183,9 @@ Item {
         onQuickLaunchRenameRequested: function(appId, label) {
           root.renameCustomQuickLaunchApp(appId, label)
         }
+        onQuickLaunchRemoveRequested: function(appId) {
+          root.removeCustomQuickLaunchApp(appId)
+        }
         onSettingsRequested: root.toggleSettingsPanel()
         onShellSettingsRequested: root.toggleShellSettingsPanel()
         onCollapseRequested: sidebarState.toggleCollapsed()
@@ -1525,33 +1281,6 @@ Item {
           root.activate(entry)
         }
         onCloseRequested: panelController.closeFlyout("settings")
-      }
-
-      OmarchyShellSettingsWindow {
-        id: shellSettingsPanel
-
-        anchors.fill: parent
-        visible: root.renderShellSettingsContent
-        enabled: root.shellSettingsPanelOpen
-        opacity: root.shellSettingsPanelOpen ? 1 : 0
-        open: root.shellSettingsPanelOpen
-        compact: root.compact
-        drawBackground: false
-        designTokens: designTokens
-        registry: registry
-        settingsService: shellSettingsService
-        foreground: root.foreground
-        background: root.background
-        accent: root.accent
-        shellAccent: root.shellAccent
-        sessionAccent: root.sessionAccent
-        dangerAccent: root.dangerAccent
-        navAccent: root.navAccent
-        muted: root.muted
-        onActivated: function(entry) {
-          root.activate(entry)
-        }
-        onCloseRequested: panelController.closeFlyout("shellSettings")
       }
 
       FlyoutAppPickerContent {

@@ -1,4 +1,5 @@
 import unittest
+import json
 from pathlib import Path
 
 
@@ -7,6 +8,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def read(path):
     return (ROOT / path).read_text(encoding="utf-8")
+
+
+def read_json(path):
+    return json.loads(read(path))
 
 
 class QmlContractTests(unittest.TestCase):
@@ -23,6 +28,32 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("function mergePendingSave", qml)
         self.assertIn("merged.customQuickLaunchApps = loadedBase.customQuickLaunchApps", qml)
         self.assertIn("merged.customQuickLaunchNames = loadedBase.customQuickLaunchNames", qml)
+
+    def test_custom_quick_launch_context_menu_can_delete_items(self):
+        content = read("plugins/omarchy.lacuna-menu/menu/MenuContent.qml")
+        window = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
+
+        self.assertIn("signal quickLaunchRemoveRequested(string appId)", content)
+        self.assertIn('text: "Delete"', content)
+        self.assertIn("function openQuickLaunchContext", content)
+        self.assertIn("onSecondaryClicked: function(x, y)", content)
+        self.assertIn("root.quickLaunchRemoveRequested(quickLaunchContextAppId)", content)
+        self.assertIn("function removeCustomQuickLaunchApp(id)", window)
+        self.assertIn("next.customQuickLaunchApps = ids", window)
+        self.assertIn("next.customQuickLaunchNames = names", window)
+        self.assertIn("onQuickLaunchRemoveRequested", window)
+
+    def test_quick_launch_add_action_lives_in_header_controls(self):
+        registry = read("plugins/omarchy.lacuna-menu/menu/MenuRegistry.qml")
+        content = read("plugins/omarchy.lacuna-menu/menu/MenuContent.qml")
+        section = read("plugins/omarchy.lacuna-menu/menu/MenuSection.qml")
+
+        self.assertIn('header.headerAction = "open-custom-quick-launch-picker"', registry)
+        self.assertIn('header.headerActionIcon = "plus"', registry)
+        self.assertIn("var launchers = customQuickLaunchItems()", registry)
+        self.assertNotIn('entries.action({ icon: "plus", label: "Add Quick Launch App"', registry)
+        self.assertIn("onActionTriggered", content)
+        self.assertIn("signal actionTriggered()", section)
 
     def test_workspace_lacuna_selected_state_has_no_fill_or_underline(self):
         qml = read("plugins/omarchy.lacuna-workspaces/components/LacunaWorkspaceButton.qml")
@@ -90,11 +121,62 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("setManagedToggles", panel)
 
     def test_window_gaps_toggle_does_not_override_theme_border_size(self):
-        service = read("plugins/omarchy.lacuna-menu/services/OmarchyShellSettings.qml")
-        state_script = read("plugins/omarchy.lacuna-menu/scripts/omarchy-shell-settings-state.py")
-        settings_window = read("plugins/omarchy.lacuna-menu/settings/OmarchyShellSettingsWindow.qml")
+        service = read("plugins/omarchy.lacuna-shell-settings/Service.qml")
+        state_script = read("plugins/omarchy.lacuna-shell-settings/scripts/omarchy-shell-settings-state.py")
+        settings_window = read("plugins/omarchy.lacuna-shell-settings/settings/OmarchyShellSettingsWindow.qml")
 
         self.assertIn("without changing theme borders", service)
         self.assertNotIn("border_size", service)
         self.assertIn("live_gaps_enabled = any(value and value > 0 for value in [gaps_in, gaps_out])", state_script)
         self.assertIn("without changing theme borders", settings_window)
+
+    def test_plugin_manifests_have_existing_item_entrypoints(self):
+        for manifest_path in sorted((ROOT / "plugins").glob("*/manifest.json")):
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            entry_points = manifest.get("entryPoints", {})
+            self.assertIsInstance(entry_points, dict, manifest_path)
+            self.assertTrue(entry_points, manifest_path)
+
+            for entry_path in entry_points.values():
+                qml_path = manifest_path.parent / entry_path
+                self.assertTrue(qml_path.exists(), qml_path)
+                self.assertNotIn("ShellRoot", qml_path.read_text(encoding="utf-8"), qml_path)
+
+    def test_lacuna_state_and_shell_settings_are_split_plugins(self):
+        state_manifest = read_json("plugins/omarchy.lacuna-state/manifest.json")
+        shell_settings_manifest = read_json("plugins/omarchy.lacuna-shell-settings/manifest.json")
+        menu = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
+
+        self.assertIn("service", state_manifest["kinds"])
+        self.assertEqual("Service.qml", state_manifest["entryPoints"]["service"])
+        self.assertIn("service", shell_settings_manifest["kinds"])
+        self.assertIn("panel", shell_settings_manifest["kinds"])
+        self.assertEqual("Service.qml", shell_settings_manifest["entryPoints"]["service"])
+        self.assertEqual("Panel.qml", shell_settings_manifest["entryPoints"]["panel"])
+        self.assertIn('ensureService("omarchy.lacuna-state")', menu)
+        self.assertIn('summon("omarchy.lacuna-shell-settings"', menu)
+        self.assertNotIn("OmarchyShellSettings {", menu)
+        self.assertNotIn("OmarchyShellSettingsWindow", menu)
+
+    def test_simple_bar_helpers_match_canonical_vendored_templates(self):
+        color_template = read("shared/qml/simple-bar/ColorProfile.qml")
+        motion_template = read("shared/qml/simple-bar/MotionTokens.qml")
+        simple_color_plugins = [
+            "omarchy.lacuna-bar-size-pill",
+            "omarchy.lacuna-claude-usage",
+            "omarchy.lacuna-codex-usage",
+            "omarchy.lacuna-compact-pill",
+            "omarchy.lacuna-menu-button",
+            "omarchy.lacuna-script-pill",
+            "omarchy.lacuna-system-stats",
+            "omarchy.lacuna-temperature",
+        ]
+        simple_motion_plugins = simple_color_plugins + [
+            "omarchy.lacuna-theme",
+            "omarchy.lacuna-wallpaper",
+        ]
+
+        for plugin in simple_color_plugins:
+            self.assertEqual(read(f"plugins/{plugin}/ColorProfile.qml"), color_template, plugin)
+        for plugin in simple_motion_plugins:
+            self.assertEqual(read(f"plugins/{plugin}/MotionTokens.qml"), motion_template, plugin)

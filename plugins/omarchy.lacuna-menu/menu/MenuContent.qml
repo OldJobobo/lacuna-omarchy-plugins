@@ -11,6 +11,7 @@ Column {
   signal collapseRequested()
   signal quickLaunchMoveRequested(string appId, int targetIndex)
   signal quickLaunchRenameRequested(string appId, string label)
+  signal quickLaunchRemoveRequested(string appId)
   signal settingsRequested()
   signal shellSettingsRequested()
 
@@ -182,9 +183,28 @@ Column {
     })
   }
 
+  function openQuickLaunchContext(appId, label, item, x, y) {
+    if (String(appId || "") === "" || !item) return
+    var point = item.mapToItem(itemList, x, y)
+    root.quickLaunchContextAppId = appId
+    root.quickLaunchContextLabel = label
+    root.quickLaunchRenameOpen = false
+    root.quickLaunchContextX = Math.max(0, Math.min(itemList.width - quickLaunchContextMenu.width, point.x))
+    root.quickLaunchContextY = Math.max(0, Math.min(Math.max(0, itemList.height - quickLaunchContextMenu.height), point.y))
+    root.quickLaunchContextOpen = true
+  }
+
   function saveQuickLaunchRename() {
     root.quickLaunchRenameRequested(quickLaunchRenameAppId, renameInput.text)
     quickLaunchRenameOpen = false
+  }
+
+  function removeQuickLaunchApp() {
+    root.quickLaunchRemoveRequested(quickLaunchContextAppId)
+    quickLaunchContextOpen = false
+    quickLaunchRenameOpen = false
+    draggingQuickLaunchAppId = ""
+    quickLaunchDropIndex = -1
   }
 
   spacing: designTokens.sectionSpacing
@@ -325,7 +345,7 @@ Column {
       x: root.quickLaunchContextX
       y: root.quickLaunchContextY
       width: root.compact ? 106 : 118
-      height: root.compact ? 56 : 62
+      height: root.compact ? 84 : 93
       radius: root.designTokens.material ? 8 : root.designTokens.controlRadius
       color: root.background
       border.width: root.designTokens.lacuna ? 0 : 1
@@ -396,6 +416,40 @@ Column {
             hoverOpacity: root.designTokens.hoverOpacity
             pressOpacity: root.designTokens.activeOpacity
             onTriggered: root.openQuickLaunchRename(root.quickLaunchContextAppId, root.quickLaunchContextLabel)
+          }
+        }
+
+        Item {
+          width: parent.width
+          height: root.compact ? 28 : 31
+
+          LacunaRect {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: 1
+            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+          }
+
+          LacunaText {
+            anchors.fill: parent
+            anchors.leftMargin: 10
+            anchors.rightMargin: 10
+            text: "Delete"
+            color: root.dangerAccent
+            fontFamily: root.bodyFontFamily
+            font.pixelSize: root.compact ? 9 : 10
+            font.weight: Font.DemiBold
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+          }
+
+          LacunaStateLayer {
+            anchors.fill: parent
+            stateColor: root.dangerAccent
+            hoverOpacity: root.designTokens.hoverOpacity
+            pressOpacity: root.designTokens.activeOpacity
+            onTriggered: root.removeQuickLaunchApp()
           }
         }
       }
@@ -494,6 +548,8 @@ Column {
         count: parent.entry.sectionCount || 0
         options: parent.entry.options || []
         optionValue: parent.entry.optionValue || ""
+        actionIcon: parent.entry.headerActionIcon || ""
+        actionTooltip: parent.entry.headerActionTooltip || ""
         compact: root.compact
         designTokens: root.designTokens
         fontFamily: root.bodyFontFamily
@@ -504,6 +560,14 @@ Column {
           root.activated({
             kind: "item",
             action: (parent.entry.optionActionPrefix || "") + value,
+            view: "",
+            command: ""
+          })
+        }
+        onActionTriggered: {
+          root.activated({
+            kind: "item",
+            action: parent.entry.headerAction || "",
             view: "",
             command: ""
           })
@@ -549,13 +613,7 @@ Column {
         onTriggered: root.activated(parent.entry)
         onContextRequested: function(x, y) {
           if (parent.entry.reorderable !== true) return
-          var point = parent.mapToItem(itemList, x, y)
-          root.quickLaunchContextAppId = parent.entry.appId
-          root.quickLaunchContextLabel = parent.entry.label
-          root.quickLaunchRenameOpen = false
-          root.quickLaunchContextX = Math.max(0, Math.min(itemList.width - quickLaunchContextMenu.width, point.x))
-          root.quickLaunchContextY = Math.max(0, point.y)
-          root.quickLaunchContextOpen = true
+          root.openQuickLaunchContext(parent.entry.appId, parent.entry.label, parent, x, y)
         }
         onReorderDragStarted: function(sceneY) {
           if (parent.entry.reorderable !== true) return
@@ -801,6 +859,11 @@ Column {
                 pressOpacity: root.designTokens.activeOpacity
                 showFill: !root.designTokens.lacuna
                 onTriggered: root.activated(tile.modelData)
+                onSecondaryClicked: function(x, y) {
+                  if (tile.modelData.reorderable !== true) return
+                  gridRoot.hideTileTooltip(tile)
+                  root.openQuickLaunchContext(tile.modelData.appId, tile.modelData.label, tile, x, y)
+                }
                 onContainsMouseChanged: {
                   if (containsMouse) {
                     gridRoot.scheduleTileTooltip(tile, tile.modelData, tile.itemAccent)

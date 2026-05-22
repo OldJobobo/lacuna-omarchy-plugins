@@ -380,6 +380,9 @@ Item {
     header.optionValue = root.quickLaunchLayout === "grid" ? "grid" : "list"
     header.optionActionPrefix = "set-quick-launch-layout-"
     header.options = layoutOptions()
+    header.headerAction = "open-custom-quick-launch-picker"
+    header.headerActionIcon = "plus"
+    header.headerActionTooltip = "Add Quick Launch App"
     return header
   }
 
@@ -418,9 +421,7 @@ Item {
 
   function quickLaunchItems() {
     var rows = [quickLaunchHeader()]
-    var launchers = [
-      entries.action({ icon: "plus", label: "Add Quick Launch App", hint: "Pick a custom app for this section", action: "open-custom-quick-launch-picker", tone: "lacuna", priority: "normal", group: "quick-launch" })
-    ].concat(customQuickLaunchItems())
+    var launchers = customQuickLaunchItems()
 
     if (root.quickLaunchLayout === "grid") {
       rows.push(entries.grid("nav", launchers))
