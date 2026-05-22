@@ -181,7 +181,7 @@ def hypr_state(toggles_dir):
   rounding = first_int(hypr_option("decoration:rounding"), "int:")
   aspect = vec2_value(hypr_option("layout:single_window_aspect_ratio"))
 
-  live_gaps_enabled = any(value and value > 0 for value in [gaps_in, gaps_out, border_size])
+  live_gaps_enabled = any(value and value > 0 for value in [gaps_in, gaps_out])
   if stock_no_gaps_flag:
     gaps_enabled = False
   elif lacuna_gaps_text:

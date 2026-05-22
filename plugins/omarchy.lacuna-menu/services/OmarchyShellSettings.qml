@@ -247,23 +247,19 @@ Item {
     var lacunaFile = dir + "/zz-lacuna-window-gaps.lua"
     var gapsIn = want ? 5 : 0
     var gapsOut = want ? 10 : 0
-    var borderSize = want ? 2 : 0
     setOptimisticHypr("windowGapsEnabled", want, {
       gapsIn: gapsIn,
-      gapsOut: gapsOut,
-      borderSize: borderSize
+      gapsOut: gapsOut
     })
-    var body = "-- Lacuna: Own Hyprland window gaps without changing corner rounding.\n"
+    var body = "-- Lacuna: Own Hyprland window gaps without changing theme borders or corner rounding.\n"
       + "hl.config({\n"
       + "  general = {\n"
       + "    gaps_out = " + gapsOut + ",\n"
       + "    gaps_in = " + gapsIn + ",\n"
-      + "    border_size = " + borderSize + ",\n"
       + "  },\n"
       + "})\n"
     var liveConfig = "hl.config({ general = { gaps_out = " + gapsOut
-      + ", gaps_in = " + gapsIn
-      + ", border_size = " + borderSize + " } })"
+      + ", gaps_in = " + gapsIn + " } })"
     run("mkdir -p " + quote(dir)
       + "; rm -f " + quote(stockFile) + " " + quote(oldLacunaFile)
       + "; printf %s " + quote(body) + " > " + quote(lacunaFile)

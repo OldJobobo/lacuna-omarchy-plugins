@@ -173,7 +173,7 @@ Item {
     if (sectionId === "windows") {
       return [
         section("Tiling", "Hyprland layout toggles for application windows.", "shell"),
-        toggleRow("density-normal", "Window Gaps", "Enable tiled-window gaps and borders", "windowGapsEnabled", service.hyprValue("windowGapsEnabled", null), "shell"),
+        toggleRow("density-normal", "Window Gaps", "Enable tiled-window gaps without changing theme borders", "windowGapsEnabled", service.hyprValue("windowGapsEnabled", null), "shell"),
         toggleRow("corners", "Rounded Windows", "Switch Hyprland application windows between square and rounded corners", "roundedWindows", service.hyprValue("roundedWindows", null), "shell"),
         toggleRow("sidebar-overlay", "Single-Window Square", "Constrain one tiled window to a square aspect ratio", "singleWindowAspect", service.hyprValue("singleWindowAspect", null), "shell"),
         section("Shell Bar", "Visibility only. Bar layout remains in Omarchy's bar settings.", "shell"),

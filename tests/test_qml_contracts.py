@@ -88,3 +88,13 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("Idle Inhibit", panel)
         self.assertIn("Nightlight", panel)
         self.assertIn("setManagedToggles", panel)
+
+    def test_window_gaps_toggle_does_not_override_theme_border_size(self):
+        service = read("plugins/omarchy.lacuna-menu/services/OmarchyShellSettings.qml")
+        state_script = read("plugins/omarchy.lacuna-menu/scripts/omarchy-shell-settings-state.py")
+        settings_window = read("plugins/omarchy.lacuna-menu/settings/OmarchyShellSettingsWindow.qml")
+
+        self.assertIn("without changing theme borders", service)
+        self.assertNotIn("border_size", service)
+        self.assertIn("live_gaps_enabled = any(value and value > 0 for value in [gaps_in, gaps_out])", state_script)
+        self.assertIn("without changing theme borders", settings_window)
