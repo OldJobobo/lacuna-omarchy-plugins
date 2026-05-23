@@ -25,6 +25,7 @@ Item {
   visible: true
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
+  readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {
     var value = settings ? settings[name] : undefined

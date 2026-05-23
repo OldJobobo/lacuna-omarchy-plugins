@@ -36,6 +36,7 @@ Item {
   }
 
   readonly property bool hovered: clickArea.containsMouse
+  readonly property bool tooltipHovered: visible && opacity > 0 && clickArea.containsMouse
   readonly property real hoverRevealAmount: clickArea.reveal
   readonly property bool omarchyStyle: designStyle === "omarchy"
   readonly property bool materialStyle: designStyle === "material"

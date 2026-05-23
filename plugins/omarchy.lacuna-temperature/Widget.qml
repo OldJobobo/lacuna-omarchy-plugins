@@ -28,6 +28,7 @@ Item {
   visible: temperatureAvailable
   implicitWidth: visible ? button.implicitWidth : 0
   implicitHeight: visible ? button.implicitHeight : 0
+  readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {
     var value = settings ? settings[name] : undefined

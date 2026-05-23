@@ -37,6 +37,7 @@ Item {
   }
 
   readonly property bool hovered: clickArea.containsMouse
+  readonly property bool tooltipHovered: visible && opacity > 0 && clickArea.containsMouse
   readonly property real hoverRevealAmount: clickArea.reveal
   readonly property real labelAnimatedScale: 1 + hoverRevealAmount * (0.08 + hoverPulseAmount * 0.025)
   readonly property real hoverGlowOpacity: sweepActive ? 0 : hoverRevealAmount * (0.28 + hoverPulseAmount * 0.18)
