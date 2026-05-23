@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "omarchy.lacuna-system-update",
+  "name": "Lacuna System Update",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Lacuna-styled system update indicator for the Omarchy bar.",
+  "kinds": ["bar-widget"],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lacuna System Update",
+    "description": "Shows when Omarchy updates are available.",
+    "category": "Lacuna",
+    "allowMultiple": false,
+    "defaults": {
+      "interval": 21600000
+    },
+    "schema": [
+      { "key": "interval", "type": "integer", "label": "Refresh interval (ms)", "min": 60000, "step": 60000 },
+      { "key": "colorProfile", "type": "enum", "label": "Color profile", "options": ["semantic", "colorful"], "description": "Override the global Lacuna color profile for this widget." }
+    ]
+  }
+}

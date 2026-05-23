@@ -152,7 +152,7 @@ Item {
     StatButton {
       id: cpuButton
       bar: root.bar
-      iconSource: Qt.resolvedUrl("assets/tabler/assembly-filled.svg")
+      iconSource: Qt.resolvedUrl("assets/tabler/cpu.svg")
       label: root.cpuPercent + "%"
       tooltip: "<b>CPU usage</b><br/>" + root.cpuPercent + "% used"
       accent: root.cpuPercent >= 90 ? root.urgent : colorProfile.roleColor("cpu", root.foreground)
@@ -178,6 +178,7 @@ Item {
     height: vertical ? Math.max(barSize, content.implicitHeight + 10) : barSize
     implicitWidth: width
     implicitHeight: height
+    readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
     Rectangle {
       anchors.fill: parent

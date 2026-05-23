@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "bar": {
+    "position": "top",
+    "transparent": false,
+    "centerAnchor": "omarchy.lacuna-clock",
+    "layout": {
+      "left": [
+        { "id": "omarchy.lacuna-menu-button" },
+        { "id": "spacer", "size": 24 },
+        { "id": "omarchy.lacuna-workspaces", "workspaceCount": 7 },
+        { "id": "spacer", "size": 24 },
+        { "id": "omarchy.lacuna-codex-usage" },
+        { "id": "omarchy.lacuna-claude-usage" },
+        { "id": "spacer", "size": 24 },
+        { "id": "omarchy.lacuna-mpris" }
+      ],
+      "center": [
+        { "id": "omarchy.lacuna-system-update" },
+        {
+          "id": "omarchy.lacuna-clock",
+          "format": "ddd d h:mm AP",
+          "formatAlt": "dd MMMM 'W'ww yyyy",
+          "verticalFormat": "HH\n—\nmm"
+        },
+        { "id": "omarchy.lacuna-weather" },
+        { "id": "omarchy.lacuna-notifications" },
+        {
+          "id": "omarchy.lacuna-indicators",
+          "items": ["Dnd", "NightLight", "StayAwake", "ScreenRecording", "Dictation"]
+        }
+      ],
+      "right": [
+        { "id": "Tray" },
+        { "id": "omarchy.lacuna-theme" },
+        { "id": "omarchy.lacuna-wallpaper" },
+        { "id": "omarchy.lacuna-bluetooth" },
+        { "id": "omarchy.lacuna-network" },
+        { "id": "omarchy.lacuna-audio" },
+        { "id": "omarchy.lacuna-power" },
+        { "id": "omarchy.lacuna-system-stats" },
+        { "id": "omarchy.lacuna-temperature" },
+        { "id": "omarchy.lacuna-bar-size-pill" }
+      ]
+    }
+  },
+  "plugins": [
+    { "id": "omarchy.lacuna-menu" },
+    { "id": "omarchy.lacuna-theme-preloader" },
+    { "id": "omarchy.lacuna-desktop-clock" },
+    { "id": "omarchy.lacuna-vhs-overlay" },
+    { "id": "omarchy.lacuna-settings-persistence" },
+    { "id": "omarchy.lacuna-state" },
+    { "id": "omarchy.lacuna-shell-settings" }
+  ]
+}

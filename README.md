@@ -26,6 +26,17 @@ styling, and workflow ideas. New Omarchy work should happen here as plugins.
 - `plugins/omarchy.lacuna-*-usage/`: Codex and Claude usage bar widgets.
 - `plugins/omarchy.lacuna-theme/` and
   `plugins/omarchy.lacuna-wallpaper/`: active Omarchy theme/background widgets.
+- `plugins/omarchy.lacuna-clock/`,
+  `plugins/omarchy.lacuna-system-update/`,
+  `plugins/omarchy.lacuna-weather/`,
+  `plugins/omarchy.lacuna-notifications/`,
+  `plugins/omarchy.lacuna-indicators/`,
+  `plugins/omarchy.lacuna-audio/`,
+  `plugins/omarchy.lacuna-network/`,
+  `plugins/omarchy.lacuna-bluetooth/`, and
+  `plugins/omarchy.lacuna-power/`: Lacuna-native replacements for the selected
+  Omarchy topbar controls. These are button-first replacements; rich native
+  popups are not embedded in v1. The system tray stays native.
 - `plugins/omarchy.lacuna-system-stats/` and
   `plugins/omarchy.lacuna-temperature/`: system status bar widgets.
 - `plugins/omarchy.lacuna-bar-size-pill/`: Omarchy host bar compact/full
@@ -56,6 +67,18 @@ ln -sfn "$PWD/plugins/omarchy.lacuna-vhs-overlay" ~/.config/omarchy/plugins/omar
 ln -sfn "$PWD/plugins/omarchy.lacuna-settings-persistence" ~/.config/omarchy/plugins/omarchy.lacuna-settings-persistence
 ```
 
+For a full Lacuna topbar, also symlink the native replacement widgets:
+
+```bash
+for plugin in \
+  omarchy.lacuna-system-update omarchy.lacuna-clock omarchy.lacuna-weather \
+  omarchy.lacuna-notifications omarchy.lacuna-indicators omarchy.lacuna-audio \
+  omarchy.lacuna-network omarchy.lacuna-bluetooth omarchy.lacuna-power
+do
+  ln -sfn "$PWD/plugins/$plugin" "$HOME/.config/omarchy/plugins/$plugin"
+done
+```
+
 Enable panel, overlay, and menu plugins in `~/.config/omarchy/shell.json`,
 then reload:
 
@@ -77,6 +100,14 @@ Settings. Lacuna runtime state lives in
 `colorProfile` setting, `customQuickLaunchApps`, and `preferredApps`. Use
 `semantic` for the foreground-first profile or `colorful` to let Lacuna topbar
 modules draw from the active Omarchy theme colors.
+
+`config/shell.lacuna-native-replacements.example.json` shows the current
+recommended topbar layout with Lacuna replacements for Clock, SystemUpdate,
+Weather, NotificationCenter, Indicators, Audio, Network, Bluetooth, and Power.
+
+The Lacuna menu uses a unified color model: normal entries share the active
+theme accent, while destructive actions keep the danger/urgent color. See
+`docs/lacuna-menu-unified-color-model.md` for the rationale.
 
 `omarchy.lacuna-menu` owns Lacuna panel motion and sidebar choreography.
 Specialized widgets own their own interaction animation, while simple topbar

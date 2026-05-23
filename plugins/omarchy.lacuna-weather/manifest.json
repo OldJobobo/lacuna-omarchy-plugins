@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "omarchy.lacuna-weather",
+  "name": "Lacuna Weather",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Lacuna-styled weather status for the Omarchy bar.",
+  "kinds": ["bar-widget"],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lacuna Weather",
+    "description": "Shows the current weather command output and opens the weather notification.",
+    "category": "Lacuna",
+    "allowMultiple": false,
+    "defaults": {
+      "interval": 60000,
+      "showText": true
+    },
+    "schema": [
+      { "key": "interval", "type": "integer", "label": "Refresh interval (ms)", "min": 10000, "step": 10000 },
+      { "key": "showText", "type": "boolean", "label": "Show text" },
+      { "key": "colorProfile", "type": "enum", "label": "Color profile", "options": ["semantic", "colorful"], "description": "Override the global Lacuna color profile for this widget." }
+    ]
+  }
+}

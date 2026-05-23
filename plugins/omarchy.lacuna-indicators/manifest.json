@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "omarchy.lacuna-indicators",
+  "name": "Lacuna Indicators",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Lacuna-styled manual state indicators for the Omarchy bar.",
+  "kinds": ["bar-widget"],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lacuna Indicators",
+    "description": "Shows DND, night light, idle, recording, and dictation state indicators.",
+    "category": "Lacuna",
+    "allowMultiple": false,
+    "defaults": {
+      "items": ["Dnd", "NightLight", "StayAwake", "ScreenRecording", "Dictation"]
+    },
+    "schema": [
+      { "key": "items", "type": "multiselect", "label": "Indicators", "options": ["Dnd", "NightLight", "StayAwake", "ScreenRecording", "Dictation"], "noSelectionText": "None selected" },
+      { "key": "colorProfile", "type": "enum", "label": "Color profile", "options": ["semantic", "colorful"], "description": "Override the global Lacuna color profile for this widget." }
+    ]
+  }
+}
