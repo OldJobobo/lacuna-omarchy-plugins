@@ -54,6 +54,132 @@ class QmlContractTests(unittest.TestCase):
         self.assertNotIn('entries.action({ icon: "plus", label: "Add Quick Launch App"', registry)
         self.assertIn("onActionTriggered", content)
         self.assertIn("signal actionTriggered()", section)
+        self.assertIn("var header = entry", content)
+        self.assertNotIn("for (var key in entry) header[key] = entry[key]", content)
+        self.assertIn("width: itemList.width", content)
+        self.assertIn("width: implicitWidth", section)
+        self.assertIn("width: root.options.length * height", section)
+
+    def test_system_restart_requires_confirmation_unless_enabled(self):
+        registry = read("plugins/omarchy.lacuna-menu/menu/MenuRegistry.qml")
+        window = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
+        settings = read("plugins/omarchy.lacuna-menu/services/LacunaSettings.qml")
+        state_service = read("plugins/omarchy.lacuna-state/Service.qml")
+        settings_window = read("plugins/omarchy.lacuna-menu/settings/SettingsWindow.qml")
+
+        self.assertIn('instantRestart: false', settings)
+        self.assertIn('instantRestart: false', state_service)
+        self.assertIn('action: "confirm-system-restart"', registry)
+        self.assertNotIn('label: "Restart", hint: "Reboot machine", command: "omarchy-system-reboot"', registry)
+        self.assertIn("property bool pendingSystemRestartConfirmation", window)
+        self.assertIn("function requestSystemRestart()", window)
+        self.assertIn("function confirmSystemRestart()", window)
+        self.assertIn('commands.run("omarchy-system-reboot")', window)
+        self.assertIn('entry.action === "confirm-system-restart"', window)
+        self.assertIn('entry.action === "toggle-instant-restart"', window)
+        self.assertIn('"Instant Restart"', settings_window)
+        self.assertIn('"toggle-instant-restart"', settings_window)
+
+    def test_rail_has_no_compact_density_button(self):
+        rail = read("plugins/omarchy.lacuna-menu/menu/MenuRail.qml")
+        window = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
+
+        self.assertNotIn("signal compactToggleRequested", rail)
+        self.assertNotIn("id: compactButton", rail)
+        self.assertNotIn("Compact density", rail)
+        self.assertNotIn("Normal density", rail)
+        self.assertNotIn("onCompactToggleRequested", window)
+
+    def test_topbar_tooltip_targets_expose_hover_state(self):
+        root_target_widgets = [
+            "omarchy.lacuna-audio",
+            "omarchy.lacuna-bluetooth",
+            "omarchy.lacuna-clock",
+            "omarchy.lacuna-bar-size-pill",
+            "omarchy.lacuna-claude-usage",
+            "omarchy.lacuna-codex-usage",
+            "omarchy.lacuna-compact-pill",
+            "omarchy.lacuna-indicators",
+            "omarchy.lacuna-menu-button",
+            "omarchy.lacuna-network",
+            "omarchy.lacuna-notifications",
+            "omarchy.lacuna-power",
+            "omarchy.lacuna-script-pill",
+            "omarchy.lacuna-system-update",
+            "omarchy.lacuna-temperature",
+            "omarchy.lacuna-theme",
+            "omarchy.lacuna-wallpaper",
+            "omarchy.lacuna-weather",
+        ]
+
+        for plugin in root_target_widgets:
+            qml = read(f"plugins/{plugin}/Widget.qml")
+            self.assertIn("readonly property bool tooltipHovered", qml, plugin)
+            self.assertIn("mouseArea.containsMouse", qml, plugin)
+
+        system_stats = read("plugins/omarchy.lacuna-system-stats/Widget.qml")
+        self.assertIn("readonly property bool tooltipHovered", system_stats)
+        self.assertIn("parent.bar.showTooltip(parent, parent.tooltip)", system_stats)
+
+        for path in [
+            "plugins/omarchy.lacuna-mpris/components/LacunaMprisButton.qml",
+            "plugins/omarchy.lacuna-workspaces/components/LacunaWorkspaceButton.qml",
+        ]:
+            qml = read(path)
+            self.assertIn("readonly property bool tooltipHovered", qml, path)
+            self.assertIn("clickArea.containsMouse", qml, path)
+
+    def test_lacuna_native_replacement_widgets_have_expected_contracts(self):
+        replacements = {
+            "omarchy.lacuna-system-update": "SystemUpdate",
+            "omarchy.lacuna-clock": "Clock",
+            "omarchy.lacuna-weather": "Weather",
+            "omarchy.lacuna-notifications": "NotificationCenter",
+            "omarchy.lacuna-indicators": "Indicators",
+            "omarchy.lacuna-bluetooth": "BluetoothPanel",
+            "omarchy.lacuna-network": "NetworkPanel",
+            "omarchy.lacuna-audio": "AudioPanel",
+            "omarchy.lacuna-power": "PowerPanel",
+        }
+
+        example = read_json("config/shell.lacuna-native-replacements.example.json")
+        layout_ids = []
+        for section in ["left", "center", "right"]:
+            layout_ids.extend(entry["id"] for entry in example["bar"]["layout"][section])
+
+        for plugin_id, native_id in replacements.items():
+            manifest = read_json(f"plugins/{plugin_id}/manifest.json")
+            qml = read(f"plugins/{plugin_id}/Widget.qml")
+
+            self.assertEqual(plugin_id, manifest["id"])
+            self.assertIn("bar-widget", manifest["kinds"])
+            self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
+            self.assertEqual("Lacuna", manifest["barWidget"]["category"])
+            self.assertIn(plugin_id, layout_ids)
+            self.assertNotIn(f'moduleName: "{native_id}"', qml)
+            self.assertIn(f'moduleName: "{plugin_id}"', qml)
+            self.assertIn("barSize", qml)
+            self.assertIn("colorProfile", qml)
+
+    def test_system_stats_uses_tabler_cpu_icon(self):
+        qml = read("plugins/omarchy.lacuna-system-stats/Widget.qml")
+        icon = read("plugins/omarchy.lacuna-system-stats/assets/tabler/cpu.svg")
+
+        self.assertIn('iconSource: Qt.resolvedUrl("assets/tabler/cpu.svg")', qml)
+        self.assertNotIn('iconSource: Qt.resolvedUrl("assets/tabler/assembly-filled.svg")', qml)
+        self.assertIn("icon-tabler-cpu", icon)
+
+    def test_wallpaper_commands_force_live_background_refresh(self):
+        widget = read("plugins/omarchy.lacuna-wallpaper/Widget.qml")
+        catalog = read("plugins/omarchy.lacuna-menu/menu/MenuCommandCatalog.qml")
+        panel = read("plugins/omarchy.lacuna-shell-settings/Panel.qml")
+
+        self.assertIn("function nextBackgroundCommand()", widget)
+        self.assertIn("bar.run(root.nextBackgroundCommand())", widget)
+        for qml in [widget, catalog, panel]:
+            self.assertIn("function applyCurrentBackgroundCommand()", qml)
+            self.assertIn("readlink -f", qml)
+            self.assertIn("background setInstant", qml)
 
     def test_workspace_lacuna_selected_state_has_no_fill_or_underline(self):
         qml = read("plugins/omarchy.lacuna-workspaces/components/LacunaWorkspaceButton.qml")
@@ -67,6 +193,26 @@ class QmlContractTests(unittest.TestCase):
 
         self.assertIn("circle-dotted-letter-l.svg", qml)
         self.assertNotIn("layout-sidebar-left-expand-filled.svg", qml)
+
+    def test_lacuna_menu_uses_unified_accent_except_danger(self):
+        for path in [
+            "plugins/omarchy.lacuna-menu/menu/MenuContent.qml",
+            "plugins/omarchy.lacuna-menu/menu/MenuRail.qml",
+            "plugins/omarchy.lacuna-menu/settings/SettingsWindow.qml",
+            "plugins/omarchy.lacuna-menu/settings/OmarchyShellSettingsWindow.qml",
+        ]:
+            qml = read(path)
+            tone_function = qml.split("function toneAccent", 1)[1].split("\n  }", 1)[0]
+
+            self.assertIn('if (tone === "danger") return root.dangerAccent', tone_function, path)
+            self.assertIn("return root.accent", tone_function, path)
+            self.assertNotIn("return root.shellAccent", tone_function, path)
+            self.assertNotIn("return root.sessionAccent", tone_function, path)
+            self.assertNotIn("return root.navAccent", tone_function, path)
+
+        docs = read("docs/lacuna-menu-unified-color-model.md")
+        self.assertIn("one primary theme accent", docs)
+        self.assertIn("Reserve a separate danger accent", docs)
 
     def test_design_token_consumers_use_lacuna_not_carbon_flag(self):
         paths = [
@@ -146,6 +292,8 @@ class QmlContractTests(unittest.TestCase):
         state_manifest = read_json("plugins/omarchy.lacuna-state/manifest.json")
         shell_settings_manifest = read_json("plugins/omarchy.lacuna-shell-settings/manifest.json")
         menu = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
+        settings = read("plugins/omarchy.lacuna-menu/services/LacunaSettings.qml")
+        settings_window = read("plugins/omarchy.lacuna-menu/settings/SettingsWindow.qml")
 
         self.assertIn("service", state_manifest["kinds"])
         self.assertEqual("Service.qml", state_manifest["entryPoints"]["service"])
@@ -154,22 +302,38 @@ class QmlContractTests(unittest.TestCase):
         self.assertEqual("Service.qml", shell_settings_manifest["entryPoints"]["service"])
         self.assertEqual("Panel.qml", shell_settings_manifest["entryPoints"]["panel"])
         self.assertIn('ensureService("omarchy.lacuna-state")', menu)
-        self.assertIn('summon("omarchy.lacuna-shell-settings"', menu)
-        self.assertNotIn("OmarchyShellSettings {", menu)
-        self.assertNotIn("OmarchyShellSettingsWindow", menu)
+        self.assertIn('ensureService("omarchy.lacuna-shell-settings")', menu)
+        self.assertIn('panelController.openFlyout("shellSettings")', menu)
+        self.assertIn("OmarchyShellSettingsWindow", menu)
+        self.assertIn("shellSettingsSurface", menu)
+        shell_section = menu.split("function openShellSettingsSection", 1)[1].split("function requestFlyoutFocus", 1)[0]
+        self.assertNotIn("sidebarState.expand()", shell_section)
+        self.assertIn("return settingsFlyoutY(panelHeight)", menu)
+        self.assertIn('surface: "flyout"', settings)
+        self.assertIn('"Shell Settings Surface"', settings_window)
+        self.assertIn('"set-shell-settings-surface-"', settings_window)
 
     def test_simple_bar_helpers_match_canonical_vendored_templates(self):
         color_template = read("shared/qml/simple-bar/ColorProfile.qml")
         motion_template = read("shared/qml/simple-bar/MotionTokens.qml")
         simple_color_plugins = [
+            "omarchy.lacuna-audio",
+            "omarchy.lacuna-bluetooth",
             "omarchy.lacuna-bar-size-pill",
+            "omarchy.lacuna-clock",
             "omarchy.lacuna-claude-usage",
             "omarchy.lacuna-codex-usage",
             "omarchy.lacuna-compact-pill",
+            "omarchy.lacuna-indicators",
             "omarchy.lacuna-menu-button",
+            "omarchy.lacuna-network",
+            "omarchy.lacuna-notifications",
+            "omarchy.lacuna-power",
             "omarchy.lacuna-script-pill",
             "omarchy.lacuna-system-stats",
+            "omarchy.lacuna-system-update",
             "omarchy.lacuna-temperature",
+            "omarchy.lacuna-weather",
         ]
         simple_motion_plugins = simple_color_plugins + [
             "omarchy.lacuna-theme",
