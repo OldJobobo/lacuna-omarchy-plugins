@@ -33,6 +33,7 @@ Item {
   visible: displayText.length > 0
   implicitWidth: visible ? button.implicitWidth : 0
   implicitHeight: visible ? button.implicitHeight : 0
+  readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {
     var value = settings ? settings[name] : undefined
@@ -40,7 +41,15 @@ Item {
   }
 
   function switchBackgroundCommand() {
-    return "background=$(omarchy theme bg-switcher); [ -n \"$background\" ] && omarchy theme bg set \"$background\""
+    return "background=$(omarchy theme bg-switcher); [ -n \"$background\" ] && omarchy theme bg set \"$background\" && " + applyCurrentBackgroundCommand()
+  }
+
+  function nextBackgroundCommand() {
+    return "omarchy theme bg next && " + applyCurrentBackgroundCommand()
+  }
+
+  function applyCurrentBackgroundCommand() {
+    return "current=$(readlink -f \"$HOME/.config/omarchy/current/background\" 2>/dev/null || true); [ -n \"$current\" ] && omarchy-shell -q background setInstant \"$current\""
   }
 
   function clipped(value) {
@@ -194,7 +203,7 @@ Item {
       onExited: if (bar) bar.hideTooltip(root)
       onClicked: function(mouse) {
         if (!bar) return
-        if (mouse.button === Qt.RightButton) bar.run("omarchy theme bg next")
+        if (mouse.button === Qt.RightButton) bar.run(root.nextBackgroundCommand())
         else bar.run(root.switchBackgroundCommand())
       }
     }
