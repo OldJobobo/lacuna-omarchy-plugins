@@ -29,6 +29,12 @@
     "email": "thunderbird.desktop",
     "discord": "vesktop.desktop"
   },
+  "power": {
+    "instantRestart": false
+  },
+  "shellSettings": {
+    "surface": "flyout"
+  },
   "sidebar": {
     "defaultMode": "rail",
     "collapsed": true,

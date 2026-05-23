@@ -51,11 +51,8 @@ Item {
   }
 
   function toneAccent(tone) {
-    if (tone === "lacuna") return root.accent
-    if (tone === "shell") return root.shellAccent
-    if (tone === "session") return root.sessionAccent
     if (tone === "danger") return root.dangerAccent
-    return root.navAccent
+    return root.accent
   }
 
   function section(label, note, tone) {
@@ -191,7 +188,12 @@ Item {
           { value: "rail", label: "Rail" }
         ], root.registry.sidebarDefaultMode, "set-sidebar-default-"),
         row("sidebar-overlay", "Window Mode", root.registry.sidebarExclusive ? "Float over windows" : "Reserve screen space", sidebarModeName(), "lacuna", "toggle-sidebar-mode", "toggle", root.registry.sidebarExclusive),
-        row("corners", "Corner Pieces", root.registry.sidebarCornerPieces ? "Rounded connector pieces are visible" : "Use a flat sidebar edge", root.registry.sidebarCornerPieces ? "On" : "Off", "lacuna", "toggle-corner-pieces", "toggle", root.registry.sidebarCornerPieces)
+        row("corners", "Corner Pieces", root.registry.sidebarCornerPieces ? "Rounded connector pieces are visible" : "Use a flat sidebar edge", root.registry.sidebarCornerPieces ? "On" : "Off", "lacuna", "toggle-corner-pieces", "toggle", root.registry.sidebarCornerPieces),
+        section("Omarchy Settings", "Choose how the shell settings surface opens from Lacuna.", "shell"),
+        row("settings", "Shell Settings Surface", root.registry.shellSettingsSurfaceHint(), root.registry.shellSettingsSurfaceName(), "shell", "", "segments", false, [
+          { value: "flyout", label: "Flyout" },
+          { value: "window", label: "Window" }
+        ], root.registry.shellSettingsSurface, "set-shell-settings-surface-")
       ]
     }
 
@@ -237,7 +239,9 @@ Item {
         commandRow("refresh", "Restart Shell", "Restart Omarchy shell", root.registry.restartLacunaCommand(), "shell"),
         commandRow("file-search", "Open Log", "View the current shell log", root.registry.openLogCommand(), "shell"),
         row("refresh", "Reload App Catalog", "Rescan desktop launchers", "Reload", "shell", "reload-apps", "button"),
-        commandRow("edit", "Open Plugin Source", "Edit the Lacuna plugin repository", root.registry.editPluginCommand(), "lacuna")
+        commandRow("edit", "Open Plugin Source", "Edit the Lacuna plugin repository", root.registry.editPluginCommand(), "lacuna"),
+        section("Power", "Dangerous system actions ask first by default.", "danger"),
+        row("refresh", "Instant Restart", root.registry.instantRestart ? "System restart runs without confirmation" : "System restart opens a confirmation popup", root.registry.instantRestart ? "On" : "Off", "danger", "toggle-instant-restart", "toggle", root.registry.instantRestart)
       ]
     }
 

@@ -21,6 +21,8 @@ Item {
   property string quickLaunchLayout: "list"
   property string dailyLaunchLayout: "list"
   property string controlsLayout: "grid"
+  property string shellSettingsSurface: "flyout"
+  property bool instantRestart: false
   property string frameMode: "off"
   property bool frameShadow: false
   property var backgroundEffects: ({})
@@ -368,6 +370,14 @@ Item {
     return root.controlsLayout === "list" ? "List" : "Grid"
   }
 
+  function shellSettingsSurfaceName() {
+    return root.shellSettingsSurface === "window" ? "Window" : "Flyout"
+  }
+
+  function shellSettingsSurfaceHint() {
+    return root.shellSettingsSurface === "window" ? "Open Omarchy shell settings as a separate floating window" : "Attach Omarchy shell settings to the Lacuna sidebar"
+  }
+
   function layoutOptions() {
     return [
       { value: "grid", icon: "layout-grid" },
@@ -494,7 +504,7 @@ Item {
       entries.command({ icon: "lock", label: "Lock", hint: "Lock session", command: "omarchy-system-lock", tone: "session", group: "session" }),
       entries.command({ icon: "logout", label: "Logout", hint: "End session", command: "omarchy-system-logout", tone: "session", priority: "normal", group: "session" }),
       entries.header("Power", "danger", "power"),
-      entries.command({ icon: "refresh", label: "Restart", hint: "Reboot machine", command: "omarchy-system-reboot", tone: "danger", priority: "normal", danger: true, group: "power" }),
+      entries.action({ icon: "refresh", label: "Restart", hint: root.instantRestart ? "Reboot machine immediately" : "Confirm before rebooting machine", action: "confirm-system-restart", tone: "danger", priority: "normal", danger: true, group: "power" }),
       entries.command({ icon: "power", label: "Shutdown", hint: "Power off machine", command: "omarchy-system-shutdown", tone: "danger", danger: true, group: "power" })
     ]
   }

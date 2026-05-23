@@ -77,23 +77,29 @@ Item {
   readonly property bool settingsPanelOpen: panelController.isFlyoutOpen("settings")
   readonly property bool settingsPanelVisible: panelController.isFlyoutVisible("settings")
   property int settingsPanelWidth: Math.round(sizeMix(400, 360))
+  readonly property bool shellSettingsPanelOpen: panelController.isFlyoutOpen("shellSettings")
+  readonly property bool shellSettingsPanelVisible: panelController.isFlyoutVisible("shellSettings")
+  property int shellSettingsPanelWidth: Math.round(sizeMix(520, 440))
   readonly property bool appPickerOpen: panelController.isFlyoutOpen("appPicker")
   readonly property bool appPickerVisible: panelController.isFlyoutVisible("appPicker")
   readonly property bool flyoutOpen: panelController.flyoutOpen
   readonly property bool flyoutInteractive: panelController.flyoutInteractive
   property string appPickerMode: "customQuickLaunchApp"
   property string preferredAppPickerRole: ""
+  property string shellSettingsSection: "apps"
   property int appPickerWidth: Math.round(sizeMix(300, 260))
-  readonly property int maxFlyoutLaneWidth: Math.max(settingsPanelWidth, appPickerWidth)
+  readonly property int maxFlyoutLaneWidth: Math.max(settingsPanelWidth, shellSettingsPanelWidth, appPickerWidth)
   readonly property string visibleFlyout: panelController.visibleFlyout
   readonly property string outgoingFlyout: panelController.outgoingFlyout
   readonly property bool activeFlyoutSettings: visibleFlyout === "settings"
+  readonly property bool activeFlyoutShellSettings: visibleFlyout === "shellSettings"
   readonly property bool activeFlyoutAppPicker: visibleFlyout === "appPicker"
   readonly property bool renderSettingsContent: settingsPanelVisible || outgoingFlyout === "settings"
+  readonly property bool renderShellSettingsContent: shellSettingsPanelVisible || outgoingFlyout === "shellSettings"
   readonly property bool renderAppPickerContent: appPickerVisible || outgoingFlyout === "appPicker"
-  readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : 0
-  readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : 0
-  readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : 0
+  readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutShellSettings ? shellSettingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : 0
+  readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutShellSettings ? shellSettingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : 0
+  readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutShellSettings ? shellSettingsFlyoutY(shellSettingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : 0
   readonly property int frameOverlayWidth: !lacunaEnabled || frameMode === "off" ? 0 : ((sidebarScreen ? sidebarScreen.width : 0) + 100)
   readonly property bool frameReserveActive: lacunaEnabled && sidebarState.exclusive && (panelController.menuRenderable || frameMode === "fullframe") && frameMode !== "off"
   readonly property bool sidebarReserveActive: lacunaEnabled && sidebarState.exclusive && panelController.menuRenderable && sidebarSurfaceVisible
@@ -111,6 +117,7 @@ Item {
   readonly property int topBarShadowReserve: frameReserveActive && root.frameShadow && root.topBar ? root.barEdgeCasterSize + reservePadding : 0
   readonly property real frameOverlayProgress: !lacunaEnabled ? 0 : frameMode === "fullframe" ? 1 : panelController.menuProgress
   property string pendingFlyoutFocus: ""
+  property bool pendingSystemRestartConfirmation: false
   property int pluginStateRevision: 0
   readonly property var shellConfig: shell && shell.shellConfig ? shell.shellConfig : ({})
   readonly property var shellBarConfig: shellConfig && shellConfig.bar ? shellConfig.bar : ({})
@@ -131,6 +138,11 @@ Item {
   readonly property real desktopClockScale: numberSetting(desktopClockSettings.scale, 1)
   readonly property bool desktopClockUse12Hour: boolSetting(desktopClockSettings.use12Hour, false)
   readonly property var backgroundEffectsSettings: lacunaSettings.data && lacunaSettings.data.backgroundEffects ? lacunaSettings.data.backgroundEffects : ({})
+  readonly property var shellSettingsSettings: lacunaSettings.data && lacunaSettings.data.shellSettings ? lacunaSettings.data.shellSettings : ({})
+  readonly property string shellSettingsSurface: validShellSettingsSurface(shellSettingsSettings.surface)
+  readonly property var shellSettingsService: resolveShellSettingsService()
+  readonly property var powerSettings: lacunaSettings.data && lacunaSettings.data.power ? lacunaSettings.data.power : ({})
+  readonly property bool instantRestart: boolSetting(powerSettings.instantRestart, false)
   readonly property var frameSettings: lacunaSettings.data && lacunaSettings.data.frame ? lacunaSettings.data.frame : ({})
   readonly property string frameMode: validFrameMode(frameSettings.mode)
   readonly property bool frameShadow: boolSetting(frameSettings.shadow, false)
@@ -181,6 +193,18 @@ Item {
       if (service) return service
     }
     return localLacunaSettings
+  }
+
+  function resolveShellSettingsService() {
+    if (root.shell && typeof root.shell.ensureService === "function") {
+      var ensured = root.shell.ensureService("omarchy.lacuna-shell-settings")
+      if (ensured) return ensured
+    }
+    if (root.shell && typeof root.shell.serviceFor === "function") {
+      var service = root.shell.serviceFor("omarchy.lacuna-shell-settings")
+      if (service) return service
+    }
+    return localShellSettingsService
   }
 
   function applyInitialSidebarDefault() {
@@ -266,6 +290,21 @@ Item {
     return Math.min(menuWindow.height - y - designTokens.bottomInset, root.compact ? 430 : 520)
   }
 
+  function shellSettingsFlyoutHeight() {
+    var availableHeight = menuWindow.height - barBottomY - designTokens.topInset - designTokens.bottomInset
+    return Math.max(360, Math.min(availableHeight, compact ? 560 : 660))
+  }
+
+  function shellSettingsFlyoutY(panelHeight) {
+    return settingsFlyoutY(panelHeight)
+  }
+
+  function validShellSettingsSurface(value) {
+    var surface = String(value || "").toLowerCase()
+    if (surface === "window" || surface === "floating" || surface === "panel") return "window"
+    return "flyout"
+  }
+
   function open(payloadJson) {
     if (!lacunaEnabled) return
     panelController.openMenu()
@@ -309,9 +348,6 @@ Item {
   }
 
   function viewToneAccent() {
-    if (menuState.currentView === "system") return root.dangerAccent
-    if (menuState.currentView === "lacuna-shell") return root.shellAccent
-    if (menuState.currentView === "lacuna" || menuState.currentView === "lacuna-preferences") return root.accent
     return root.accent
   }
 
@@ -324,6 +360,13 @@ Item {
   function setControlsLayout(layout) {
     var next = lacunaSettings.normalize(lacunaSettings.data)
     next.controlsLayout = layout === "list" ? "list" : "grid"
+    lacunaSettings.save(next)
+  }
+
+  function setShellSettingsSurface(surface) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    if (!next.shellSettings || typeof next.shellSettings !== "object") next.shellSettings = {}
+    next.shellSettings.surface = validShellSettingsSurface(surface)
     lacunaSettings.save(next)
   }
 
@@ -478,6 +521,11 @@ Item {
   }
 
   function openShellSettingsPanel(sectionId) {
+    if (root.shellSettingsSurface === "flyout") {
+      openShellSettingsSection(sectionId)
+      return
+    }
+
     var payload = JSON.stringify({ section: String(sectionId || "apps") })
     if (root.shell && typeof root.shell.summon === "function") {
       root.shell.summon("omarchy.lacuna-shell-settings", payload)
@@ -488,6 +536,21 @@ Item {
 
   function toggleShellSettingsPanel() {
     openShellSettingsPanel("apps")
+  }
+
+  function openShellSettingsSection(sectionId) {
+    if (!lacunaEnabled) return
+
+    var nextSection = String(sectionId || "apps")
+    if (shellSettingsPanelOpen && shellSettingsPanel.item && shellSettingsPanel.item.currentSection === nextSection) {
+      panelController.closeFlyout("shellSettings")
+      return
+    }
+
+    shellSettingsSection = nextSection
+    if (shellSettingsPanel.item) shellSettingsPanel.item.currentSection = nextSection
+    panelController.openFlyout("shellSettings")
+    requestFlyoutFocus("shellSettings")
   }
 
   function requestFlyoutFocus(id) {
@@ -509,6 +572,9 @@ Item {
       pendingFlyoutFocus = ""
     } else if (pendingFlyoutFocus === "settings" && settingsPanelOpen) {
       settingsPanel.forceActiveFocus()
+      pendingFlyoutFocus = ""
+    } else if (pendingFlyoutFocus === "shellSettings" && shellSettingsPanelOpen && shellSettingsPanel.item) {
+      shellSettingsPanel.item.forceActiveFocus()
       pendingFlyoutFocus = ""
     }
   }
@@ -700,6 +766,27 @@ Item {
     commands.run(command)
   }
 
+  function requestSystemRestart() {
+    if (instantRestart) {
+      confirmSystemRestart()
+      return
+    }
+
+    pendingSystemRestartConfirmation = true
+    if (!menuState.open) panelController.openMenu()
+  }
+
+  function confirmSystemRestart() {
+    pendingSystemRestartConfirmation = false
+    panelController.closeActiveFlyout()
+    commands.run("omarchy-system-reboot")
+    applySidebarDefaultState()
+  }
+
+  function cancelSystemRestart() {
+    pendingSystemRestartConfirmation = false
+  }
+
   function handleSidebarAction(entry) {
     if (entry.action === "toggle-sidebar-mode") {
       sidebarState.toggle()
@@ -738,6 +825,11 @@ Item {
 
     if (entry.action.indexOf("set-controls-layout-") === 0) {
       setControlsLayout(entry.action.substring("set-controls-layout-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-shell-settings-surface-") === 0) {
+      setShellSettingsSurface(entry.action.substring("set-shell-settings-surface-".length))
       return true
     }
 
@@ -780,6 +872,13 @@ Item {
       var next = lacunaSettings.normalize(lacunaSettings.data)
       next.colorProfile = next.colorProfile === "colorful" ? "semantic" : "colorful"
       lacunaSettings.save(next)
+      return true
+    }
+
+    if (entry.action === "toggle-instant-restart") {
+      var nextPowerSettings = lacunaSettings.normalize(lacunaSettings.data)
+      nextPowerSettings.power.instantRestart = !root.instantRestart
+      lacunaSettings.save(nextPowerSettings)
       return true
     }
 
@@ -854,6 +953,11 @@ Item {
   }
 
   function handleQuickAccessAction(entry) {
+    if (entry.action === "confirm-system-restart") {
+      requestSystemRestart()
+      return true
+    }
+
     if (entry.action === "open-custom-quick-launch-picker") {
       openCustomQuickLaunchPicker()
       return true
@@ -919,6 +1023,14 @@ Item {
 
   LacunaSettings {
     id: localLacunaSettings
+  }
+
+  OmarchyShellSettingsService {
+    id: localShellSettingsService
+    shell: root.shell
+    manifest: root.manifest
+    pluginRegistry: root.pluginRegistry
+    shellConfig: root.shellConfig
   }
 
   Connections {
@@ -1000,9 +1112,11 @@ Item {
     quickLaunchLayout: lacunaSettings.data && lacunaSettings.data.quickLaunchLayout ? lacunaSettings.data.quickLaunchLayout : "list"
     dailyLaunchLayout: lacunaSettings.data && lacunaSettings.data.dailyLaunchLayout ? lacunaSettings.data.dailyLaunchLayout : "list"
     controlsLayout: lacunaSettings.data && lacunaSettings.data.controlsLayout ? lacunaSettings.data.controlsLayout : "grid"
+    shellSettingsSurface: root.shellSettingsSurface
     frameMode: root.frameMode
     frameShadow: root.frameShadow
     backgroundEffects: root.backgroundEffectsSettings
+    instantRestart: root.instantRestart
     shellBarConfig: root.shellBarConfig
     shellBarPosition: root.barPosition
     shellBarTransparent: root.shellBarConfig && root.shellBarConfig.transparent === true
@@ -1215,7 +1329,6 @@ Item {
         muted: root.muted
         railWidth: root.railButtonWidth
         onExpandRequested: sidebarState.toggleCollapsed()
-        onCompactToggleRequested: compactState.toggle()
         onActivated: function(entry) {
           root.activate(entry)
         }
@@ -1283,6 +1396,39 @@ Item {
         onCloseRequested: panelController.closeFlyout("settings")
       }
 
+      Loader {
+        id: shellSettingsPanel
+
+        anchors.fill: parent
+        active: root.renderShellSettingsContent
+        visible: root.renderShellSettingsContent
+        opacity: root.shellSettingsPanelOpen ? 1 : 0
+        onLoaded: if (item) item.currentSection = root.shellSettingsSection
+        sourceComponent: Component {
+          OmarchyShellSettingsWindow {
+            currentSection: root.shellSettingsSection
+            open: root.shellSettingsPanelOpen
+            compact: root.compact
+            drawBackground: false
+            designTokens: designTokens
+            registry: registry
+            settingsService: root.shellSettingsService
+            foreground: root.foreground
+            background: root.background
+            accent: root.accent
+            shellAccent: root.shellAccent
+            sessionAccent: root.sessionAccent
+            dangerAccent: root.dangerAccent
+            navAccent: root.navAccent
+            muted: root.muted
+            onActivated: function(entry) {
+              root.activate(entry)
+            }
+            onCloseRequested: panelController.closeFlyout("shellSettings")
+          }
+        }
+      }
+
       FlyoutAppPickerContent {
         id: appPickerContent
 
@@ -1306,6 +1452,171 @@ Item {
         onAppSelected: function(appId) {
           if (root.appPickerMode === "preferredApp") root.setPreferredApp(root.preferredAppPickerRole, appId)
           else root.addCustomQuickLaunchApp(appId)
+        }
+      }
+    }
+
+    Item {
+      id: restartConfirmOverlay
+
+      visible: root.pendingSystemRestartConfirmation && root.sidebarSurfaceVisible
+      enabled: visible
+      focus: visible
+      z: 1000
+      x: panelHost.sidebarMaskX
+      y: panelHost.sidebarMaskY
+      width: root.panelWidth
+      height: panelHost.sidebarMaskHeight
+      opacity: visible ? 1 : 0
+      onVisibleChanged: if (visible) forceActiveFocus()
+      Keys.onEscapePressed: root.cancelSystemRestart()
+      Keys.onReturnPressed: root.confirmSystemRestart()
+      Keys.onEnterPressed: root.confirmSystemRestart()
+
+      Behavior on opacity {
+        LacunaAnim { motion: "fast" }
+      }
+
+      MouseArea {
+        anchors.fill: parent
+        hoverEnabled: true
+        onClicked: root.cancelSystemRestart()
+      }
+
+      LacunaRect {
+        id: restartConfirmDialog
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: Math.max(root.barBottomY + 44, Math.round((parent.height - height) / 2) - 18)
+        width: Math.max(220, Math.min(parent.width - 28, root.compact ? 238 : 270))
+        height: root.compact ? 164 : 184
+        radius: root.designStyle === "material" ? 12 : designTokens.radius
+        color: root.background
+        border.width: root.designStyle === "lacuna" ? 0 : 1
+        border.color: Qt.rgba(root.dangerAccent.r, root.dangerAccent.g, root.dangerAccent.b, 0.26)
+        clip: true
+
+        MouseArea {
+          anchors.fill: parent
+          hoverEnabled: true
+          onClicked: {}
+        }
+
+        LacunaRect {
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: parent.top
+          height: 2
+          color: root.dangerAccent
+          opacity: 0.86
+        }
+
+        LacunaTablerIcon {
+          id: restartConfirmIcon
+
+          anchors.left: parent.left
+          anchors.leftMargin: 16
+          anchors.top: parent.top
+          anchors.topMargin: root.compact ? 18 : 20
+          name: "refresh"
+          color: root.dangerAccent
+          iconSize: root.compact ? 20 : 22
+        }
+
+        LacunaText {
+          anchors.left: restartConfirmIcon.right
+          anchors.leftMargin: 10
+          anchors.right: parent.right
+          anchors.rightMargin: 16
+          anchors.verticalCenter: restartConfirmIcon.verticalCenter
+          text: "Restart System?"
+          color: root.foreground
+          fontFamily: root.bodyFontFamily
+          font.pixelSize: root.compact ? 12 : 13
+          font.weight: Font.DemiBold
+        }
+
+        Text {
+          anchors.left: parent.left
+          anchors.leftMargin: 16
+          anchors.right: parent.right
+          anchors.rightMargin: 16
+          anchors.top: restartConfirmIcon.bottom
+          anchors.topMargin: root.compact ? 16 : 18
+          text: "This will reboot the machine now. Unsaved work in other apps may be lost."
+          color: root.muted
+          font.family: root.bodyFontFamily
+          font.pixelSize: root.compact ? 10 : 11
+          wrapMode: Text.WordWrap
+          lineHeight: 1.16
+          renderType: Text.NativeRendering
+        }
+
+        Row {
+          anchors.left: parent.left
+          anchors.leftMargin: 16
+          anchors.right: parent.right
+          anchors.rightMargin: 16
+          anchors.bottom: parent.bottom
+          anchors.bottomMargin: 16
+          height: root.compact ? 30 : 34
+          spacing: 8
+
+          LacunaRect {
+            width: Math.floor((parent.width - parent.spacing) / 2)
+            height: parent.height
+            radius: root.designStyle === "material" ? height / 2 : designTokens.controlRadius
+            color: "transparent"
+            border.width: root.designStyle === "lacuna" ? 0 : 1
+            border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.16)
+
+            LacunaText {
+              anchors.centerIn: parent
+              width: parent.width - 14
+              text: "Cancel"
+              color: root.muted
+              fontFamily: root.bodyFontFamily
+              font.pixelSize: root.compact ? 10 : 11
+              font.weight: Font.DemiBold
+              horizontalAlignment: Text.AlignHCenter
+            }
+
+            LacunaStateLayer {
+              anchors.fill: parent
+              stateColor: root.foreground
+              hoverOpacity: designTokens.hoverOpacity
+              pressOpacity: designTokens.activeOpacity
+              onTriggered: root.cancelSystemRestart()
+            }
+          }
+
+          LacunaRect {
+            width: parent.width - parent.spacing - Math.floor((parent.width - parent.spacing) / 2)
+            height: parent.height
+            radius: root.designStyle === "material" ? height / 2 : designTokens.controlRadius
+            color: Qt.rgba(root.dangerAccent.r, root.dangerAccent.g, root.dangerAccent.b, 0.16)
+            border.width: root.designStyle === "lacuna" ? 0 : 1
+            border.color: Qt.rgba(root.dangerAccent.r, root.dangerAccent.g, root.dangerAccent.b, 0.32)
+
+            LacunaText {
+              anchors.centerIn: parent
+              width: parent.width - 14
+              text: "Restart"
+              color: root.foreground
+              fontFamily: root.bodyFontFamily
+              font.pixelSize: root.compact ? 10 : 11
+              font.weight: Font.DemiBold
+              horizontalAlignment: Text.AlignHCenter
+            }
+
+            LacunaStateLayer {
+              anchors.fill: parent
+              stateColor: root.dangerAccent
+              hoverOpacity: designTokens.hoverOpacity
+              pressOpacity: designTokens.activeOpacity
+              onTriggered: root.confirmSystemRestart()
+            }
+          }
         }
       }
     }

@@ -14,6 +14,12 @@
     "email": "system",
     "discord": "system"
   },
+  "power": {
+    "instantRestart": false
+  },
+  "shellSettings": {
+    "surface": "flyout"
+  },
   "sidebar": {
     "defaultMode": "off",
     "collapsed": false,

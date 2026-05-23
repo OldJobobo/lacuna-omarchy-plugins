@@ -37,6 +37,12 @@ Item {
         email: "system",
         discord: "system"
       },
+      power: {
+        instantRestart: false
+      },
+      shellSettings: {
+        surface: "flyout"
+      },
       sidebar: {
         defaultMode: "off",
         collapsed: false,
@@ -79,6 +85,8 @@ Item {
       next.customQuickLaunchApps = normalizeCustomQuickLaunchApps(value.customQuickLaunchApps || value.quickLaunch)
       next.customQuickLaunchNames = normalizeCustomQuickLaunchNames(value.customQuickLaunchNames || value.quickLaunchNames, next.customQuickLaunchApps)
       next.preferredApps = normalizePreferredApps(value.preferredApps || value.defaultLaunchers || value.appDefaults)
+      next.power = normalizePowerSettings(value.power || value.session || value.system)
+      next.shellSettings = normalizeShellSettings(value.shellSettings || value.omarchySettings)
       if (value.sidebar && typeof value.sidebar === "object") {
         next.sidebar.defaultMode = normalizeSidebarDefaultMode(value.sidebar.defaultMode)
         next.sidebar.collapsed = value.sidebar.collapsed === true
@@ -96,6 +104,23 @@ Item {
         next.frame.shadowOffsetX = boundedInt(value.frame.shadowOffsetX, offset.x, -8, 8)
         next.frame.shadowOffsetY = boundedInt(value.frame.shadowOffsetY, offset.y, -8, 8)
       }
+    }
+    return next
+  }
+
+  function normalizePowerSettings(value) {
+    var next = defaultData().power
+    if (value && typeof value === "object") {
+      next.instantRestart = value.instantRestart === true || value.instantReboot === true
+    }
+    return next
+  }
+
+  function normalizeShellSettings(value) {
+    var next = defaultData().shellSettings
+    if (value && typeof value === "object") {
+      var surface = String(value.surface || value.mode || "").toLowerCase()
+      next.surface = surface === "window" || surface === "floating" || surface === "panel" ? "window" : "flyout"
     }
     return next
   }
