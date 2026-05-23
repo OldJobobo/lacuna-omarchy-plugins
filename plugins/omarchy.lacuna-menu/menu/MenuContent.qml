@@ -58,11 +58,8 @@ Column {
   }
 
   function toneAccent(tone) {
-    if (tone === "lacuna") return root.accent
-    if (tone === "shell") return root.shellAccent
-    if (tone === "session") return root.sessionAccent
     if (tone === "danger") return root.dangerAccent
-    return root.navAccent
+    return root.accent
   }
 
   function openSettings() {
@@ -118,8 +115,7 @@ Column {
       if (entry.kind === "header") {
         activeKey = sectionKey(entry, headerIndex)
         activeCollapsed = isSectionCollapsed(activeKey)
-        var header = {}
-        for (var key in entry) header[key] = entry[key]
+        var header = entry
         header.sectionKey = activeKey
         header.sectionCollapsed = activeCollapsed
         header.sectionCount = counts[activeKey] || 0
@@ -537,7 +533,7 @@ Column {
       id: sectionDelegate
 
       MenuSection {
-        width: parent ? parent.width : 0
+        width: itemList.width
         title: parent.entry.label
         foreground: root.foreground
         muted: root.muted
@@ -666,10 +662,10 @@ Column {
         readonly property int tileHeight: root.compact ? 62 : 72
         property var tooltipTarget: null
         property string tooltipText: ""
-        property color tooltipAccent: root.sessionAccent
+        property color tooltipAccent: root.accent
         property var tooltipPendingTarget: null
         property var tooltipPendingEntry: null
-        property color tooltipPendingAccent: root.sessionAccent
+        property color tooltipPendingAccent: root.accent
 
         function showTileTooltip(item, entry, accentColor) {
           if (!item || !entry || !entry.label) return
@@ -734,25 +730,36 @@ Column {
               readonly property bool hovered: stateLayer.containsMouse
               readonly property real reveal: stateLayer.reveal
               property bool pulseActive: false
-              property real breath: 0
+              property real pulse: 0
 
               width: gridRoot.tileWidth
               height: gridRoot.tileHeight
               radius: root.designTokens.material ? 8 : root.designTokens.radius
-              color: Qt.rgba(itemAccent.r, itemAccent.g, itemAccent.b, itemDanger ? 0.08 + reveal * 0.08 : 0.06 + reveal * 0.07)
-              border.width: root.designTokens.lacuna ? 0 : 1
-              border.color: Qt.rgba(itemAccent.r, itemAccent.g, itemAccent.b, hovered ? 0.42 : 0.20)
+              color: "transparent"
+              border.width: 0
               clip: true
 
-              Behavior on color {
-                LacunaColorAnim {}
+              LacunaRect {
+                id: tileBackground
+
+                anchors.centerIn: parent
+                width: Math.max(0, parent.width - (root.compact ? 6 : 8))
+                height: Math.max(0, parent.height - (root.compact ? 6 : 8))
+                radius: root.designTokens.material ? 8 : root.designTokens.radius
+                color: Qt.rgba(tile.itemAccent.r, tile.itemAccent.g, tile.itemAccent.b, tile.itemDanger ? 0.08 + tile.reveal * 0.08 : 0.06 + tile.reveal * 0.07)
+                border.width: root.designTokens.lacuna ? 0 : 1
+                border.color: Qt.rgba(tile.itemAccent.r, tile.itemAccent.g, tile.itemAccent.b, tile.hovered ? 0.42 : 0.20)
+
+                Behavior on color {
+                  LacunaColorAnim {}
+                }
               }
 
               LacunaRect {
                 visible: root.designTokens.accentStrips
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: parent.top
+                anchors.left: tileBackground.left
+                anchors.right: tileBackground.right
+                anchors.top: tileBackground.top
                 height: 2
                 color: tile.itemAccent
                 opacity: tile.hovered ? 0.82 : 0.34
@@ -764,16 +771,11 @@ Column {
                 anchors.centerIn: parent
                 width: root.compact ? 38 : 44
                 height: width
-                scale: 1 + tile.reveal * 0.12 + tile.breath * 0.35
+                scale: 1 + tile.reveal * (0.12 + tile.pulse * 0.055)
                 radius: root.designTokens.material ? width / 2 : root.designTokens.controlRadius
-                color: Qt.rgba(tile.itemAccent.r, tile.itemAccent.g, tile.itemAccent.b, 0.12 + tile.reveal * 0.12)
-                border.width: root.designTokens.lacuna ? 0 : 1
-                border.color: Qt.rgba(tile.itemAccent.r, tile.itemAccent.g, tile.itemAccent.b, 0.24 + tile.reveal * 0.24)
+                color: "transparent"
+                border.width: 0
                 transformOrigin: Item.Center
-
-                Behavior on scale {
-                  LacunaAnim { motion: "fast" }
-                }
 
                 IconImage {
                   id: gridIconImage
@@ -785,7 +787,7 @@ Column {
                   source: tile.modelData.iconSource || ""
                   visible: tile.hasIconSource && status === Image.Ready
                   opacity: tile.hovered ? 1 : 0.92
-                  scale: 1 + tile.reveal * 0.24 + tile.breath
+                  scale: 1 + tile.reveal * (0.24 + tile.pulse * 0.085)
                   transformOrigin: Item.Center
                 }
 
@@ -796,7 +798,7 @@ Column {
                   name: tile.modelData.icon || ""
                   color: tile.hovered ? root.foreground : tile.itemAccent
                   iconSize: root.compact ? 22 : 25
-                  scale: 1 + tile.reveal * 0.28 + tile.breath
+                  scale: 1 + tile.reveal * (0.28 + tile.pulse * 0.085)
                   transformOrigin: Item.Center
                   visible: (!tile.hasIconSource || gridIconImage.status === Image.Error) && valid
                 }
@@ -810,7 +812,7 @@ Column {
                   fontFamily: root.bodyFontFamily
                   font.pixelSize: root.compact ? 15 : 17
                   horizontalAlignment: Text.AlignHCenter
-                  scale: 1 + tile.reveal * 0.24 + tile.breath
+                  scale: 1 + tile.reveal * (0.24 + tile.pulse * 0.085)
                   transformOrigin: Item.Center
                 }
               }
@@ -829,25 +831,23 @@ Column {
 
                 NumberAnimation {
                   target: tile
-                  property: "breath"
+                  property: "pulse"
                   from: 0
-                  to: 0.18
-                  duration: root.motionTokens.duration(1100)
-                  easing.type: Easing.OutSine
+                  to: 1
+                  duration: root.motionTokens.duration(1050)
+                  easing.type: Easing.InOutSine
                 }
-
-                PauseAnimation { duration: root.motionTokens.duration(120) }
 
                 NumberAnimation {
                   target: tile
-                  property: "breath"
-                  from: 0.18
+                  property: "pulse"
+                  from: 1
                   to: 0
                   duration: root.motionTokens.duration(1450)
                   easing.type: Easing.InOutSine
                 }
 
-                PauseAnimation { duration: root.motionTokens.duration(220) }
+                PauseAnimation { duration: root.motionTokens.duration(180) }
               }
 
               LacunaStateLayer {
@@ -872,7 +872,7 @@ Column {
                     gridRoot.cancelTileTooltip(tile)
                     pulseDelayTimer.stop()
                     tile.pulseActive = false
-                    tile.breath = 0
+                    tile.pulse = 0
                   }
                 }
               }
@@ -999,8 +999,8 @@ Column {
         icon: "settings"
         foreground: root.foreground
         muted: root.muted
-        accent: root.shellAccent
-        hoverAccent: root.shellAccent
+        accent: root.accent
+        hoverAccent: root.accent
         buttonSize: root.compact ? 32 : 36
         buttonRadius: root.designTokens.controlRadius
         hoverOpacity: root.designTokens.hoverOpacity
@@ -1055,7 +1055,7 @@ Column {
       radius: root.designTokens.tooltipTreatment === "tonal" ? root.designTokens.radius : 0
       color: root.background
       border.width: root.designTokens.tooltipTreatment === "accent-strip" ? 1 : root.designTokens.borderWidth
-      border.color: root.designTokens.tooltipTreatment === "bordered" ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.22) : Qt.rgba(root.shellAccent.r, root.shellAccent.g, root.shellAccent.b, 0.24)
+      border.color: root.designTokens.tooltipTreatment === "bordered" ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.22) : Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.24)
 
       LacunaRect {
         visible: root.designTokens.tooltipTreatment === "accent-strip"
@@ -1063,7 +1063,7 @@ Column {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: 2
-        color: root.shellAccent
+        color: root.accent
         opacity: 0.82
       }
 

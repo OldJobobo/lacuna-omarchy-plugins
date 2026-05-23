@@ -81,6 +81,7 @@ Item {
     anchors.right: parent.right
     anchors.rightMargin: 4
     anchors.verticalCenter: label.verticalCenter
+    width: implicitWidth
     height: root.compact ? 18 : 20
     spacing: 6
 
@@ -114,6 +115,7 @@ Item {
 
       visible: root.options.length > 0
       y: (controlRow.height - height) / 2
+      width: root.options.length * height + Math.max(0, root.options.length - 1) * spacing
       height: parent.height
       spacing: 2
 

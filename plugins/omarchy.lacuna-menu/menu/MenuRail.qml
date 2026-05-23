@@ -8,7 +8,6 @@ Column {
 
   signal activated(var entry)
   signal expandRequested()
-  signal compactToggleRequested()
   signal settingsRequested()
   signal shellSettingsRequested()
 
@@ -38,11 +37,8 @@ Column {
   property var designTokens: fallbackDesignTokens
 
   function toneAccent(tone) {
-    if (tone === "lacuna") return root.accent
-    if (tone === "shell") return root.shellAccent
-    if (tone === "session") return root.sessionAccent
     if (tone === "danger") return root.dangerAccent
-    return root.navAccent
+    return root.accent
   }
 
   function railItems() {
@@ -123,23 +119,7 @@ Column {
 
   Item {
     width: root.railWidth
-    height: Math.max(0, root.height - y - compactButton.height - expandButton.height - settingsDivider.height - shellSettingsButton.height - settingsButton.height - root.spacing * 5)
-  }
-
-  MenuRailButton {
-    id: compactButton
-
-    shape: root.compact ? "arrows-maximize" : "arrows-minimize"
-    muted: root.muted
-    hoverAccent: root.accent
-    buttonSize: root.railWidth
-    buttonRadius: root.designTokens.controlRadius
-    hoverOpacity: root.designTokens.hoverOpacity
-    pressOpacity: root.designTokens.activeOpacity
-    iconSize: root.compact ? 16 : 18
-    onHoveredChanged: if (hovered) root.showTooltipText(this, root.compact ? "Normal density" : "Compact density", root.accent)
-                    else root.hideTooltip(this)
-    onTriggered: root.compactToggleRequested()
+    height: Math.max(0, root.height - y - expandButton.height - settingsDivider.height - shellSettingsButton.height - settingsButton.height - root.spacing * 4)
   }
 
   MenuRailButton {
@@ -171,13 +151,13 @@ Column {
 
     shape: "settings"
     muted: root.muted
-    hoverAccent: root.shellAccent
+    hoverAccent: root.accent
     buttonSize: root.railWidth
     buttonRadius: root.designTokens.controlRadius
     hoverOpacity: root.designTokens.hoverOpacity
     pressOpacity: root.designTokens.activeOpacity
     iconSize: root.compact ? 20 : 22
-    onHoveredChanged: if (hovered) root.showTooltipText(this, "Omarchy Shell Settings", root.shellAccent)
+    onHoveredChanged: if (hovered) root.showTooltipText(this, "Omarchy Shell Settings", root.accent)
                     else root.hideTooltip(this)
     onTriggered: root.shellSettingsRequested()
   }

@@ -14,11 +14,12 @@ Item {
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.roleColor("menu", foreground)
   readonly property string tooltipText: String(setting("tooltip", "Lacuna"))
-  readonly property int topbarIconSize: barSize >= 32 ? 18 : 15
+  readonly property int topbarIconSize: (barSize >= 32 ? 18 : 15) + 2
   readonly property url iconSource: Qt.resolvedUrl("assets/tabler/circle-dotted-letter-l.svg")
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
+  readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {
     var value = settings ? settings[name] : undefined
