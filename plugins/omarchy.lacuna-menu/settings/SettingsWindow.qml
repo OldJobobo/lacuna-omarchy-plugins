@@ -84,10 +84,34 @@ Item {
     }
   }
 
+  function selectRow(icon, label, hint, currentValue, options, actionPrefix, tone, placeholder) {
+    var item = row(icon, label, hint, "", tone || "lacuna", "", "select", false, options, currentValue || "", actionPrefix || "")
+    item.placeholder = placeholder || "Select"
+    return item
+  }
+
   function commandRow(icon, label, hint, command, tone) {
     var item = row(icon, label, hint, "Open", tone || "shell", "", "button")
     item.command = command || ""
     return item
+  }
+
+  function backgroundEffectRows() {
+    var rows = [
+      section("Background Effects", "Wallpaper-layer animation effects controlled by Lacuna.", "lacuna"),
+      row("background", "Background Animations", root.registry.backgroundEffectsHint(), root.registry.backgroundEffectsEnabled() ? "On" : "Off", "lacuna", "toggle-background-effects", "toggle", root.registry.backgroundEffectsEnabled()),
+      selectRow("background", "Animation", "Choose one wallpaper-layer animation", root.registry.activeBackgroundEffect(), root.registry.backgroundEffectOptions(), "set-background-effect-", "lacuna", "Animation")
+    ]
+
+    if (root.registry.activeBackgroundEffect() === "cinematicLight") {
+      rows.push(selectRow("photo", "Light Style", root.registry.cinematicLightStyleHint(), root.registry.cinematicLightStylePreset(), root.registry.cinematicLightStyleOptions(), "set-cinematic-light-style-", "lacuna", "Style"))
+      rows.push(section("Light Motion", root.registry.cinematicLightMotionHint(), "lacuna"))
+      rows.push(row("motion", "Slow Drift", "Slow breathing and gentle left-right drift", root.registry.cinematicLightSlowDriftEnabled() ? "On" : "Off", "lacuna", "toggle-cinematic-light-motion-slowDrift", "toggle", root.registry.cinematicLightSlowDriftEnabled()))
+      rows.push(row("motion", "Occasional Sweeps", "Rare bright horizontal passes", root.registry.cinematicLightOccasionalSweepsEnabled() ? "On" : "Off", "lacuna", "toggle-cinematic-light-motion-occasionalSweeps", "toggle", root.registry.cinematicLightOccasionalSweepsEnabled()))
+      rows.push(row("motion", "Active Shimmer", "More frequent glints, pulse variation, and shimmer", root.registry.cinematicLightActiveShimmerEnabled() ? "On" : "Off", "lacuna", "toggle-cinematic-light-motion-activeShimmer", "toggle", root.registry.cinematicLightActiveShimmerEnabled()))
+    }
+
+    return rows
   }
 
   function colorProfileName() {
@@ -166,13 +190,12 @@ Item {
           { value: "fullframe", label: "On" }
         ], root.registry.frameMode, "set-frame-mode-"),
         row("photo", "Frame Shadow", root.registry.frameShadow ? "Apply one cohesive shadow pass to the frame layer" : "Keep frame pieces fill-only", root.registry.frameShadow ? "On" : "Off", "lacuna", "toggle-frame-shadow", "toggle", root.registry.frameShadow),
-        section("Background Effects", "Wallpaper-layer animation effects controlled by Lacuna.", "lacuna"),
-        row("background", root.registry.backgroundEffectName("trackingLines"), root.registry.backgroundEffectHint("trackingLines"), root.registry.backgroundEffectEnabled("trackingLines") ? "On" : "Off", "lacuna", "toggle-background-effect-trackingLines", "toggle", root.registry.backgroundEffectEnabled("trackingLines")),
+      ].concat(backgroundEffectRows()).concat([
         section("Omarchy", "Shortcuts for the host theme workflow.", "shell"),
         commandRow("palette", "Theme", "Switch Omarchy theme", root.registry.switchThemeCommand(), "shell"),
         commandRow("background", "Background", "Switch the active theme background", root.registry.switchBackgroundCommand(), "shell"),
         commandRow("photo", "Wallpaper Catalog", "Open wallpaper picker", "jobowalls-gui", "shell")
-      ]
+      ])
     }
 
     if (sectionId === "layout") {
@@ -386,7 +409,11 @@ Item {
               property var entry: modelData
 
               width: parent.width
-              sourceComponent: entry.kind === "section" ? sectionDelegate : rowDelegate
+              sourceComponent: entry.kind === "section"
+                ? sectionDelegate
+                : entry.control === "select"
+                  ? selectDelegate
+                  : rowDelegate
             }
           }
         }
@@ -431,6 +458,36 @@ Item {
             designTokens: root.designTokens
             onTriggered: root.handleEntry(parent.entry)
             onOptionSelected: function(value) {
+              root.activated({
+                kind: "item",
+                action: parent.entry.optionActionPrefix + value,
+                view: "",
+                command: ""
+              })
+            }
+          }
+        }
+
+        Component {
+          id: selectDelegate
+
+          SettingsSelectRow {
+            width: parent.width
+            icon: parent.entry.icon
+            label: parent.entry.label
+            hint: parent.entry.hint
+            currentValue: parent.entry.optionValue
+            placeholder: parent.entry.placeholder || "Select"
+            options: parent.entry.options
+            compact: root.compact
+            foreground: root.foreground
+            background: root.background
+            muted: root.muted
+            toneAccent: root.toneAccent(parent.entry.tone)
+            titleFontFamily: root.itemFontFamily
+            bodyFontFamily: root.bodyFontFamily
+            designTokens: root.designTokens
+            onSelected: function(value) {
               root.activated({
                 kind: "item",
                 action: parent.entry.optionActionPrefix + value,

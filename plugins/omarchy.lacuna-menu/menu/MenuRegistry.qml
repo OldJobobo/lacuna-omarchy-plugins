@@ -20,6 +20,7 @@ Item {
   property string colorProfile: "semantic"
   property string quickLaunchLayout: "list"
   property string dailyLaunchLayout: "list"
+  property string shortcutsLayout: "list"
   property string controlsLayout: "grid"
   property string shellSettingsSurface: "flyout"
   property bool instantRestart: false
@@ -173,23 +174,154 @@ Item {
     return !root.backgroundEffects || root.backgroundEffects.enabled !== false
   }
 
+  function backgroundEffectOptions() {
+    return [
+      { value: "trackingLines", label: "VHS" },
+      { value: "auroraDrift", label: "Aurora" },
+      { value: "rainfall", label: "Rain" },
+      { value: "cinematicLight", label: "Cinematic Light" }
+    ]
+  }
+
+  function activeBackgroundEffect() {
+    var effectId = root.backgroundEffects && root.backgroundEffects.activeEffect ? String(root.backgroundEffects.activeEffect) : "trackingLines"
+    if (effectId === "auroraDrift" || effectId === "rainfall" || effectId === "cinematicLight") return effectId
+    return "trackingLines"
+  }
+
   function backgroundEffectEnabled(effectId) {
     var effects = root.backgroundEffects && root.backgroundEffects.effects ? root.backgroundEffects.effects : ({})
     var effect = effects[String(effectId || "")]
-    if (!effect || typeof effect !== "object") return false
-    return backgroundEffectsEnabled() && effect.enabled !== false
+    if (effect && typeof effect === "object" && effect.enabled === false) return false
+    return backgroundEffectsEnabled() && activeBackgroundEffect() === String(effectId || "")
   }
 
   function backgroundEffectName(effectId) {
     if (effectId === "trackingLines") return "Tracking Lines"
+    if (effectId === "auroraDrift") return "Aurora Drift"
+    if (effectId === "rainfall") return "Rainfall"
+    if (effectId === "cinematicLight") return "Cinematic Light"
     return "Background Effect"
   }
 
   function backgroundEffectHint(effectId) {
     if (effectId === "trackingLines") {
-      return backgroundEffectEnabled(effectId) ? "Animated wallpaper tracking lines are visible" : "Animated wallpaper tracking lines are hidden"
+      return activeBackgroundEffect() === effectId ? "Selected VHS tracking animation" : "VHS tracking animation is available"
+    }
+    if (effectId === "auroraDrift") {
+      return activeBackgroundEffect() === effectId ? "Selected aurora ribbon animation" : "Aurora ribbon animation is available"
+    }
+    if (effectId === "rainfall") {
+      return activeBackgroundEffect() === effectId ? "Selected rain animation" : "Rain animation is available"
+    }
+    if (effectId === "cinematicLight") {
+      return activeBackgroundEffect() === effectId ? "Selected cinematic light animation" : "Cinematic light animation is available"
     }
     return backgroundEffectEnabled(effectId) ? "Effect is visible" : "Effect is hidden"
+  }
+
+  function backgroundEffectsHint() {
+    return backgroundEffectsEnabled() ? "Wallpaper-layer animation is visible" : "Wallpaper-layer animation is hidden"
+  }
+
+  function cinematicLightSettings() {
+    var defaults = {
+      stylePreset: "lightLeak",
+      slowDrift: true,
+      occasionalSweeps: false,
+      activeShimmer: false
+    }
+    var plugins = Array.isArray(root.shellPlugins) ? root.shellPlugins : []
+    for (var i = 0; i < plugins.length; i++) {
+      var entry = plugins[i]
+      if (!entry || String(entry.id || "") !== "omarchy.lacuna-cinematic-light-overlay") continue
+      var merged = {}
+      for (var key in defaults) merged[key] = defaults[key]
+      for (var entryKey in entry) {
+        if (entryKey !== "id") merged[entryKey] = entry[entryKey]
+      }
+      if (!cinematicLightEntryHasMotionToggles(entry) && entry.motionMode !== undefined) {
+        var legacyMode = cinematicLightNormalizeMotionMode(entry.motionMode)
+        merged.slowDrift = legacyMode === "slowDrift"
+        merged.occasionalSweeps = legacyMode === "occasionalSweeps"
+        merged.activeShimmer = legacyMode === "activeShimmer"
+      }
+      return merged
+    }
+    return defaults
+  }
+
+  function cinematicLightStyleOptions() {
+    return [
+      { value: "lightLeak", label: "Light Leak" },
+      { value: "cinematicFlare", label: "Cinematic Flare" },
+      { value: "anamorphicGlow", label: "Anamorphic Glow" }
+    ]
+  }
+
+  function cinematicLightStylePreset() {
+    var value = String(cinematicLightSettings().stylePreset || "")
+    if (value === "cinematicFlare" || value === "anamorphicGlow") return value
+    return "lightLeak"
+  }
+
+  function cinematicLightEntryHasMotionToggles(entry) {
+    return entry
+      && (entry.slowDrift !== undefined || entry.occasionalSweeps !== undefined || entry.activeShimmer !== undefined)
+  }
+
+  function cinematicLightNormalizeMotionMode(value) {
+    var mode = String(value || "")
+    if (mode === "occasionalSweeps" || mode === "activeShimmer") return mode
+    return "slowDrift"
+  }
+
+  function cinematicLightBool(value, fallbackValue) {
+    if (value === true || value === false) return value
+    var normalized = String(value || "").toLowerCase()
+    if (normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "on") return true
+    if (normalized === "false" || normalized === "0" || normalized === "no" || normalized === "off") return false
+    return fallbackValue
+  }
+
+  function cinematicLightMotionModes() {
+    var settings = cinematicLightSettings()
+    var modes = {
+      slowDrift: cinematicLightBool(settings.slowDrift, true),
+      occasionalSweeps: cinematicLightBool(settings.occasionalSweeps, false),
+      activeShimmer: cinematicLightBool(settings.activeShimmer, false)
+    }
+
+    if (!modes.slowDrift && !modes.occasionalSweeps && !modes.activeShimmer) modes.slowDrift = true
+    return modes
+  }
+
+  function cinematicLightSlowDriftEnabled() {
+    return cinematicLightMotionModes().slowDrift
+  }
+
+  function cinematicLightOccasionalSweepsEnabled() {
+    return cinematicLightMotionModes().occasionalSweeps
+  }
+
+  function cinematicLightActiveShimmerEnabled() {
+    return cinematicLightMotionModes().activeShimmer
+  }
+
+  function cinematicLightStyleHint() {
+    var value = cinematicLightStylePreset()
+    if (value === "cinematicFlare") return "Balanced movie lens flare with core, ghosts, and warm bloom"
+    if (value === "anamorphicGlow") return "Thin long horizontal streaks with stronger anamorphic contrast"
+    return "Soft edge bleeds and warm film leak glow"
+  }
+
+  function cinematicLightMotionHint() {
+    var modes = cinematicLightMotionModes()
+    var selected = []
+    if (modes.slowDrift) selected.push("slow drift")
+    if (modes.occasionalSweeps) selected.push("occasional sweeps")
+    if (modes.activeShimmer) selected.push("active shimmer")
+    return selected.length > 0 ? selected.join(" / ") : "slow drift"
   }
 
   function shellPluginEnabled(id) {
@@ -397,7 +529,7 @@ Item {
   }
 
   function dailyLaunchHeader() {
-    var header = entries.header("Daily Launch", "lacuna", "launch")
+    var header = entries.header("Daily Launch", "nav", "launch")
     header.optionValue = root.dailyLaunchLayout === "grid" ? "grid" : "list"
     header.optionActionPrefix = "set-daily-launch-layout-"
     header.options = layoutOptions()
@@ -408,6 +540,14 @@ Item {
     var header = entries.header("Controls", "session", "controls")
     header.optionValue = root.controlsLayout === "list" ? "list" : "grid"
     header.optionActionPrefix = "set-controls-layout-"
+    header.options = layoutOptions()
+    return header
+  }
+
+  function shortcutsHeader() {
+    var header = entries.header("Shortcuts", "nav", "shortcuts")
+    header.optionValue = root.shortcutsLayout === "grid" ? "grid" : "list"
+    header.optionActionPrefix = "set-shortcuts-layout-"
     header.options = layoutOptions()
     return header
   }
@@ -487,6 +627,24 @@ Item {
     return rows
   }
 
+  function shortcutEntries() {
+    return [
+      entries.nav({ icon: "apps", label: "Apps", hint: "Browse categorized launchers", view: "apps", tone: "nav", group: "apps" }),
+      entries.nav({ icon: "palette", label: "Customize", hint: "Theme, background, and Lacuna settings", view: "customize", tone: "shell", group: "customize" }),
+      entries.nav({ icon: "power", label: "System", hint: "Lock, logout, restart, shutdown", view: "system", tone: "session", group: "session" })
+    ]
+  }
+
+  function shortcutItems() {
+    var rows = [shortcutsHeader()]
+    var shortcuts = shortcutEntries()
+    if (root.shortcutsLayout === "grid") {
+      rows.push(entries.grid("nav", shortcuts))
+      return rows
+    }
+    return rows.concat(shortcuts)
+  }
+
   function customizeItems() {
     return [
       entries.header("Customize", "shell", "customize"),
@@ -520,12 +678,7 @@ Item {
   }
 
   function mainItems() {
-    var rows = quickLaunchItems().concat(dailyLaunchItems()).concat([
-      entries.header("Shortcuts", "nav", "shortcuts"),
-      entries.nav({ icon: "apps", label: "Apps", hint: "Browse categorized launchers", view: "apps", tone: "nav", group: "apps" }),
-      entries.nav({ icon: "palette", label: "Customize", hint: "Theme, background, and Lacuna settings", view: "customize", tone: "shell", group: "customize" }),
-      entries.nav({ icon: "power", label: "System", hint: "Lock, logout, restart, shutdown", view: "system", tone: "session", group: "session" })
-    ]).concat(controlsItems())
+    var rows = quickLaunchItems().concat(dailyLaunchItems()).concat(shortcutItems()).concat(controlsItems())
 
     return rows
   }

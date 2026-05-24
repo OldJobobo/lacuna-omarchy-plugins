@@ -41,12 +41,17 @@ Item {
     return "'" + String(value).replace(/'/g, "'\\''") + "'"
   }
 
+  function refreshThemeBackgroundCommand(themeVariable) {
+    var variable = String(themeVariable || "theme")
+    return "{ fixer=\"$HOME/.config/omarchy/plugins/omarchy.lacuna-theme-preloader/scripts/refresh-theme-background.sh\"; [ -x \"$fixer\" ] && \"$fixer\" \"$" + variable + "\" || true; }"
+  }
+
   function switchThemeCommand() {
-    return "theme=$(omarchy theme switcher); [ -n \"$theme\" ] && omarchy theme set \"$theme\""
+    return "theme=$(omarchy theme switcher); [ -n \"$theme\" ] && omarchy theme set \"$theme\" && " + refreshThemeBackgroundCommand("theme")
   }
 
   function randomThemeCommand() {
-    return "current=\"$(omarchy theme current)\"; next=\"$(omarchy theme list | grep -Fvx \"$current\" | shuf -n 1)\"; [ -n \"$next\" ] && omarchy theme set \"$next\""
+    return "current=\"$(omarchy theme current)\"; next=\"$(omarchy theme list | grep -Fvx \"$current\" | shuf -n 1)\"; [ -n \"$next\" ] && omarchy theme set \"$next\" && " + refreshThemeBackgroundCommand("next")
   }
 
   function clipped(value) {
@@ -208,7 +213,7 @@ Item {
         text: root.displayText
         color: root.moduleColor
         font.family: bar ? bar.fontFamily : "monospace"
-        font.pixelSize: 12
+        font.pixelSize: 14
         maximumLineCount: 1
         elide: Text.ElideRight
       }

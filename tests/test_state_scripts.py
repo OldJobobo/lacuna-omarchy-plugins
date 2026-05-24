@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "tests" / "fixtures" / "full-settings.json"
 BAR_SIZE_STATE = ROOT / "plugins" / "omarchy.lacuna-bar-size-pill" / "scripts" / "bar-size-state"
 COMPACT_STATE = ROOT / "plugins" / "omarchy.lacuna-compact-pill" / "scripts" / "compact-state"
+REFRESH_THEME_BACKGROUND = ROOT / "plugins" / "omarchy.lacuna-theme-preloader" / "scripts" / "refresh-theme-background.sh"
 
 PRESERVED_KEYS = [
     "customQuickLaunchApps",
@@ -70,6 +71,20 @@ def run_script(script, action, config_home, omarchy_path):
     )
 
 
+def run_shell_script(script, args, config_home, omarchy_path, extra_env=None):
+    env = env_for(config_home, omarchy_path)
+    if extra_env:
+        env.update(extra_env)
+    return subprocess.run(
+        [str(script)] + list(args),
+        check=True,
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
 def assert_preserved(testcase, before, after):
     for key in PRESERVED_KEYS:
         testcase.assertEqual(after[key], before[key], key)
@@ -118,3 +133,42 @@ class StateScriptTests(unittest.TestCase):
             self.assertIs(payload["compact"], True)
             self.assertEqual(after["barSizeMode"], "compact")
             assert_preserved(self, before, after)
+
+    def test_theme_background_refresh_relinks_reused_current_theme_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_home, omarchy_path, _settings_path, _before = seed_config(tmp_path)
+            theme_name = "fixture-theme"
+            current_background = config_home / "omarchy" / "current" / "theme" / "backgrounds" / "same-name.jpg"
+            source_background = config_home / "omarchy" / "themes" / theme_name / "backgrounds" / "same-name.jpg"
+            current_background.parent.mkdir(parents=True, exist_ok=True)
+            source_background.parent.mkdir(parents=True, exist_ok=True)
+            current_background.write_bytes(b"old-current-copy")
+            source_background.write_bytes(b"new-source-image")
+            background_link = config_home / "omarchy" / "current" / "background"
+            background_link.symlink_to(current_background)
+
+            fake_bin = tmp_path / "bin"
+            fake_bin.mkdir()
+            shell_log = tmp_path / "omarchy-shell.log"
+            fake_shell = fake_bin / "omarchy-shell"
+            fake_shell.write_text(
+                "#!/usr/bin/env bash\n"
+                "printf '%s\\n' \"$*\" >> \"$OMARCHY_SHELL_LOG\"\n",
+                encoding="utf-8",
+            )
+            fake_shell.chmod(0o755)
+
+            run_shell_script(
+                REFRESH_THEME_BACKGROUND,
+                [theme_name],
+                config_home,
+                omarchy_path,
+                {
+                    "PATH": str(fake_bin) + os.pathsep + os.environ.get("PATH", ""),
+                    "OMARCHY_SHELL_LOG": str(shell_log),
+                },
+            )
+
+            self.assertEqual(background_link.resolve(), source_background)
+            self.assertIn("background set " + str(source_background), shell_log.read_text(encoding="utf-8"))

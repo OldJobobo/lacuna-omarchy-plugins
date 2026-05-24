@@ -122,8 +122,13 @@ Item {
       return terminalCommand("omarchy debug idle; printf '\\nCommand exited. Press Enter to close...'; read -r _", "Omarchy Idle Debug", false)
     }
 
+    function refreshThemeBackgroundCommand(themeVariable) {
+      var variable = String(themeVariable || "theme")
+      return "{ fixer=\"$HOME/.config/omarchy/plugins/omarchy.lacuna-theme-preloader/scripts/refresh-theme-background.sh\"; [ -x \"$fixer\" ] && \"$fixer\" \"$" + variable + "\" || true; }"
+    }
+
     function switchThemeCommand() {
-      return "theme=$(omarchy theme switcher); [ -n \"$theme\" ] && omarchy theme set \"$theme\""
+      return "theme=$(omarchy theme switcher); [ -n \"$theme\" ] && omarchy theme set \"$theme\" && " + refreshThemeBackgroundCommand("theme")
     }
 
     function switchBackgroundCommand() {

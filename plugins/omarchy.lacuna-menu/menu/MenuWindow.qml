@@ -363,6 +363,12 @@ Item {
     lacunaSettings.save(next)
   }
 
+  function setShortcutsLayout(layout) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    next.shortcutsLayout = layout === "grid" ? "grid" : "list"
+    lacunaSettings.save(next)
+  }
+
   function setShellSettingsSurface(surface) {
     var next = lacunaSettings.normalize(lacunaSettings.data)
     if (!next.shellSettings || typeof next.shellSettings !== "object") next.shellSettings = {}
@@ -633,7 +639,14 @@ Item {
     lacunaSettings.save(next)
   }
 
-  function setBackgroundEffectEnabled(effectId, enabled) {
+  function setBackgroundEffectsEnabled(enabled) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    if (!next.backgroundEffects || typeof next.backgroundEffects !== "object") next.backgroundEffects = lacunaSettings.normalizeBackgroundEffects({})
+    next.backgroundEffects.enabled = enabled === true
+    lacunaSettings.save(next)
+  }
+
+  function setBackgroundEffect(effectId) {
     var id = String(effectId || "").trim()
     if (id === "") return
 
@@ -641,7 +654,11 @@ Item {
     if (!next.backgroundEffects || typeof next.backgroundEffects !== "object") next.backgroundEffects = lacunaSettings.normalizeBackgroundEffects({})
     if (!next.backgroundEffects.effects || typeof next.backgroundEffects.effects !== "object") next.backgroundEffects.effects = {}
     next.backgroundEffects.enabled = true
-    next.backgroundEffects.effects[id] = { enabled: enabled === true }
+    next.backgroundEffects.activeEffect = lacunaSettings.normalizeBackgroundEffectId(id, next.backgroundEffects.activeEffect)
+    next.backgroundEffects.effects.trackingLines = { enabled: true }
+    next.backgroundEffects.effects.auroraDrift = { enabled: true }
+    next.backgroundEffects.effects.rainfall = { enabled: true }
+    next.backgroundEffects.effects.cinematicLight = { enabled: true }
     lacunaSettings.save(next)
   }
 
@@ -728,6 +745,49 @@ Item {
     }
 
     commands.run("notify-send 'Lacuna' 'Clock settings require the Omarchy shell plugin registry'")
+  }
+
+  function setCinematicLightSetting(key, value) {
+    var next = registry.cinematicLightSettings()
+    var normalizedKey = String(key || "")
+    var normalizedValue = String(value || "")
+
+    if (normalizedKey !== "stylePreset") {
+      return
+    }
+
+    next.stylePreset = normalizedValue === "cinematicFlare" || normalizedValue === "anamorphicGlow" ? normalizedValue : "lightLeak"
+
+    if (shell && typeof shell.updateEntryInline === "function") {
+      shell.updateEntryInline("omarchy.lacuna-cinematic-light-overlay", next)
+      pluginStateRevision++
+      return
+    }
+
+    commands.run("notify-send 'Lacuna' 'Cinematic Light settings require the Omarchy shell plugin registry'")
+  }
+
+  function toggleCinematicLightMotion(mode) {
+    var normalizedMode = String(mode || "")
+    if (normalizedMode !== "slowDrift" && normalizedMode !== "occasionalSweeps" && normalizedMode !== "activeShimmer") return
+
+    var next = registry.cinematicLightSettings()
+    var modes = registry.cinematicLightMotionModes()
+    modes[normalizedMode] = !modes[normalizedMode]
+    if (!modes.slowDrift && !modes.occasionalSweeps && !modes.activeShimmer) modes[normalizedMode] = true
+
+    next.slowDrift = modes.slowDrift
+    next.occasionalSweeps = modes.occasionalSweeps
+    next.activeShimmer = modes.activeShimmer
+    delete next.motionMode
+
+    if (shell && typeof shell.updateEntryInline === "function") {
+      shell.updateEntryInline("omarchy.lacuna-cinematic-light-overlay", next)
+      pluginStateRevision++
+      return
+    }
+
+    commands.run("notify-send 'Lacuna' 'Cinematic Light settings require the Omarchy shell plugin registry'")
   }
 
   function setDesktopClockAnchorAxis(axis, value) {
@@ -828,6 +888,11 @@ Item {
       return true
     }
 
+    if (entry.action.indexOf("set-shortcuts-layout-") === 0) {
+      setShortcutsLayout(entry.action.substring("set-shortcuts-layout-".length))
+      return true
+    }
+
     if (entry.action.indexOf("set-shell-settings-surface-") === 0) {
       setShellSettingsSurface(entry.action.substring("set-shell-settings-surface-".length))
       return true
@@ -857,9 +922,23 @@ Item {
       return true
     }
 
-    if (entry.action.indexOf("toggle-background-effect-") === 0) {
-      var effectId = entry.action.substring("toggle-background-effect-".length)
-      setBackgroundEffectEnabled(effectId, !registry.backgroundEffectEnabled(effectId))
+    if (entry.action === "toggle-background-effects") {
+      setBackgroundEffectsEnabled(!registry.backgroundEffectsEnabled())
+      return true
+    }
+
+    if (entry.action.indexOf("set-background-effect-") === 0) {
+      setBackgroundEffect(entry.action.substring("set-background-effect-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-cinematic-light-style-") === 0) {
+      setCinematicLightSetting("stylePreset", entry.action.substring("set-cinematic-light-style-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("toggle-cinematic-light-motion-") === 0) {
+      toggleCinematicLightMotion(entry.action.substring("toggle-cinematic-light-motion-".length))
       return true
     }
 
@@ -1111,6 +1190,7 @@ Item {
     colorProfile: lacunaSettings.data && lacunaSettings.data.colorProfile ? lacunaSettings.data.colorProfile : "semantic"
     quickLaunchLayout: lacunaSettings.data && lacunaSettings.data.quickLaunchLayout ? lacunaSettings.data.quickLaunchLayout : "list"
     dailyLaunchLayout: lacunaSettings.data && lacunaSettings.data.dailyLaunchLayout ? lacunaSettings.data.dailyLaunchLayout : "list"
+    shortcutsLayout: lacunaSettings.data && lacunaSettings.data.shortcutsLayout ? lacunaSettings.data.shortcutsLayout : "list"
     controlsLayout: lacunaSettings.data && lacunaSettings.data.controlsLayout ? lacunaSettings.data.controlsLayout : "grid"
     shellSettingsSurface: root.shellSettingsSurface
     frameMode: root.frameMode

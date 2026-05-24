@@ -6,6 +6,7 @@
   "barSizeMode": "theme",
   "quickLaunchLayout": "list",
   "dailyLaunchLayout": "list",
+  "shortcutsLayout": "list",
   "controlsLayout": "grid",
   "customQuickLaunchApps": [],
   "preferredApps": {
@@ -28,8 +29,18 @@
   },
   "backgroundEffects": {
     "enabled": true,
+    "activeEffect": "trackingLines",
     "effects": {
       "trackingLines": {
+        "enabled": true
+      },
+      "auroraDrift": {
+        "enabled": true
+      },
+      "rainfall": {
+        "enabled": true
+      },
+      "cinematicLight": {
         "enabled": true
       }
     }

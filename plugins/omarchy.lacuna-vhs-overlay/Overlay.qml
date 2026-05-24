@@ -81,6 +81,10 @@ Item {
     var backgroundEffects = settings.backgroundEffects && typeof settings.backgroundEffects === "object" ? settings.backgroundEffects : null
     if (!backgroundEffects) return fallbackValue
     if (backgroundEffects.enabled === false) return false
+    if (backgroundEffects.activeEffect !== undefined || backgroundEffects.selectedEffect !== undefined || backgroundEffects.currentEffect !== undefined) {
+      var activeEffect = String(backgroundEffects.activeEffect || backgroundEffects.selectedEffect || backgroundEffects.currentEffect || "trackingLines")
+      return activeEffect === String(effectId || "")
+    }
 
     var effects = backgroundEffects.effects && typeof backgroundEffects.effects === "object" ? backgroundEffects.effects : {}
     var effect = effects[String(effectId || "")]

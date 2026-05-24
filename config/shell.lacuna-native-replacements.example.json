@@ -25,10 +25,10 @@
         },
         { "id": "omarchy.lacuna-weather" },
         { "id": "omarchy.lacuna-notifications" },
-        {
-          "id": "omarchy.lacuna-indicators",
-          "items": ["Dnd", "NightLight", "StayAwake", "ScreenRecording", "Dictation"]
-        }
+        { "id": "omarchy.lacuna-nightlight" },
+        { "id": "omarchy.lacuna-idle-inhibitor" },
+        { "id": "omarchy.lacuna-screen-recording" },
+        { "id": "omarchy.lacuna-voxtype" }
       ],
       "right": [
         { "id": "Tray" },
@@ -49,8 +49,15 @@
     { "id": "omarchy.lacuna-theme-preloader" },
     { "id": "omarchy.lacuna-desktop-clock" },
     { "id": "omarchy.lacuna-vhs-overlay" },
+    { "id": "omarchy.lacuna-aurora-drift" },
+    { "id": "omarchy.lacuna-rainfall-overlay" },
+    { "id": "omarchy.lacuna-cinematic-light-overlay" },
     { "id": "omarchy.lacuna-settings-persistence" },
     { "id": "omarchy.lacuna-state" },
-    { "id": "omarchy.lacuna-shell-settings" }
+    { "id": "omarchy.lacuna-shell-settings" },
+    { "id": "omarchy.lacuna-nightlight" },
+    { "id": "omarchy.lacuna-idle-inhibitor" },
+    { "id": "omarchy.lacuna-screen-recording" },
+    { "id": "omarchy.lacuna-voxtype" }
   ]
 }

@@ -20,6 +20,8 @@ Item {
   readonly property int topbarIconSize: barSize >= 32 ? 18 : 15
   readonly property string home: Quickshell.env("HOME")
   readonly property string weatherScript: home + "/.config/omarchy/bar/scripts/weather-temp"
+  readonly property string weatherIcon: leadingWeatherIcon(weatherText) || "󰖐"
+  readonly property string displayText: textWithoutLeadingWeatherIcon(weatherText)
 
   visible: weatherText.length > 0
   implicitWidth: visible ? button.implicitWidth : 0
@@ -33,6 +35,27 @@ Item {
 
   function refresh() {
     if (!weatherProc.running) weatherProc.running = true
+  }
+
+  function isWeatherIcon(value) {
+    return [
+      "", "", "", "", "", "", "", "", "", "",
+      "", "", "", "", "󰖐"
+    ].indexOf(String(value || "")) >= 0
+  }
+
+  function leadingWeatherIcon(raw) {
+    var trimmed = String(raw || "").trim()
+    if (trimmed.length === 0) return ""
+    var first = trimmed.split(/\s+/)[0]
+    return isWeatherIcon(first) ? first : ""
+  }
+
+  function textWithoutLeadingWeatherIcon(raw) {
+    var trimmed = String(raw || "").trim()
+    var icon = leadingWeatherIcon(trimmed)
+    if (icon === "") return trimmed
+    return trimmed.substring(icon.length).trim()
   }
 
   ColorProfile {
@@ -90,11 +113,11 @@ Item {
       id: content
       anchors.centerIn: parent
       rotation: root.vertical ? -90 : 0
-      spacing: root.showText ? 4 : 0
+      spacing: root.showText && root.displayText.length > 0 ? 4 : 0
 
       Text {
         anchors.verticalCenter: parent.verticalCenter
-        text: "󰖐"
+        text: root.weatherIcon
         color: root.moduleColor
         font.family: root.bar ? root.bar.fontFamily : "monospace"
         font.pixelSize: root.topbarIconSize
@@ -104,10 +127,10 @@ Item {
       Text {
         visible: root.showText
         anchors.verticalCenter: parent.verticalCenter
-        text: root.weatherText
+        text: root.displayText
         color: root.moduleColor
         font.family: root.bar ? root.bar.fontFamily : "monospace"
-        font.pixelSize: 12
+        font.pixelSize: 14
         maximumLineCount: 1
         renderType: Text.NativeRendering
       }

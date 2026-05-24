@@ -126,7 +126,7 @@ Item {
         text: root.temperatureF + " F"
         color: root.statusColor
         font.family: bar ? bar.fontFamily : "monospace"
-        font.pixelSize: 12
+        font.pixelSize: 14
         font.weight: root.status === "Hot" ? Font.DemiBold : Font.Normal
         maximumLineCount: 1
       }

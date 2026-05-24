@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "id": "omarchy.lacuna-rainfall-overlay",
+  "name": "Lacuna Rainfall Overlay",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Subtle bottom-layer rain streaks for animated wallpaper ambience.",
+  "kinds": ["overlay"],
+  "activation": "persistent",
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "Overlay.qml"
+  },
+  "defaults": {
+    "effectEnabled": true,
+    "intensity": 0.92,
+    "speed": 0.62,
+    "dropCount": 180,
+    "slant": 0.08,
+    "mistAmount": 0.42,
+    "splashAmount": 0.5,
+    "accentBlend": 0.42,
+    "vignette": true
+  },
+  "schema": [
+    {
+      "key": "effectEnabled",
+      "type": "boolean",
+      "label": "Effect enabled"
+    },
+    {
+      "key": "intensity",
+      "type": "number",
+      "label": "Intensity"
+    },
+    {
+      "key": "speed",
+      "type": "number",
+      "label": "Speed"
+    },
+    {
+      "key": "dropCount",
+      "type": "number",
+      "label": "Drop count"
+    },
+    {
+      "key": "slant",
+      "type": "number",
+      "label": "Rain slant"
+    },
+    {
+      "key": "mistAmount",
+      "type": "number",
+      "label": "Mist amount"
+    },
+    {
+      "key": "splashAmount",
+      "type": "number",
+      "label": "Splash amount"
+    },
+    {
+      "key": "accentBlend",
+      "type": "number",
+      "label": "Accent blend"
+    },
+    {
+      "key": "vignette",
+      "type": "boolean",
+      "label": "Vignette"
+    }
+  ]
+}

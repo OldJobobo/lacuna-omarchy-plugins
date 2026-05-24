@@ -213,7 +213,7 @@ Item {
         text: content.parent.label
         color: content.parent.accent
         font.family: content.parent.bar ? content.parent.bar.fontFamily : "monospace"
-        font.pixelSize: 12
+        font.pixelSize: 14
         maximumLineCount: 1
       }
     }

@@ -43,13 +43,27 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("next.customQuickLaunchNames = names", window)
         self.assertIn("onQuickLaunchRemoveRequested", window)
 
+    def test_app_picker_does_not_cap_search_results(self):
+        picker = read("plugins/omarchy.lacuna-menu/menu/FlyoutAppPickerContent.qml")
+        filtered = picker.split("function filteredApps()", 1)[1].split("return list", 1)[0]
+
+        self.assertNotIn("list.length >= 80", filtered)
+        self.assertNotIn("break", filtered)
+
     def test_quick_launch_add_action_lives_in_header_controls(self):
         registry = read("plugins/omarchy.lacuna-menu/menu/MenuRegistry.qml")
         content = read("plugins/omarchy.lacuna-menu/menu/MenuContent.qml")
         section = read("plugins/omarchy.lacuna-menu/menu/MenuSection.qml")
+        window = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
 
         self.assertIn('header.headerAction = "open-custom-quick-launch-picker"', registry)
         self.assertIn('header.headerActionIcon = "plus"', registry)
+        self.assertIn('var header = entries.header("Daily Launch", "nav", "launch")', registry)
+        self.assertIn('var header = entries.header("Shortcuts", "nav", "shortcuts")', registry)
+        self.assertIn('header.optionActionPrefix = "set-shortcuts-layout-"', registry)
+        self.assertIn('if (root.shortcutsLayout === "grid")', registry)
+        self.assertIn('entry.action.indexOf("set-shortcuts-layout-") === 0', window)
+        self.assertIn("function setShortcutsLayout", window)
         self.assertIn("var launchers = customQuickLaunchItems()", registry)
         self.assertNotIn('entries.action({ icon: "plus", label: "Add Quick Launch App"', registry)
         self.assertIn("onActionTriggered", content)
@@ -90,6 +104,52 @@ class QmlContractTests(unittest.TestCase):
         self.assertNotIn("Normal density", rail)
         self.assertNotIn("onCompactToggleRequested", window)
 
+    def test_idle_indicator_uses_stable_reveal_and_clear_icon(self):
+        combined = read("plugins/omarchy.lacuna-indicators/Widget.qml")
+        standalone = read("plugins/omarchy.lacuna-idle-inhibitor/Widget.qml")
+
+        self.assertIn('if (id === "StayAwake") return "Zz"', combined)
+        self.assertIn('text: "Zz"', standalone)
+        self.assertIn("opacity: root.stayAwake || mouseArea.containsMouse ? 1 : 0.55", standalone)
+        self.assertIn('font.bold: indicatorButton.indicatorId === "StayAwake"', combined)
+        self.assertIn("function hasConfiguredActiveIndicator", combined)
+        self.assertIn("function readableIndicatorColor(id, active)", combined)
+        self.assertIn("contrastDistance(candidate, background) >= 0.24", combined)
+        self.assertIn("opacity: indicatorButton.active || clickArea.containsMouse ? 1 : 0.72", combined)
+        self.assertIn("property int hoveredIndicators", combined)
+        self.assertIn('readonly property bool showInactive: boolSetting("showInactive", false)', combined)
+        self.assertIn("readonly property bool tooltipHovered: visible && opacity > 0 && hoveredIndicators > 0", combined)
+        self.assertIn("visible: active || root.showInactive", combined)
+        self.assertNotIn("revealInactive", combined)
+        self.assertNotIn("revealCollapseDelay", combined)
+        self.assertNotIn('text: "󰄲"', combined)
+        self.assertIn("visible: stayAwake || showInactive || mouseArea.containsMouse", standalone)
+
+    def test_grouped_indicators_match_standalone_controls(self):
+        combined = read("plugins/omarchy.lacuna-indicators/Widget.qml")
+        manifest = read_json("plugins/omarchy.lacuna-indicators/manifest.json")
+
+        self.assertFalse(manifest["barWidget"]["defaults"]["showInactive"])
+        self.assertIn("showInactive", [entry["key"] for entry in manifest["barWidget"]["schema"]])
+        self.assertIn("readonly property int pendingCount", combined)
+        self.assertIn('if (id === "Dnd") return dnd || pendingCount > 0', combined)
+        self.assertIn('pendingCount + " pending notification"', combined)
+        self.assertIn('bar.run("omarchy-shell notifications showHistory")', combined)
+        self.assertIn('bar.run("omarchy toggle notification silencing")', combined)
+        self.assertIn('else if (recording) bar.run("omarchy-capture-screenrecording --stop-recording")', combined)
+        self.assertIn("Qt.LeftButton | Qt.MiddleButton | Qt.RightButton", combined)
+        self.assertIn('indicatorButton.indicatorId === "Dnd" && root.pendingCount > 0 && !root.dnd', combined)
+
+    def test_indicator_status_roles_have_visible_palette_slots(self):
+        combined = read("plugins/omarchy.lacuna-indicators/Widget.qml")
+
+        self.assertIn('if (id === "Dnd") return "color13"', combined)
+        self.assertIn('if (id === "NightLight") return "color11"', combined)
+        self.assertIn('if (id === "StayAwake") return "color14"', combined)
+        self.assertIn('if (id === "ScreenRecording") return "color9"', combined)
+        self.assertIn('if (id === "Dictation") return "color6"', combined)
+        self.assertIn('return "foreground"', combined)
+
     def test_topbar_tooltip_targets_expose_hover_state(self):
         root_target_widgets = [
             "omarchy.lacuna-audio",
@@ -99,15 +159,19 @@ class QmlContractTests(unittest.TestCase):
             "omarchy.lacuna-claude-usage",
             "omarchy.lacuna-codex-usage",
             "omarchy.lacuna-compact-pill",
+            "omarchy.lacuna-idle-inhibitor",
             "omarchy.lacuna-indicators",
+            "omarchy.lacuna-nightlight",
             "omarchy.lacuna-menu-button",
             "omarchy.lacuna-network",
             "omarchy.lacuna-notifications",
             "omarchy.lacuna-power",
             "omarchy.lacuna-script-pill",
+            "omarchy.lacuna-screen-recording",
             "omarchy.lacuna-system-update",
             "omarchy.lacuna-temperature",
             "omarchy.lacuna-theme",
+            "omarchy.lacuna-voxtype",
             "omarchy.lacuna-wallpaper",
             "omarchy.lacuna-weather",
         ]
@@ -115,7 +179,10 @@ class QmlContractTests(unittest.TestCase):
         for plugin in root_target_widgets:
             qml = read(f"plugins/{plugin}/Widget.qml")
             self.assertIn("readonly property bool tooltipHovered", qml, plugin)
-            self.assertIn("mouseArea.containsMouse", qml, plugin)
+            if plugin == "omarchy.lacuna-indicators":
+                self.assertIn("hoveredIndicators > 0", qml, plugin)
+            else:
+                self.assertIn("mouseArea.containsMouse", qml, plugin)
 
         system_stats = read("plugins/omarchy.lacuna-system-stats/Widget.qml")
         self.assertIn("readonly property bool tooltipHovered", system_stats)
@@ -135,7 +202,10 @@ class QmlContractTests(unittest.TestCase):
             "omarchy.lacuna-clock": "Clock",
             "omarchy.lacuna-weather": "Weather",
             "omarchy.lacuna-notifications": "NotificationCenter",
-            "omarchy.lacuna-indicators": "Indicators",
+            "omarchy.lacuna-nightlight": "NightLight",
+            "omarchy.lacuna-idle-inhibitor": "idleInhibitor",
+            "omarchy.lacuna-screen-recording": "screenRecording",
+            "omarchy.lacuna-voxtype": "voxtype",
             "omarchy.lacuna-bluetooth": "BluetoothPanel",
             "omarchy.lacuna-network": "NetworkPanel",
             "omarchy.lacuna-audio": "AudioPanel",
@@ -169,6 +239,16 @@ class QmlContractTests(unittest.TestCase):
         self.assertNotIn('iconSource: Qt.resolvedUrl("assets/tabler/assembly-filled.svg")', qml)
         self.assertIn("icon-tabler-cpu", icon)
 
+    def test_weather_splits_leading_condition_icon_from_label(self):
+        qml = read("plugins/omarchy.lacuna-weather/Widget.qml")
+
+        self.assertIn("function leadingWeatherIcon(raw)", qml)
+        self.assertIn("function textWithoutLeadingWeatherIcon(raw)", qml)
+        self.assertIn('readonly property string weatherIcon: leadingWeatherIcon(weatherText) || "󰖐"', qml)
+        self.assertIn("text: root.weatherIcon", qml)
+        self.assertIn("text: root.displayText", qml)
+        self.assertNotIn("text: root.weatherText", qml)
+
     def test_wallpaper_commands_force_live_background_refresh(self):
         widget = read("plugins/omarchy.lacuna-wallpaper/Widget.qml")
         catalog = read("plugins/omarchy.lacuna-menu/menu/MenuCommandCatalog.qml")
@@ -180,6 +260,105 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("function applyCurrentBackgroundCommand()", qml)
             self.assertIn("readlink -f", qml)
             self.assertIn("background setInstant", qml)
+
+    def test_background_animations_use_single_selected_effect_contract(self):
+        manifest = read_json("plugins/omarchy.lacuna-aurora-drift/manifest.json")
+        qml = read("plugins/omarchy.lacuna-aurora-drift/Overlay.qml")
+        rain_manifest = read_json("plugins/omarchy.lacuna-rainfall-overlay/manifest.json")
+        rain = read("plugins/omarchy.lacuna-rainfall-overlay/Overlay.qml")
+        cinematic_manifest = read_json("plugins/omarchy.lacuna-cinematic-light-overlay/manifest.json")
+        cinematic = read("plugins/omarchy.lacuna-cinematic-light-overlay/Overlay.qml")
+        vhs = read("plugins/omarchy.lacuna-vhs-overlay/Overlay.qml")
+        settings = read("plugins/omarchy.lacuna-menu/services/LacunaSettings.qml")
+        state_service = read("plugins/omarchy.lacuna-state/Service.qml")
+        registry = read("plugins/omarchy.lacuna-menu/menu/MenuRegistry.qml")
+        settings_window = read("plugins/omarchy.lacuna-menu/settings/SettingsWindow.qml")
+        window = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
+        example = read_json("config/shell.lacuna-native-replacements.example.json")
+
+        self.assertEqual("omarchy.lacuna-aurora-drift", manifest["id"])
+        self.assertEqual(["overlay"], manifest["kinds"])
+        self.assertEqual("Overlay.qml", manifest["entryPoints"]["overlay"])
+        self.assertEqual("omarchy.lacuna-rainfall-overlay", rain_manifest["id"])
+        self.assertEqual(["overlay"], rain_manifest["kinds"])
+        self.assertEqual("Overlay.qml", rain_manifest["entryPoints"]["overlay"])
+        self.assertEqual("omarchy.lacuna-cinematic-light-overlay", cinematic_manifest["id"])
+        self.assertEqual(["overlay"], cinematic_manifest["kinds"])
+        self.assertEqual("persistent", cinematic_manifest["activation"])
+        self.assertIs(cinematic_manifest["keepLoaded"], True)
+        self.assertEqual("Overlay.qml", cinematic_manifest["entryPoints"]["overlay"])
+        self.assertEqual("lightLeak", cinematic_manifest["defaults"]["stylePreset"])
+        self.assertTrue(cinematic_manifest["defaults"]["slowDrift"])
+        self.assertFalse(cinematic_manifest["defaults"]["occasionalSweeps"])
+        self.assertFalse(cinematic_manifest["defaults"]["activeShimmer"])
+        self.assertIn("stylePreset", [entry["key"] for entry in cinematic_manifest["schema"]])
+        self.assertIn("slowDrift", [entry["key"] for entry in cinematic_manifest["schema"]])
+        self.assertIn("occasionalSweeps", [entry["key"] for entry in cinematic_manifest["schema"]])
+        self.assertIn("activeShimmer", [entry["key"] for entry in cinematic_manifest["schema"]])
+        self.assertIn('backgroundEffectEnabled("auroraDrift", true)', qml)
+        self.assertIn('backgroundEffectEnabled("rainfall", true)', rain)
+        self.assertIn('backgroundEffectEnabled("cinematicLight", true)', cinematic)
+        self.assertIn("backgroundEffects.activeEffect", qml)
+        self.assertIn("backgroundEffects.activeEffect", vhs)
+        self.assertIn("backgroundEffects.activeEffect", rain)
+        self.assertIn("backgroundEffects.activeEffect", cinematic)
+        self.assertIn('target: "lacuna-aurora-drift"', qml)
+        self.assertIn('WlrLayershell.namespace: "lacuna-aurora-drift"', qml)
+        self.assertIn('target: "lacuna-rainfall-overlay"', rain)
+        self.assertIn('WlrLayershell.namespace: "lacuna-rainfall-overlay"', rain)
+        self.assertIn('target: "lacuna-cinematic-light-overlay"', cinematic)
+        self.assertIn('WlrLayershell.namespace: "lacuna-cinematic-light-overlay"', cinematic)
+        self.assertIn("WlrLayershell.layer: WlrLayer.Bottom", qml)
+        self.assertIn("WlrLayershell.layer: WlrLayer.Bottom", rain)
+        self.assertIn("WlrLayershell.layer: WlrLayer.Bottom", cinematic)
+        self.assertIn("mask: Region {}", qml)
+        self.assertIn("mask: Region {}", rain)
+        self.assertIn("mask: Region {}", cinematic)
+        self.assertIn('readonly property string stylePreset: normalizeStylePreset(settingValue("stylePreset", "lightLeak"))', cinematic)
+        self.assertIn("readonly property bool slowDriftEnabled", cinematic)
+        self.assertIn("readonly property bool occasionalSweepsEnabled", cinematic)
+        self.assertIn("readonly property bool activeShimmerEnabled", cinematic)
+        self.assertIn('if (preset === "cinematicFlare" || preset === "anamorphicGlow") return preset', cinematic)
+        self.assertIn('if (mode === "occasionalSweeps" || mode === "activeShimmer") return mode', cinematic)
+        self.assertIn("motionModes: {", cinematic)
+        self.assertIn('activeEffect: "trackingLines"', settings)
+        self.assertIn('auroraDrift: {', settings)
+        self.assertIn('rainfall: {', settings)
+        self.assertIn('cinematicLight: {', settings)
+        self.assertIn('activeEffect: "trackingLines"', state_service)
+        self.assertIn('auroraDrift: {', state_service)
+        self.assertIn('rainfall: {', state_service)
+        self.assertIn('cinematicLight: {', state_service)
+        self.assertIn("function activeBackgroundEffect", registry)
+        self.assertIn("function backgroundEffectOptions", registry)
+        self.assertIn("function cinematicLightSettings", registry)
+        self.assertIn("function cinematicLightStyleOptions", registry)
+        self.assertIn("function cinematicLightMotionModes", registry)
+        self.assertIn("function cinematicLightSlowDriftEnabled", registry)
+        self.assertIn("function cinematicLightOccasionalSweepsEnabled", registry)
+        self.assertIn("function cinematicLightActiveShimmerEnabled", registry)
+        self.assertIn('if (effectId === "auroraDrift") return "Aurora Drift"', registry)
+        self.assertIn('if (effectId === "rainfall") return "Rainfall"', registry)
+        self.assertIn('if (effectId === "cinematicLight") return "Cinematic Light"', registry)
+        self.assertIn('"toggle-background-effects"', settings_window)
+        self.assertIn('"set-background-effect-"', settings_window)
+        self.assertIn('root.registry.activeBackgroundEffect() === "cinematicLight"', settings_window)
+        self.assertIn('"set-cinematic-light-style-"', settings_window)
+        self.assertIn('"toggle-cinematic-light-motion-slowDrift"', settings_window)
+        self.assertIn('"toggle-cinematic-light-motion-occasionalSweeps"', settings_window)
+        self.assertIn('"toggle-cinematic-light-motion-activeShimmer"', settings_window)
+        self.assertIn("SettingsSelectRow", settings_window)
+        self.assertIn("function setBackgroundEffectsEnabled", window)
+        self.assertIn("function setBackgroundEffect", window)
+        self.assertIn("function setCinematicLightSetting", window)
+        self.assertIn("function toggleCinematicLightMotion", window)
+        self.assertIn('shell.updateEntryInline("omarchy.lacuna-cinematic-light-overlay", next)', window)
+        self.assertIn('entry.action.indexOf("set-cinematic-light-style-") === 0', window)
+        self.assertIn('entry.action.indexOf("toggle-cinematic-light-motion-") === 0', window)
+        self.assertNotIn('"toggle-background-effect-auroraDrift"', settings_window)
+        self.assertIn("omarchy.lacuna-aurora-drift", [entry["id"] for entry in example["plugins"]])
+        self.assertIn("omarchy.lacuna-rainfall-overlay", [entry["id"] for entry in example["plugins"]])
+        self.assertIn("omarchy.lacuna-cinematic-light-overlay", [entry["id"] for entry in example["plugins"]])
 
     def test_workspace_lacuna_selected_state_has_no_fill_or_underline(self):
         qml = read("plugins/omarchy.lacuna-workspaces/components/LacunaWorkspaceButton.qml")
@@ -324,15 +503,19 @@ class QmlContractTests(unittest.TestCase):
             "omarchy.lacuna-claude-usage",
             "omarchy.lacuna-codex-usage",
             "omarchy.lacuna-compact-pill",
+            "omarchy.lacuna-idle-inhibitor",
             "omarchy.lacuna-indicators",
+            "omarchy.lacuna-nightlight",
             "omarchy.lacuna-menu-button",
             "omarchy.lacuna-network",
             "omarchy.lacuna-notifications",
             "omarchy.lacuna-power",
             "omarchy.lacuna-script-pill",
+            "omarchy.lacuna-screen-recording",
             "omarchy.lacuna-system-stats",
             "omarchy.lacuna-system-update",
             "omarchy.lacuna-temperature",
+            "omarchy.lacuna-voxtype",
             "omarchy.lacuna-weather",
         ]
         simple_motion_plugins = simple_color_plugins + [

@@ -4,6 +4,10 @@
   "colorProfile": "semantic",
   "compact": false,
   "barSizeMode": "theme",
+  "quickLaunchLayout": "grid",
+  "dailyLaunchLayout": "list",
+  "shortcutsLayout": "grid",
+  "controlsLayout": "grid",
   "barSizeSnapshot": {
     "themeName": "fixture-theme",
     "sizeHorizontal": 30,
@@ -40,6 +44,24 @@
     "collapsed": true,
     "exclusive": false,
     "cornerPieces": false
+  },
+  "backgroundEffects": {
+    "enabled": true,
+    "activeEffect": "auroraDrift",
+    "effects": {
+      "trackingLines": {
+        "enabled": true
+      },
+      "auroraDrift": {
+        "enabled": true
+      },
+      "rainfall": {
+        "enabled": true
+      },
+      "cinematicLight": {
+        "enabled": true
+      }
+    }
   },
   "frame": {
     "mode": "fullframe",

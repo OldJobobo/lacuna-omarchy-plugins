@@ -171,7 +171,7 @@ Item {
         text: root.displayText
         color: root.activeColor
         font.family: bar ? bar.fontFamily : "monospace"
-        font.pixelSize: 12
+        font.pixelSize: 14
         font.weight: root.activeState ? Font.DemiBold : Font.Normal
         maximumLineCount: 1
         elide: Text.ElideRight

@@ -157,7 +157,7 @@ Item {
         text: root.displayText
         color: root.moduleColor
         font.family: bar ? bar.fontFamily : "monospace"
-        font.pixelSize: 12
+        font.pixelSize: 14
         font.weight: Font.Normal
         font.underline: false
         maximumLineCount: 1

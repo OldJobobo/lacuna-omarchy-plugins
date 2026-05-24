@@ -23,6 +23,7 @@ Item {
       barSizeMode: "full",
       quickLaunchLayout: "list",
       dailyLaunchLayout: "list",
+      shortcutsLayout: "list",
       controlsLayout: "grid",
       barSizeSnapshot: null,
       sizeTransition: {
@@ -51,8 +52,18 @@ Item {
       },
       backgroundEffects: {
         enabled: true,
+        activeEffect: "trackingLines",
         effects: {
           trackingLines: {
+            enabled: true
+          },
+          auroraDrift: {
+            enabled: true
+          },
+          rainfall: {
+            enabled: true
+          },
+          cinematicLight: {
             enabled: true
           }
         }
@@ -77,6 +88,7 @@ Item {
       next.colorProfile = String(value.colorProfile || "").toLowerCase() === "colorful" ? "colorful" : "semantic"
       next.quickLaunchLayout = normalizeLayoutMode(value.quickLaunchLayout || value.quickLaunchView, "list")
       next.dailyLaunchLayout = normalizeLayoutMode(value.dailyLaunchLayout || value.launchLayout || value.dailyLaunchView, "list")
+      next.shortcutsLayout = normalizeLayoutMode(value.shortcutsLayout || value.shortcutLayout || value.shortcutsView, "list")
       next.controlsLayout = normalizeControlsLayout(value.controlsLayout || value.controlLayout || value.controlsView)
       next.barSizeMode = normalizeBarSizeMode(value.barSizeMode, value.compact === true)
       next.compact = next.barSizeMode === "compact"
@@ -129,6 +141,7 @@ Item {
     var defaults = defaultData().backgroundEffects
     var next = {
       enabled: true,
+      activeEffect: defaults.activeEffect,
       effects: {}
     }
 
@@ -138,6 +151,7 @@ Item {
 
     if (value && typeof value === "object") {
       next.enabled = value.enabled !== false
+      next.activeEffect = normalizeBackgroundEffectId(value.activeEffect || value.selectedEffect || value.currentEffect, defaults.activeEffect)
 
       var sourceEffects = value.effects && typeof value.effects === "object" ? value.effects : {}
       for (var effectId in sourceEffects) {
@@ -151,7 +165,17 @@ Item {
     }
 
     if (!next.effects.trackingLines) next.effects.trackingLines = { enabled: true }
+    if (!next.effects.auroraDrift) next.effects.auroraDrift = { enabled: true }
+    if (!next.effects.rainfall) next.effects.rainfall = { enabled: true }
+    if (!next.effects.cinematicLight) next.effects.cinematicLight = { enabled: true }
     return next
+  }
+
+  function normalizeBackgroundEffectId(value, fallback) {
+    var id = String(value || "").trim()
+    if (id === "trackingLines" || id === "auroraDrift" || id === "rainfall" || id === "cinematicLight") return id
+    if (fallback === "auroraDrift" || fallback === "rainfall" || fallback === "cinematicLight") return fallback
+    return "trackingLines"
   }
 
   function boundedInt(value, fallback, minimum, maximum) {

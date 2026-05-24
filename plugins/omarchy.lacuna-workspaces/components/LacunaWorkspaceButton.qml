@@ -24,7 +24,7 @@ Item {
   property int barSize: 26
   property int minButtonWidth: Math.max(24, barSize)
   property int contentHorizontalPadding: barSize <= 26 ? 8 : 16
-  property int labelPixelSize: barSize <= 26 ? 11 : 12
+  property int labelPixelSize: barSize <= 26 ? 13 : 14
   property string fontFamily: "BlexMono Nerd Font Propo"
   property int labelFontWeight: active ? Font.DemiBold : Font.Normal
   property real hoverPulseAmount: 0
@@ -170,7 +170,7 @@ Item {
     color: root.baseTextColor()
     opacity: root.labelOpacity
     font.family: root.fontFamily
-    font.pixelSize: root.omarchyStyle ? 12 : root.materialStyle ? root.labelPixelSize : root.labelPixelSize
+    font.pixelSize: root.omarchyStyle ? 14 : root.materialStyle ? root.labelPixelSize : root.labelPixelSize
     font.weight: root.materialStyle && root.active ? Font.DemiBold : root.labelFontWeight
     scale: root.labelAnimatedScale
     transformOrigin: Item.Center

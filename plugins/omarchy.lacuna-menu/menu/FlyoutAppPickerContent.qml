@@ -58,7 +58,6 @@ Column {
       var app = apps[i]
       var haystack = String((app.Name || "") + " " + (app.GenericName || "") + " " + (app.Comment || "") + " " + (app.Categories || "")).toLowerCase()
       if (needle === "" || haystack.indexOf(needle) >= 0) list.push(app)
-      if (list.length >= 80) break
     }
 
     return list

@@ -24,7 +24,7 @@ Item {
   property int barSize: 26
   property int minButtonWidth: Math.max(32, barSize)
   property int contentHorizontalPadding: compact ? 8 : 16
-  property int labelPixelSize: compact ? 11 : 12
+  property int labelPixelSize: compact ? 13 : 14
   property int iconSize: barSize >= 32 ? 18 : compact ? 12 : 13
   property string fontFamily: "JetBrains Mono"
   property int labelFontWeight: active ? Font.DemiBold : Font.Normal

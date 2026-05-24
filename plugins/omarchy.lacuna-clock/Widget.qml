@@ -86,7 +86,7 @@ Item {
       text: root.displayText
       color: root.moduleColor
       font.family: root.bar ? root.bar.fontFamily : "monospace"
-      font.pixelSize: 12
+      font.pixelSize: 14
       maximumLineCount: 1
       renderType: Text.NativeRendering
     }

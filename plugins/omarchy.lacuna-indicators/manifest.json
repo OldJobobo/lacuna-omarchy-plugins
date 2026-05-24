@@ -16,10 +16,12 @@
     "category": "Lacuna",
     "allowMultiple": false,
     "defaults": {
-      "items": ["Dnd", "NightLight", "StayAwake", "ScreenRecording", "Dictation"]
+      "items": ["Dnd", "NightLight", "StayAwake", "ScreenRecording", "Dictation"],
+      "showInactive": false
     },
     "schema": [
       { "key": "items", "type": "multiselect", "label": "Indicators", "options": ["Dnd", "NightLight", "StayAwake", "ScreenRecording", "Dictation"], "noSelectionText": "None selected" },
+      { "key": "showInactive", "type": "boolean", "label": "Show inactive indicators" },
       { "key": "colorProfile", "type": "enum", "label": "Color profile", "options": ["semantic", "colorful"], "description": "Override the global Lacuna color profile for this widget." }
     ]
   }
