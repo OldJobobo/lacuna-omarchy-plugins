@@ -70,6 +70,21 @@ Item {
     }
 
     function shellPluginEnabled(id) {
+      if (pluginRegistry && typeof pluginRegistry.isEnabled === "function") {
+        return pluginRegistry.isEnabled(id)
+      }
+
+      var config = root.shellConfig
+      var bar = config && config.bar ? config.bar : null
+      var layout = bar && bar.layout ? bar.layout : null
+      var sections = ["left", "center", "right"]
+      for (var s = 0; s < sections.length; s++) {
+        var list = layout && Array.isArray(layout[sections[s]]) ? layout[sections[s]] : []
+        for (var j = 0; j < list.length; j++) {
+          if (list[j] && String(list[j].id || "") === String(id || "")) return true
+        }
+      }
+
       var plugins = Array.isArray(shellPlugins) ? shellPlugins : []
       for (var i = 0; i < plugins.length; i++) {
         if (plugins[i] && String(plugins[i].id || "") === String(id || "")) return true

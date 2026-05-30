@@ -65,9 +65,9 @@ Item {
   property int bodyRightInset: effectiveCornerPieces ? joinRadius : 0
   property int surfaceRightInset: bodyRightInset
   property int settingsConnectorWidth: effectiveCornerPieces ? joinRadius : 0
-  property int barEdgeCasterSize: 3
+  property int barEdgeCasterSize: frameThickness
   property int frameReservePadding: 4
-  property int sidebarReserveExtra: 6
+  property int sidebarReserveExtra: 2
   property int flyoutLaneWidth: lacunaEnabled && panelController.menuRenderable ? maxFlyoutLaneWidth : 0
   // In exclusive mode the compositor already places this window below the top
   // bar, so the bar edge is local y=0. In overlay mode the window starts at
@@ -113,8 +113,8 @@ Item {
   readonly property int frameReserveTop: frameReserveActive && frameMode === "fullframe" && !root.topBar ? frameThickness + reservePadding : 0
   readonly property int frameReserveBottom: frameReserveActive && frameMode === "fullframe" && !root.bottomBar ? frameThickness + reservePadding : 0
   readonly property int frameReserveLeft: frameReserveActive && frameMode === "fullframe" && !root.leftBar && (root.panelOnRight || !root.sidebarSurfaceVisible) ? frameThickness + reservePadding : 0
-  readonly property int frameReserveRight: frameReserveActive && frameMode === "fullframe" && !root.panelOnRight && !root.rightBar ? frameThickness + frameShadowRightReserve + reservePadding : 0
-  readonly property int topBarShadowReserve: frameReserveActive && root.frameShadow && root.topBar ? root.barEdgeCasterSize + reservePadding : 0
+  readonly property int frameReserveRight: frameReserveActive && frameMode === "fullframe" && !root.panelOnRight && !root.rightBar ? frameThickness + reservePadding : 0
+  readonly property int topBarShadowReserve: frameReserveActive && root.topBar ? reservePadding : 0
   readonly property real frameOverlayProgress: !lacunaEnabled ? 0 : frameMode === "fullframe" ? 1 : panelController.menuProgress
   property string pendingFlyoutFocus: ""
   property bool pendingSystemRestartConfirmation: false
@@ -138,6 +138,7 @@ Item {
   readonly property real desktopClockScale: numberSetting(desktopClockSettings.scale, 1)
   readonly property bool desktopClockUse12Hour: boolSetting(desktopClockSettings.use12Hour, false)
   readonly property var backgroundEffectsSettings: lacunaSettings.data && lacunaSettings.data.backgroundEffects ? lacunaSettings.data.backgroundEffects : ({})
+  readonly property var backgroundVignetteSettings: lacunaSettings.data && lacunaSettings.data.backgroundVignette ? lacunaSettings.data.backgroundVignette : ({})
   readonly property var shellSettingsSettings: lacunaSettings.data && lacunaSettings.data.shellSettings ? lacunaSettings.data.shellSettings : ({})
   readonly property string shellSettingsSurface: validShellSettingsSurface(shellSettingsSettings.surface)
   readonly property var shellSettingsService: resolveShellSettingsService()
@@ -587,7 +588,21 @@ Item {
 
   function shellPluginEnabled(id) {
     var revision = pluginStateRevision
+    if (pluginRegistry && typeof pluginRegistry.isEnabled === "function") {
+      return pluginRegistry.isEnabled(id)
+    }
+
     var config = root.shellConfig
+    var bar = config && config.bar ? config.bar : null
+    var layout = bar && bar.layout ? bar.layout : null
+    var sections = ["left", "center", "right"]
+    for (var s = 0; s < sections.length; s++) {
+      var list = layout && Array.isArray(layout[sections[s]]) ? layout[sections[s]] : []
+      for (var j = 0; j < list.length; j++) {
+        if (list[j] && list[j].id === id) return true
+      }
+    }
+
     var plugins = config && Array.isArray(config.plugins) ? config.plugins : []
     for (var i = 0; i < plugins.length; i++) {
       if (plugins[i] && plugins[i].id === id) return true
@@ -646,6 +661,21 @@ Item {
     lacunaSettings.save(next)
   }
 
+  function setBackgroundVignetteEnabled(enabled) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    if (!next.backgroundVignette || typeof next.backgroundVignette !== "object") next.backgroundVignette = lacunaSettings.normalizeBackgroundVignette({})
+    next.backgroundVignette.enabled = enabled === true
+    lacunaSettings.save(next)
+
+    if (enabled === true && !shellPluginEnabled("omarchy.lacuna-background-vignette")) {
+      setShellPluginEnabled("omarchy.lacuna-background-vignette", true)
+    }
+  }
+
+  function desiredChecked(entry, fallback) {
+    return entry && entry.desiredChecked !== undefined ? entry.desiredChecked === true : fallback
+  }
+
   function setBackgroundEffect(effectId) {
     var id = String(effectId || "").trim()
     if (id === "") return
@@ -659,13 +689,48 @@ Item {
     next.backgroundEffects.effects.auroraDrift = { enabled: true }
     next.backgroundEffects.effects.rainfall = { enabled: true }
     next.backgroundEffects.effects.cinematicLight = { enabled: true }
+    next.backgroundEffects.effects.crt = { enabled: true }
+    lacunaSettings.save(next)
+
+    var pluginId = registry.backgroundEffectPluginId(next.backgroundEffects.activeEffect)
+    if (pluginId !== "" && !shellPluginEnabled(pluginId)) {
+      setShellPluginEnabled(pluginId, true)
+    }
+  }
+
+  function setBackgroundEffectForeground(effectId, enabled) {
+    var id = registry.activeBackgroundEffect() === effectId ? effectId : registry.activeBackgroundEffect()
+    var pluginId = registry.backgroundEffectPluginId(id)
+    if (pluginId === "") return
+
+    if (!shellPluginEnabled(pluginId)) {
+      setShellPluginEnabled(pluginId, true)
+    }
+
+    var next = registry.backgroundEffectLayerSettings(id)
+    next.foregroundOverlay = enabled === true
+
+    if (shell && typeof shell.updateEntryInline === "function") {
+      shell.updateEntryInline(pluginId, next)
+      pluginStateRevision++
+      return
+    }
+
+    commands.run("notify-send 'Lacuna' 'Background overlay settings require the Omarchy shell plugin registry'")
+  }
+
+  function toggleBackgroundEffectForeground(effectId) {
+    setBackgroundEffectForeground(effectId, !registry.backgroundEffectForegroundEnabled(effectId))
+  }
+
+  function setFrameShadow(enabled) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    next.frame.shadow = enabled === true
     lacunaSettings.save(next)
   }
 
   function toggleFrameShadow() {
-    var next = lacunaSettings.normalize(lacunaSettings.data)
-    next.frame.shadow = !next.frame.shadow
-    lacunaSettings.save(next)
+    setFrameShadow(!lacunaSettings.normalize(lacunaSettings.data).frame.shadow)
   }
 
   function setSidebarDefaultMode(mode) {
@@ -752,11 +817,16 @@ Item {
     var normalizedKey = String(key || "")
     var normalizedValue = String(value || "")
 
-    if (normalizedKey !== "stylePreset") {
+    if (normalizedKey !== "stylePreset" && normalizedKey !== "intensity") {
       return
     }
 
-    next.stylePreset = normalizedValue === "cinematicFlare" || normalizedValue === "anamorphicGlow" ? normalizedValue : "lightLeak"
+    if (normalizedKey === "stylePreset") {
+      next.stylePreset = normalizedValue === "cinematicFlare" || normalizedValue === "anamorphicGlow" ? normalizedValue : "lightLeak"
+    } else {
+      var intensity = Number(normalizedValue)
+      next.intensity = isNaN(intensity) ? 1 : Math.max(0, Math.min(1, intensity))
+    }
 
     if (shell && typeof shell.updateEntryInline === "function") {
       shell.updateEntryInline("omarchy.lacuna-cinematic-light-overlay", next)
@@ -767,13 +837,13 @@ Item {
     commands.run("notify-send 'Lacuna' 'Cinematic Light settings require the Omarchy shell plugin registry'")
   }
 
-  function toggleCinematicLightMotion(mode) {
+  function setCinematicLightMotion(mode, enabled) {
     var normalizedMode = String(mode || "")
     if (normalizedMode !== "slowDrift" && normalizedMode !== "occasionalSweeps" && normalizedMode !== "activeShimmer") return
 
     var next = registry.cinematicLightSettings()
     var modes = registry.cinematicLightMotionModes()
-    modes[normalizedMode] = !modes[normalizedMode]
+    modes[normalizedMode] = enabled === true
     if (!modes.slowDrift && !modes.occasionalSweeps && !modes.activeShimmer) modes[normalizedMode] = true
 
     next.slowDrift = modes.slowDrift
@@ -788,6 +858,11 @@ Item {
     }
 
     commands.run("notify-send 'Lacuna' 'Cinematic Light settings require the Omarchy shell plugin registry'")
+  }
+
+  function toggleCinematicLightMotion(mode) {
+    var modes = registry.cinematicLightMotionModes()
+    setCinematicLightMotion(mode, !modes[String(mode || "")])
   }
 
   function setDesktopClockAnchorAxis(axis, value) {
@@ -849,7 +924,7 @@ Item {
 
   function handleSidebarAction(entry) {
     if (entry.action === "toggle-sidebar-mode") {
-      sidebarState.toggle()
+      sidebarState.setExclusive(desiredChecked(entry, !sidebarState.exclusive))
       return true
     }
 
@@ -864,7 +939,7 @@ Item {
     }
 
     if (entry.action === "toggle-corner-pieces") {
-      sidebarState.toggleCornerPieces()
+      sidebarState.setCornerPiecesEnabled(desiredChecked(entry, !sidebarState.cornerPieces))
       return true
     }
 
@@ -918,12 +993,17 @@ Item {
     }
 
     if (entry.action === "toggle-frame-shadow") {
-      toggleFrameShadow()
+      setFrameShadow(desiredChecked(entry, !lacunaSettings.normalize(lacunaSettings.data).frame.shadow))
       return true
     }
 
     if (entry.action === "toggle-background-effects") {
-      setBackgroundEffectsEnabled(!registry.backgroundEffectsEnabled())
+      setBackgroundEffectsEnabled(desiredChecked(entry, !registry.backgroundEffectsEnabled()))
+      return true
+    }
+
+    if (entry.action === "toggle-background-vignette") {
+      setBackgroundVignetteEnabled(desiredChecked(entry, !registry.backgroundVignetteEnabled()))
       return true
     }
 
@@ -932,13 +1012,25 @@ Item {
       return true
     }
 
+    if (entry.action.indexOf("toggle-background-effect-foreground-") === 0) {
+      var foregroundEffect = entry.action.substring("toggle-background-effect-foreground-".length)
+      setBackgroundEffectForeground(foregroundEffect, desiredChecked(entry, !registry.backgroundEffectForegroundEnabled(foregroundEffect)))
+      return true
+    }
+
     if (entry.action.indexOf("set-cinematic-light-style-") === 0) {
       setCinematicLightSetting("stylePreset", entry.action.substring("set-cinematic-light-style-".length))
       return true
     }
 
+    if (entry.action.indexOf("set-cinematic-light-intensity-") === 0) {
+      setCinematicLightSetting("intensity", entry.action.substring("set-cinematic-light-intensity-".length))
+      return true
+    }
+
     if (entry.action.indexOf("toggle-cinematic-light-motion-") === 0) {
-      toggleCinematicLightMotion(entry.action.substring("toggle-cinematic-light-motion-".length))
+      var motionMode = entry.action.substring("toggle-cinematic-light-motion-".length)
+      setCinematicLightMotion(motionMode, desiredChecked(entry, !registry.cinematicLightMotionModes()[motionMode]))
       return true
     }
 
@@ -949,25 +1041,25 @@ Item {
 
     if (entry.action === "toggle-color-profile") {
       var next = lacunaSettings.normalize(lacunaSettings.data)
-      next.colorProfile = next.colorProfile === "colorful" ? "semantic" : "colorful"
+      next.colorProfile = desiredChecked(entry, next.colorProfile !== "colorful") ? "colorful" : "semantic"
       lacunaSettings.save(next)
       return true
     }
 
     if (entry.action === "toggle-instant-restart") {
       var nextPowerSettings = lacunaSettings.normalize(lacunaSettings.data)
-      nextPowerSettings.power.instantRestart = !root.instantRestart
+      nextPowerSettings.power.instantRestart = desiredChecked(entry, !root.instantRestart)
       lacunaSettings.save(nextPowerSettings)
       return true
     }
 
     if (entry.action === "toggle-desktop-clock") {
-      setShellPluginEnabled("omarchy.lacuna-desktop-clock", !desktopClockEnabled)
+      setShellPluginEnabled("omarchy.lacuna-desktop-clock", desiredChecked(entry, !desktopClockEnabled))
       return true
     }
 
     if (entry.action === "toggle-clock-12-hour") {
-      setDesktopClockSettings({ use12Hour: !root.desktopClockUse12Hour })
+      setDesktopClockSettings({ use12Hour: desiredChecked(entry, !root.desktopClockUse12Hour) })
       return true
     }
 
@@ -1196,6 +1288,7 @@ Item {
     frameMode: root.frameMode
     frameShadow: root.frameShadow
     backgroundEffects: root.backgroundEffectsSettings
+    backgroundVignette: root.backgroundVignetteSettings
     instantRestart: root.instantRestart
     shellBarConfig: root.shellBarConfig
     shellBarPosition: root.barPosition
@@ -1296,6 +1389,7 @@ Item {
       barPosition: root.barPosition
       barSize: root.barControlSize
       barBottomY: root.barBottomY
+      barEdgeCasterSize: root.barEdgeCasterSize
       frameWidth: root.sidebarScreen ? root.sidebarScreen.width : menuWindow.width
       frameThickness: root.frameThickness
       frameRadius: root.frameRadius

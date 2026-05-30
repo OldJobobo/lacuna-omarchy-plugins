@@ -58,7 +58,7 @@ Item {
   readonly property real curveKappa: 0.5522847498
   readonly property real cornerSize: Math.max(t, joinRadius)
   readonly property real shadowExtent: Math.max(14, shadowBlurMax + Math.max(Math.abs(shadowOffsetX), Math.abs(shadowOffsetY)))
-  readonly property real barEdgeCasterSize: 7
+  property real barEdgeCasterSize: frameThickness
   readonly property real barEdgeCasterOverrun: 100
   readonly property real barEdgeShadowOpacity: Math.min(1, shadowOpacity * 1.35)
   readonly property real sidebarJoinTop: Math.max(-sidebarCornerWidth, barBottomY - 1)

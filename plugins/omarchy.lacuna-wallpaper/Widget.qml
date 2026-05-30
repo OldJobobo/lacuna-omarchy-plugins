@@ -16,8 +16,9 @@ Item {
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.roleColor("wallpaper", foreground)
+  readonly property bool widgetEnabled: boolSetting("enabled", true)
   readonly property int maxTextLength: Math.max(4, Number(setting("maxTextLength", 18)))
-  readonly property bool showIcon: setting("showIcon", true) === true
+  readonly property bool showIcon: boolSetting("showIcon", true)
   readonly property int topbarIconSize: barSize >= 32 ? 18 : 14
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
   readonly property string backgroundLink: configHome + "/omarchy/current/background"
@@ -30,7 +31,8 @@ Item {
       + "<br/><br/>Left click: picker<br/>Right click: next"
     : "<b>No Wallpaper</b><br/>No active Omarchy background symlink was found."
 
-  visible: displayText.length > 0
+  enabled: widgetEnabled
+  visible: widgetEnabled && displayText.length > 0
   implicitWidth: visible ? button.implicitWidth : 0
   implicitHeight: visible ? button.implicitHeight : 0
   readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
@@ -38,6 +40,16 @@ Item {
   function setting(name, fallback) {
     var value = settings ? settings[name] : undefined
     return value === undefined || value === null ? fallback : value
+  }
+
+  function boolSetting(name, fallback) {
+    var value = setting(name, fallback)
+    if (value === true || value === false) return value
+
+    var normalized = String(value || "").toLowerCase()
+    if (normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "on") return true
+    if (normalized === "false" || normalized === "0" || normalized === "no" || normalized === "off") return false
+    return fallback
   }
 
   function switchBackgroundCommand() {

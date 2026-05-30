@@ -65,8 +65,16 @@ Item {
           },
           cinematicLight: {
             enabled: true
+          },
+          crt: {
+            enabled: true
           }
         }
+      },
+      backgroundVignette: {
+        enabled: false,
+        intensity: 0.85,
+        ignoreBackgroundAnimationLayer: false
       },
       frame: {
         mode: "off",
@@ -106,6 +114,7 @@ Item {
         next.sidebar.cornerPieces = value.sidebar.cornerPieces !== false
       }
       next.backgroundEffects = normalizeBackgroundEffects(value.backgroundEffects || value.bgEffects)
+      next.backgroundVignette = normalizeBackgroundVignette(value.backgroundVignette || value.bgVignette || value.vignette)
       if (value.frame && typeof value.frame === "object") {
         next.frame.mode = normalizeFrameMode(value.frame.mode)
         next.frame.shadow = value.frame.shadow === true
@@ -117,6 +126,30 @@ Item {
         next.frame.shadowOffsetY = boundedInt(value.frame.shadowOffsetY, offset.y, -8, 8)
       }
     }
+    return next
+  }
+
+  function normalizeBackgroundVignette(value) {
+    var defaults = defaultData().backgroundVignette
+    var next = {
+      enabled: defaults.enabled,
+      intensity: defaults.intensity,
+      ignoreBackgroundAnimationLayer: defaults.ignoreBackgroundAnimationLayer
+    }
+
+    if (value === true || value === false) {
+      next.enabled = value === true
+      return next
+    }
+
+    if (value && typeof value === "object") {
+      next.enabled = value.enabled === true
+      next.intensity = boundedReal(value.intensity, defaults.intensity, 0, 1)
+      next.ignoreBackgroundAnimationLayer = value.ignoreBackgroundAnimationLayer === true
+        || value.ignoreBackgroundAnimations === true
+        || value.ignoreAnimationLayer === true
+    }
+
     return next
   }
 
@@ -168,14 +201,21 @@ Item {
     if (!next.effects.auroraDrift) next.effects.auroraDrift = { enabled: true }
     if (!next.effects.rainfall) next.effects.rainfall = { enabled: true }
     if (!next.effects.cinematicLight) next.effects.cinematicLight = { enabled: true }
+    if (!next.effects.crt) next.effects.crt = { enabled: true }
     return next
   }
 
   function normalizeBackgroundEffectId(value, fallback) {
     var id = String(value || "").trim()
-    if (id === "trackingLines" || id === "auroraDrift" || id === "rainfall" || id === "cinematicLight") return id
-    if (fallback === "auroraDrift" || fallback === "rainfall" || fallback === "cinematicLight") return fallback
+    if (id === "trackingLines" || id === "auroraDrift" || id === "rainfall" || id === "cinematicLight" || id === "crt") return id
+    if (fallback === "auroraDrift" || fallback === "rainfall" || fallback === "cinematicLight" || fallback === "crt") return fallback
     return "trackingLines"
+  }
+
+  function boundedReal(value, fallback, minimum, maximum) {
+    var parsed = Number(value)
+    if (!isFinite(parsed)) return fallback
+    return Math.max(minimum, Math.min(maximum, parsed))
   }
 
   function boundedInt(value, fallback, minimum, maximum) {

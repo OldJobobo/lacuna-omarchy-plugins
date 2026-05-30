@@ -252,26 +252,26 @@ Item {
     var stockFile = dir + "/window-no-gaps.lua"
     var oldLacunaFile = dir + "/zz-lacuna-window-no-gaps.lua"
     var lacunaFile = dir + "/zz-lacuna-window-gaps.lua"
-    var gapsIn = want ? 5 : 0
-    var gapsOut = want ? 10 : 0
-    setOptimisticHypr("windowGapsEnabled", want, {
-      gapsIn: gapsIn,
-      gapsOut: gapsOut
-    })
-    var body = "-- Lacuna: Own Hyprland window gaps without changing theme borders or corner rounding.\n"
+    setOptimisticHypr("windowGapsEnabled", want, {})
+    if (want) {
+      run("mkdir -p " + quote(dir)
+        + "; rm -f " + quote(stockFile) + " " + quote(oldLacunaFile) + " " + quote(lacunaFile)
+        + "; hyprctl reload >/dev/null")
+      return
+    }
+
+    var body = "-- Lacuna: Disable Hyprland window gaps without changing theme borders or corner rounding.\n"
       + "hl.config({\n"
       + "  general = {\n"
-      + "    gaps_out = " + gapsOut + ",\n"
-      + "    gaps_in = " + gapsIn + ",\n"
+      + "    gaps_out = 0,\n"
+      + "    gaps_in = 0,\n"
       + "  },\n"
       + "})\n"
-    var liveConfig = "hl.config({ general = { gaps_out = " + gapsOut
-      + ", gaps_in = " + gapsIn + " } })"
     run("mkdir -p " + quote(dir)
       + "; rm -f " + quote(stockFile) + " " + quote(oldLacunaFile)
       + "; printf %s " + quote(body) + " > " + quote(lacunaFile)
       + "; hyprctl reload >/dev/null"
-      + "; hyprctl eval " + quote(liveConfig) + " >/dev/null")
+      + "; hyprctl eval " + quote("hl.config({ general = { gaps_out = 0, gaps_in = 0 } })") + " >/dev/null")
   }
 
   function setSingleWindowAspect(enabled) {

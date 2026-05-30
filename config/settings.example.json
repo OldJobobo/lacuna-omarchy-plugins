@@ -42,8 +42,16 @@
       },
       "cinematicLight": {
         "enabled": true
+      },
+      "crt": {
+        "enabled": true
       }
     }
+  },
+  "backgroundVignette": {
+    "enabled": false,
+    "intensity": 0.85,
+    "ignoreBackgroundAnimationLayer": false
   },
   "frame": {
     "mode": "off",

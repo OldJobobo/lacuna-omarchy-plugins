@@ -13,6 +13,7 @@
   },
   "defaults": {
     "effectEnabled": true,
+    "foregroundOverlay": false,
     "intensity": 0.68,
     "speed": 1,
     "lineSpacing": 4,
@@ -27,6 +28,11 @@
       "key": "effectEnabled",
       "type": "boolean",
       "label": "Effect enabled"
+    },
+    {
+      "key": "foregroundOverlay",
+      "type": "boolean",
+      "label": "Foreground overlay"
     },
     {
       "key": "intensity",

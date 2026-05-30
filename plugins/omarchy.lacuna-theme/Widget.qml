@@ -16,8 +16,9 @@ Item {
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.roleColor("theme", foreground)
+  readonly property bool widgetEnabled: boolSetting("enabled", true)
   readonly property int maxTextLength: Math.max(4, Number(setting("maxTextLength", 26)))
-  readonly property bool showIcon: setting("showIcon", true) === true
+  readonly property bool showIcon: boolSetting("showIcon", true)
   readonly property int topbarIconSize: barSize >= 32 ? 18 : 14
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
   readonly property string colorsPath: configHome + "/omarchy/current/theme/colors.toml"
@@ -26,7 +27,8 @@ Item {
   readonly property string displayText: clipped(themeTitle)
   readonly property string tooltipText: themeTooltip()
 
-  visible: themeTitle.length > 0
+  enabled: widgetEnabled
+  visible: widgetEnabled && themeTitle.length > 0
   implicitWidth: visible ? button.implicitWidth : 0
   implicitHeight: visible ? button.implicitHeight : 0
   readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
@@ -34,6 +36,16 @@ Item {
   function setting(name, fallback) {
     var value = settings ? settings[name] : undefined
     return value === undefined || value === null ? fallback : value
+  }
+
+  function boolSetting(name, fallback) {
+    var value = setting(name, fallback)
+    if (value === true || value === false) return value
+
+    var normalized = String(value || "").toLowerCase()
+    if (normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "on") return true
+    if (normalized === "false" || normalized === "0" || normalized === "no" || normalized === "off") return false
+    return fallback
   }
 
   function shellQuote(value) {

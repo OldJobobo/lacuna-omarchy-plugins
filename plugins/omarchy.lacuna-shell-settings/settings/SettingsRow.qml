@@ -26,6 +26,17 @@ LacunaRect {
   property string bodyFontFamily: "JetBrains Mono"
   property var designTokens: null
 
+  function tokenBool(name, fallback) {
+    if (!designTokens || designTokens[name] === undefined || designTokens[name] === null) return fallback
+    return designTokens[name] === true
+  }
+
+  function tokenNumber(name, fallback) {
+    if (!designTokens || designTokens[name] === undefined || designTokens[name] === null) return fallback
+    var value = Number(designTokens[name])
+    return isFinite(value) ? value : fallback
+  }
+
   readonly property bool hasHint: hint !== ""
   readonly property bool hasValue: value !== ""
   readonly property int rowHeight: compact ? 44 : 50
@@ -33,9 +44,9 @@ LacunaRect {
 
   width: parent ? parent.width : implicitWidth
   height: rowHeight
-  radius: designTokens ? designTokens.controlRadius : 0
+  radius: tokenNumber("controlRadius", 0)
   color: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.025 + stateLayer.reveal * 0.03)
-  border.width: designTokens && designTokens.omarchy && stateLayer.containsMouse ? 1 : 0
+  border.width: tokenBool("omarchy", false) && stateLayer.containsMouse ? 1 : 0
   border.color: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.14)
   clip: true
 
@@ -44,14 +55,14 @@ LacunaRect {
 
     disabled: root.control === "value" || root.control === "segments"
     stateColor: root.toneAccent
-    hoverOpacity: root.designTokens ? root.designTokens.hoverOpacity : 0.06
-    pressOpacity: root.designTokens ? root.designTokens.activeOpacity : 0.11
+    hoverOpacity: root.tokenNumber("hoverOpacity", 0.06)
+    pressOpacity: root.tokenNumber("activeOpacity", 0.11)
     showFill: false
     onTriggered: root.triggered()
   }
 
   LacunaRect {
-    visible: designTokens && designTokens.accentStrips
+    visible: root.tokenBool("accentStrips", false)
     anchors.left: parent.left
     anchors.top: parent.top
     anchors.bottom: parent.bottom
@@ -162,9 +173,9 @@ LacunaRect {
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width
         height: root.compact ? 24 : 26
-        radius: root.designTokens ? root.designTokens.controlRadius : 0
+        radius: root.tokenNumber("controlRadius", 0)
         color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.10 + stateLayer.reveal * 0.10)
-        border.width: root.designTokens && root.designTokens.lacuna ? 0 : 1
+        border.width: root.tokenBool("lacuna", false) ? 0 : 1
         border.color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.30)
 
         LacunaText {
@@ -195,9 +206,9 @@ LacunaRect {
             readonly property bool selected: String(modelData.value) === root.optionValue
             width: Math.max(24, (parent.width - Math.max(0, root.options.length - 1) * parent.spacing) / Math.max(1, root.options.length))
             height: parent.height
-            radius: root.designTokens ? root.designTokens.controlRadius : 0
+            radius: root.tokenNumber("controlRadius", 0)
             color: selected ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.22) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.04 + segmentLayer.reveal * 0.04)
-            border.width: selected || (root.designTokens && !root.designTokens.lacuna) ? 1 : 0
+            border.width: selected || !root.tokenBool("lacuna", false) ? 1 : 0
             border.color: selected ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.46) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
             clip: true
 
@@ -214,9 +225,11 @@ LacunaRect {
             LacunaStateLayer {
               id: segmentLayer
 
+              z: 10
+              enabled: root.control === "segments"
               stateColor: root.toneAccent
-              hoverOpacity: root.designTokens ? root.designTokens.hoverOpacity : 0.06
-              pressOpacity: root.designTokens ? root.designTokens.activeOpacity : 0.11
+              hoverOpacity: root.tokenNumber("hoverOpacity", 0.06)
+              pressOpacity: root.tokenNumber("activeOpacity", 0.11)
               onTriggered: root.optionSelected(String(modelData.value))
             }
           }

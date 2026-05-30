@@ -253,14 +253,15 @@ Item {
             readonly property real phase: root.clamp(lane + (root.seededNoise(seed + 1) - 0.5) * 0.18, -0.04, 1.04)
             readonly property real widthScale: 0.82 + root.seededNoise(seed + 3) * 0.42
             readonly property real heightScale: 1.08 + root.seededNoise(seed + 5) * 0.28
-            readonly property real xSwing: 0.028 + root.seededNoise(seed + 7) * 0.06
-            readonly property real ySwing: 0.12 + root.seededNoise(seed + 11) * 0.11
+            readonly property real xSwing: 0.055 + root.seededNoise(seed + 7) * 0.07
+            readonly property real ySwing: 0.04 + root.seededNoise(seed + 11) * 0.035
             readonly property int initialDelay: Math.round(root.seededNoise(seed + 13) * 7600)
             readonly property bool reverseDrift: root.seededNoise(seed + 17) > 0.5
             readonly property int xA: Math.round(auroraWindow.width * (-0.08 + phase * 0.9 - xSwing * 0.5))
             readonly property int xB: Math.round(auroraWindow.width * (-0.08 + phase * 0.9 + xSwing))
-            readonly property real yA: -height * (0.42 - root.seededNoise(seed + 19) * 0.08)
-            readonly property real yB: -height * (0.2 - ySwing * 0.16)
+            readonly property real yCenter: -height * (0.32 - root.seededNoise(seed + 19) * 0.06)
+            readonly property real yA: yCenter - auroraWindow.height * ySwing
+            readonly property real yB: yCenter + auroraWindow.height * ySwing
             readonly property int blurPad: Math.round(132 + root.blurSoftness * 168)
             readonly property int ribbonHeight: Math.max(980, Math.round(auroraWindow.height * (1.12 + root.blurSoftness * 0.28) * heightScale))
             readonly property int ribbonWidth: Math.max(150, Math.round(auroraWindow.width * (0.105 + root.blurSoftness * 0.054) * widthScale))
@@ -397,10 +398,13 @@ Item {
             readonly property real lane: (index + root.seededNoise(seed + 1) * 0.9) / Math.max(1, Math.round(root.ribbonCount * 0.75))
             readonly property int initialDelay: Math.round(root.seededNoise(seed + 3) * 6800)
             readonly property real driftSpeed: 0.62 + root.seededNoise(seed + 5) * 0.7
-            readonly property int xA: Math.round(auroraWindow.width * (0.04 + lane * 0.82 - root.seededNoise(seed + 7) * 0.035))
-            readonly property int xB: Math.round(auroraWindow.width * (0.06 + lane * 0.82 + root.seededNoise(seed + 11) * 0.055))
-            readonly property real yA: -height * (0.36 - root.seededNoise(seed + 13) * 0.08)
-            readonly property real yB: -height * (0.12 - root.seededNoise(seed + 17) * 0.04)
+            readonly property real xSwing: 0.052 + root.seededNoise(seed + 7) * 0.064
+            readonly property real ySwing: 0.032 + root.seededNoise(seed + 11) * 0.031
+            readonly property int xA: Math.round(auroraWindow.width * (0.04 + lane * 0.82 - xSwing * 0.48))
+            readonly property int xB: Math.round(auroraWindow.width * (0.04 + lane * 0.82 + xSwing))
+            readonly property real yCenter: -height * (0.26 - root.seededNoise(seed + 13) * 0.05)
+            readonly property real yA: yCenter - auroraWindow.height * ySwing
+            readonly property real yB: yCenter + auroraWindow.height * ySwing
             readonly property int blurPad: Math.round(124 + root.blurSoftness * 154)
             readonly property int glowWidth: Math.max(170, Math.round(auroraWindow.width * (0.096 + root.blurSoftness * 0.068) * (0.86 + root.seededNoise(seed + 19) * 0.36)))
             readonly property int glowHeight: Math.max(760, Math.round(auroraWindow.height * (0.9 + root.blurSoftness * 0.24) * (0.92 + root.seededNoise(seed + 23) * 0.3)))

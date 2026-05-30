@@ -18,12 +18,16 @@ styling, and workflow ideas. New Omarchy work should happen here as plugins.
 - `plugins/omarchy.lacuna-menu-button/`: topbar launcher for the Lacuna menu.
 - `plugins/omarchy.lacuna-vhs-overlay/`: desktop-layer VHS tracking line
   ambience overlay.
+- `plugins/omarchy.lacuna-crt-overlay/`: desktop-layer CRT scanline ambience
+  overlay with optional foreground mode.
 - `plugins/omarchy.lacuna-aurora-drift/`: desktop-layer aurora ribbon
   ambience overlay.
 - `plugins/omarchy.lacuna-rainfall-overlay/`: desktop-layer rain ambience
   overlay.
 - `plugins/omarchy.lacuna-cinematic-light-overlay/`: desktop-layer warm
   cinematic light bleed and lens flare overlay.
+- `plugins/omarchy.lacuna-background-vignette/`: global wallpaper-layer edge
+  darkening overlay.
 - `plugins/omarchy.lacuna-workspaces/`: original Lacuna numbered workspace
   switcher as an Omarchy bar widget.
 - `plugins/omarchy.lacuna-mpris/`: original Lacuna media pill with playback
@@ -74,9 +78,11 @@ ln -sfn "$PWD/plugins/omarchy.lacuna-shell-settings" ~/.config/omarchy/plugins/o
 ln -sfn "$PWD/plugins/omarchy.lacuna-bar-size-pill" ~/.config/omarchy/plugins/omarchy.lacuna-bar-size-pill
 ln -sfn "$PWD/plugins/omarchy.lacuna-desktop-clock" ~/.config/omarchy/plugins/omarchy.lacuna-desktop-clock
 ln -sfn "$PWD/plugins/omarchy.lacuna-vhs-overlay" ~/.config/omarchy/plugins/omarchy.lacuna-vhs-overlay
+ln -sfn "$PWD/plugins/omarchy.lacuna-crt-overlay" ~/.config/omarchy/plugins/omarchy.lacuna-crt-overlay
 ln -sfn "$PWD/plugins/omarchy.lacuna-aurora-drift" ~/.config/omarchy/plugins/omarchy.lacuna-aurora-drift
 ln -sfn "$PWD/plugins/omarchy.lacuna-rainfall-overlay" ~/.config/omarchy/plugins/omarchy.lacuna-rainfall-overlay
 ln -sfn "$PWD/plugins/omarchy.lacuna-cinematic-light-overlay" ~/.config/omarchy/plugins/omarchy.lacuna-cinematic-light-overlay
+ln -sfn "$PWD/plugins/omarchy.lacuna-background-vignette" ~/.config/omarchy/plugins/omarchy.lacuna-background-vignette
 ln -sfn "$PWD/plugins/omarchy.lacuna-settings-persistence" ~/.config/omarchy/plugins/omarchy.lacuna-settings-persistence
 ```
 
@@ -104,9 +110,11 @@ OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-she
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-shell-settings true
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-desktop-clock true
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-vhs-overlay true
+OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-crt-overlay true
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-aurora-drift true
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-rainfall-overlay true
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-cinematic-light-overlay true
+OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-background-vignette true
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-settings-persistence true
 OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell summon omarchy.lacuna-settings-persistence "{}"
 omarchy restart shell

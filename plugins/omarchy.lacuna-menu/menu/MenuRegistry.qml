@@ -27,6 +27,7 @@ Item {
   property string frameMode: "off"
   property bool frameShadow: false
   property var backgroundEffects: ({})
+  property var backgroundVignette: ({})
   property var shellBarConfig: ({})
   property string shellBarPosition: "top"
   property bool shellBarTransparent: false
@@ -177,6 +178,7 @@ Item {
   function backgroundEffectOptions() {
     return [
       { value: "trackingLines", label: "VHS" },
+      { value: "crt", label: "CRT" },
       { value: "auroraDrift", label: "Aurora" },
       { value: "rainfall", label: "Rain" },
       { value: "cinematicLight", label: "Cinematic Light" }
@@ -185,7 +187,7 @@ Item {
 
   function activeBackgroundEffect() {
     var effectId = root.backgroundEffects && root.backgroundEffects.activeEffect ? String(root.backgroundEffects.activeEffect) : "trackingLines"
-    if (effectId === "auroraDrift" || effectId === "rainfall" || effectId === "cinematicLight") return effectId
+    if (effectId === "auroraDrift" || effectId === "rainfall" || effectId === "cinematicLight" || effectId === "crt") return effectId
     return "trackingLines"
   }
 
@@ -198,6 +200,7 @@ Item {
 
   function backgroundEffectName(effectId) {
     if (effectId === "trackingLines") return "Tracking Lines"
+    if (effectId === "crt") return "CRT"
     if (effectId === "auroraDrift") return "Aurora Drift"
     if (effectId === "rainfall") return "Rainfall"
     if (effectId === "cinematicLight") return "Cinematic Light"
@@ -207,6 +210,9 @@ Item {
   function backgroundEffectHint(effectId) {
     if (effectId === "trackingLines") {
       return activeBackgroundEffect() === effectId ? "Selected VHS tracking animation" : "VHS tracking animation is available"
+    }
+    if (effectId === "crt") {
+      return activeBackgroundEffect() === effectId ? "Selected CRT scanline animation" : "CRT scanline animation is available"
     }
     if (effectId === "auroraDrift") {
       return activeBackgroundEffect() === effectId ? "Selected aurora ribbon animation" : "Aurora ribbon animation is available"
@@ -224,8 +230,59 @@ Item {
     return backgroundEffectsEnabled() ? "Wallpaper-layer animation is visible" : "Wallpaper-layer animation is hidden"
   }
 
+  function backgroundVignetteEnabled() {
+    return root.backgroundVignette && root.backgroundVignette.enabled === true
+  }
+
+  function backgroundVignetteHint() {
+    return backgroundVignetteEnabled() ? "Wallpaper edge darkening is visible" : "Wallpaper edge darkening is hidden"
+  }
+
+  function backgroundEffectPluginId(effectId) {
+    if (effectId === "trackingLines") return "omarchy.lacuna-vhs-overlay"
+    if (effectId === "crt") return "omarchy.lacuna-crt-overlay"
+    return ""
+  }
+
+  function backgroundEffectLayerSettings(effectId) {
+    var defaults = {
+      foregroundOverlay: false
+    }
+    var pluginId = backgroundEffectPluginId(effectId)
+    if (pluginId === "") return defaults
+
+    var plugins = Array.isArray(root.shellPlugins) ? root.shellPlugins : []
+    for (var i = 0; i < plugins.length; i++) {
+      var entry = plugins[i]
+      if (!entry || String(entry.id || "") !== pluginId) continue
+      var merged = {}
+      for (var key in defaults) merged[key] = defaults[key]
+      for (var entryKey in entry) {
+        if (entryKey !== "id") merged[entryKey] = entry[entryKey]
+      }
+      return merged
+    }
+
+    return defaults
+  }
+
+  function backgroundEffectForegroundCapable(effectId) {
+    return backgroundEffectPluginId(effectId) !== ""
+  }
+
+  function backgroundEffectForegroundEnabled(effectId) {
+    var settings = backgroundEffectLayerSettings(effectId)
+    return settings.foregroundOverlay === true
+  }
+
+  function backgroundEffectForegroundHint(effectId) {
+    var name = backgroundEffectName(effectId)
+    return backgroundEffectForegroundEnabled(effectId) ? name + " draws above windows" : name + " stays behind windows"
+  }
+
   function cinematicLightSettings() {
     var defaults = {
+      intensity: 1,
       stylePreset: "lightLeak",
       slowDrift: true,
       occasionalSweeps: false,
@@ -257,6 +314,29 @@ Item {
       { value: "cinematicFlare", label: "Cinematic Flare" },
       { value: "anamorphicGlow", label: "Anamorphic Glow" }
     ]
+  }
+
+  function cinematicLightIntensityOptions() {
+    return [
+      { value: "0.78", label: "Soft" },
+      { value: "0.9", label: "Balanced" },
+      { value: "1", label: "Bright" }
+    ]
+  }
+
+  function cinematicLightIntensity() {
+    var value = Number(cinematicLightSettings().intensity)
+    if (isNaN(value)) return "1"
+    if (value <= 0.84) return "0.78"
+    if (value <= 0.95) return "0.9"
+    return "1"
+  }
+
+  function cinematicLightIntensityHint() {
+    var value = Number(cinematicLightSettings().intensity)
+    if (isNaN(value)) value = 1
+    value = Math.max(0, Math.min(1, value))
+    return "Light overlay opacity " + Math.round(value * 100) + "%"
   }
 
   function cinematicLightStylePreset() {
@@ -325,6 +405,12 @@ Item {
   }
 
   function shellPluginEnabled(id) {
+    if (root.pluginRegistry && typeof root.pluginRegistry.isEnabled === "function") {
+      return root.pluginRegistry.isEnabled(id)
+    }
+
+    if (shellBarWidgetExistsAnywhere(id)) return true
+
     var plugins = Array.isArray(root.shellPlugins) ? root.shellPlugins : []
     for (var i = 0; i < plugins.length; i++) {
       if (plugins[i] && String(plugins[i].id || "") === String(id || "")) return true

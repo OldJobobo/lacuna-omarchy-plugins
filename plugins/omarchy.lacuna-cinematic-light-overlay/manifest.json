@@ -13,7 +13,7 @@
   },
   "defaults": {
     "effectEnabled": true,
-    "intensity": 0.92,
+    "intensity": 1,
     "speed": 1,
     "stylePreset": "lightLeak",
     "slowDrift": true,

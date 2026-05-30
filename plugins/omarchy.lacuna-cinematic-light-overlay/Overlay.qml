@@ -24,7 +24,7 @@ Item {
   readonly property bool configuredEnabled: boolSetting("effectEnabled", true)
   readonly property bool lacunaCinematicLightEnabled: backgroundEffectEnabled("cinematicLight", true)
   readonly property bool effectVisible: configuredEnabled && lacunaCinematicLightEnabled && runtimeEnabled && effectiveIntensity > 0.001
-  readonly property real configuredIntensity: clamp(numberSetting("intensity", 0.92), 0, 1)
+  readonly property real configuredIntensity: clamp(numberSetting("intensity", 1), 0, 1)
   readonly property real effectiveIntensity: runtimeIntensity >= 0 ? clamp(runtimeIntensity, 0, 1) : configuredIntensity
   readonly property real speed: clamp(numberSetting("speed", 1), 0.15, 4)
   readonly property string stylePreset: normalizeStylePreset(settingValue("stylePreset", "lightLeak"))
@@ -390,14 +390,18 @@ Item {
             readonly property real cycleSeed: seed + cycle * 113
             readonly property int cycleWidth: Math.round(flareWindow.width * (0.78 + root.seededNoise(cycleSeed + 3) * 0.84))
             readonly property int cycleBaseX: Math.round(-cycleWidth * (0.44 + root.seededNoise(cycleSeed + 5) * 0.18) + root.seededNoise(cycleSeed + 7) * flareWindow.width * 0.68)
-            readonly property int cycleTravel: Math.round(flareWindow.width * (-0.1 + root.seededNoise(cycleSeed + 9) * 0.22))
+            readonly property int cycleXDirection: root.seededNoise(cycleSeed + 9) > 0.5 ? 1 : -1
+            readonly property int cycleTravel: Math.round(cycleXDirection * flareWindow.width * (0.1 + root.seededNoise(cycleSeed + 10) * 0.12))
             readonly property int cycleBaseY: Math.round(flareWindow.height * (0.08 + root.seededNoise(cycleSeed + 11) * 0.84))
-            readonly property real cycleYDrift: flareWindow.height * (0.025 + root.seededNoise(cycleSeed + 13) * 0.075)
+            readonly property int cycleYDirection: root.seededNoise(cycleSeed + 13) > 0.5 ? 1 : -1
+            readonly property real cycleYDrift: flareWindow.height * (0.024 + root.seededNoise(cycleSeed + 14) * 0.034)
             readonly property int cycleXA: cycleBaseX
             readonly property int cycleXB: cycleBaseX + cycleTravel
+            readonly property int cycleYA: cycleBaseY - Math.round(height / 2) - cycleYDirection * Math.round(cycleYDrift * 0.5)
+            readonly property int cycleYB: cycleBaseY - Math.round(height / 2) + cycleYDirection * Math.round(cycleYDrift * 0.5)
 
             x: cycleXA
-            y: cycleBaseY - Math.round(height / 2)
+            y: cycleYA
             width: cycleWidth
             height: root.stylePreset === "lightLeak" ? 230 : root.stylePreset === "cinematicFlare" ? 190 : 150
             opacity: flareFloor
@@ -422,7 +426,7 @@ Item {
                   flare.opacity = flare.flareFloor
                   flare.width = flare.cycleWidth
                   flare.x = flare.cycleXA
-                  flare.y = flare.cycleBaseY - Math.round(flare.height / 2) - flare.cycleYDrift
+                  flare.y = flare.cycleYA
                 }
               }
               ParallelAnimation {
@@ -437,8 +441,8 @@ Item {
                 NumberAnimation {
                   target: flare
                   property: "y"
-                  from: flare.cycleBaseY - flare.height / 2 - flare.cycleYDrift
-                  to: flare.cycleBaseY - flare.height / 2 + flare.cycleYDrift
+                  from: flare.cycleYA
+                  to: flare.cycleYB
                   duration: flare.driftDuration
                   easing.type: Easing.InOutSine
                 }

@@ -16,13 +16,15 @@
     "category": "Lacuna",
     "allowMultiple": false,
     "defaults": {
+      "enabled": true,
       "maxTextLength": 18,
       "showIcon": true
     },
     "schema": [
-      { "key": "maxTextLength", "type": "integer", "label": "Max text length", "min": 4, "max": 80, "step": 1 },
-      { "key": "showIcon", "type": "boolean", "label": "Show icon" },
-      { "key": "colorProfile", "type": "enum", "label": "Color profile", "options": ["semantic", "colorful"], "description": "Override the global Lacuna color profile for this widget." }
+      { "key": "enabled", "type": "boolean", "label": "Enabled", "defaultValue": true },
+      { "key": "maxTextLength", "type": "integer", "label": "Max text length", "min": 4, "max": 80, "step": 1, "defaultValue": 18 },
+      { "key": "showIcon", "type": "boolean", "label": "Show icon", "defaultValue": true },
+      { "key": "colorProfile", "type": "enum", "label": "Color profile", "options": ["semantic", "colorful"], "defaultValue": "semantic", "description": "Override the global Lacuna color profile for this widget." }
     ]
   }
 }

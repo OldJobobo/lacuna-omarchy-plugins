@@ -27,8 +27,13 @@ Item {
   property string itemFontFamily: itemFont.name !== "" ? itemFont.name : "Tektur"
   property var designTokens: fallbackDesignTokens
   property bool drawBackground: true
+  property var controlOverrides: ({})
+  property int controlRevision: 0
   readonly property int panelRadius: Math.max(designTokens.radius, compact ? 10 : 14)
   readonly property real curveKappa: 0.5522847498
+
+  onOpenChanged: if (!open) clearControlOverrides()
+  onCurrentSectionChanged: clearControlOverrides()
 
   function sections() {
     return [
@@ -90,6 +95,55 @@ Item {
     return item
   }
 
+  function controlKey(entry) {
+    if (!entry) return ""
+    if (entry.control === "toggle") return "toggle:" + String(entry.action || entry.label || "")
+    if (entry.control === "segments" || entry.control === "select" || entry.control === "search-select")
+      return "value:" + String(entry.optionActionPrefix || entry.action || entry.label || "")
+    return ""
+  }
+
+  function hasControlOverride(key) {
+    return key !== "" && controlOverrides && controlOverrides[key] !== undefined
+  }
+
+  function currentControlChecked(entry) {
+    var revision = controlRevision
+    var key = controlKey(entry)
+    if (hasControlOverride(key)) return controlOverrides[key] === true
+    return entry && entry.checked === true
+  }
+
+  function currentControlValue(entry) {
+    var revision = controlRevision
+    var key = controlKey(entry)
+    if (hasControlOverride(key)) return String(controlOverrides[key])
+    return entry && entry.optionValue !== undefined && entry.optionValue !== null ? String(entry.optionValue) : ""
+  }
+
+  function setControlOverride(entry, value) {
+    var key = controlKey(entry)
+    if (key === "") return
+    var next = {}
+    for (var existingKey in controlOverrides) next[existingKey] = controlOverrides[existingKey]
+    next[key] = value
+    controlOverrides = next
+    controlRevision++
+    controlResetTimer.restart()
+  }
+
+  function clearControlOverrides() {
+    if (!controlOverrides) return
+    var hadOverrides = false
+    for (var key in controlOverrides) {
+      hadOverrides = true
+      break
+    }
+    if (!hadOverrides) return
+    controlOverrides = ({})
+    controlRevision++
+  }
+
   function commandRow(icon, label, hint, command, tone) {
     var item = row(icon, label, hint, "Open", tone || "shell", "", "button")
     item.command = command || ""
@@ -99,16 +153,23 @@ Item {
   function backgroundEffectRows() {
     var rows = [
       section("Background Effects", "Wallpaper-layer animation effects controlled by Lacuna.", "lacuna"),
+      row("photo", "Background Vignette", root.registry.backgroundVignetteHint(), root.registry.backgroundVignetteEnabled() ? "On" : "Off", "lacuna", "toggle-background-vignette", "toggle", root.registry.backgroundVignetteEnabled()),
       row("background", "Background Animations", root.registry.backgroundEffectsHint(), root.registry.backgroundEffectsEnabled() ? "On" : "Off", "lacuna", "toggle-background-effects", "toggle", root.registry.backgroundEffectsEnabled()),
       selectRow("background", "Animation", "Choose one wallpaper-layer animation", root.registry.activeBackgroundEffect(), root.registry.backgroundEffectOptions(), "set-background-effect-", "lacuna", "Animation")
     ]
 
     if (root.registry.activeBackgroundEffect() === "cinematicLight") {
       rows.push(selectRow("photo", "Light Style", root.registry.cinematicLightStyleHint(), root.registry.cinematicLightStylePreset(), root.registry.cinematicLightStyleOptions(), "set-cinematic-light-style-", "lacuna", "Style"))
+      rows.push(selectRow("sliders", "Intensity", root.registry.cinematicLightIntensityHint(), root.registry.cinematicLightIntensity(), root.registry.cinematicLightIntensityOptions(), "set-cinematic-light-intensity-", "lacuna", "Intensity"))
       rows.push(section("Light Motion", root.registry.cinematicLightMotionHint(), "lacuna"))
       rows.push(row("motion", "Slow Drift", "Slow breathing and gentle left-right drift", root.registry.cinematicLightSlowDriftEnabled() ? "On" : "Off", "lacuna", "toggle-cinematic-light-motion-slowDrift", "toggle", root.registry.cinematicLightSlowDriftEnabled()))
       rows.push(row("motion", "Occasional Sweeps", "Rare bright horizontal passes", root.registry.cinematicLightOccasionalSweepsEnabled() ? "On" : "Off", "lacuna", "toggle-cinematic-light-motion-occasionalSweeps", "toggle", root.registry.cinematicLightOccasionalSweepsEnabled()))
       rows.push(row("motion", "Active Shimmer", "More frequent glints, pulse variation, and shimmer", root.registry.cinematicLightActiveShimmerEnabled() ? "On" : "Off", "lacuna", "toggle-cinematic-light-motion-activeShimmer", "toggle", root.registry.cinematicLightActiveShimmerEnabled()))
+    }
+
+    var activeEffect = root.registry.activeBackgroundEffect()
+    if (root.registry.backgroundEffectForegroundCapable(activeEffect)) {
+      rows.push(row("layers", "Foreground Overlay", root.registry.backgroundEffectForegroundHint(activeEffect), root.registry.backgroundEffectForegroundEnabled(activeEffect) ? "On" : "Off", "lacuna", "toggle-background-effect-foreground-" + activeEffect, "toggle", root.registry.backgroundEffectForegroundEnabled(activeEffect)))
     }
 
     return rows
@@ -278,13 +339,45 @@ Item {
     ]
   }
 
-  function handleEntry(entry) {
+  function entryWithDesiredChecked(entry, desiredChecked) {
+    var next = {}
+    for (var key in entry) next[key] = entry[key]
+    next.desiredChecked = desiredChecked === true
+    return next
+  }
+
+  function handleEntry(entry, desiredChecked) {
     if (!entry || entry.kind !== "row") return
     if (entry.settingsSection !== "") {
       currentSection = entry.settingsSection
       return
     }
-    root.activated(entry)
+    root.activated(desiredChecked === undefined ? entry : entryWithDesiredChecked(entry, desiredChecked))
+  }
+
+  function handleOptionSelected(entry, value) {
+    root.activated({
+      kind: "item",
+      action: entry.optionActionPrefix + value,
+      view: "",
+      command: ""
+    })
+  }
+
+  function activateControl(entry, value) {
+    if (!entry || entry.kind !== "row") return
+    if (entry.control === "toggle") {
+      var desired = !currentControlChecked(entry)
+      setControlOverride(entry, desired)
+      handleEntry(entry, desired)
+      return
+    }
+    if (entry.control === "segments" || entry.control === "select" || entry.control === "search-select") {
+      setControlOverride(entry, value)
+      handleOptionSelected(entry, value)
+      return
+    }
+    handleEntry(entry)
   }
 
   width: 400
@@ -295,6 +388,13 @@ Item {
 
   Behavior on opacity {
     LacunaAnim { motion: "fast" }
+  }
+
+  Timer {
+    id: controlResetTimer
+    interval: 1600
+    repeat: false
+    onTriggered: root.clearControlOverrides()
   }
 
   FontLoader {
@@ -444,9 +544,9 @@ Item {
             value: parent.entry.value
             tone: parent.entry.tone
             control: parent.entry.control
-            checked: parent.entry.checked
+            checked: root.currentControlChecked(parent.entry)
             options: parent.entry.options
-            optionValue: parent.entry.optionValue
+            optionValue: root.currentControlValue(parent.entry)
             compact: root.compact
             foreground: root.foreground
             background: root.background
@@ -456,15 +556,8 @@ Item {
             titleFontFamily: root.itemFontFamily
             bodyFontFamily: root.bodyFontFamily
             designTokens: root.designTokens
-            onTriggered: root.handleEntry(parent.entry)
-            onOptionSelected: function(value) {
-              root.activated({
-                kind: "item",
-                action: parent.entry.optionActionPrefix + value,
-                view: "",
-                command: ""
-              })
-            }
+            onTriggered: root.activateControl(parent.entry)
+            onOptionSelected: function(value) { root.activateControl(parent.entry, value) }
           }
         }
 
@@ -476,7 +569,7 @@ Item {
             icon: parent.entry.icon
             label: parent.entry.label
             hint: parent.entry.hint
-            currentValue: parent.entry.optionValue
+            currentValue: root.currentControlValue(parent.entry)
             placeholder: parent.entry.placeholder || "Select"
             options: parent.entry.options
             compact: root.compact
@@ -487,14 +580,7 @@ Item {
             titleFontFamily: root.itemFontFamily
             bodyFontFamily: root.bodyFontFamily
             designTokens: root.designTokens
-            onSelected: function(value) {
-              root.activated({
-                kind: "item",
-                action: parent.entry.optionActionPrefix + value,
-                view: "",
-                command: ""
-              })
-            }
+            onSelected: function(value) { root.activateControl(parent.entry, value) }
           }
         }
       }

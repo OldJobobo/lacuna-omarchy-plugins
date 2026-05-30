@@ -27,10 +27,19 @@ Item {
   property var designTokens: fallbackDesignTokens
   property bool drawBackground: true
   property int stateRevision: 0
-  readonly property int panelRadius: Math.max(designTokens.radius, compact ? 10 : 14)
+  property var controlOverrides: ({})
+  property int controlRevision: 0
+  readonly property int panelRadius: Math.max(tokenNumber("radius", 0), compact ? 10 : 14)
   readonly property real curveKappa: 0.5522847498
 
   onOpenChanged: if (open && settingsService) settingsService.refresh()
+  onCurrentSectionChanged: clearControlOverrides()
+
+  function tokenNumber(name, fallback) {
+    if (!designTokens || designTokens[name] === undefined || designTokens[name] === null) return fallback
+    var value = Number(designTokens[name])
+    return isFinite(value) ? value : fallback
+  }
 
   function sections() {
     return [
@@ -119,6 +128,55 @@ Item {
     return item
   }
 
+  function controlKey(entry) {
+    if (!entry) return ""
+    if (entry.control === "toggle") return "toggle:" + String(entry.setting || entry.pluginId || entry.action || entry.label || "")
+    if (entry.control === "segments") return "value:" + String(entry.timeoutKind || entry.optionActionPrefix || entry.setting || entry.label || "")
+    if (entry.control === "select" || entry.control === "search-select") return "value:" + String(entry.setting || entry.label || "")
+    return ""
+  }
+
+  function hasControlOverride(key) {
+    return key !== "" && controlOverrides && controlOverrides[key] !== undefined
+  }
+
+  function currentControlChecked(entry) {
+    var revision = controlRevision
+    var key = controlKey(entry)
+    if (hasControlOverride(key)) return controlOverrides[key] === true
+    return entry && entry.checked === true
+  }
+
+  function currentControlValue(entry) {
+    var revision = controlRevision
+    var key = controlKey(entry)
+    if (hasControlOverride(key)) return String(controlOverrides[key])
+    return entry && entry.optionValue !== undefined && entry.optionValue !== null ? String(entry.optionValue) : ""
+  }
+
+  function setControlOverride(entry, value) {
+    var key = controlKey(entry)
+    if (key === "") return
+    var next = {}
+    for (var existingKey in controlOverrides) next[existingKey] = controlOverrides[existingKey]
+    next[key] = value
+    controlOverrides = next
+    controlRevision++
+    controlResetTimer.restart()
+  }
+
+  function clearControlOverrides() {
+    if (!controlOverrides) return
+    var hadOverrides = false
+    for (var key in controlOverrides) {
+      hadOverrides = true
+      break
+    }
+    if (!hadOverrides) return
+    controlOverrides = ({})
+    controlRevision++
+  }
+
   function timeoutRow(icon, label, hint, kind, currentValue, options) {
     var item = row(icon, label, hint, "", "shell", "", "segments", false, options, String(currentValue), "")
     item.timeoutKind = kind
@@ -170,7 +228,7 @@ Item {
     if (sectionId === "windows") {
       return [
         section("Tiling", "Hyprland layout toggles for application windows.", "shell"),
-        toggleRow("density-normal", "Window Gaps", "Enable tiled-window gaps without changing theme borders", "windowGapsEnabled", service.hyprValue("windowGapsEnabled", null), "shell"),
+        toggleRow("density-normal", "Window Gaps", "Use the active theme's tiled-window gap size", "windowGapsEnabled", service.hyprValue("windowGapsEnabled", null), "shell"),
         toggleRow("corners", "Rounded Windows", "Switch Hyprland application windows between square and rounded corners", "roundedWindows", service.hyprValue("roundedWindows", null), "shell"),
         toggleRow("sidebar-overlay", "Single-Window Square", "Constrain one tiled window to a square aspect ratio", "singleWindowAspect", service.hyprValue("singleWindowAspect", null), "shell"),
         section("Shell Bar", "Visibility only. Bar layout remains in Omarchy's bar settings.", "shell"),
@@ -233,18 +291,19 @@ Item {
     ]
   }
 
-  function handleEntry(entry) {
+  function handleEntry(entry, desiredChecked) {
     if (!entry || entry.kind !== "row") return
     if (entry.action === "refresh-shell-settings-state") {
       root.settingsService.refresh()
       return
     }
     if (entry.control === "toggle") {
+      var want = desiredChecked === true
       if (entry.setting === "shellPlugin") {
-        root.settingsService.setShellPluginEnabled(entry.pluginId, !entry.checked)
+        root.settingsService.setShellPluginEnabled(entry.pluginId, want)
         return
       }
-      root.settingsService.setToggle(entry.setting, !entry.checked)
+      root.settingsService.setToggle(entry.setting, want)
       return
     }
     root.activated(entry)
@@ -275,9 +334,31 @@ Item {
     })
   }
 
+  function activateControl(entry, value) {
+    if (!entry || entry.kind !== "row") return
+    if (entry.control === "toggle") {
+      var desired = !currentControlChecked(entry)
+      setControlOverride(entry, desired)
+      handleEntry(entry, desired)
+      return
+    }
+    if (entry.control === "segments") {
+      setControlOverride(entry, value)
+      handleOptionSelected(entry, value)
+      return
+    }
+    if (entry.control === "select" || entry.control === "search-select") {
+      setControlOverride(entry, value)
+      handleSelected(entry, value)
+      return
+    }
+    handleEntry(entry)
+  }
+
   Connections {
     target: root.settingsService
-    function onStateChanged() { root.stateRevision++ }
+    function onStateChanged() { root.stateRevision++; root.clearControlOverrides() }
+    function onShellConfigChanged() { root.stateRevision++; root.clearControlOverrides() }
     function onLoadingChanged() { root.stateRevision++ }
   }
 
@@ -289,6 +370,13 @@ Item {
 
   Behavior on opacity {
     LacunaAnim { motion: "fast" }
+  }
+
+  Timer {
+    id: controlResetTimer
+    interval: 1600
+    repeat: false
+    onTriggered: root.clearControlOverrides()
   }
 
   FontLoader {
@@ -438,9 +526,9 @@ Item {
             value: parent.entry.value
             tone: parent.entry.tone
             control: parent.entry.control
-            checked: parent.entry.checked
+            checked: root.currentControlChecked(parent.entry)
             options: parent.entry.options
-            optionValue: parent.entry.optionValue
+            optionValue: root.currentControlValue(parent.entry)
             compact: root.compact
             foreground: root.foreground
             background: root.background
@@ -450,10 +538,8 @@ Item {
             titleFontFamily: root.itemFontFamily
             bodyFontFamily: root.bodyFontFamily
             designTokens: root.designTokens
-            onTriggered: root.handleEntry(parent.entry)
-            onOptionSelected: function(value) {
-              root.handleOptionSelected(parent.entry, value)
-            }
+            onTriggered: root.activateControl(parent.entry)
+            onOptionSelected: function(value) { root.activateControl(parent.entry, value) }
           }
         }
 
@@ -465,7 +551,7 @@ Item {
             icon: parent.entry.icon
             label: parent.entry.label
             hint: parent.entry.hint
-            currentValue: parent.entry.optionValue
+            currentValue: root.currentControlValue(parent.entry)
             placeholder: parent.entry.placeholder || "Select"
             options: parent.entry.options
             compact: root.compact
@@ -476,9 +562,7 @@ Item {
             titleFontFamily: root.itemFontFamily
             bodyFontFamily: root.bodyFontFamily
             designTokens: root.designTokens
-            onSelected: function(value) {
-              root.handleSelected(parent.entry, value)
-            }
+            onSelected: function(value) { root.activateControl(parent.entry, value) }
           }
         }
 
@@ -490,7 +574,7 @@ Item {
             icon: parent.entry.icon
             label: parent.entry.label
             hint: parent.entry.hint
-            currentValue: parent.entry.optionValue
+            currentValue: root.currentControlValue(parent.entry)
             placeholder: parent.entry.placeholder || "Search"
             options: parent.entry.options
             compact: root.compact
@@ -501,9 +585,7 @@ Item {
             titleFontFamily: root.itemFontFamily
             bodyFontFamily: root.bodyFontFamily
             designTokens: root.designTokens
-            onSelected: function(value) {
-              root.handleSelected(parent.entry, value)
-            }
+            onSelected: function(value) { root.activateControl(parent.entry, value) }
           }
         }
       }

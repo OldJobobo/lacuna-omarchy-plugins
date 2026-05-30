@@ -18,6 +18,7 @@ Item {
   readonly property string settingsFile: configDir + "/settings.json"
   readonly property var overlaySettings: pluginSettings()
   readonly property bool configuredEnabled: boolSetting("effectEnabled", true)
+  readonly property bool foregroundOverlay: boolSetting("foregroundOverlay", false)
   readonly property bool lacunaTrackingLinesEnabled: backgroundEffectEnabled("trackingLines", true)
   readonly property bool effectVisible: configuredEnabled && lacunaTrackingLinesEnabled && runtimeEnabled && effectiveIntensity > 0.001
   readonly property real configuredIntensity: clamp(numberSetting("intensity", 0.68), 0, 1)
@@ -158,7 +159,7 @@ Item {
       implicitWidth: 0
       implicitHeight: 0
       WlrLayershell.namespace: "lacuna-vhs-overlay"
-      WlrLayershell.layer: WlrLayer.Bottom
+      WlrLayershell.layer: root.foregroundOverlay ? WlrLayer.Overlay : WlrLayer.Bottom
       WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
       exclusionMode: ExclusionMode.Ignore
       mask: Region {}
@@ -555,6 +556,7 @@ Item {
     function status(): string {
       return JSON.stringify({
         configuredEnabled: root.configuredEnabled,
+        foregroundOverlay: root.foregroundOverlay,
         runtimeEnabled: root.runtimeEnabled,
         visible: root.effectVisible,
         intensity: root.effectiveIntensity,

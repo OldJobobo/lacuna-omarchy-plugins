@@ -17,7 +17,11 @@ Item {
   }
 
   function toggle() {
-    exclusive = !exclusive
+    setExclusive(!exclusive)
+  }
+
+  function setExclusive(value) {
+    exclusive = value === true
     save()
   }
 
@@ -26,7 +30,11 @@ Item {
   }
 
   function toggleCornerPieces() {
-    cornerPieces = !cornerPieces
+    setCornerPiecesEnabled(!cornerPieces)
+  }
+
+  function setCornerPiecesEnabled(value) {
+    cornerPieces = value === true
     save()
   }
 
