@@ -206,6 +206,7 @@ class QmlContractTests(unittest.TestCase):
             "omarchy.lacuna-idle-inhibitor": "idleInhibitor",
             "omarchy.lacuna-screen-recording": "screenRecording",
             "omarchy.lacuna-voxtype": "voxtype",
+            "omarchy.lacuna-tray": "Tray",
             "omarchy.lacuna-bluetooth": "BluetoothPanel",
             "omarchy.lacuna-network": "NetworkPanel",
             "omarchy.lacuna-audio": "AudioPanel",
@@ -229,7 +230,29 @@ class QmlContractTests(unittest.TestCase):
             self.assertNotIn(f'moduleName: "{native_id}"', qml)
             self.assertIn(f'moduleName: "{plugin_id}"', qml)
             self.assertIn("barSize", qml)
-            self.assertIn("colorProfile", qml)
+            if plugin_id != "omarchy.lacuna-tray":
+                self.assertIn("colorProfile", qml)
+
+    def test_lacuna_tray_dispatches_status_notifier_context_menus(self):
+        manifest = read_json("plugins/omarchy.lacuna-tray/manifest.json")
+        qml = read("plugins/omarchy.lacuna-tray/Widget.qml")
+        registry = read("plugins/omarchy.lacuna-menu/menu/MenuRegistry.qml")
+
+        self.assertEqual("omarchy.lacuna-tray", manifest["id"])
+        self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
+        self.assertIn("bar-widget", manifest["kinds"])
+        self.assertNotIn("QsMenuAnchor", qml)
+        self.assertIn("property bool trayMenuOpen", qml)
+        self.assertIn("readonly property bool expanded: drawerHovered || trayMenuOpen", qml)
+        self.assertIn("function markTrayMenuRequested", qml)
+        self.assertIn("trayMenuReset.restart()", qml)
+        self.assertIn("onPressed: function(mouse)", qml)
+        self.assertIn("mouse.button === Qt.RightButton", qml)
+        self.assertIn("trayItemRoot.modelData.onlyMenu && trayItemRoot.modelData.hasMenu", qml)
+        self.assertIn("root.markTrayMenuRequested()", qml)
+        self.assertIn("trayItemRoot.modelData.display(trayItemRoot.QsWindow.window, point.x, point.y)", qml)
+        self.assertIn('root.bar.shell.updateEntryInline(id, { id: id, pinned: pinned, hidden: hidden })', qml)
+        self.assertIn('if (key === "omarchy.lacuna-tray") return "apps"', registry)
 
     def test_system_stats_uses_tabler_cpu_icon(self):
         qml = read("plugins/omarchy.lacuna-system-stats/Widget.qml")

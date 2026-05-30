@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "omarchy.lacuna-tray",
+  "name": "Lacuna Tray",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "System tray widget with Lacuna-safe DBus menu anchoring.",
+  "kinds": ["bar-widget"],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lacuna Tray",
+    "description": "Status notifier tray with anchored context menus.",
+    "category": "Lacuna",
+    "allowMultiple": false,
+    "defaults": {
+      "pinned": [],
+      "hidden": []
+    },
+    "schema": []
+  }
+}

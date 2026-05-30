@@ -501,6 +501,7 @@ Item {
     if (key === "calendar" || key === "clock") return "clock"
     if (key === "weather") return "world"
     if (key === "update") return "refresh"
+    if (key === "omarchy.lacuna-tray") return "apps"
     if (key === "tray") return "apps"
     if (key === "bluetoothPanel") return "bluetooth"
     if (key === "networkPanel") return "wifi"

@@ -31,7 +31,7 @@
         { "id": "omarchy.lacuna-voxtype" }
       ],
       "right": [
-        { "id": "Tray" },
+        { "id": "omarchy.lacuna-tray" },
         { "id": "omarchy.lacuna-theme" },
         { "id": "omarchy.lacuna-wallpaper" },
         { "id": "omarchy.lacuna-bluetooth" },

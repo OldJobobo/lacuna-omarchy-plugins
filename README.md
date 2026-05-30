@@ -45,12 +45,14 @@ styling, and workflow ideas. New Omarchy work should happen here as plugins.
   `plugins/omarchy.lacuna-idle-inhibitor/`,
   `plugins/omarchy.lacuna-screen-recording/`,
   `plugins/omarchy.lacuna-voxtype/`,
+  `plugins/omarchy.lacuna-tray/`,
   `plugins/omarchy.lacuna-audio/`,
   `plugins/omarchy.lacuna-network/`,
   `plugins/omarchy.lacuna-bluetooth/`, and
   `plugins/omarchy.lacuna-power/`: Lacuna-native replacements for the selected
-  Omarchy topbar controls. These are button-first replacements; rich native
-  popups are not embedded in v1. The system tray stays native.
+  Omarchy topbar controls. Most are button-first replacements; the tray keeps
+  the native status-notifier model while anchoring item context menus through
+  Lacuna-safe plugin code.
 - `plugins/omarchy.lacuna-system-stats/` and
   `plugins/omarchy.lacuna-temperature/`: system status bar widgets.
 - `plugins/omarchy.lacuna-bar-size-pill/`: Omarchy host bar compact/full
@@ -94,6 +96,7 @@ for plugin in \
   omarchy.lacuna-notifications omarchy.lacuna-indicators \
   omarchy.lacuna-nightlight omarchy.lacuna-idle-inhibitor \
   omarchy.lacuna-screen-recording omarchy.lacuna-voxtype \
+  omarchy.lacuna-tray \
   omarchy.lacuna-audio \
   omarchy.lacuna-network omarchy.lacuna-bluetooth omarchy.lacuna-power
 do
