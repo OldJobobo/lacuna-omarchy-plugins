@@ -119,6 +119,7 @@ Item {
   property string pendingFlyoutFocus: ""
   property bool pendingSystemRestartConfirmation: false
   property int pluginStateRevision: 0
+  property double ignoreFlyoutFocusClearUntil: 0
   readonly property var shellConfig: shell && shell.shellConfig ? shell.shellConfig : ({})
   readonly property var shellBarConfig: shellConfig && shellConfig.bar ? shellConfig.bar : ({})
   readonly property var shellIdleConfig: shellConfig && shellConfig.idle ? shellConfig.idle : ({})
@@ -317,8 +318,13 @@ Item {
   }
 
   function closeFlyouts() {
+    if (Date.now() < ignoreFlyoutFocusClearUntil) return
     pendingFlyoutFocus = ""
     panelController.closeActiveFlyout()
+  }
+
+  function holdFlyoutAfterSettingsActivation() {
+    ignoreFlyoutFocusClearUntil = Date.now() + 900
   }
 
   function applySidebarDefaultState() {
@@ -1394,6 +1400,7 @@ Item {
       frameThickness: root.frameThickness
       frameRadius: root.frameRadius
       joinRadius: root.lacunaJoinRadius
+      cornerPieces: sidebarState.cornerPieces
       progress: root.frameOverlayProgress
       frameColor: root.panelColor
       shadowOffsetX: root.frameShadowOffsetX
@@ -1565,7 +1572,9 @@ Item {
         navAccent: root.navAccent
         muted: root.muted
         onActivated: function(entry) {
+          root.holdFlyoutAfterSettingsActivation()
           root.activate(entry)
+          root.requestFlyoutFocus("settings")
         }
         onCloseRequested: panelController.closeFlyout("settings")
       }
@@ -1596,7 +1605,9 @@ Item {
             navAccent: root.navAccent
             muted: root.muted
             onActivated: function(entry) {
+              root.holdFlyoutAfterSettingsActivation()
               root.activate(entry)
+              root.requestFlyoutFocus("shellSettings")
             }
             onCloseRequested: panelController.closeFlyout("shellSettings")
           }

@@ -245,6 +245,7 @@ Item {
           { value: "material", label: "Material" }
         ], root.registry.designStyle, "set-design-style-"),
         row("color-swatch", "Color Profile", root.registry.colorProfile === "colorful" ? "Use theme colors across Lacuna surfaces" : "Use semantic accents with restrained color", colorProfileName(), "lacuna", "toggle-color-profile", "toggle", root.registry.colorProfile === "colorful"),
+        row("corners", "Corner Pieces", root.registry.sidebarCornerPieces ? "Rounded connector pieces are visible" : "Use a flat sidebar edge", root.registry.sidebarCornerPieces ? "On" : "Off", "lacuna", "toggle-corner-pieces", "toggle", root.registry.sidebarCornerPieces),
         section("Frame", "Fake fullscreen frame and unified shadow treatment.", "lacuna"),
         row("corners", "Frame", "Draw Lacuna-owned frame pieces around the screen perimeter", frameModeName(), "lacuna", "", "segments", false, [
           { value: "off", label: "Off" },
@@ -272,7 +273,6 @@ Item {
           { value: "rail", label: "Rail" }
         ], root.registry.sidebarDefaultMode, "set-sidebar-default-"),
         row("sidebar-overlay", "Window Mode", root.registry.sidebarExclusive ? "Float over windows" : "Reserve screen space", sidebarModeName(), "lacuna", "toggle-sidebar-mode", "toggle", root.registry.sidebarExclusive),
-        row("corners", "Corner Pieces", root.registry.sidebarCornerPieces ? "Rounded connector pieces are visible" : "Use a flat sidebar edge", root.registry.sidebarCornerPieces ? "On" : "Off", "lacuna", "toggle-corner-pieces", "toggle", root.registry.sidebarCornerPieces),
         section("Omarchy Settings", "Choose how the shell settings surface opens from Lacuna.", "shell"),
         row("settings", "Shell Settings Surface", root.registry.shellSettingsSurfaceHint(), root.registry.shellSettingsSurfaceName(), "shell", "", "segments", false, [
           { value: "flyout", label: "Flyout" },

@@ -555,7 +555,12 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("property int barEdgeCasterSize: frameThickness", window)
         self.assertIn("property int sidebarReserveExtra: 2", window)
         self.assertIn("barEdgeCasterSize: root.barEdgeCasterSize", window)
+        self.assertIn("cornerPieces: sidebarState.cornerPieces", window)
+        self.assertIn("function holdFlyoutAfterSettingsActivation()", window)
+        self.assertIn("if (Date.now() < ignoreFlyoutFocusClearUntil) return", window)
         self.assertIn("property real barEdgeCasterSize: frameThickness", overlay)
+        self.assertIn("property bool cornerPieces: true", overlay)
+        self.assertIn("root.fullFrame && root.cornerPieces && root.topBar && !root.leftBar && !root.leftEdgeOccupied", overlay)
         self.assertIn("frameReserveRight: frameReserveActive && frameMode === \"fullframe\" && !root.panelOnRight && !root.rightBar ? frameThickness + reservePadding : 0", window)
         self.assertIn("topBarShadowReserve: frameReserveActive && root.topBar ? reservePadding : 0", window)
 

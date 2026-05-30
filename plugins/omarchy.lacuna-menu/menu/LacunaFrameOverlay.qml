@@ -14,6 +14,7 @@ Item {
   property int frameThickness: 8
   property int frameRadius: 14
   property int joinRadius: frameRadius
+  property bool cornerPieces: true
   property real progress: 1
   property color frameColor: "#101315"
   property color shadowColor: "black"
@@ -144,7 +145,7 @@ Item {
     Shape {
       id: fullFrameTopLeftCorner
 
-      visible: root.fullFrame && root.topBar && !root.leftBar && !root.leftEdgeOccupied && root.cornerSize > 0
+      visible: root.fullFrame && root.cornerPieces && root.topBar && !root.leftBar && !root.leftEdgeOccupied && root.cornerSize > 0
       x: -root.cornerSize + (root.t + root.cornerSize) * root.edgeProgress
       y: 0
       width: root.cornerSize
@@ -190,7 +191,7 @@ Item {
     Shape {
       id: fullFrameTopRightCorner
 
-      visible: root.fullFrame && root.topBar && !root.rightBar && !root.rightEdgeOccupied && root.cornerSize > 0
+      visible: root.fullFrame && root.cornerPieces && root.topBar && !root.rightBar && !root.rightEdgeOccupied && root.cornerSize > 0
       x: root.effectiveFrameWidth - (root.t + root.cornerSize) * root.edgeProgress
       y: 0
       width: root.cornerSize
@@ -227,7 +228,7 @@ Item {
     Shape {
       id: fullFrameBottomRightCorner
 
-      visible: root.fullFrame && !root.bottomBar && !root.rightBar && !root.rightEdgeOccupied && root.cornerSize > 0
+      visible: root.fullFrame && root.cornerPieces && !root.bottomBar && !root.rightBar && !root.rightEdgeOccupied && root.cornerSize > 0
       x: root.effectiveFrameWidth - (root.t + root.cornerSize) * root.edgeProgress
       y: parent.height - (root.t + root.cornerSize) * root.edgeProgress
       width: root.cornerSize
@@ -264,7 +265,7 @@ Item {
     Shape {
       id: fullFrameBottomLeftCorner
 
-      visible: root.fullFrame && !root.bottomBar && root.leftEdgeOccupied && root.sidebarCornerVisible && root.cornerSize > 0
+      visible: root.fullFrame && root.cornerPieces && !root.bottomBar && root.leftEdgeOccupied && root.sidebarCornerVisible && root.cornerSize > 0
       x: root.sidebarX + root.sidebarWidth
       y: parent.height - (root.t + root.cornerSize) * root.edgeProgress
       width: root.cornerSize
@@ -301,7 +302,7 @@ Item {
     Shape {
       id: fullFrameBottomLeftEdgeCorner
 
-      visible: root.fullFrame && !root.bottomBar && !root.leftBar && !root.leftEdgeOccupied && root.cornerSize > 0
+      visible: root.fullFrame && root.cornerPieces && !root.bottomBar && !root.leftBar && !root.leftEdgeOccupied && root.cornerSize > 0
       x: -root.cornerSize + (root.t + root.cornerSize) * root.edgeProgress
       y: parent.height - (root.t + root.cornerSize) * root.edgeProgress
       width: root.cornerSize
