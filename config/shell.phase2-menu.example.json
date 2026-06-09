@@ -1,31 +1,29 @@
 {
-    "schemaVersion": 1,
-    "id": "omarchy.lacuna-menu-button",
-    "name": "Lacuna Menu Button",
-    "version": "0.1.0",
-    "author": "Lacuna",
-    "description": "Top-bar button that opens the Lacuna sidebar menu.",
-    "kinds": [
-        "bar-widget"
-    ],
-    "activation": "on-demand",
-    "entryPoints": {
-        "barWidget": "Widget.qml"
-    },
-    "barWidget": {
-        "displayName": "Lacuna Menu Button",
-        "description": "Opens the Lacuna menu sidebar.",
-        "category": "Lacuna",
-        "allowMultiple": false,
-        "defaults": {
-            "tooltip": "Lacuna"
-        },
-        "schema": [
-            {
-                "key": "tooltip",
-                "type": "string",
-                "label": "Tooltip"
-            }
-        ]
+  "version": 1,
+  "bar": {
+    "position": "top",
+    "transparent": false,
+    "centerAnchor": "omarchy.clock",
+    "layout": {
+      "left": [
+        { "id": "lacuna.menu-button" },
+        { "id": "omarchy.spacer", "size": 24 },
+        { "id": "omarchy.workspaces" }
+      ],
+      "center": [
+        { "id": "omarchy.clock" }
+      ],
+      "right": [
+        { "id": "omarchy.notifications" },
+        { "id": "omarchy.tray" },
+        { "id": "omarchy.audio" },
+        { "id": "omarchy.power" }
+      ]
     }
+  },
+  "plugins": [
+    { "id": "lacuna.state" },
+    { "id": "lacuna.shell-settings" },
+    { "id": "lacuna.menu" }
+  ]
 }

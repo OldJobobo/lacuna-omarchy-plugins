@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.state",
+  "name": "Lacuna State",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Shared Lacuna runtime settings and normalization service.",
+  "kinds": [
+    "service"
+  ],
+  "activation": "persistent",
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml"
+  },
+  "lacuna": {
+    "standalone": false,
+    "bundle": "core",
+    "requires": [],
+    "recommends": [
+      "lacuna.menu",
+      "lacuna.shell-settings"
+    ]
+  }
+}

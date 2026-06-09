@@ -12,16 +12,16 @@ The stock theme switcher script performs three expensive steps before the picker
 
 1. Scan user themes in `~/.config/omarchy/themes`.
 2. Scan stock themes in `~/.local/share/omarchy/themes`.
-3. Build preview symlinks in `~/.cache/omarchy/theme-selector/previews`, then delegate to `omarchy-menu-images`.
+3. Build preview symlinks in `~/.cache/omarchy/theme-selector/previews`, then delegate to `omarchy menu images`.
 
-`omarchy-menu-images` then prepares image-selector rows and thumbnails under `~/.cache/omarchy/image-selector`.
+`omarchy menu images` then prepares image-selector rows and thumbnails under `~/.cache/omarchy/image-selector`.
 
 ## Plugin Shape
 
 Add a persistent headless plugin:
 
 ```text
-plugins/omarchy.lacuna-theme-preloader/
+lacuna.theme-preloader/
   manifest.json
   Service.qml
   scripts/
@@ -45,7 +45,7 @@ Current Omarchy shell only instantiates generic `service` entries for first-part
 
 - mirror the stock theme-switcher preview-index logic
 - write only regeneratable cache files under `~/.cache/omarchy`
-- warm the image-selector cache with `omarchy-menu-images --cache-only`
+- warm the image-selector cache with `omarchy menu images --cache-only`
 - never edit files in `~/.local/share/omarchy`
 - exit successfully when another preload is already running
 
@@ -85,10 +85,10 @@ omarchy-shell lacuna-theme-preloader ping
 Use:
 
 ```bash
-qmllint plugins/omarchy.lacuna-theme-preloader/Service.qml
-bash -n plugins/omarchy.lacuna-theme-preloader/scripts/preload-theme-switcher.sh
-plugins/omarchy.lacuna-theme-preloader/scripts/preload-theme-switcher.sh
-omarchy-shell shell rescanPlugins
+qmllint lacuna.theme-preloader/Service.qml
+bash -n lacuna.theme-preloader/scripts/preload-theme-switcher.sh
+lacuna.theme-preloader/scripts/preload-theme-switcher.sh
+omarchy plugin rescan
 omarchy restart shell
 quickshell log --path ~/.local/share/omarchy/shell --tail 100 --newest
 ```

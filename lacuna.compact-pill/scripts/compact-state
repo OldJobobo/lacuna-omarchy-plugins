@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+
+import json
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+
+HOME = Path.home()
+CONFIG_HOME = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config"))
+SETTINGS_PATH = CONFIG_HOME / "omarchy" / "lacuna" / "settings.json"
+BAR_SIZE_STATE = CONFIG_HOME / "omarchy" / "plugins" / "lacuna.bar-size-pill" / "scripts" / "bar-size-state"
+
+
+def load_settings():
+    if not SETTINGS_PATH.exists():
+        return {"version": 1, "colorProfile": "semantic", "compact": False, "barSizeMode": "full", "sizeTransition": {"holdCompact": False, "holdUntil": 0}, "sidebar": {"collapsed": False, "exclusive": True, "cornerPieces": True}}
+    try:
+        data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    data.setdefault("version", 1)
+    if data.get("colorProfile") not in ("semantic", "colorful"):
+        data["colorProfile"] = "semantic"
+    compact_fallback = bool(data.get("compact", False))
+    if data.get("barSizeMode") not in ("compact", "full"):
+        data["barSizeMode"] = "compact" if compact_fallback else "full"
+    data["compact"] = data["barSizeMode"] == "compact"
+    sidebar = data.setdefault("sidebar", {})
+    if not isinstance(sidebar, dict):
+        data["sidebar"] = {"collapsed": False, "exclusive": True, "cornerPieces": True}
+    else:
+        sidebar.setdefault("collapsed", False)
+        sidebar.setdefault("exclusive", True)
+        sidebar.setdefault("cornerPieces", True)
+    return data
+
+
+def save_settings(data):
+    SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp = SETTINGS_PATH.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(SETTINGS_PATH)
+
+
+def emit(data):
+    compact = data.get("barSizeMode") == "compact"
+    print(json.dumps({
+        "compact": compact,
+        "tooltip": "<b>Lacuna Size</b><br/>Mode: " + ("compact" if compact else "full"),
+    }, separators=(",", ":")))
+
+
+def emit_from_bar_size_state(payload):
+    mode = payload.get("mode") if payload.get("mode") in ("compact", "full") else "full"
+    compact = mode == "compact"
+    print(json.dumps({
+        "compact": compact,
+        "tooltip": "<b>Lacuna Size</b><br/>Mode: " + ("compact" if compact else "full"),
+    }, separators=(",", ":")))
+
+
+def delegate_to_bar_size_state(action):
+    if not BAR_SIZE_STATE.exists():
+        return False
+
+    try:
+        raw = subprocess.check_output([str(BAR_SIZE_STATE), action], text=True)
+        payload = json.loads(raw or "{}")
+    except Exception:
+        return False
+
+    emit_from_bar_size_state(payload)
+    return True
+
+
+def main():
+    action = sys.argv[1] if len(sys.argv) > 1 else "get"
+    if delegate_to_bar_size_state(action):
+        return
+
+    data = load_settings()
+    if action == "toggle":
+        old_compact = bool(data.get("compact", False))
+        data["barSizeMode"] = "full" if data.get("barSizeMode") == "compact" else "compact"
+        data["compact"] = data["barSizeMode"] == "compact"
+        data["sizeTransition"] = {
+            "holdCompact": old_compact,
+            "holdUntil": int((time.time() + 0.056) * 1000),
+        }
+        save_settings(data)
+    emit(data)
+
+
+if __name__ == "__main__":
+    main()

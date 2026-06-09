@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.menu",
+  "name": "Lacuna Menu",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Left command sidebar for Omarchy shell.",
+  "kinds": [
+    "menu"
+  ],
+  "activation": "on-demand",
+  "keepLoaded": true,
+  "entryPoints": {
+    "menu": "Menu.qml"
+  },
+  "lacuna": {
+    "standalone": false,
+    "bundle": "core",
+    "requires": [
+      "lacuna.state",
+      "lacuna.shell-settings"
+    ],
+    "recommends": [
+      "lacuna.menu-button",
+      "lacuna.background-vignette",
+      "lacuna.cinematic-light-overlay",
+      "lacuna.crt-overlay",
+      "lacuna.desktop-clock",
+      "lacuna.theme-preloader",
+      "lacuna.tray",
+      "lacuna.vhs-overlay"
+    ]
+  }
+}

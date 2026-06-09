@@ -3,63 +3,63 @@
   "bar": {
     "position": "top",
     "transparent": false,
-    "centerAnchor": "omarchy.lacuna-clock",
+    "centerAnchor": "lacuna.clock",
     "layout": {
       "left": [
-        { "id": "omarchy.lacuna-menu-button" },
-        { "id": "spacer", "size": 24 },
-        { "id": "omarchy.lacuna-workspaces", "workspaceCount": 7 },
-        { "id": "spacer", "size": 24 },
-        { "id": "omarchy.lacuna-codex-usage" },
-        { "id": "omarchy.lacuna-claude-usage" },
-        { "id": "spacer", "size": 24 },
-        { "id": "omarchy.lacuna-mpris" }
+        { "id": "lacuna.menu-button" },
+        { "id": "omarchy.spacer", "size": 24 },
+        { "id": "lacuna.workspaces", "workspaceCount": 7 },
+        { "id": "omarchy.spacer", "size": 24 },
+        { "id": "lacuna.codex-usage" },
+        { "id": "lacuna.claude-usage" },
+        { "id": "omarchy.spacer", "size": 24 },
+        { "id": "lacuna.mpris" }
       ],
       "center": [
-        { "id": "omarchy.lacuna-system-update" },
+        { "id": "lacuna.system-update" },
         {
-          "id": "omarchy.lacuna-clock",
+          "id": "lacuna.clock",
           "format": "ddd d h:mm AP",
           "formatAlt": "dd MMMM 'W'ww yyyy",
           "verticalFormat": "HH\n—\nmm"
         },
-        { "id": "omarchy.lacuna-weather" },
-        { "id": "omarchy.lacuna-notifications" },
-        { "id": "omarchy.lacuna-nightlight" },
-        { "id": "omarchy.lacuna-idle-inhibitor" },
-        { "id": "omarchy.lacuna-screen-recording" },
-        { "id": "omarchy.lacuna-voxtype" }
+        { "id": "lacuna.weather" },
+        { "id": "lacuna.notifications" },
+        { "id": "lacuna.nightlight" },
+        { "id": "lacuna.idle-inhibitor" },
+        { "id": "lacuna.screen-recording" },
+        { "id": "lacuna.voxtype" }
       ],
       "right": [
-        { "id": "omarchy.lacuna-tray" },
-        { "id": "omarchy.lacuna-theme" },
-        { "id": "omarchy.lacuna-wallpaper" },
-        { "id": "omarchy.lacuna-bluetooth" },
-        { "id": "omarchy.lacuna-network" },
-        { "id": "omarchy.lacuna-audio" },
-        { "id": "omarchy.lacuna-power" },
-        { "id": "omarchy.lacuna-system-stats" },
-        { "id": "omarchy.lacuna-temperature" },
-        { "id": "omarchy.lacuna-bar-size-pill" }
+        { "id": "lacuna.tray" },
+        { "id": "lacuna.theme" },
+        { "id": "lacuna.wallpaper" },
+        { "id": "lacuna.bluetooth" },
+        { "id": "lacuna.network" },
+        { "id": "lacuna.audio" },
+        { "id": "lacuna.power" },
+        { "id": "lacuna.system-stats" },
+        { "id": "lacuna.temperature" },
+        { "id": "lacuna.bar-size-pill" }
       ]
     }
   },
   "plugins": [
-    { "id": "omarchy.lacuna-menu" },
-    { "id": "omarchy.lacuna-theme-preloader" },
-    { "id": "omarchy.lacuna-desktop-clock" },
-    { "id": "omarchy.lacuna-vhs-overlay" },
-    { "id": "omarchy.lacuna-crt-overlay" },
-    { "id": "omarchy.lacuna-aurora-drift" },
-    { "id": "omarchy.lacuna-rainfall-overlay" },
-    { "id": "omarchy.lacuna-cinematic-light-overlay" },
-    { "id": "omarchy.lacuna-background-vignette" },
-    { "id": "omarchy.lacuna-settings-persistence" },
-    { "id": "omarchy.lacuna-state" },
-    { "id": "omarchy.lacuna-shell-settings" },
-    { "id": "omarchy.lacuna-nightlight" },
-    { "id": "omarchy.lacuna-idle-inhibitor" },
-    { "id": "omarchy.lacuna-screen-recording" },
-    { "id": "omarchy.lacuna-voxtype" }
+    { "id": "lacuna.menu" },
+    { "id": "lacuna.theme-preloader" },
+    { "id": "lacuna.desktop-clock" },
+    { "id": "lacuna.vhs-overlay" },
+    { "id": "lacuna.crt-overlay" },
+    { "id": "lacuna.aurora-drift" },
+    { "id": "lacuna.rainfall-overlay" },
+    { "id": "lacuna.cinematic-light-overlay" },
+    { "id": "lacuna.background-vignette" },
+    { "id": "lacuna.settings-persistence" },
+    { "id": "lacuna.state" },
+    { "id": "lacuna.shell-settings" },
+    { "id": "lacuna.nightlight" },
+    { "id": "lacuna.idle-inhibitor" },
+    { "id": "lacuna.screen-recording" },
+    { "id": "lacuna.voxtype" }
   ]
 }

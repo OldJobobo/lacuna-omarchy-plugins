@@ -10,9 +10,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "tests" / "fixtures" / "full-settings.json"
-BAR_SIZE_STATE = ROOT / "plugins" / "omarchy.lacuna-bar-size-pill" / "scripts" / "bar-size-state"
-COMPACT_STATE = ROOT / "plugins" / "omarchy.lacuna-compact-pill" / "scripts" / "compact-state"
-REFRESH_THEME_BACKGROUND = ROOT / "plugins" / "omarchy.lacuna-theme-preloader" / "scripts" / "refresh-theme-background.sh"
+BAR_SIZE_STATE = ROOT / "lacuna.bar-size-pill" / "scripts" / "bar-size-state"
+COMPACT_STATE = ROOT / "lacuna.compact-pill" / "scripts" / "compact-state"
+REFRESH_THEME_BACKGROUND = ROOT / "lacuna.theme-preloader" / "scripts" / "refresh-theme-background.sh"
 
 PRESERVED_KEYS = [
     "customQuickLaunchApps",
@@ -122,7 +122,7 @@ class StateScriptTests(unittest.TestCase):
     def test_compact_state_delegates_to_bar_size_state_and_preserves_state(self):
         with tempfile.TemporaryDirectory() as tmp:
             config_home, omarchy_path, settings_path, before = seed_config(Path(tmp))
-            delegated = config_home / "omarchy" / "plugins" / "omarchy.lacuna-bar-size-pill" / "scripts" / "bar-size-state"
+            delegated = config_home / "omarchy" / "plugins" / "lacuna.bar-size-pill" / "scripts" / "bar-size-state"
             delegated.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(BAR_SIZE_STATE, delegated)
 

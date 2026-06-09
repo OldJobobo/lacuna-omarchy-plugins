@@ -166,8 +166,8 @@ The first implementation should use one of these safer approximations:
 Validated:
 
 - `find plugins -name '*.qml' -print0 | xargs -0 qmllint`
-- `omarchy-shell shell rescanPlugins`
-- `omarchy-shell shell summon omarchy.lacuna-menu "{}"`
+- `omarchy plugin rescan`
+- `omarchy-shell shell summon lacuna.menu "{}"`
 
 ## Performance Rules
 

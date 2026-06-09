@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.power",
+  "name": "Lacuna Power",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Lacuna-styled battery and power status control for the Omarchy bar.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lacuna Power",
+    "description": "Shows battery percentage and power state.",
+    "category": "Lacuna",
+    "allowMultiple": false,
+    "defaults": {},
+    "schema": [
+      {
+        "key": "colorProfile",
+        "type": "enum",
+        "label": "Color profile",
+        "options": [
+          "semantic",
+          "colorful"
+        ],
+        "description": "Override the global Lacuna color profile for this widget."
+      }
+    ]
+  },
+  "lacuna": {
+    "standalone": true,
+    "bundle": "standalone",
+    "requires": [],
+    "recommends": []
+  }
+}

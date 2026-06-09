@@ -26,7 +26,7 @@ Overhaul Lacuna's sidebar and attached flyout control so panel lifecycle, render
 
 ### Panel Controller State
 
-Replace scattered lifecycle state with a controller-owned transition model in `plugins/omarchy.lacuna-menu/services/PanelController.qml`.
+Replace scattered lifecycle state with a controller-owned transition model in `lacuna.menu/services/PanelController.qml`.
 
 Track explicit state such as:
 
@@ -153,13 +153,13 @@ This prevents stale close completions from hiding a panel that has already reope
 ## Verification Commands
 
 ```sh
-qmllint plugins/omarchy.lacuna-menu/services/PanelController.qml plugins/omarchy.lacuna-menu/menu/*.qml plugins/omarchy.lacuna-menu/settings/*.qml
+qmllint lacuna.menu/services/PanelController.qml lacuna.menu/menu/*.qml lacuna.menu/settings/*.qml
 ```
 
 ```sh
-omarchy-shell shell rescanPlugins
+omarchy plugin rescan
 ```
 
 ```sh
-omarchy-shell shell summon omarchy.lacuna-menu "{}"
+omarchy-shell shell summon lacuna.menu "{}"
 ```

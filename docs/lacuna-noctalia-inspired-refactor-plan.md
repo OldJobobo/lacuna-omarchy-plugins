@@ -12,7 +12,7 @@ The result should still be an Omarchy plugin integration. Do not turn Lacuna int
 - 2026-05-19: Began Phase 2 controller hardening by adding explicit menu/flyout state names, renderability aliases, outgoing flyout tracking, and revision fields to `PanelController.qml` while preserving the existing `MenuWindow`-facing API.
 - 2026-05-19: Collapsed settings and app picker onto a single attached flyout shell and connector in `MenuWindow.qml`, then changed `LacunaAttachedFlyout.qml` to reveal by growing visible width from the sidebar edge with delayed content opacity. Added `LacunaShapeSurface.qml` as the first shared geometry-backed panel shell and made connector pieces fill-only.
 - 2026-05-19: Ported the flyout shell to explicit per-corner state through `LacunaCornerHelper.qml`, keeping the sidebar attachment edge square while rounding only exposed right corners. Added `LacunaScrollView.qml` and moved the app picker list onto the shared smooth wheel scrolling primitive.
-- 2026-05-19: Verified the current refactor checkpoint with full QML lint, Omarchy shell plugin rescan, `omarchy.lacuna-menu` summon, and live Quickshell log inspection. No Lacuna runtime load errors were present at this checkpoint.
+- 2026-05-19: Verified the current refactor checkpoint with full QML lint, Omarchy shell plugin rescan, `lacuna.menu` summon, and live Quickshell log inspection. No Lacuna runtime load errors were present at this checkpoint.
 - 2026-05-19: Added `LacunaPanelHost.qml` as the first non-visual geometry owner for sidebar, connector, flyout positions, and input masks. `MenuWindow.qml` now consumes host-owned mask geometry while keeping the existing visual children stable.
 - 2026-05-19: Made Lacuna panel background ownership explicit with `Theme.panelBackground`, sourced from `colors.toml` base background and not from `shell.toml` popup/menu background roles. Switched panel progress animations to shared Noctalia-style bezier motion tokens and moved local scroll/view reveal timings onto `MotionTokens.qml`.
 - 2026-05-19: Removed stale pre-host flyout mask aliases and the old `attachedFlyoutLeftX` property so mask ownership lives in `LacunaPanelHost.qml`. Re-verified with full QML lint, plugin rescan, menu summon, Quickshell log tail, and a compositor screenshot showing the sidebar rendered.
@@ -57,7 +57,7 @@ Validated at this checkpoint:
 
 - `find plugins -name '*.qml' -print0 | xargs -0 qmllint`
 - `omarchy restart shell`
-- `omarchy-shell shell summon omarchy.lacuna-menu "{}"`
+- `omarchy-shell shell summon lacuna.menu "{}"`
 - Hyprland layer geometry with top bar: Omarchy bar at the top, Lacuna menu at the left below the bar.
 - Hyprland layer geometry with right bar: Omarchy bar at the right, Lacuna menu at the left.
 
@@ -121,7 +121,7 @@ The duration values should respect a Lacuna setting later if needed, but the fir
 
 ### 2. Explicit Panel Controller
 
-Replace the current implicit progress controller in `plugins/omarchy.lacuna-menu/services/PanelController.qml` with a small state machine.
+Replace the current implicit progress controller in `lacuna.menu/services/PanelController.qml` with a small state machine.
 
 States:
 
@@ -165,7 +165,7 @@ Rules:
 Create a new host component:
 
 ```text
-plugins/omarchy.lacuna-menu/menu/LacunaPanelHost.qml
+lacuna.menu/menu/LacunaPanelHost.qml
 ```
 
 Responsibilities:
@@ -207,8 +207,8 @@ For app picker and settings:
 Introduce a reusable geometry-backed shape layer:
 
 ```text
-plugins/omarchy.lacuna-menu/menu/LacunaShapeSurface.qml
-plugins/omarchy.lacuna-menu/menu/LacunaCornerHelper.qml
+lacuna.menu/menu/LacunaShapeSurface.qml
+lacuna.menu/menu/LacunaCornerHelper.qml
 ```
 
 Use Noctalia's corner-state idea:
@@ -265,11 +265,11 @@ Consider a short keyboard initialization period only if Hyprland focus remains f
 After the panel host is stable, refactor Lacuna UI controls into a small widget set:
 
 ```text
-plugins/omarchy.lacuna-menu/components/LacunaButton.qml
-plugins/omarchy.lacuna-menu/components/LacunaIconButton.qml
-plugins/omarchy.lacuna-menu/components/LacunaListView.qml
-plugins/omarchy.lacuna-menu/components/LacunaSurfaceBox.qml
-plugins/omarchy.lacuna-menu/components/LacunaScrollView.qml
+lacuna.menu/components/LacunaButton.qml
+lacuna.menu/components/LacunaIconButton.qml
+lacuna.menu/components/LacunaListView.qml
+lacuna.menu/components/LacunaSurfaceBox.qml
+lacuna.menu/components/LacunaScrollView.qml
 ```
 
 Model them after Noctalia's widgets, but use Lacuna/Omarchy tokens:
@@ -284,17 +284,17 @@ Model them after Noctalia's widgets, but use Lacuna/Omarchy tokens:
 
 Apply the same primitives to Lacuna bar widgets after the menu refactor:
 
-- `omarchy.lacuna-menu-button`
-- `omarchy.lacuna-script-pill`
-- `omarchy.lacuna-compact-pill`
-- `omarchy.lacuna-system-stats`
-- `omarchy.lacuna-temperature`
-- `omarchy.lacuna-codex-usage`
-- `omarchy.lacuna-claude-usage`
-- `omarchy.lacuna-theme`
-- `omarchy.lacuna-wallpaper`
-- `omarchy.lacuna-workspaces`
-- `omarchy.lacuna-mpris`
+- `lacuna.menu-button`
+- `lacuna.script-pill`
+- `lacuna.compact-pill`
+- `lacuna.system-stats`
+- `lacuna.temperature`
+- `lacuna.codex-usage`
+- `lacuna.claude-usage`
+- `lacuna.theme`
+- `lacuna.wallpaper`
+- `lacuna.workspaces`
+- `lacuna.mpris`
 
 Goals:
 
@@ -406,7 +406,7 @@ Success criteria:
 
 ### Phase 8: Bar Widget Pass
 
-1. Extract shared pill/button primitives usable outside `omarchy.lacuna-menu`.
+1. Extract shared pill/button primitives usable outside `lacuna.menu`.
 2. Update Lacuna bar widgets one group at a time.
 3. Preserve existing manifest schemas and Omarchy Settings behavior.
 4. Keep plugin-relative script path handling intact.
@@ -422,24 +422,24 @@ Success criteria:
 
 Likely new files:
 
-- `plugins/omarchy.lacuna-menu/services/MotionTokens.qml`
-- `plugins/omarchy.lacuna-menu/menu/LacunaPanelHost.qml`
-- `plugins/omarchy.lacuna-menu/menu/LacunaShapeSurface.qml`
-- `plugins/omarchy.lacuna-menu/menu/LacunaCornerHelper.qml`
-- `plugins/omarchy.lacuna-menu/components/LacunaScrollView.qml`
-- `plugins/omarchy.lacuna-menu/menu/FlyoutAppPickerContent.qml`
+- `lacuna.menu/services/MotionTokens.qml`
+- `lacuna.menu/menu/LacunaPanelHost.qml`
+- `lacuna.menu/menu/LacunaShapeSurface.qml`
+- `lacuna.menu/menu/LacunaCornerHelper.qml`
+- `lacuna.menu/components/LacunaScrollView.qml`
+- `lacuna.menu/menu/FlyoutAppPickerContent.qml`
 
 Likely major edits:
 
-- `plugins/omarchy.lacuna-menu/services/PanelController.qml`
-- `plugins/omarchy.lacuna-menu/services/DesignTokens.qml`
-- `plugins/omarchy.lacuna-menu/menu/MenuWindow.qml`
-- `plugins/omarchy.lacuna-menu/menu/LacunaPanelWindow.qml`
-- `plugins/omarchy.lacuna-menu/menu/MenuSurface.qml`
-- `plugins/omarchy.lacuna-menu/menu/LacunaAttachedFlyout.qml`
-- `plugins/omarchy.lacuna-menu/menu/LacunaPanelConnector.qml`
-- `plugins/omarchy.lacuna-menu/components/LacunaAnim.qml`
-- `plugins/omarchy.lacuna-menu/components/LacunaColorAnim.qml`
+- `lacuna.menu/services/PanelController.qml`
+- `lacuna.menu/services/DesignTokens.qml`
+- `lacuna.menu/menu/MenuWindow.qml`
+- `lacuna.menu/menu/LacunaPanelWindow.qml`
+- `lacuna.menu/menu/MenuSurface.qml`
+- `lacuna.menu/menu/LacunaAttachedFlyout.qml`
+- `lacuna.menu/menu/LacunaPanelConnector.qml`
+- `lacuna.menu/components/LacunaAnim.qml`
+- `lacuna.menu/components/LacunaColorAnim.qml`
 
 ## Manual Test Matrix
 
@@ -462,15 +462,15 @@ Likely major edits:
 ## Verification Commands
 
 ```sh
-qmllint plugins/omarchy.lacuna-menu/services/*.qml plugins/omarchy.lacuna-menu/menu/*.qml plugins/omarchy.lacuna-menu/components/*.qml plugins/omarchy.lacuna-menu/settings/*.qml
+qmllint lacuna.menu/services/*.qml lacuna.menu/menu/*.qml lacuna.menu/components/*.qml lacuna.menu/settings/*.qml
 ```
 
 ```sh
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell rescanPlugins
+OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy plugin rescan
 ```
 
 ```sh
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell summon omarchy.lacuna-menu "{}"
+OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell summon lacuna.menu "{}"
 ```
 
 ## Non-Goals
@@ -487,5 +487,5 @@ OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-she
 1. Should Lacuna expose a user setting for animation speed, or keep motion tuned and fixed?
 2. Should the sidebar itself slide, grow from the edge, or support both as design styles?
 3. Should the app picker preview panel become a second attached flyout lane later?
-4. Should shared Lacuna controls live inside `omarchy.lacuna-menu` first, then be copied to bar widgets, or should they become a tiny shared component package per plugin?
+4. Should shared Lacuna controls live inside `lacuna.menu` first, then be copied to bar widgets, or should they become a tiny shared component package per plugin?
 5. Should Lacuna continue maintaining separate bar widgets where Omarchy has strong native widgets, or should the refactor reduce the widget set to only distinct Lacuna workflows?

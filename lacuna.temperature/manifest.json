@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.temperature",
+  "name": "Lacuna Temperature",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Lacuna-styled CPU temperature status for the Omarchy bar.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lacuna Temperature",
+    "description": "Shows CPU temperature and threshold status.",
+    "category": "Lacuna",
+    "allowMultiple": false,
+    "defaults": {
+      "interval": 5000,
+      "warmF": 150,
+      "criticalF": 185
+    },
+    "schema": [
+      {
+        "key": "interval",
+        "type": "integer",
+        "label": "Refresh interval (ms)",
+        "min": 1000,
+        "step": 1000
+      },
+      {
+        "key": "warmF",
+        "type": "integer",
+        "label": "Warm threshold F",
+        "min": 1,
+        "step": 1
+      },
+      {
+        "key": "criticalF",
+        "type": "integer",
+        "label": "Critical threshold F",
+        "min": 2,
+        "step": 1
+      },
+      {
+        "key": "colorProfile",
+        "type": "enum",
+        "label": "Color profile",
+        "options": [
+          "semantic",
+          "colorful"
+        ],
+        "description": "Override the global Lacuna color profile for this widget."
+      }
+    ]
+  },
+  "lacuna": {
+    "standalone": true,
+    "bundle": "standalone",
+    "requires": [],
+    "recommends": []
+  }
+}

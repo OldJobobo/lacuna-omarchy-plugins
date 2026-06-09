@@ -32,7 +32,7 @@ The future Omarchy shell lives under:
 Important constraints from that implementation:
 
 1. `shell.qml` is the only `ShellRoot`.
-2. First-party plugins live under `plugins/<id>/`.
+2. First-party Omarchy plugins live under `shell/plugins/<id>/` in the installed Omarchy source.
 3. User plugins live under `~/.config/omarchy/plugins/<id>/`.
 4. Every plugin has a `manifest.json`.
 5. Plugin entry points are `Item`s, not `ShellRoot` or standalone app roots.
@@ -59,7 +59,7 @@ The live Omarchy shell now owns several pipelines that affect Lacuna:
    standalone `background-switcher.qml`.
 5. The first-party menu can be extended with
    `~/.config/omarchy/extensions/omarchy-menu.jsonc` when Lacuna only needs
-   command entries. Keep `omarchy.lacuna-menu` for the distinct sidebar UI.
+   command entries. Keep `lacuna.menu` for the distinct sidebar UI.
 6. Use current commands such as `omarchy restart shell`,
    `omarchy theme switcher`, `omarchy theme bg-switcher`, and
    `omarchy style corners sharp|round`.
@@ -162,9 +162,9 @@ Port Lacuna code when it adds one of these:
 3. A small status pill that does not exist as a native Omarchy widget.
 4. A sidebar-specific behavior that should not live in the generic Omarchy menu.
 5. A script-backed experiment that has proven useful enough to graduate from
-   `omarchy.lacuna-script-pill` into its own plugin.
+   `lacuna.script-pill` into its own plugin.
 
-`omarchy.lacuna-mpris` is included under this exception because the native media
+`lacuna.mpris` is included under this exception because the native media
 module does not own Lacuna's original per-character sweep animation treatment.
 
 The sidebar is the intentional exception. It overlaps with `omarchy.menu`, but
@@ -175,7 +175,7 @@ re-implementing their internals.
 
 ## Target Plugin Split
 
-### `omarchy.lacuna-menu`
+### `lacuna.menu`
 
 Type: `menu`
 
@@ -212,7 +212,7 @@ Required changes:
    - `open(payloadJson)`
    - `close()`
 4. When the sidebar closes itself through keyboard, command, or menu actions,
-   call `shell.hide("omarchy.lacuna-menu")` so the Omarchy host clears its
+   call `shell.hide("lacuna.menu")` so the Omarchy host clears its
    open-plugin state. Guard this path so host-initiated `close()` does not
    recurse.
 5. Replace restart/self-update commands that assume standalone Lacuna.
@@ -231,7 +231,7 @@ Starter manifest:
 ```json
 {
   "schemaVersion": 1,
-  "id": "omarchy.lacuna-menu",
+  "id": "lacuna.menu",
   "name": "Lacuna Menu",
   "version": "0.1.0",
   "author": "Lacuna",
@@ -288,7 +288,7 @@ Starter widget manifest:
 ```json
 {
   "schemaVersion": 1,
-  "id": "omarchy.lacuna-script-pill",
+  "id": "lacuna.script-pill",
   "name": "Lacuna Script Pill",
   "version": "0.1.0",
   "author": "Lacuna",
@@ -337,7 +337,7 @@ maintenance cost.
 
 | Lacuna area | First-pass direction |
 |-------------|----------------------|
-| Sidebar/menu | Port as `omarchy.lacuna-menu`, but delegate actions to Omarchy targets. |
+| Sidebar/menu | Port as `lacuna.menu`, but delegate actions to Omarchy targets. |
 | Shell restart/update controls | Use `omarchy restart shell` and Omarchy update commands. |
 | Theme/background selection | Reuse Omarchy shell image picker and theme/background commands. |
 | Audio/network/Bluetooth/media/calendar/battery/tray | Reuse Omarchy native widgets. |
@@ -356,7 +356,7 @@ not a simple user plugin.
 Options:
 
 1. Port Lacuna as a set of bar widgets for the existing Omarchy bar.
-2. Add a first-party alternate `omarchy.lacuna-bar` inside Omarchy.
+2. Add a first-party alternate `lacuna.bar` inside Omarchy.
 3. Refactor Omarchy's bar host to support selectable bar engines.
 
 Initial recommendation: choose option 1 for the first implementation branch.
@@ -382,29 +382,28 @@ Create a new repository outside this Lacuna folder, for example:
 ```text
 lacuna-omarchy-plugins/
   README.md
-  plugins/
-    omarchy.lacuna-script-pill/
-      manifest.json
-      Widget.qml
-      components/
-      services/
+  lacuna.script-pill/
+    manifest.json
+    Widget.qml
+    components/
+    services/
       scripts/
-    omarchy.lacuna-compact-pill/
+    lacuna.compact-pill/
       manifest.json
       Widget.qml
       components/
       services/
-    omarchy.lacuna-system-stats/
+    lacuna.system-stats/
       manifest.json
       Widget.qml
       components/
       services/
-    omarchy.lacuna-temperature/
+    lacuna.temperature/
       manifest.json
       Widget.qml
       components/
       services/
-    omarchy.lacuna-menu/
+    lacuna.menu/
       manifest.json
       Menu.qml
       menu/
@@ -438,7 +437,7 @@ Install/test shape for user plugins:
 
 1. Copy or symlink each plugin directory from the new repo into
    `~/.config/omarchy/plugins/<plugin-id>/`.
-2. Run `omarchy-shell shell rescanPlugins` or restart the shell.
+2. Run `omarchy plugin rescan` or restart the shell.
 3. Enable the plugin through Omarchy Settings or by adding its id to
    `~/.config/omarchy/shell.json`.
 4. Keep bar-widget options in the manifest schema and inline `shell.json`
@@ -488,11 +487,11 @@ the plugin manifest schema:
   "bar": {
     "layout": {
       "left": [
-        { "id": "omarchy.lacuna-script-pill", "script": "scripts/example-status", "interval": 30000 }
+        { "id": "lacuna.script-pill", "script": "scripts/example-status", "interval": 30000 }
       ]
     }
   },
-  "plugins": [{ "id": "omarchy.lacuna-menu" }]
+  "plugins": [{ "id": "lacuna.menu" }]
 }
 ```
 
@@ -531,7 +530,7 @@ With plugin-safe equivalents:
 ```text
 manifest.__sourceDir
 omarchyPath
-omarchy-shell shell hide omarchy.lacuna-menu
+omarchy-shell shell hide lacuna.menu
 omarchy restart shell
 ```
 
@@ -552,22 +551,22 @@ as the source reference for the original QML, scripts, services, and styling.
 
 Initial module targets:
 
-1. `omarchy.lacuna-script-pill`
+1. `lacuna.script-pill`
    - Source: `modules/ScriptPill.qml`
    - Purpose: script-backed status output with Lacuna pill styling.
-2. `omarchy.lacuna-compact-pill`
+2. `lacuna.compact-pill`
    - Source: `modules/CompactPill.qml`
    - Purpose: toggle Lacuna UI density through Lacuna's settings service.
-3. `omarchy.lacuna-system-stats`
+3. `lacuna.system-stats`
    - Source: `modules/SystemStats.qml` plus `services/SystemMonitor.qml`
    - Purpose: Lacuna CPU, memory, and disk status treatment.
-4. `omarchy.lacuna-temperature`
+4. `lacuna.temperature`
    - Source: `modules/TemperaturePill.qml` plus `services/SystemMonitor.qml`
    - Purpose: Lacuna CPU temperature indicator and alert treatment.
-5. `omarchy.lacuna-theme`
+5. `lacuna.theme`
    - Source: `modules/ThemePill.qml` plus `services/Theme.qml`
    - Purpose: show the active Omarchy theme, palette tooltip, and theme switcher.
-6. `omarchy.lacuna-wallpaper`
+6. `lacuna.wallpaper`
    - Source: `modules/WallpaperPill.qml`
    - Purpose: show the active Omarchy background and background switcher.
 
@@ -580,7 +579,7 @@ script only after it proves it is a durable Lacuna workflow.
 Required work:
 
 1. Create the new external plugin repository.
-2. Create one plugin directory per module under `plugins/<plugin-id>/`.
+2. Create one root-level plugin directory per module, named with the plugin id.
 3. Add a `manifest.json` with `kinds: ["bar-widget"]` and
    `entryPoints: { "barWidget": "Widget.qml" }`.
 4. Wrap each Lacuna module in a plugin-safe `Widget.qml`.
@@ -613,35 +612,35 @@ Status: complete.
 
 Validation:
 
-- `python3 -m json.tool plugins/omarchy.lacuna-menu/manifest.json`
-- `qmllint plugins/omarchy.lacuna-menu/Menu.qml plugins/omarchy.lacuna-menu/menu/*.qml plugins/omarchy.lacuna-menu/modules/*.qml plugins/omarchy.lacuna-menu/services/*.qml plugins/omarchy.lacuna-menu/components/*.qml`
-- `omarchy-shell shell rescanPlugins`
-- `omarchy-shell shell summon omarchy.lacuna-menu '{}'`
-- `omarchy-shell shell hide omarchy.lacuna-menu`
+- `python3 -m json.tool lacuna.menu/manifest.json`
+- `qmllint lacuna.menu/Menu.qml lacuna.menu/menu/*.qml lacuna.menu/modules/*.qml lacuna.menu/services/*.qml lacuna.menu/components/*.qml`
+- `omarchy plugin rescan`
+- `omarchy-shell shell summon lacuna.menu '{}'`
+- `omarchy-shell shell hide lacuna.menu`
 - `hyprctl layers` before and after hide to confirm the `lacuna-menu` layer is created and removed.
 
 Implemented notes:
 
-- `omarchy.lacuna-menu` is the hosted sidebar/menu plugin.
-- `omarchy.lacuna-menu-button` is the topbar launcher for the sidebar and
+- `lacuna.menu` is the hosted sidebar/menu plugin.
+- `lacuna.menu-button` is the topbar launcher for the sidebar and
   belongs in `bar.layout.left`, typically after the stock `omarchy` button.
 
 1. Create a plugin-shaped `Menu.qml` wrapper.
 2. Move `MenuWindow.qml` behavior behind `open()` and `close()`.
 3. Keep the existing left layer-shell `PanelWindow`.
-4. Add a `manifest.json` for `omarchy.lacuna-menu`.
+4. Add a `manifest.json` for `lacuna.menu`.
 5. Install or link the plugin directory to
-   `~/.config/omarchy/plugins/omarchy.lacuna-menu/`.
-6. Run `omarchy-shell shell rescanPlugins` or restart the shell.
+   `~/.config/omarchy/lacuna.menu/`.
+6. Run `omarchy plugin rescan` or restart the shell.
 7. Enable the plugin through Omarchy Settings or add
-   `{ "id": "omarchy.lacuna-menu" }` to `plugins[]` in `shell.json`.
+   `{ "id": "lacuna.menu" }` to `plugins[]` in `shell.json`.
 8. Test through `omarchy-shell shell summon`; use standalone harnesses only
    for isolated local development outside the running Omarchy session.
 
 Success criteria:
 
-- `omarchy-shell shell summon omarchy.lacuna-menu "{}"` opens the sidebar.
-- `omarchy-shell shell hide omarchy.lacuna-menu` closes it.
+- `omarchy-shell shell summon lacuna.menu "{}"` opens the sidebar.
+- `omarchy-shell shell hide lacuna.menu` closes it.
 - Closing the sidebar from inside Lacuna also clears the host open state.
 - Sidebar view stack, rail mode, and corner pieces still work.
 
@@ -651,11 +650,11 @@ Status: complete.
 
 Validation:
 
-- `rg -n 'LACUNA_PATH|PWD|\.\./\.\.|import "/|import components|background-switcher|currentColor' plugins/omarchy.lacuna-menu plugins/*/assets/tabler docs/omarchy-shell-refactor-plan.md`
-- `qmllint plugins/omarchy.lacuna-menu/Menu.qml plugins/omarchy.lacuna-menu/menu/*.qml plugins/omarchy.lacuna-menu/modules/*.qml plugins/omarchy.lacuna-menu/services/*.qml plugins/omarchy.lacuna-menu/components/*.qml`
-- `omarchy-shell shell rescanPlugins`
-- `omarchy-shell shell summon omarchy.lacuna-menu '{}'`
-- `omarchy-shell shell hide omarchy.lacuna-menu`
+- `rg -n 'LACUNA_PATH|PWD|\.\./\.\.|import "/|import components|background-switcher|currentColor' lacuna.menu lacuna.*/assets/tabler docs/omarchy-shell-refactor-plan.md`
+- `qmllint lacuna.menu/Menu.qml lacuna.menu/menu/*.qml lacuna.menu/modules/*.qml lacuna.menu/services/*.qml lacuna.menu/components/*.qml`
+- `omarchy plugin rescan`
+- `omarchy-shell shell summon lacuna.menu '{}'`
+- `omarchy-shell shell hide lacuna.menu`
 - `hyprctl layers` before and after hide to confirm the `lacuna-menu` layer is created and removed.
 
 1. Move reusable Lacuna primitives into a plugin-local import path.
@@ -690,11 +689,11 @@ Status: complete.
 
 Validation:
 
-- `for f in plugins/omarchy.lacuna-{script-pill,compact-pill,system-stats,temperature}/manifest.json; do python3 -m json.tool "$f" >/dev/null || exit 1; done`
-- `qmllint plugins/omarchy.lacuna-script-pill/Widget.qml plugins/omarchy.lacuna-compact-pill/Widget.qml plugins/omarchy.lacuna-system-stats/Widget.qml plugins/omarchy.lacuna-temperature/Widget.qml`
+- `for f in lacuna.{script-pill,compact-pill,system-stats,temperature}/manifest.json; do python3 -m json.tool "$f" >/dev/null || exit 1; done`
+- `qmllint lacuna.script-pill/Widget.qml lacuna.compact-pill/Widget.qml lacuna.system-stats/Widget.qml lacuna.temperature/Widget.qml`
 - temperature sensor discovery command returns a readable millidegree value
 - `omarchy restart shell`
-- `omarchy-shell shell listPlugins`
+- `omarchy plugin list`
 - `quickshell log --path /home/oldjobobo/.local/share/omarchy/shell --tail 250 --newest`
 
 After the menu and shared primitives are packaged, harden the first-pass
@@ -768,12 +767,12 @@ Success criteria:
 
 Completed notes:
 
-- `omarchy.lacuna-menu` now uses a shared Lacuna settings service for density
+- `lacuna.menu` now uses a shared Lacuna settings service for density
   and sidebar state.
 - Lacuna menu/sidebar now keeps `designStyle` separate from `colorProfile`:
   design style controls structure, borders, radius, spacing, state layers, and
   surface treatment while color profile controls color distribution.
-- `omarchy.lacuna-compact-pill` now reads and writes the same
+- `lacuna.compact-pill` now reads and writes the same
   `~/.config/omarchy/lacuna/settings.json` file.
 - Lacuna topbar modules support a global `colorProfile` plus per-widget
   Omarchy Settings overrides.

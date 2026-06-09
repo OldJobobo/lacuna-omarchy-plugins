@@ -489,8 +489,8 @@ Remaining polish:
 Run:
 
 ```bash
-qmllint plugins/omarchy.lacuna-menu/menu/MenuWindow.qml
-qmllint plugins/omarchy.lacuna-menu/settings/SettingsWindow.qml
+qmllint lacuna.menu/menu/MenuWindow.qml
+qmllint lacuna.menu/settings/SettingsWindow.qml
 python3 -m json.tool config/settings.example.json
 ```
 

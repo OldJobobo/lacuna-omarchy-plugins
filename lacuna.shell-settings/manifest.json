@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.shell-settings",
+  "name": "Lacuna Shell Settings",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Lacuna-styled Omarchy shell settings and runtime controls.",
+  "kinds": [
+    "service",
+    "panel"
+  ],
+  "activation": "persistent",
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml",
+    "panel": "Panel.qml"
+  },
+  "lacuna": {
+    "standalone": false,
+    "bundle": "core",
+    "requires": [
+      "lacuna.state"
+    ],
+    "recommends": [
+      "lacuna.menu",
+      "lacuna.theme-preloader"
+    ]
+  }
+}

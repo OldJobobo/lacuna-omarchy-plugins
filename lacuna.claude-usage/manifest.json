@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.claude-usage",
+  "name": "Lacuna Claude Usage",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Lacuna-styled top-bar widget for Claude Code usage.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lacuna Claude Usage",
+    "description": "Shows remaining Claude Code 5-hour block usage from local Claude data.",
+    "category": "Lacuna",
+    "allowMultiple": false,
+    "defaults": {
+      "interval": 30000,
+      "maxTextLength": 32,
+      "showIcon": true
+    },
+    "schema": [
+      {
+        "key": "interval",
+        "type": "integer",
+        "label": "Refresh interval (ms)",
+        "min": 1000,
+        "step": 1000,
+        "description": "How often to read local Claude usage state."
+      },
+      {
+        "key": "maxTextLength",
+        "type": "integer",
+        "label": "Max text length",
+        "min": 4,
+        "max": 80,
+        "step": 1
+      },
+      {
+        "key": "showIcon",
+        "type": "boolean",
+        "label": "Show icon"
+      },
+      {
+        "key": "colorProfile",
+        "type": "enum",
+        "label": "Color profile",
+        "options": [
+          "semantic",
+          "colorful"
+        ],
+        "description": "Override the global Lacuna color profile for this widget."
+      }
+    ]
+  },
+  "lacuna": {
+    "standalone": true,
+    "bundle": "standalone",
+    "requires": [],
+    "recommends": []
+  }
+}

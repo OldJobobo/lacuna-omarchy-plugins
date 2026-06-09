@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.script-pill",
+  "name": "Lacuna Script Pill",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Lacuna-styled top-bar widget for script-backed status text.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lacuna Script Pill",
+    "description": "Runs a configured script and displays its JSON or plain text output.",
+    "category": "Lacuna",
+    "allowMultiple": true,
+    "defaults": {
+      "script": "",
+      "interval": 30000,
+      "maxTextLength": 32,
+      "showWhenEmpty": false
+    },
+    "schema": [
+      {
+        "key": "script",
+        "type": "command",
+        "label": "Script command",
+        "description": "Absolute path, plugin-relative scripts/foo, or shell command."
+      },
+      {
+        "key": "interval",
+        "type": "integer",
+        "label": "Refresh interval (ms)",
+        "min": 1000,
+        "step": 1000
+      },
+      {
+        "key": "maxTextLength",
+        "type": "integer",
+        "label": "Max text length",
+        "min": 4,
+        "max": 80,
+        "step": 1
+      },
+      {
+        "key": "showWhenEmpty",
+        "type": "boolean",
+        "label": "Show empty output"
+      },
+      {
+        "key": "colorProfile",
+        "type": "enum",
+        "label": "Color profile",
+        "options": [
+          "semantic",
+          "colorful"
+        ],
+        "description": "Override the global Lacuna color profile for this widget."
+      }
+    ]
+  },
+  "lacuna": {
+    "standalone": true,
+    "bundle": "standalone",
+    "requires": [],
+    "recommends": []
+  }
+}

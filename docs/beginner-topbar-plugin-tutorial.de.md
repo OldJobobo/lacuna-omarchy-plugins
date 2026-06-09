@@ -99,7 +99,7 @@ braucht.
 Lass die laufende Shell nach Plugins suchen:
 
 ```bash
-omarchy-shell shell rescanPlugins
+omarchy plugin rescan
 ```
 
 Wenn das Widget spaeter nicht erscheint, starte die Shell neu:

@@ -13,7 +13,7 @@ states, occupied workspace color, urgent override, and hover pulse.
 ## Plugin
 
 ```text
-plugins/omarchy.lacuna-workspaces/
+lacuna.workspaces/
   manifest.json
   Widget.qml
   ColorProfile.qml
@@ -100,7 +100,7 @@ The visual target is the original Lacuna topbar workspace group:
 Use this widget in `bar.layout` where native `workspaces` would normally sit:
 
 ```json
-{ "id": "omarchy.lacuna-workspaces", "workspaceCount": 7 }
+{ "id": "lacuna.workspaces", "workspaceCount": 7 }
 ```
 
 The plugin should appear in Omarchy Settings under the `Lacuna` category.
@@ -110,7 +110,7 @@ The plugin should appear in Omarchy Settings under the `Lacuna` category.
 Manual validation target:
 
 1. Symlink the plugin into `~/.config/omarchy/plugins/`.
-2. Run `omarchy-shell shell rescanPlugins`.
+2. Run `omarchy plugin rescan`.
 3. Place the widget in `~/.config/omarchy/shell.json`.
 4. Confirm workspace focus, occupied, empty, urgent, hover, and restart
    behavior inside Omarchy shell.
@@ -118,7 +118,7 @@ Manual validation target:
 Static validation:
 
 ```bash
-python3 -m json.tool plugins/omarchy.lacuna-workspaces/manifest.json
-qmllint plugins/omarchy.lacuna-workspaces/Widget.qml
-qmllint plugins/omarchy.lacuna-workspaces/components/LacunaWorkspaceButton.qml
+python3 -m json.tool lacuna.workspaces/manifest.json
+qmllint lacuna.workspaces/Widget.qml
+qmllint lacuna.workspaces/components/LacunaWorkspaceButton.qml
 ```

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.menu-button",
+  "name": "Lacuna Menu Button",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Top-bar button that opens the Lacuna sidebar menu.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lacuna Menu Button",
+    "description": "Opens the Lacuna menu sidebar.",
+    "category": "Lacuna",
+    "allowMultiple": false,
+    "defaults": {
+      "tooltip": "Lacuna"
+    },
+    "schema": [
+      {
+        "key": "tooltip",
+        "type": "string",
+        "label": "Tooltip"
+      },
+      {
+        "key": "colorProfile",
+        "type": "enum",
+        "label": "Color profile",
+        "options": [
+          "semantic",
+          "colorful"
+        ],
+        "description": "Override the global Lacuna color profile for this widget."
+      }
+    ]
+  },
+  "lacuna": {
+    "standalone": false,
+    "bundle": "core",
+    "requires": [
+      "lacuna.menu"
+    ],
+    "recommends": []
+  }
+}

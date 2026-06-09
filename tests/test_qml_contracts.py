@@ -14,24 +14,28 @@ def read_json(path):
     return json.loads(read(path))
 
 
+def plugin_manifest_paths():
+    return sorted(ROOT.glob("lacuna.*/manifest.json"))
+
+
 class QmlContractTests(unittest.TestCase):
     def test_lacuna_settings_keeps_carbon_as_legacy_lacuna_alias(self):
-        qml = read("plugins/omarchy.lacuna-menu/services/LacunaSettings.qml")
+        qml = read("lacuna.menu/services/LacunaSettings.qml")
 
         self.assertIn('designStyle: "lacuna"', qml)
         self.assertIn('style === "lacuna" || style === "carbon"', qml)
         self.assertIn('return "lacuna"', qml)
 
     def test_lacuna_settings_has_pending_save_merge_for_quick_launch_state(self):
-        qml = read("plugins/omarchy.lacuna-menu/services/LacunaSettings.qml")
+        qml = read("lacuna.menu/services/LacunaSettings.qml")
 
         self.assertIn("function mergePendingSave", qml)
         self.assertIn("merged.customQuickLaunchApps = loadedBase.customQuickLaunchApps", qml)
         self.assertIn("merged.customQuickLaunchNames = loadedBase.customQuickLaunchNames", qml)
 
     def test_custom_quick_launch_context_menu_can_delete_items(self):
-        content = read("plugins/omarchy.lacuna-menu/menu/MenuContent.qml")
-        window = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
+        content = read("lacuna.menu/menu/MenuContent.qml")
+        window = read("lacuna.menu/menu/MenuWindow.qml")
 
         self.assertIn("signal quickLaunchRemoveRequested(string appId)", content)
         self.assertIn('text: "Delete"', content)
@@ -44,17 +48,17 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("onQuickLaunchRemoveRequested", window)
 
     def test_app_picker_does_not_cap_search_results(self):
-        picker = read("plugins/omarchy.lacuna-menu/menu/FlyoutAppPickerContent.qml")
+        picker = read("lacuna.menu/menu/FlyoutAppPickerContent.qml")
         filtered = picker.split("function filteredApps()", 1)[1].split("return list", 1)[0]
 
         self.assertNotIn("list.length >= 80", filtered)
         self.assertNotIn("break", filtered)
 
     def test_quick_launch_add_action_lives_in_header_controls(self):
-        registry = read("plugins/omarchy.lacuna-menu/menu/MenuRegistry.qml")
-        content = read("plugins/omarchy.lacuna-menu/menu/MenuContent.qml")
-        section = read("plugins/omarchy.lacuna-menu/menu/MenuSection.qml")
-        window = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
+        registry = read("lacuna.menu/menu/MenuRegistry.qml")
+        content = read("lacuna.menu/menu/MenuContent.qml")
+        section = read("lacuna.menu/menu/MenuSection.qml")
+        window = read("lacuna.menu/menu/MenuWindow.qml")
 
         self.assertIn('header.headerAction = "open-custom-quick-launch-picker"', registry)
         self.assertIn('header.headerActionIcon = "plus"', registry)
@@ -75,28 +79,28 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("width: root.options.length * height", section)
 
     def test_system_restart_requires_confirmation_unless_enabled(self):
-        registry = read("plugins/omarchy.lacuna-menu/menu/MenuRegistry.qml")
-        window = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
-        settings = read("plugins/omarchy.lacuna-menu/services/LacunaSettings.qml")
-        state_service = read("plugins/omarchy.lacuna-state/Service.qml")
-        settings_window = read("plugins/omarchy.lacuna-menu/settings/SettingsWindow.qml")
+        registry = read("lacuna.menu/menu/MenuRegistry.qml")
+        window = read("lacuna.menu/menu/MenuWindow.qml")
+        settings = read("lacuna.menu/services/LacunaSettings.qml")
+        state_service = read("lacuna.state/Service.qml")
+        settings_window = read("lacuna.menu/settings/SettingsWindow.qml")
 
         self.assertIn('instantRestart: false', settings)
         self.assertIn('instantRestart: false', state_service)
         self.assertIn('action: "confirm-system-restart"', registry)
-        self.assertNotIn('label: "Restart", hint: "Reboot machine", command: "omarchy-system-reboot"', registry)
+        self.assertNotIn('label: "Restart", hint: "Reboot machine", command: "omarchy system reboot"', registry)
         self.assertIn("property bool pendingSystemRestartConfirmation", window)
         self.assertIn("function requestSystemRestart()", window)
         self.assertIn("function confirmSystemRestart()", window)
-        self.assertIn('commands.run("omarchy-system-reboot")', window)
+        self.assertIn('commands.run("omarchy system reboot")', window)
         self.assertIn('entry.action === "confirm-system-restart"', window)
         self.assertIn('entry.action === "toggle-instant-restart"', window)
         self.assertIn('"Instant Restart"', settings_window)
         self.assertIn('"toggle-instant-restart"', settings_window)
 
     def test_rail_has_no_compact_density_button(self):
-        rail = read("plugins/omarchy.lacuna-menu/menu/MenuRail.qml")
-        window = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
+        rail = read("lacuna.menu/menu/MenuRail.qml")
+        window = read("lacuna.menu/menu/MenuWindow.qml")
 
         self.assertNotIn("signal compactToggleRequested", rail)
         self.assertNotIn("id: compactButton", rail)
@@ -105,8 +109,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertNotIn("onCompactToggleRequested", window)
 
     def test_idle_indicator_uses_stable_reveal_and_clear_icon(self):
-        combined = read("plugins/omarchy.lacuna-indicators/Widget.qml")
-        standalone = read("plugins/omarchy.lacuna-idle-inhibitor/Widget.qml")
+        combined = read("lacuna.indicators/Widget.qml")
+        standalone = read("lacuna.idle-inhibitor/Widget.qml")
 
         self.assertIn('if (id === "StayAwake") return "Zz"', combined)
         self.assertIn('text: "Zz"', standalone)
@@ -126,8 +130,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("visible: stayAwake || showInactive || mouseArea.containsMouse", standalone)
 
     def test_grouped_indicators_match_standalone_controls(self):
-        combined = read("plugins/omarchy.lacuna-indicators/Widget.qml")
-        manifest = read_json("plugins/omarchy.lacuna-indicators/manifest.json")
+        combined = read("lacuna.indicators/Widget.qml")
+        manifest = read_json("lacuna.indicators/manifest.json")
 
         self.assertFalse(manifest["barWidget"]["defaults"]["showInactive"])
         self.assertIn("showInactive", [entry["key"] for entry in manifest["barWidget"]["schema"]])
@@ -136,12 +140,12 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('pendingCount + " pending notification"', combined)
         self.assertIn('bar.run("omarchy-shell notifications showHistory")', combined)
         self.assertIn('bar.run("omarchy toggle notification silencing")', combined)
-        self.assertIn('else if (recording) bar.run("omarchy-capture-screenrecording --stop-recording")', combined)
+        self.assertIn('else if (recording) bar.run("omarchy capture screenrecording --stop-recording")', combined)
         self.assertIn("Qt.LeftButton | Qt.MiddleButton | Qt.RightButton", combined)
         self.assertIn('indicatorButton.indicatorId === "Dnd" && root.pendingCount > 0 && !root.dnd', combined)
 
     def test_indicator_status_roles_have_visible_palette_slots(self):
-        combined = read("plugins/omarchy.lacuna-indicators/Widget.qml")
+        combined = read("lacuna.indicators/Widget.qml")
 
         self.assertIn('if (id === "Dnd") return "color13"', combined)
         self.assertIn('if (id === "NightLight") return "color11"', combined)
@@ -152,45 +156,45 @@ class QmlContractTests(unittest.TestCase):
 
     def test_topbar_tooltip_targets_expose_hover_state(self):
         root_target_widgets = [
-            "omarchy.lacuna-audio",
-            "omarchy.lacuna-bluetooth",
-            "omarchy.lacuna-clock",
-            "omarchy.lacuna-bar-size-pill",
-            "omarchy.lacuna-claude-usage",
-            "omarchy.lacuna-codex-usage",
-            "omarchy.lacuna-compact-pill",
-            "omarchy.lacuna-idle-inhibitor",
-            "omarchy.lacuna-indicators",
-            "omarchy.lacuna-nightlight",
-            "omarchy.lacuna-menu-button",
-            "omarchy.lacuna-network",
-            "omarchy.lacuna-notifications",
-            "omarchy.lacuna-power",
-            "omarchy.lacuna-script-pill",
-            "omarchy.lacuna-screen-recording",
-            "omarchy.lacuna-system-update",
-            "omarchy.lacuna-temperature",
-            "omarchy.lacuna-theme",
-            "omarchy.lacuna-voxtype",
-            "omarchy.lacuna-wallpaper",
-            "omarchy.lacuna-weather",
+            "lacuna.audio",
+            "lacuna.bluetooth",
+            "lacuna.clock",
+            "lacuna.bar-size-pill",
+            "lacuna.claude-usage",
+            "lacuna.codex-usage",
+            "lacuna.compact-pill",
+            "lacuna.idle-inhibitor",
+            "lacuna.indicators",
+            "lacuna.nightlight",
+            "lacuna.menu-button",
+            "lacuna.network",
+            "lacuna.notifications",
+            "lacuna.power",
+            "lacuna.script-pill",
+            "lacuna.screen-recording",
+            "lacuna.system-update",
+            "lacuna.temperature",
+            "lacuna.theme",
+            "lacuna.voxtype",
+            "lacuna.wallpaper",
+            "lacuna.weather",
         ]
 
         for plugin in root_target_widgets:
-            qml = read(f"plugins/{plugin}/Widget.qml")
+            qml = read(f"{plugin}/Widget.qml")
             self.assertIn("readonly property bool tooltipHovered", qml, plugin)
-            if plugin == "omarchy.lacuna-indicators":
+            if plugin == "lacuna.indicators":
                 self.assertIn("hoveredIndicators > 0", qml, plugin)
             else:
                 self.assertIn("mouseArea.containsMouse", qml, plugin)
 
-        system_stats = read("plugins/omarchy.lacuna-system-stats/Widget.qml")
+        system_stats = read("lacuna.system-stats/Widget.qml")
         self.assertIn("readonly property bool tooltipHovered", system_stats)
         self.assertIn("parent.bar.showTooltip(parent, parent.tooltip)", system_stats)
 
         for path in [
-            "plugins/omarchy.lacuna-mpris/components/LacunaMprisButton.qml",
-            "plugins/omarchy.lacuna-workspaces/components/LacunaWorkspaceButton.qml",
+            "lacuna.mpris/components/LacunaMprisButton.qml",
+            "lacuna.workspaces/components/LacunaWorkspaceButton.qml",
         ]:
             qml = read(path)
             self.assertIn("readonly property bool tooltipHovered", qml, path)
@@ -198,19 +202,19 @@ class QmlContractTests(unittest.TestCase):
 
     def test_lacuna_native_replacement_widgets_have_expected_contracts(self):
         replacements = {
-            "omarchy.lacuna-system-update": "SystemUpdate",
-            "omarchy.lacuna-clock": "Clock",
-            "omarchy.lacuna-weather": "Weather",
-            "omarchy.lacuna-notifications": "NotificationCenter",
-            "omarchy.lacuna-nightlight": "NightLight",
-            "omarchy.lacuna-idle-inhibitor": "idleInhibitor",
-            "omarchy.lacuna-screen-recording": "screenRecording",
-            "omarchy.lacuna-voxtype": "voxtype",
-            "omarchy.lacuna-tray": "Tray",
-            "omarchy.lacuna-bluetooth": "BluetoothPanel",
-            "omarchy.lacuna-network": "NetworkPanel",
-            "omarchy.lacuna-audio": "AudioPanel",
-            "omarchy.lacuna-power": "PowerPanel",
+            "lacuna.system-update": "SystemUpdate",
+            "lacuna.clock": "Clock",
+            "lacuna.weather": "Weather",
+            "lacuna.notifications": "NotificationCenter",
+            "lacuna.nightlight": "NightLight",
+            "lacuna.idle-inhibitor": "idleInhibitor",
+            "lacuna.screen-recording": "screenRecording",
+            "lacuna.voxtype": "voxtype",
+            "lacuna.tray": "Tray",
+            "lacuna.bluetooth": "BluetoothPanel",
+            "lacuna.network": "NetworkPanel",
+            "lacuna.audio": "AudioPanel",
+            "lacuna.power": "PowerPanel",
         }
 
         example = read_json("config/shell.lacuna-native-replacements.example.json")
@@ -219,8 +223,8 @@ class QmlContractTests(unittest.TestCase):
             layout_ids.extend(entry["id"] for entry in example["bar"]["layout"][section])
 
         for plugin_id, native_id in replacements.items():
-            manifest = read_json(f"plugins/{plugin_id}/manifest.json")
-            qml = read(f"plugins/{plugin_id}/Widget.qml")
+            manifest = read_json(f"{plugin_id}/manifest.json")
+            qml = read(f"{plugin_id}/Widget.qml")
 
             self.assertEqual(plugin_id, manifest["id"])
             self.assertIn("bar-widget", manifest["kinds"])
@@ -230,15 +234,15 @@ class QmlContractTests(unittest.TestCase):
             self.assertNotIn(f'moduleName: "{native_id}"', qml)
             self.assertIn(f'moduleName: "{plugin_id}"', qml)
             self.assertIn("barSize", qml)
-            if plugin_id != "omarchy.lacuna-tray":
+            if plugin_id != "lacuna.tray":
                 self.assertIn("colorProfile", qml)
 
     def test_lacuna_tray_dispatches_status_notifier_context_menus(self):
-        manifest = read_json("plugins/omarchy.lacuna-tray/manifest.json")
-        qml = read("plugins/omarchy.lacuna-tray/Widget.qml")
-        registry = read("plugins/omarchy.lacuna-menu/menu/MenuRegistry.qml")
+        manifest = read_json("lacuna.tray/manifest.json")
+        qml = read("lacuna.tray/Widget.qml")
+        registry = read("lacuna.menu/menu/MenuRegistry.qml")
 
-        self.assertEqual("omarchy.lacuna-tray", manifest["id"])
+        self.assertEqual("lacuna.tray", manifest["id"])
         self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
         self.assertIn("bar-widget", manifest["kinds"])
         self.assertNotIn("QsMenuAnchor", qml)
@@ -252,18 +256,18 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("root.markTrayMenuRequested()", qml)
         self.assertIn("trayItemRoot.modelData.display(trayItemRoot.QsWindow.window, point.x, point.y)", qml)
         self.assertIn('root.bar.shell.updateEntryInline(id, { id: id, pinned: pinned, hidden: hidden })', qml)
-        self.assertIn('if (key === "omarchy.lacuna-tray") return "apps"', registry)
+        self.assertIn('if (key === "lacuna.tray") return "apps"', registry)
 
     def test_system_stats_uses_tabler_cpu_icon(self):
-        qml = read("plugins/omarchy.lacuna-system-stats/Widget.qml")
-        icon = read("plugins/omarchy.lacuna-system-stats/assets/tabler/cpu.svg")
+        qml = read("lacuna.system-stats/Widget.qml")
+        icon = read("lacuna.system-stats/assets/tabler/cpu.svg")
 
         self.assertIn('iconSource: Qt.resolvedUrl("assets/tabler/cpu.svg")', qml)
         self.assertNotIn('iconSource: Qt.resolvedUrl("assets/tabler/assembly-filled.svg")', qml)
         self.assertIn("icon-tabler-cpu", icon)
 
     def test_weather_splits_leading_condition_icon_from_label(self):
-        qml = read("plugins/omarchy.lacuna-weather/Widget.qml")
+        qml = read("lacuna.weather/Widget.qml")
 
         self.assertIn("function leadingWeatherIcon(raw)", qml)
         self.assertIn("function textWithoutLeadingWeatherIcon(raw)", qml)
@@ -273,9 +277,9 @@ class QmlContractTests(unittest.TestCase):
         self.assertNotIn("text: root.weatherText", qml)
 
     def test_wallpaper_commands_force_live_background_refresh(self):
-        widget = read("plugins/omarchy.lacuna-wallpaper/Widget.qml")
-        catalog = read("plugins/omarchy.lacuna-menu/menu/MenuCommandCatalog.qml")
-        panel = read("plugins/omarchy.lacuna-shell-settings/Panel.qml")
+        widget = read("lacuna.wallpaper/Widget.qml")
+        catalog = read("lacuna.menu/menu/MenuCommandCatalog.qml")
+        panel = read("lacuna.shell-settings/Panel.qml")
 
         self.assertIn("function nextBackgroundCommand()", widget)
         self.assertIn("bar.run(root.nextBackgroundCommand())", widget)
@@ -285,33 +289,33 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("background setInstant", qml)
 
     def test_background_animations_use_single_selected_effect_contract(self):
-        manifest = read_json("plugins/omarchy.lacuna-aurora-drift/manifest.json")
-        qml = read("plugins/omarchy.lacuna-aurora-drift/Overlay.qml")
-        rain_manifest = read_json("plugins/omarchy.lacuna-rainfall-overlay/manifest.json")
-        rain = read("plugins/omarchy.lacuna-rainfall-overlay/Overlay.qml")
-        cinematic_manifest = read_json("plugins/omarchy.lacuna-cinematic-light-overlay/manifest.json")
-        cinematic = read("plugins/omarchy.lacuna-cinematic-light-overlay/Overlay.qml")
-        crt_manifest = read_json("plugins/omarchy.lacuna-crt-overlay/manifest.json")
-        crt = read("plugins/omarchy.lacuna-crt-overlay/Overlay.qml")
-        vhs_manifest = read_json("plugins/omarchy.lacuna-vhs-overlay/manifest.json")
-        vhs = read("plugins/omarchy.lacuna-vhs-overlay/Overlay.qml")
-        vignette_manifest = read_json("plugins/omarchy.lacuna-background-vignette/manifest.json")
-        vignette = read("plugins/omarchy.lacuna-background-vignette/Overlay.qml")
-        settings = read("plugins/omarchy.lacuna-menu/services/LacunaSettings.qml")
-        state_service = read("plugins/omarchy.lacuna-state/Service.qml")
-        registry = read("plugins/omarchy.lacuna-menu/menu/MenuRegistry.qml")
-        shell_settings_panel = read("plugins/omarchy.lacuna-shell-settings/Panel.qml")
-        settings_window = read("plugins/omarchy.lacuna-menu/settings/SettingsWindow.qml")
-        window = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
+        manifest = read_json("lacuna.aurora-drift/manifest.json")
+        qml = read("lacuna.aurora-drift/Overlay.qml")
+        rain_manifest = read_json("lacuna.rainfall-overlay/manifest.json")
+        rain = read("lacuna.rainfall-overlay/Overlay.qml")
+        cinematic_manifest = read_json("lacuna.cinematic-light-overlay/manifest.json")
+        cinematic = read("lacuna.cinematic-light-overlay/Overlay.qml")
+        crt_manifest = read_json("lacuna.crt-overlay/manifest.json")
+        crt = read("lacuna.crt-overlay/Overlay.qml")
+        vhs_manifest = read_json("lacuna.vhs-overlay/manifest.json")
+        vhs = read("lacuna.vhs-overlay/Overlay.qml")
+        vignette_manifest = read_json("lacuna.background-vignette/manifest.json")
+        vignette = read("lacuna.background-vignette/Overlay.qml")
+        settings = read("lacuna.menu/services/LacunaSettings.qml")
+        state_service = read("lacuna.state/Service.qml")
+        registry = read("lacuna.menu/menu/MenuRegistry.qml")
+        shell_settings_panel = read("lacuna.shell-settings/Panel.qml")
+        settings_window = read("lacuna.menu/settings/SettingsWindow.qml")
+        window = read("lacuna.menu/menu/MenuWindow.qml")
         example = read_json("config/shell.lacuna-native-replacements.example.json")
 
-        self.assertEqual("omarchy.lacuna-aurora-drift", manifest["id"])
+        self.assertEqual("lacuna.aurora-drift", manifest["id"])
         self.assertEqual(["overlay"], manifest["kinds"])
         self.assertEqual("Overlay.qml", manifest["entryPoints"]["overlay"])
-        self.assertEqual("omarchy.lacuna-rainfall-overlay", rain_manifest["id"])
+        self.assertEqual("lacuna.rainfall-overlay", rain_manifest["id"])
         self.assertEqual(["overlay"], rain_manifest["kinds"])
         self.assertEqual("Overlay.qml", rain_manifest["entryPoints"]["overlay"])
-        self.assertEqual("omarchy.lacuna-cinematic-light-overlay", cinematic_manifest["id"])
+        self.assertEqual("lacuna.cinematic-light-overlay", cinematic_manifest["id"])
         self.assertEqual(["overlay"], cinematic_manifest["kinds"])
         self.assertEqual("persistent", cinematic_manifest["activation"])
         self.assertIs(cinematic_manifest["keepLoaded"], True)
@@ -321,7 +325,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertTrue(cinematic_manifest["defaults"]["slowDrift"])
         self.assertFalse(cinematic_manifest["defaults"]["occasionalSweeps"])
         self.assertFalse(cinematic_manifest["defaults"]["activeShimmer"])
-        self.assertEqual("omarchy.lacuna-crt-overlay", crt_manifest["id"])
+        self.assertEqual("lacuna.crt-overlay", crt_manifest["id"])
         self.assertEqual(["overlay"], crt_manifest["kinds"])
         self.assertEqual("persistent", crt_manifest["activation"])
         self.assertIs(crt_manifest["keepLoaded"], True)
@@ -330,7 +334,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertTrue(crt_manifest["defaults"]["distortion"])
         self.assertTrue(crt_manifest["defaults"]["bloomPulse"])
         self.assertFalse(vhs_manifest["defaults"]["foregroundOverlay"])
-        self.assertEqual("omarchy.lacuna-background-vignette", vignette_manifest["id"])
+        self.assertEqual("lacuna.background-vignette", vignette_manifest["id"])
         self.assertEqual(["overlay"], vignette_manifest["kinds"])
         self.assertEqual("persistent", vignette_manifest["activation"])
         self.assertIs(vignette_manifest["keepLoaded"], True)
@@ -439,38 +443,38 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("setShellPluginEnabled(pluginId, true)", window)
         self.assertIn("function setCinematicLightSetting", window)
         self.assertIn("function toggleCinematicLightMotion", window)
-        self.assertIn('shell.updateEntryInline("omarchy.lacuna-cinematic-light-overlay", next)', window)
+        self.assertIn('shell.updateEntryInline("lacuna.cinematic-light-overlay", next)', window)
         self.assertIn("shell.updateEntryInline(pluginId, next)", window)
         self.assertIn('entry.action.indexOf("toggle-background-effect-foreground-") === 0', window)
         self.assertIn('entry.action.indexOf("set-cinematic-light-style-") === 0', window)
         self.assertIn('entry.action.indexOf("set-cinematic-light-intensity-") === 0', window)
         self.assertIn('entry.action.indexOf("toggle-cinematic-light-motion-") === 0', window)
         self.assertNotIn('"toggle-background-effect-auroraDrift"', settings_window)
-        self.assertIn("omarchy.lacuna-aurora-drift", [entry["id"] for entry in example["plugins"]])
-        self.assertIn("omarchy.lacuna-rainfall-overlay", [entry["id"] for entry in example["plugins"]])
-        self.assertIn("omarchy.lacuna-cinematic-light-overlay", [entry["id"] for entry in example["plugins"]])
-        self.assertIn("omarchy.lacuna-crt-overlay", [entry["id"] for entry in example["plugins"]])
-        self.assertIn("omarchy.lacuna-background-vignette", [entry["id"] for entry in example["plugins"]])
+        self.assertIn("lacuna.aurora-drift", [entry["id"] for entry in example["plugins"]])
+        self.assertIn("lacuna.rainfall-overlay", [entry["id"] for entry in example["plugins"]])
+        self.assertIn("lacuna.cinematic-light-overlay", [entry["id"] for entry in example["plugins"]])
+        self.assertIn("lacuna.crt-overlay", [entry["id"] for entry in example["plugins"]])
+        self.assertIn("lacuna.background-vignette", [entry["id"] for entry in example["plugins"]])
 
     def test_workspace_lacuna_selected_state_has_no_fill_or_underline(self):
-        qml = read("plugins/omarchy.lacuna-workspaces/components/LacunaWorkspaceButton.qml")
+        qml = read("lacuna.workspaces/components/LacunaWorkspaceButton.qml")
 
         self.assertNotIn("root.active ? 0.08", qml)
         self.assertNotIn("height: 2\n    color: root.accent\n    opacity: root.active", qml)
         self.assertIn('property string designStyle: "lacuna"', qml)
 
     def test_lacuna_menu_button_uses_lacuna_icon_asset(self):
-        qml = read("plugins/omarchy.lacuna-menu-button/Widget.qml")
+        qml = read("lacuna.menu-button/Widget.qml")
 
         self.assertIn("circle-dotted-letter-l.svg", qml)
         self.assertNotIn("layout-sidebar-left-expand-filled.svg", qml)
 
     def test_lacuna_menu_uses_unified_accent_except_danger(self):
         for path in [
-            "plugins/omarchy.lacuna-menu/menu/MenuContent.qml",
-            "plugins/omarchy.lacuna-menu/menu/MenuRail.qml",
-            "plugins/omarchy.lacuna-menu/settings/SettingsWindow.qml",
-            "plugins/omarchy.lacuna-menu/settings/OmarchyShellSettingsWindow.qml",
+            "lacuna.menu/menu/MenuContent.qml",
+            "lacuna.menu/menu/MenuRail.qml",
+            "lacuna.menu/settings/SettingsWindow.qml",
+            "lacuna.menu/settings/OmarchyShellSettingsWindow.qml",
         ]:
             qml = read(path)
             tone_function = qml.split("function toneAccent", 1)[1].split("\n  }", 1)[0]
@@ -487,11 +491,11 @@ class QmlContractTests(unittest.TestCase):
 
     def test_design_token_consumers_use_lacuna_not_carbon_flag(self):
         paths = [
-            "plugins/omarchy.lacuna-menu/settings/SettingsRail.qml",
-            "plugins/omarchy.lacuna-menu/settings/SettingsRow.qml",
-            "plugins/omarchy.lacuna-menu/modules/LacunaMenuItem.qml",
-            "plugins/omarchy.lacuna-menu/menu/MenuContent.qml",
-            "plugins/omarchy.lacuna-menu/menu/FlyoutAppPickerContent.qml",
+            "lacuna.menu/settings/SettingsRail.qml",
+            "lacuna.menu/settings/SettingsRow.qml",
+            "lacuna.menu/modules/LacunaMenuItem.qml",
+            "lacuna.menu/menu/MenuContent.qml",
+            "lacuna.menu/menu/FlyoutAppPickerContent.qml",
         ]
 
         for path in paths:
@@ -499,16 +503,17 @@ class QmlContractTests(unittest.TestCase):
             self.assertNotIn("designTokens.carbon", qml, path)
 
     def test_daily_launch_system_editor_uses_omarchy_editor_launcher(self):
-        qml = read("plugins/omarchy.lacuna-menu/menu/MenuAppModel.qml")
+        qml = read("lacuna.menu/menu/MenuAppModel.qml")
 
-        self.assertIn('role === "editor") return root.commands.hyprExec("omarchy-launch-editor")', qml)
-        self.assertNotIn('role === "editor") return root.commands.hyprExec("omarchy launch editor")', qml)
+        self.assertIn('role === "editor") return root.commands.hyprExec("omarchy launch editor")', qml)
+        old_editor_helper = "omarchy" + "-launch-editor"
+        self.assertNotIn(f'role === "editor") return root.commands.hyprExec("{old_editor_helper}")', qml)
 
     def test_sidebar_default_mode_is_separate_from_runtime_toggle(self):
-        settings = read("plugins/omarchy.lacuna-menu/services/LacunaSettings.qml")
-        sidebar = read("plugins/omarchy.lacuna-menu/services/SidebarState.qml")
-        window = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
-        settings_window = read("plugins/omarchy.lacuna-menu/settings/SettingsWindow.qml")
+        settings = read("lacuna.menu/services/LacunaSettings.qml")
+        sidebar = read("lacuna.menu/services/SidebarState.qml")
+        window = read("lacuna.menu/menu/MenuWindow.qml")
+        settings_window = read("lacuna.menu/settings/SettingsWindow.qml")
 
         self.assertIn('defaultMode: "off"', settings)
         self.assertIn("function setDefaultMode", sidebar)
@@ -517,20 +522,20 @@ class QmlContractTests(unittest.TestCase):
         self.assertNotIn('"set-sidebar-display-"', settings_window)
 
     def test_lacuna_settings_persistence_service_restores_idle_state(self):
-        manifest = read("plugins/omarchy.lacuna-settings-persistence/manifest.json")
-        qml = read("plugins/omarchy.lacuna-settings-persistence/Service.qml")
-        panel = read("plugins/omarchy.lacuna-settings-persistence/Panel.qml")
+        manifest = read_json("lacuna.settings-persistence/manifest.json")
+        qml = read("lacuna.settings-persistence/Service.qml")
+        panel = read("lacuna.settings-persistence/Panel.qml")
 
-        self.assertIn('"name": "Lacuna Settings Persistence"', manifest)
-        self.assertIn('"kinds": ["service", "panel"]', manifest)
-        self.assertIn('"service": "Service.qml"', manifest)
-        self.assertIn('"panel": "Panel.qml"', manifest)
+        self.assertEqual("Lacuna Settings Persistence", manifest["name"])
+        self.assertEqual(["service", "panel"], manifest["kinds"])
+        self.assertEqual("Service.qml", manifest["entryPoints"]["service"])
+        self.assertEqual("Panel.qml", manifest["entryPoints"]["panel"])
         self.assertIn("settings-persistence.json", qml)
         self.assertIn("manageIdle", qml)
         self.assertIn("manageNightlight", qml)
         self.assertIn("omarchy-shell idle status", qml)
         self.assertIn("omarchy-shell idle \" + (enabled ? \"enable\" : \"disable\")", qml)
-        self.assertIn("omarchy-toggle-nightlight --status", qml)
+        self.assertIn("omarchy toggle nightlight --status", qml)
         self.assertIn("hyprctl hyprsunset temperature", qml)
         self.assertIn('target: "lacuna-settings-persistence"', qml)
         self.assertIn("Idle Inhibit", panel)
@@ -538,9 +543,9 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("setManagedToggles", panel)
 
     def test_window_gaps_toggle_uses_theme_size_when_enabled(self):
-        service = read("plugins/omarchy.lacuna-shell-settings/Service.qml")
-        state_script = read("plugins/omarchy.lacuna-shell-settings/scripts/omarchy-shell-settings-state.py")
-        settings_window = read("plugins/omarchy.lacuna-shell-settings/settings/OmarchyShellSettingsWindow.qml")
+        service = read("lacuna.shell-settings/Service.qml")
+        state_script = read("lacuna.shell-settings/scripts/omarchy-shell-settings-state.py")
+        settings_window = read("lacuna.shell-settings/settings/OmarchyShellSettingsWindow.qml")
 
         self.assertIn("rm -f \" + quote(stockFile) + \" \" + quote(oldLacunaFile) + \" \" + quote(lacunaFile)", service)
         self.assertIn("Disable Hyprland window gaps without changing theme borders", service)
@@ -549,8 +554,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("Use the active theme's tiled-window gap size", settings_window)
 
     def test_fake_frame_topbar_reserve_matches_rendered_caster_size(self):
-        window = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
-        overlay = read("plugins/omarchy.lacuna-menu/menu/LacunaFrameOverlay.qml")
+        window = read("lacuna.menu/menu/MenuWindow.qml")
+        overlay = read("lacuna.menu/menu/LacunaFrameOverlay.qml")
 
         self.assertIn("property int barEdgeCasterSize: frameThickness", window)
         self.assertIn("property int sidebarReserveExtra: 2", window)
@@ -565,21 +570,151 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("topBarShadowReserve: frameReserveActive && root.topBar ? reservePadding : 0", window)
 
     def test_plugin_manifests_have_existing_item_entrypoints(self):
-        for manifest_path in sorted((ROOT / "plugins").glob("*/manifest.json")):
+        kind_entry_points = {
+            "bar-widget": "barWidget",
+            "panel": "panel",
+            "overlay": "overlay",
+            "menu": "menu",
+            "service": "service",
+        }
+
+        manifest_paths = plugin_manifest_paths()
+        self.assertTrue(manifest_paths)
+        self.assertFalse((ROOT / "plugins").exists())
+
+        for manifest_path in manifest_paths:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(1, manifest.get("schemaVersion"), manifest_path)
+            self.assertIsInstance(manifest.get("id"), str, manifest_path)
+            self.assertTrue(manifest["id"].startswith("lacuna."), manifest_path)
+            self.assertFalse(manifest["id"].startswith("omarchy."), manifest_path)
+            self.assertEqual(manifest_path.parent.name, manifest["id"], manifest_path)
+            for required in ["name", "version", "kinds", "entryPoints"]:
+                self.assertIn(required, manifest, manifest_path)
+
             entry_points = manifest.get("entryPoints", {})
             self.assertIsInstance(entry_points, dict, manifest_path)
             self.assertTrue(entry_points, manifest_path)
 
+            for kind in manifest["kinds"]:
+                self.assertIn(kind, kind_entry_points, manifest_path)
+                self.assertIn(kind_entry_points[kind], entry_points, manifest_path)
+
             for entry_path in entry_points.values():
+                self.assertIsInstance(entry_path, str, manifest_path)
+                self.assertFalse(entry_path.startswith("/"), manifest_path)
+                self.assertNotIn("..", entry_path, manifest_path)
                 qml_path = manifest_path.parent / entry_path
                 self.assertTrue(qml_path.exists(), qml_path)
                 self.assertNotIn("ShellRoot", qml_path.read_text(encoding="utf-8"), qml_path)
 
+    def test_lacuna_manifest_metadata_describes_install_groups(self):
+        manifests = {
+            path.parent.name: json.loads(path.read_text(encoding="utf-8"))
+            for path in plugin_manifest_paths()
+        }
+        standalone = {
+            "lacuna.audio",
+            "lacuna.aurora-drift",
+            "lacuna.background-vignette",
+            "lacuna.bar-size-pill",
+            "lacuna.bluetooth",
+            "lacuna.cinematic-light-overlay",
+            "lacuna.claude-usage",
+            "lacuna.clock",
+            "lacuna.codex-usage",
+            "lacuna.crt-overlay",
+            "lacuna.desktop-clock",
+            "lacuna.idle-inhibitor",
+            "lacuna.indicators",
+            "lacuna.mpris",
+            "lacuna.network",
+            "lacuna.nightlight",
+            "lacuna.notifications",
+            "lacuna.power",
+            "lacuna.rainfall-overlay",
+            "lacuna.screen-recording",
+            "lacuna.script-pill",
+            "lacuna.settings-persistence",
+            "lacuna.system-stats",
+            "lacuna.system-update",
+            "lacuna.temperature",
+            "lacuna.theme",
+            "lacuna.tray",
+            "lacuna.vhs-overlay",
+            "lacuna.voxtype",
+            "lacuna.wallpaper",
+            "lacuna.weather",
+            "lacuna.workspaces",
+        }
+        bundle_only = set(manifests) - standalone
+
+        self.assertEqual(
+            {
+                "lacuna.compact-pill",
+                "lacuna.menu",
+                "lacuna.menu-button",
+                "lacuna.shell-settings",
+                "lacuna.state",
+                "lacuna.theme-preloader",
+            },
+            bundle_only,
+        )
+        for plugin_id, manifest in manifests.items():
+            metadata = manifest.get("lacuna", {})
+            self.assertIsInstance(metadata.get("standalone"), bool, plugin_id)
+            self.assertIn(metadata.get("bundle"), {"standalone", "core", "theme", "legacy"}, plugin_id)
+            self.assertIsInstance(metadata.get("requires"), list, plugin_id)
+            self.assertIsInstance(metadata.get("recommends"), list, plugin_id)
+            for dependency in metadata["requires"] + metadata["recommends"]:
+                self.assertIn(dependency, manifests, plugin_id)
+
+        for plugin_id in standalone:
+            self.assertTrue(manifests[plugin_id]["lacuna"]["standalone"], plugin_id)
+            self.assertEqual("standalone", manifests[plugin_id]["lacuna"]["bundle"], plugin_id)
+        for plugin_id in bundle_only:
+            self.assertFalse(manifests[plugin_id]["lacuna"]["standalone"], plugin_id)
+
+        self.assertEqual(["lacuna.menu"], manifests["lacuna.menu-button"]["lacuna"]["requires"])
+        self.assertEqual(
+            ["lacuna.state", "lacuna.shell-settings"],
+            manifests["lacuna.menu"]["lacuna"]["requires"],
+        )
+        self.assertEqual(["lacuna.bar-size-pill"], manifests["lacuna.compact-pill"]["lacuna"]["requires"])
+
+    def test_theme_preloader_is_loaded_as_a_service(self):
+        manifest = read_json("lacuna.theme-preloader/manifest.json")
+
+        self.assertEqual(["service"], manifest["kinds"])
+        self.assertEqual("Service.qml", manifest["entryPoints"]["service"])
+        self.assertNotIn("panel", manifest["entryPoints"])
+
+    def test_example_shell_configs_use_current_widget_ids(self):
+        stale_ids = {
+            "spacer",
+            "tray",
+            "calendar",
+            "omarchy",
+            "bluetoothPanel",
+            "networkPanel",
+            "audioPanel",
+            "battery",
+            "controlCenter",
+        }
+
+        for path in [
+            "config/shell.phase1.example.json",
+            "config/shell.lacuna-native-replacements.example.json",
+        ]:
+            config = read_json(path)
+            layout = config["bar"]["layout"]
+            ids = [entry["id"] for section in ["left", "center", "right"] for entry in layout[section]]
+            self.assertFalse(stale_ids.intersection(ids), path)
+
     def test_theme_widget_schema_exposes_defaults_for_bar_settings(self):
-        manifest = read_json("plugins/omarchy.lacuna-theme/manifest.json")
+        manifest = read_json("lacuna.theme/manifest.json")
         schema = {entry["key"]: entry for entry in manifest["barWidget"]["schema"]}
-        qml = read("plugins/omarchy.lacuna-theme/Widget.qml")
+        qml = read("lacuna.theme/Widget.qml")
 
         self.assertEqual("boolean", schema["enabled"]["type"])
         self.assertIs(schema["enabled"]["defaultValue"], True)
@@ -592,9 +727,9 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('readonly property bool showIcon: boolSetting("showIcon", true)', qml)
 
     def test_wallpaper_widget_schema_exposes_real_enabled_setting(self):
-        manifest = read_json("plugins/omarchy.lacuna-wallpaper/manifest.json")
+        manifest = read_json("lacuna.wallpaper/manifest.json")
         schema = {entry["key"]: entry for entry in manifest["barWidget"]["schema"]}
-        qml = read("plugins/omarchy.lacuna-wallpaper/Widget.qml")
+        qml = read("lacuna.wallpaper/Widget.qml")
 
         self.assertEqual("boolean", schema["enabled"]["type"])
         self.assertIs(schema["enabled"]["defaultValue"], True)
@@ -607,11 +742,11 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('readonly property bool showIcon: boolSetting("showIcon", true)', qml)
 
     def test_lacuna_state_and_shell_settings_are_split_plugins(self):
-        state_manifest = read_json("plugins/omarchy.lacuna-state/manifest.json")
-        shell_settings_manifest = read_json("plugins/omarchy.lacuna-shell-settings/manifest.json")
-        menu = read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml")
-        settings = read("plugins/omarchy.lacuna-menu/services/LacunaSettings.qml")
-        settings_window = read("plugins/omarchy.lacuna-menu/settings/SettingsWindow.qml")
+        state_manifest = read_json("lacuna.state/manifest.json")
+        shell_settings_manifest = read_json("lacuna.shell-settings/manifest.json")
+        menu = read("lacuna.menu/menu/MenuWindow.qml")
+        settings = read("lacuna.menu/services/LacunaSettings.qml")
+        settings_window = read("lacuna.menu/settings/SettingsWindow.qml")
 
         self.assertIn("service", state_manifest["kinds"])
         self.assertEqual("Service.qml", state_manifest["entryPoints"]["service"])
@@ -619,8 +754,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("panel", shell_settings_manifest["kinds"])
         self.assertEqual("Service.qml", shell_settings_manifest["entryPoints"]["service"])
         self.assertEqual("Panel.qml", shell_settings_manifest["entryPoints"]["panel"])
-        self.assertIn('ensureService("omarchy.lacuna-state")', menu)
-        self.assertIn('ensureService("omarchy.lacuna-shell-settings")', menu)
+        self.assertIn('ensureService("lacuna.state")', menu)
+        self.assertIn('ensureService("lacuna.shell-settings")', menu)
         self.assertIn('panelController.openFlyout("shellSettings")', menu)
         self.assertIn("OmarchyShellSettingsWindow", menu)
         self.assertIn("shellSettingsSurface", menu)
@@ -632,9 +767,9 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('"set-shell-settings-surface-"', settings_window)
 
     def test_lacuna_settings_windows_use_parent_control_state(self):
-        settings_window = read("plugins/omarchy.lacuna-menu/settings/SettingsWindow.qml")
-        menu_shell_settings = read("plugins/omarchy.lacuna-menu/settings/OmarchyShellSettingsWindow.qml")
-        standalone_shell_settings = read("plugins/omarchy.lacuna-shell-settings/settings/OmarchyShellSettingsWindow.qml")
+        settings_window = read("lacuna.menu/settings/SettingsWindow.qml")
+        menu_shell_settings = read("lacuna.menu/settings/OmarchyShellSettingsWindow.qml")
+        standalone_shell_settings = read("lacuna.shell-settings/settings/OmarchyShellSettingsWindow.qml")
 
         for qml in [settings_window, menu_shell_settings, standalone_shell_settings]:
             self.assertIn("property var controlOverrides", qml)
@@ -647,40 +782,40 @@ class QmlContractTests(unittest.TestCase):
 
         self.assertIn("function entryWithDesiredChecked", settings_window)
         self.assertIn("next.desiredChecked = desiredChecked === true", settings_window)
-        self.assertIn("function desiredChecked", read("plugins/omarchy.lacuna-menu/menu/MenuWindow.qml"))
+        self.assertIn("function desiredChecked", read("lacuna.menu/menu/MenuWindow.qml"))
 
     def test_simple_bar_helpers_match_canonical_vendored_templates(self):
         color_template = read("shared/qml/simple-bar/ColorProfile.qml")
         motion_template = read("shared/qml/simple-bar/MotionTokens.qml")
         simple_color_plugins = [
-            "omarchy.lacuna-audio",
-            "omarchy.lacuna-bluetooth",
-            "omarchy.lacuna-bar-size-pill",
-            "omarchy.lacuna-clock",
-            "omarchy.lacuna-claude-usage",
-            "omarchy.lacuna-codex-usage",
-            "omarchy.lacuna-compact-pill",
-            "omarchy.lacuna-idle-inhibitor",
-            "omarchy.lacuna-indicators",
-            "omarchy.lacuna-nightlight",
-            "omarchy.lacuna-menu-button",
-            "omarchy.lacuna-network",
-            "omarchy.lacuna-notifications",
-            "omarchy.lacuna-power",
-            "omarchy.lacuna-script-pill",
-            "omarchy.lacuna-screen-recording",
-            "omarchy.lacuna-system-stats",
-            "omarchy.lacuna-system-update",
-            "omarchy.lacuna-temperature",
-            "omarchy.lacuna-voxtype",
-            "omarchy.lacuna-weather",
+            "lacuna.audio",
+            "lacuna.bluetooth",
+            "lacuna.bar-size-pill",
+            "lacuna.clock",
+            "lacuna.claude-usage",
+            "lacuna.codex-usage",
+            "lacuna.compact-pill",
+            "lacuna.idle-inhibitor",
+            "lacuna.indicators",
+            "lacuna.nightlight",
+            "lacuna.menu-button",
+            "lacuna.network",
+            "lacuna.notifications",
+            "lacuna.power",
+            "lacuna.script-pill",
+            "lacuna.screen-recording",
+            "lacuna.system-stats",
+            "lacuna.system-update",
+            "lacuna.temperature",
+            "lacuna.voxtype",
+            "lacuna.weather",
         ]
         simple_motion_plugins = simple_color_plugins + [
-            "omarchy.lacuna-theme",
-            "omarchy.lacuna-wallpaper",
+            "lacuna.theme",
+            "lacuna.wallpaper",
         ]
 
         for plugin in simple_color_plugins:
-            self.assertEqual(read(f"plugins/{plugin}/ColorProfile.qml"), color_template, plugin)
+            self.assertEqual(read(f"{plugin}/ColorProfile.qml"), color_template, plugin)
         for plugin in simple_motion_plugins:
-            self.assertEqual(read(f"plugins/{plugin}/MotionTokens.qml"), motion_template, plugin)
+            self.assertEqual(read(f"{plugin}/MotionTokens.qml"), motion_template, plugin)

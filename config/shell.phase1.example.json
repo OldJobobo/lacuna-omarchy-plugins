@@ -2,36 +2,36 @@
   "version": 1,
   "bar": {
     "position": "top",
-    "centerAnchor": "calendar",
+    "centerAnchor": "omarchy.clock",
     "layout": {
       "left": [
-        { "id": "omarchy" },
-        { "id": "omarchy.lacuna-workspaces", "workspaceCount": 7 },
-        { "id": "omarchy.lacuna-codex-usage", "interval": 300000, "showIcon": true },
-        { "id": "omarchy.lacuna-claude-usage", "interval": 30000, "showIcon": true },
-        { "id": "omarchy.lacuna-mpris", "maxTextLength": 34, "sweepOnPlaying": true },
-        { "id": "omarchy.lacuna-bar-size-pill" }
+        { "id": "omarchy.menu" },
+        { "id": "lacuna.workspaces", "workspaceCount": 7 },
+        { "id": "lacuna.codex-usage", "interval": 300000, "showIcon": true },
+        { "id": "lacuna.claude-usage", "interval": 30000, "showIcon": true },
+        { "id": "lacuna.mpris", "maxTextLength": 34, "sweepOnPlaying": true },
+        { "id": "lacuna.bar-size-pill" }
       ],
       "center": [
-        { "id": "calendar" }
+        { "id": "omarchy.clock" }
       ],
       "right": [
-        { "id": "tray" },
-        { "id": "bluetoothPanel" },
-        { "id": "networkPanel" },
-        { "id": "audioPanel" },
-        { "id": "battery" },
-        { "id": "omarchy.lacuna-theme" },
-        { "id": "omarchy.lacuna-wallpaper" },
-        { "id": "omarchy.lacuna-system-stats" },
-        { "id": "omarchy.lacuna-temperature", "warmF": 150, "criticalF": 185 },
-        { "id": "controlCenter" }
+        { "id": "omarchy.tray" },
+        { "id": "omarchy.bluetooth" },
+        { "id": "omarchy.network" },
+        { "id": "omarchy.audio" },
+        { "id": "omarchy.power" },
+        { "id": "lacuna.theme" },
+        { "id": "lacuna.wallpaper" },
+        { "id": "lacuna.system-stats" },
+        { "id": "lacuna.temperature", "warmF": 150, "criticalF": 185 },
+        { "id": "omarchy.indicators" }
       ]
     }
   },
   "plugins": [
-    { "id": "omarchy.lacuna-state" },
-    { "id": "omarchy.lacuna-shell-settings" },
-    { "id": "omarchy.lacuna-settings-persistence" }
+    { "id": "lacuna.state" },
+    { "id": "lacuna.shell-settings" },
+    { "id": "lacuna.settings-persistence" }
   ]
 }

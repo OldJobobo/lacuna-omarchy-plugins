@@ -97,7 +97,7 @@ Omarchy fills in these properties:
 Ask the running shell to rescan plugins:
 
 ```bash
-omarchy-shell shell rescanPlugins
+omarchy plugin rescan
 ```
 
 If the widget does not appear later, restart the shell:

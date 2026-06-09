@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.screen-recording",
+  "name": "Lacuna Screen Recording",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Lacuna-styled screen recording status module for the Omarchy bar.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lacuna Screen Recording",
+    "description": "Shows and controls active GPU screen recording state.",
+    "category": "Lacuna",
+    "allowMultiple": false,
+    "defaults": {
+      "showInactive": false,
+      "interval": 1500
+    },
+    "schema": [
+      {
+        "key": "showInactive",
+        "type": "boolean",
+        "label": "Show when inactive",
+        "default": false
+      },
+      {
+        "key": "interval",
+        "type": "number",
+        "label": "Refresh interval (ms)",
+        "default": 1500
+      },
+      {
+        "key": "colorProfile",
+        "type": "enum",
+        "label": "Color profile",
+        "options": [
+          "semantic",
+          "colorful"
+        ],
+        "description": "Override the global Lacuna color profile for this widget."
+      }
+    ]
+  },
+  "lacuna": {
+    "standalone": true,
+    "bundle": "standalone",
+    "requires": [],
+    "recommends": []
+  }
+}

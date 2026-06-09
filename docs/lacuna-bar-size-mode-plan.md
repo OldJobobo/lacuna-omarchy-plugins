@@ -51,9 +51,9 @@ or runtime control logic.
 
 The repo has moved past the original scaffold. The relevant current files are:
 
-1. `plugins/omarchy.lacuna-menu/Menu.qml`
+1. `lacuna.menu/Menu.qml`
    - Thin entry point that instantiates `menu/MenuWindow.qml`.
-2. `plugins/omarchy.lacuna-menu/menu/MenuWindow.qml`
+2. `lacuna.menu/menu/MenuWindow.qml`
    - Main menu surface and settings flyout host.
    - Owns `lacunaSettings`, `compactState`, `sidebarState`, `menuTheme`,
      `commands`, `registry`, and action dispatch.
@@ -62,34 +62,34 @@ The repo has moved past the original scaffold. The relevant current files are:
      commands.
    - Already derives panel offsets from injected shell/bar state through
      `currentBarSize()`, `topBarHeight()`, and `barBottomY`.
-3. `plugins/omarchy.lacuna-menu/services/LacunaSettings.qml`
+3. `lacuna.menu/services/LacunaSettings.qml`
    - Owns `~/.config/omarchy/lacuna/settings.json`.
    - Current defaults are `version`, `designStyle`, `colorProfile`, `compact`,
      `customQuickLaunchApps`, `customQuickLaunchNames`, `preferredApps`, and
      `sidebar`.
-4. `plugins/omarchy.lacuna-menu/services/CompactState.qml`
+4. `lacuna.menu/services/CompactState.qml`
    - Owns only Lacuna UI density.
    - Reads and writes `settings.data.compact`.
-5. `plugins/omarchy.lacuna-menu/services/Theme.qml`
+5. `lacuna.menu/services/Theme.qml`
    - Already watches `colors.toml`, `shell.toml`, and `theme.name` under
      `~/.config/omarchy/current/theme`.
    - Parses string-valued shell roles for Lacuna colors, but does not parse or
      write `[bar]` dimensions.
-6. `plugins/omarchy.lacuna-menu/settings/SettingsWindow.qml`
+6. `lacuna.menu/settings/SettingsWindow.qml`
    - Current settings UI is a right-opening attached flyout.
    - The `layout` section currently contains Density, Sidebar Display, Window
      Mode, and Corner Pieces rows.
    - Segment rows already exist and are used for Design Style and desktop clock
      anchor controls.
-7. `plugins/omarchy.lacuna-menu/settings/SettingsRow.qml`
+7. `lacuna.menu/settings/SettingsRow.qml`
    - Already supports `segments`, `toggle`, `button`, `value`, and `nav`
      controls.
-8. `plugins/omarchy.lacuna-menu/menu/MenuRegistry.qml`
+8. `lacuna.menu/menu/MenuRegistry.qml`
    - Supplies menu/settings metadata and actions.
    - Current quick preferences still call the Lacuna density action
      `toggle-bar-density`; that name is now misleading but still means Lacuna UI
      density.
-9. `plugins/omarchy.lacuna-compact-pill/scripts/compact-state`
+9. `lacuna.compact-pill/scripts/compact-state`
    - Separate bar widget helper for toggling Lacuna UI density from the bar.
    - It preserves the settings JSON shape it loads, so adding `barSizeMode` and
      `barSizeSnapshot` should not require changes unless the script's fallback
@@ -220,37 +220,37 @@ Use a segment control, following the existing Design Style and desktop clock
 anchor rows. The row action prefix should be something explicit, such as
 `set-bar-size-mode-`.
 
-The compact rail button and `omarchy.lacuna-compact-pill` should continue to
+The compact rail button and `lacuna.compact-pill` should continue to
 toggle Lacuna density only. They should not become bar-height controls.
 
 ## Implementation Notes
 
 Recommended implementation areas:
 
-1. `plugins/omarchy.lacuna-menu/services/LacunaSettings.qml`
+1. `lacuna.menu/services/LacunaSettings.qml`
    - Add default `barSizeMode: "theme"`.
    - Normalize unknown values back to `theme`.
    - Persist optional `barSizeSnapshot`.
-2. `plugins/omarchy.lacuna-menu/services/BarSizeMode.qml`
+2. `lacuna.menu/services/BarSizeMode.qml`
    - Own file patching, snapshot restore, theme-change reapply, and reload.
-3. `plugins/omarchy.lacuna-menu/menu/MenuWindow.qml`
+3. `lacuna.menu/menu/MenuWindow.qml`
    - Instantiate `BarSizeMode`.
    - Pass `lacunaSettings`, `menuTheme.themeName`, and the resolved Omarchy path
      or shell IPC command helper data.
    - Add action handling for `set-bar-size-mode-theme`,
      `set-bar-size-mode-compact`, and `set-bar-size-mode-full`.
    - Pass the current `barSizeMode` into `MenuRegistry.qml`.
-4. `plugins/omarchy.lacuna-menu/menu/MenuRegistry.qml`
+4. `lacuna.menu/menu/MenuRegistry.qml`
    - Add `barSizeMode` and helper text/name functions for menu rows that need
      to summarize the mode.
    - Optionally rename new user-facing density labels to "Lacuna Density" while
      leaving the old action string as a compatibility alias.
-5. `plugins/omarchy.lacuna-menu/settings/SettingsWindow.qml`
+5. `lacuna.menu/settings/SettingsWindow.qml`
    - Add the `Theme | Compact | Full` segment control to the `layout` section.
    - Keep existing compact-density labels scoped to Lacuna UI density.
-6. `plugins/omarchy.lacuna-menu/settings/SettingsRow.qml`
+6. `lacuna.menu/settings/SettingsRow.qml`
    - No structural change should be needed; segment controls already exist.
-7. `plugins/omarchy.lacuna-menu/services/Theme.qml`
+7. `lacuna.menu/services/Theme.qml`
    - No write behavior should be added here unless the bar-size service needs a
      shared helper.
    - Keep theme color parsing separate from host bar-size mutation.
@@ -258,7 +258,7 @@ Recommended implementation areas:
    - Add `barSizeMode: "theme"`.
    - Optionally include an empty or omitted `barSizeSnapshot`; prefer omitted in
      the example because snapshots are runtime-only.
-9. `plugins/omarchy.lacuna-compact-pill/scripts/compact-state`
+9. `lacuna.compact-pill/scripts/compact-state`
    - Verify it preserves unknown settings keys when toggling `compact`.
    - Add fallback defaults for `barSizeMode` only if users will inspect emitted
      state or if tests are added around default settings shape.
@@ -317,15 +317,15 @@ convention.
 Run static checks:
 
 ```bash
-qmllint $(rg --files plugins -g '*.qml')
-for f in plugins/*/manifest.json; do python3 -m json.tool "$f" >/dev/null || exit 1; done
+qmllint $(rg --files -g 'lacuna.*/*.qml')
+for f in lacuna.*/manifest.json; do python3 -m json.tool "$f" >/dev/null || exit 1; done
 ```
 
 Also inspect settings defaults:
 
 ```bash
 python3 -m json.tool config/settings.example.json >/dev/null
-rg -n "barSizeMode|barSizeSnapshot|toggle-bar-density|toggle-lacuna-density" plugins/omarchy.lacuna-menu plugins/omarchy.lacuna-compact-pill config
+rg -n "barSizeMode|barSizeSnapshot|toggle-bar-density|toggle-lacuna-density" lacuna.menu lacuna.compact-pill config
 ```
 
 Manual Omarchy shell checks:

@@ -10,121 +10,82 @@ styling, and workflow ideas. New Omarchy work should happen here as plugins.
 
 ## Structure
 
-- `plugins/omarchy.lacuna-menu/`: Lacuna menu/sidebar plugin, Lacuna settings
-  panels, shared components, and menu assets.
-- `plugins/omarchy.lacuna-state/`: shared Lacuna runtime settings service.
-- `plugins/omarchy.lacuna-shell-settings/`: separate Omarchy shell settings
-  service and panel linked from the Lacuna menu.
-- `plugins/omarchy.lacuna-menu-button/`: topbar launcher for the Lacuna menu.
-- `plugins/omarchy.lacuna-vhs-overlay/`: desktop-layer VHS tracking line
-  ambience overlay.
-- `plugins/omarchy.lacuna-crt-overlay/`: desktop-layer CRT scanline ambience
-  overlay with optional foreground mode.
-- `plugins/omarchy.lacuna-aurora-drift/`: desktop-layer aurora ribbon
-  ambience overlay.
-- `plugins/omarchy.lacuna-rainfall-overlay/`: desktop-layer rain ambience
-  overlay.
-- `plugins/omarchy.lacuna-cinematic-light-overlay/`: desktop-layer warm
-  cinematic light bleed and lens flare overlay.
-- `plugins/omarchy.lacuna-background-vignette/`: global wallpaper-layer edge
-  darkening overlay.
-- `plugins/omarchy.lacuna-workspaces/`: original Lacuna numbered workspace
-  switcher as an Omarchy bar widget.
-- `plugins/omarchy.lacuna-mpris/`: original Lacuna media pill with playback
-  text sweep animation.
-- `plugins/omarchy.lacuna-desktop-clock/`: desktop-layer Tektur digital clock.
-- `plugins/omarchy.lacuna-*-usage/`: Codex and Claude usage bar widgets.
-- `plugins/omarchy.lacuna-theme/` and
-  `plugins/omarchy.lacuna-wallpaper/`: active Omarchy theme/background widgets.
-- `plugins/omarchy.lacuna-clock/`,
-  `plugins/omarchy.lacuna-system-update/`,
-  `plugins/omarchy.lacuna-weather/`,
-  `plugins/omarchy.lacuna-notifications/`,
-  `plugins/omarchy.lacuna-indicators/`,
-  `plugins/omarchy.lacuna-nightlight/`,
-  `plugins/omarchy.lacuna-idle-inhibitor/`,
-  `plugins/omarchy.lacuna-screen-recording/`,
-  `plugins/omarchy.lacuna-voxtype/`,
-  `plugins/omarchy.lacuna-tray/`,
-  `plugins/omarchy.lacuna-audio/`,
-  `plugins/omarchy.lacuna-network/`,
-  `plugins/omarchy.lacuna-bluetooth/`, and
-  `plugins/omarchy.lacuna-power/`: Lacuna-native replacements for the selected
-  Omarchy topbar controls. Most are button-first replacements; the tray keeps
-  the native status-notifier model while anchoring item context menus through
-  Lacuna-safe plugin code.
-- `plugins/omarchy.lacuna-system-stats/` and
-  `plugins/omarchy.lacuna-temperature/`: system status bar widgets.
-- `plugins/omarchy.lacuna-bar-size-pill/`: Omarchy host bar compact/full
-  toggle backed by Lacuna bar size mode.
-- `plugins/omarchy.lacuna-compact-pill/`: legacy Lacuna UI density toggle,
-  retained for existing layouts; prefer `omarchy.lacuna-bar-size-pill`.
-- `plugins/omarchy.lacuna-settings-persistence/`: service and panel that keep
-  selected Omarchy runtime toggles, currently idle locking and nightlight,
-  across shell restarts.
+Plugin directories live at the repository root as `lacuna.*` directories. This
+is intentional: Omarchy's repo-source installer scans only top-level folders
+that contain a `manifest.json`.
+
+- `lacuna.menu/`, `lacuna.state/`, `lacuna.shell-settings/`, and
+  `lacuna.menu-button/`: the core Lacuna menu bundle.
+- `lacuna.theme/`, `lacuna.wallpaper/`, and `lacuna.theme-preloader/`: theme
+  and wallpaper controls plus the optional preview/background helper service.
+- `lacuna.*-overlay/`, `lacuna.desktop-clock/`, and
+  `lacuna.background-vignette/`: desktop ambience overlays.
+- `lacuna.audio/`, `lacuna.network/`, `lacuna.bluetooth/`,
+  `lacuna.notifications/`, `lacuna.indicators/`, and other `lacuna.*`
+  topbar widgets: a-la-carte bar widgets.
+- `lacuna.bar-size-pill/`: Omarchy host bar compact/full toggle.
+- `lacuna.compact-pill/`: legacy companion for `lacuna.bar-size-pill`; prefer
+  `lacuna.bar-size-pill` for new layouts.
 - `shared/qml/simple-bar/`: canonical vendored helper templates for simple
   Lacuna topbar widgets.
 - `config/`: example Omarchy shell and Lacuna settings files.
-- `docs/omarchy-shell-refactor-plan.md`: implementation plan and phase status.
+- `docs/plugin-dependencies.md`: standalone and bundle classification.
 
 ## Install
 
-Symlink plugin directories into Omarchy's plugin directory:
+Run the Lacuna installer for a menu-driven setup:
 
 ```bash
-mkdir -p ~/.config/omarchy/plugins
-ln -sfn "$PWD/plugins/omarchy.lacuna-menu" ~/.config/omarchy/plugins/omarchy.lacuna-menu
-ln -sfn "$PWD/plugins/omarchy.lacuna-menu-button" ~/.config/omarchy/plugins/omarchy.lacuna-menu-button
-ln -sfn "$PWD/plugins/omarchy.lacuna-state" ~/.config/omarchy/plugins/omarchy.lacuna-state
-ln -sfn "$PWD/plugins/omarchy.lacuna-shell-settings" ~/.config/omarchy/plugins/omarchy.lacuna-shell-settings
-ln -sfn "$PWD/plugins/omarchy.lacuna-bar-size-pill" ~/.config/omarchy/plugins/omarchy.lacuna-bar-size-pill
-ln -sfn "$PWD/plugins/omarchy.lacuna-desktop-clock" ~/.config/omarchy/plugins/omarchy.lacuna-desktop-clock
-ln -sfn "$PWD/plugins/omarchy.lacuna-vhs-overlay" ~/.config/omarchy/plugins/omarchy.lacuna-vhs-overlay
-ln -sfn "$PWD/plugins/omarchy.lacuna-crt-overlay" ~/.config/omarchy/plugins/omarchy.lacuna-crt-overlay
-ln -sfn "$PWD/plugins/omarchy.lacuna-aurora-drift" ~/.config/omarchy/plugins/omarchy.lacuna-aurora-drift
-ln -sfn "$PWD/plugins/omarchy.lacuna-rainfall-overlay" ~/.config/omarchy/plugins/omarchy.lacuna-rainfall-overlay
-ln -sfn "$PWD/plugins/omarchy.lacuna-cinematic-light-overlay" ~/.config/omarchy/plugins/omarchy.lacuna-cinematic-light-overlay
-ln -sfn "$PWD/plugins/omarchy.lacuna-background-vignette" ~/.config/omarchy/plugins/omarchy.lacuna-background-vignette
-ln -sfn "$PWD/plugins/omarchy.lacuna-settings-persistence" ~/.config/omarchy/plugins/omarchy.lacuna-settings-persistence
+./scripts/lacuna
 ```
 
-For a full Lacuna topbar, also symlink the native replacement widgets:
+The first screen offers:
+
+- Full Lacuna install
+- Custom install
+- Uninstall Lacuna
+- Status
+
+Full install enables the maintained Lacuna suite and asks before applying the
+recommended Lacuna bar layout. Custom install lets you pick groups or individual
+standalone plugins, then automatically includes required companions such as
+`lacuna.state` and `lacuna.shell-settings`.
+
+Scripted installs are supported too:
 
 ```bash
-for plugin in \
-  omarchy.lacuna-system-update omarchy.lacuna-clock omarchy.lacuna-weather \
-  omarchy.lacuna-notifications omarchy.lacuna-indicators \
-  omarchy.lacuna-nightlight omarchy.lacuna-idle-inhibitor \
-  omarchy.lacuna-screen-recording omarchy.lacuna-voxtype \
-  omarchy.lacuna-tray \
-  omarchy.lacuna-audio \
-  omarchy.lacuna-network omarchy.lacuna-bluetooth omarchy.lacuna-power
-do
-  ln -sfn "$PWD/plugins/$plugin" "$HOME/.config/omarchy/plugins/$plugin"
-done
+./scripts/lacuna install --profile full
+./scripts/lacuna install --profile core
+./scripts/lacuna install --profile native --apply-layout
+./scripts/lacuna install --plugin lacuna.clock,lacuna.weather
 ```
 
-Enable panel, overlay, and menu plugins in `~/.config/omarchy/shell.json`,
-then reload:
+Preview any install without changing the system:
 
 ```bash
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell rescanPlugins
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-state true
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-shell-settings true
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-desktop-clock true
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-vhs-overlay true
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-crt-overlay true
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-aurora-drift true
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-rainfall-overlay true
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-cinematic-light-overlay true
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-background-vignette true
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell setPluginEnabled omarchy.lacuna-settings-persistence true
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell summon omarchy.lacuna-settings-persistence "{}"
-omarchy restart shell
+./scripts/lacuna install --profile full --dry-run
 ```
 
-Bar widgets are placed in `bar.layout`; menu surfaces are enabled in
-`plugins`. Per-widget bar options belong in `shell.json` through Omarchy
+Uninstall is handled by the same helper:
+
+```bash
+./scripts/lacuna uninstall
+./scripts/lacuna uninstall --all
+./scripts/lacuna uninstall --all --purge-state
+```
+
+The installer uses Omarchy's public plugin commands. If you prefer to do the
+steps manually, add this repository as a trusted Omarchy plugin source:
+
+```bash
+omarchy plugin source add <repo-url> --as lacuna
+omarchy plugin available
+omarchy plugin add lacuna.clock --from lacuna --enable --yes
+```
+
+Bar widgets are placed in `bar.layout`; use `omarchy plugin bar add <id>` or
+copy `config/shell.lacuna-native-replacements.example.json` into
+`~/.config/omarchy/shell.json` as a starting point. Per-widget bar options belong in `shell.json` through Omarchy
 Settings. Lacuna runtime state lives in
 `~/.config/omarchy/lacuna/settings.json`, including the global
 `colorProfile` setting, `customQuickLaunchApps`, and `preferredApps`. Use
@@ -139,7 +100,7 @@ The Lacuna menu uses a unified color model: normal entries share the active
 theme accent, while destructive actions keep the danger/urgent color. See
 `docs/lacuna-menu-unified-color-model.md` for the rationale.
 
-`omarchy.lacuna-menu` owns Lacuna panel motion and sidebar choreography.
+`lacuna.menu` owns Lacuna panel motion and sidebar choreography.
 Specialized widgets own their own interaction animation, while simple topbar
 widgets use vendored helper templates under `shared/qml/simple-bar/` to keep
 hover/color timing consistent without cross-plugin imports.
@@ -153,8 +114,8 @@ Use `qmllint` for changed QML and validate manifests with
 `python3 -m json.tool`. Smoke test loaded plugins with:
 
 ```bash
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell listPlugins
-OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell toggle omarchy.lacuna-menu '{}'
+omarchy plugin list
+OMARCHY_PATH="$HOME/.local/share/omarchy" omarchy-shell shell toggle lacuna.menu '{}'
 hyprctl layers
 ```
 

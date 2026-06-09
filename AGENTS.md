@@ -5,8 +5,8 @@
 This repository is the Omarchy plugin target for Lacuna, with the standalone Lacuna project treated as the source reference. The current structure is intentionally small:
 
 - `docs/omarchy-shell-refactor-plan.md`: architecture and migration plan.
-- `plugins/omarchy.lacuna-*/`: one Omarchy plugin directory per Lacuna surface or widget.
-- `plugins/omarchy.lacuna-menu/`: future menu/sidebar plugin, with `menu/`, `components/`, `services/`, and `assets/`.
+- `lacuna.*/`: one top-level Omarchy plugin directory per Lacuna surface or widget. This flattened layout is required for `omarchy plugin source add` repo installs.
+- `lacuna.menu/`: menu/sidebar plugin, with `menu/`, `components/`, `services/`, and `assets/`.
 - `config/`: example configuration should live here, such as `settings.example.json`.
 
 Keep plugin code self-contained under its plugin directory. Do not depend on the repository root as a runtime import path.
@@ -16,15 +16,15 @@ Keep plugin code self-contained under its plugin directory. Do not depend on the
 There is no build system or automated test command yet. Use shell inspection while the repo is scaffolded:
 
 - `rg --files`: list tracked source-like files quickly.
-- `find plugins -maxdepth 3 -print`: inspect plugin layout.
-- `OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell rescanPlugins`: ask Omarchy shell to reload installed plugins.
-- `OMARCHY_PATH="$HOME/.local/share/omarchy" ~/.local/share/omarchy/bin/omarchy-shell shell summon omarchy.lacuna-menu "{}"`: smoke-test the menu plugin once implemented.
+- `find . -maxdepth 2 -path './lacuna.*' -print`: inspect plugin layout.
+- `omarchy plugin rescan`: ask Omarchy shell to reload installed plugins.
+- `OMARCHY_PATH="$HOME/.local/share/omarchy" omarchy-shell shell summon lacuna.menu "{}"`: smoke-test the menu plugin once implemented.
 
 For local testing, copy or symlink a plugin directory into `~/.config/omarchy/plugins/<plugin-id>/`, then rescan or restart Omarchy shell. No plugin should start a second Quickshell process.
 
 ## Coding Style & Naming Conventions
 
-Use QML for plugin entry points and keep roots compatible with Omarchy plugin contracts: bar widgets expose an `Item`; menu/panel surfaces implement `open(payloadJson)` and `close()`. Name plugin directories with full IDs, for example `omarchy.lacuna-script-pill`. Prefer `Widget.qml` for bar-widget entry points and `Menu.qml` for the menu entry point.
+Use QML for plugin entry points and keep roots compatible with Omarchy plugin contracts: bar widgets expose an `Item`; menu/panel surfaces implement `open(payloadJson)` and `close()`. Name plugin directories with full IDs, for example `lacuna.script-pill`. Prefer `Widget.qml` for bar-widget entry points and `Menu.qml` for the menu entry point.
 
 Use 2-space indentation for JSON and QML unless a copied source file already has a consistent style. Store bar-widget user options in the plugin manifest schema so Omarchy Settings writes them inline to `~/.config/omarchy/shell.json`. Keep `~/.config/omarchy/lacuna/settings.json` for Lacuna runtime/app state only.
 
@@ -32,7 +32,7 @@ Use 2-space indentation for JSON and QML unless a copied source file already has
 
 For new Lacuna flyout panels that attach to the sidebar, keep the attachment edge square and use Omarchy-style molding connectors instead of ordinary rounded connector corners. If `sidebarState.cornerPieces` is enabled, reserve a connector width equal to `joinRadius`, place the flyout at `panelWidth + connectorWidth`, and draw the connector at `x: panelWidth` so it sits between the sidebar and flyout. If corner pieces are disabled, attach the flyout directly at `panelWidth`.
 
-Connector pieces are molding transitions like the sidebar/topbar join in `plugins/omarchy.lacuna-menu/menu/MenuSurface.qml`, not normal rounded corners. Use a straight body between the panel's top and bottom plus two `ShapePath` cubic pieces outside the panel bounds: one above the panel and one vertically flipped below it. Use the same `curveKappa` constant (`0.5522847498`) as `MenuSurface.qml`.
+Connector pieces are molding transitions like the sidebar/topbar join in `lacuna.menu/menu/MenuSurface.qml`, not normal rounded corners. Use a straight body between the panel's top and bottom plus two `ShapePath` cubic pieces outside the panel bounds: one above the panel and one vertically flipped below it. Use the same `curveKappa` constant (`0.5522847498`) as `MenuSurface.qml`.
 
 Flyout panels themselves may use normal rounding only on exposed corners. For a right-opening panel attached to the sidebar, keep the left edge square and round only the top-right and bottom-right corners with a custom `Shape`; do not use `Rectangle.radius`, because it rounds all four corners and breaks the connector edge.
 

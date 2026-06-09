@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.theme-preloader",
+  "name": "Lacuna Theme Preloader",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Warms Omarchy theme switcher preview and image-selector caches.",
+  "kinds": [
+    "service"
+  ],
+  "activation": "persistent",
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml"
+  },
+  "lacuna": {
+    "standalone": false,
+    "bundle": "theme",
+    "requires": [],
+    "recommends": [
+      "lacuna.theme",
+      "lacuna.wallpaper"
+    ]
+  }
+}

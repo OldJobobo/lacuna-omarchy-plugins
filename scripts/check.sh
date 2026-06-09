@@ -7,10 +7,10 @@ python3 -m json.tool config/settings.example.json >/dev/null
 
 while IFS= read -r manifest; do
   python3 -m json.tool "$manifest" >/dev/null
-done < <(find plugins -name manifest.json -print | sort)
+done < <(find . -maxdepth 2 -path './lacuna.*/manifest.json' -print | sort)
 
 if command -v qmllint >/dev/null 2>&1; then
-  qmllint $(find plugins -name '*.qml' -print | sort)
+  qmllint $(find . -path './lacuna.*/*.qml' -print | sort)
 else
   echo "warning: qmllint not found; skipping QML lint" >&2
 fi

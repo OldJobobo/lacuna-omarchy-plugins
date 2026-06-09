@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.workspaces",
+  "name": "Lacuna Workspaces",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Lacuna-styled Hyprland workspace switcher for the Omarchy bar.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lacuna Workspaces",
+    "description": "Recreates the original Lacuna numbered workspace controls.",
+    "category": "Lacuna",
+    "allowMultiple": false,
+    "defaults": {
+      "workspaceCount": 7,
+      "showDynamicExtra": false
+    },
+    "schema": [
+      {
+        "key": "workspaceCount",
+        "type": "integer",
+        "label": "Workspace count",
+        "min": 1,
+        "max": 10,
+        "step": 1
+      },
+      {
+        "key": "showDynamicExtra",
+        "type": "boolean",
+        "label": "Show dynamic extra workspaces"
+      },
+      {
+        "key": "colorProfile",
+        "type": "enum",
+        "label": "Color profile",
+        "options": [
+          "semantic",
+          "colorful"
+        ],
+        "description": "Override the global Lacuna color profile for this widget."
+      }
+    ]
+  },
+  "lacuna": {
+    "standalone": true,
+    "bundle": "standalone",
+    "requires": [],
+    "recommends": []
+  }
+}

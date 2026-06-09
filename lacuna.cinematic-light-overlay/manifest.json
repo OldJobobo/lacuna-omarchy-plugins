@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.cinematic-light-overlay",
+  "name": "Lacuna Cinematic Light",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Warm filmic horizontal light bleed and lens flare for animated wallpaper ambience.",
+  "kinds": [
+    "overlay"
+  ],
+  "activation": "persistent",
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "Overlay.qml"
+  },
+  "defaults": {
+    "effectEnabled": true,
+    "intensity": 1,
+    "speed": 1,
+    "stylePreset": "lightLeak",
+    "slowDrift": true,
+    "occasionalSweeps": false,
+    "activeShimmer": false,
+    "flareCount": 4,
+    "accentBlend": 0.5,
+    "vignette": true
+  },
+  "schema": [
+    {
+      "key": "effectEnabled",
+      "type": "boolean",
+      "label": "Effect enabled"
+    },
+    {
+      "key": "intensity",
+      "type": "number",
+      "label": "Intensity"
+    },
+    {
+      "key": "speed",
+      "type": "number",
+      "label": "Speed"
+    },
+    {
+      "key": "stylePreset",
+      "type": "enum",
+      "label": "Style",
+      "options": [
+        "lightLeak",
+        "cinematicFlare",
+        "anamorphicGlow"
+      ]
+    },
+    {
+      "key": "slowDrift",
+      "type": "boolean",
+      "label": "Slow drift"
+    },
+    {
+      "key": "occasionalSweeps",
+      "type": "boolean",
+      "label": "Occasional sweeps"
+    },
+    {
+      "key": "activeShimmer",
+      "type": "boolean",
+      "label": "Active shimmer"
+    },
+    {
+      "key": "flareCount",
+      "type": "number",
+      "label": "Flare count"
+    },
+    {
+      "key": "accentBlend",
+      "type": "number",
+      "label": "Accent blend"
+    },
+    {
+      "key": "vignette",
+      "type": "boolean",
+      "label": "Vignette"
+    }
+  ],
+  "lacuna": {
+    "standalone": true,
+    "bundle": "standalone",
+    "requires": [],
+    "recommends": []
+  }
+}
