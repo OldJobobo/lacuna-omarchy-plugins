@@ -26,6 +26,13 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('style === "lacuna" || style === "carbon"', qml)
         self.assertIn('return "lacuna"', qml)
 
+    def test_lacuna_menu_surface_tracks_omarchy_bar_background(self):
+        qml = read("lacuna.menu/services/Theme.qml")
+
+        self.assertIn('property color panelBackground: shellColor("bar.background", color("background"))', qml)
+        self.assertIn("var numKv = line.match", qml)
+        self.assertNotIn("property color panelBackground: color(\"background\")", qml)
+
     def test_lacuna_settings_has_pending_save_merge_for_quick_launch_state(self):
         qml = read("lacuna.menu/services/LacunaSettings.qml")
 
@@ -95,7 +102,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('commands.run("omarchy system reboot")', window)
         self.assertIn('entry.action === "confirm-system-restart"', window)
         self.assertIn('entry.action === "toggle-instant-restart"', window)
-        self.assertIn('"Instant Restart"', settings_window)
+        self.assertIn('"Skip Restart Confirmation"', settings_window)
         self.assertIn('"toggle-instant-restart"', settings_window)
 
     def test_rail_has_no_compact_density_button(self):
@@ -276,17 +283,23 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("text: root.displayText", qml)
         self.assertNotIn("text: root.weatherText", qml)
 
-    def test_wallpaper_commands_force_live_background_refresh(self):
+    def test_theme_and_wallpaper_commands_use_current_omarchy_routes_without_extra_ipc(self):
+        theme = read("lacuna.theme/Widget.qml")
         widget = read("lacuna.wallpaper/Widget.qml")
         catalog = read("lacuna.menu/menu/MenuCommandCatalog.qml")
         panel = read("lacuna.shell-settings/Panel.qml")
 
+        self.assertIn("omarchy theme switcher", theme)
+        self.assertIn("omarchy theme set", theme)
+        self.assertIn("omarchy theme current", theme)
+        self.assertIn("omarchy theme list", theme)
         self.assertIn("function nextBackgroundCommand()", widget)
         self.assertIn("bar.run(root.nextBackgroundCommand())", widget)
-        for qml in [widget, catalog, panel]:
-            self.assertIn("function applyCurrentBackgroundCommand()", qml)
-            self.assertIn("readlink -f", qml)
-            self.assertIn("background setInstant", qml)
+        for qml in [theme, widget, catalog, panel]:
+            self.assertIn("omarchy theme", qml)
+            self.assertNotIn("refreshThemeBackgroundCommand", qml)
+            self.assertNotIn("applyCurrentBackgroundCommand", qml)
+            self.assertNotIn("background setInstant", qml)
 
     def test_background_animations_use_single_selected_effect_contract(self):
         manifest = read_json("lacuna.aurora-drift/manifest.json")
@@ -388,6 +401,12 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property bool slowDriftEnabled", cinematic)
         self.assertIn("readonly property bool occasionalSweepsEnabled", cinematic)
         self.assertIn("readonly property bool activeShimmerEnabled", cinematic)
+        self.assertIn("readonly property real ambientWashOpacity", cinematic)
+        self.assertIn("readonly property real ambientBandOpacity", cinematic)
+        self.assertIn("property real ambientPulse", cinematic)
+        self.assertIn("running: root.effectVisible && root.slowDriftEnabled", cinematic)
+        self.assertIn("readonly property int hiddenPause: root.slowDriftEnabled", cinematic)
+        self.assertIn("readonly property int darkPause: root.slowDriftEnabled", cinematic)
         self.assertIn('if (preset === "cinematicFlare" || preset === "anamorphicGlow") return preset', cinematic)
         self.assertIn('if (mode === "occasionalSweeps" || mode === "activeShimmer") return mode', cinematic)
         self.assertIn("motionModes: {", cinematic)
@@ -608,6 +627,36 @@ class QmlContractTests(unittest.TestCase):
                 self.assertTrue(qml_path.exists(), qml_path)
                 self.assertNotIn("ShellRoot", qml_path.read_text(encoding="utf-8"), qml_path)
 
+    def test_plugin_manifest_schemas_have_coherent_defaults(self):
+        for manifest_path in plugin_manifest_paths():
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            containers = []
+            if isinstance(manifest.get("barWidget"), dict):
+                containers.append(("barWidget", manifest["barWidget"]))
+            containers.append(("root", manifest))
+
+            for label, container in containers:
+                schema = container.get("schema", [])
+                defaults = container.get("defaults", {})
+                if not schema:
+                    continue
+
+                self.assertIsInstance(defaults, dict, (manifest_path, label))
+                for entry in schema:
+                    key = entry["key"]
+                    self.assertIn(key, defaults, (manifest_path, label, key))
+                    self.assertIn("defaultValue", entry, (manifest_path, label, key))
+                    self.assertEqual(defaults[key], entry["defaultValue"], (manifest_path, label, key))
+
+    def test_command_runners_do_not_log_successful_command_payloads(self):
+        for path in [
+            "lacuna.menu/services/CommandRunner.qml",
+            "lacuna.shell-settings/CommandRunner.qml",
+        ]:
+            qml = read(path)
+            self.assertNotIn("console.log", qml, path)
+            self.assertIn("console.warn(\"lacuna command failed:\"", qml, path)
+
     def test_lacuna_manifest_metadata_describes_install_groups(self):
         manifests = {
             path.parent.name: json.loads(path.read_text(encoding="utf-8"))
@@ -763,8 +812,37 @@ class QmlContractTests(unittest.TestCase):
         self.assertNotIn("sidebarState.expand()", shell_section)
         self.assertIn("return settingsFlyoutY(panelHeight)", menu)
         self.assertIn('surface: "flyout"', settings)
-        self.assertIn('"Shell Settings Surface"', settings_window)
+        self.assertIn('"Omarchy Settings Link"', settings_window)
         self.assertIn('"set-shell-settings-surface-"', settings_window)
+
+    def test_lacuna_settings_only_exposes_lacuna_owned_settings(self):
+        settings_window = read("lacuna.menu/settings/SettingsWindow.qml")
+
+        self.assertIn('"Lacuna Tools"', settings_window)
+        self.assertIn('"Lacuna Maintenance"', settings_window)
+        self.assertIn('"Reload App Catalog"', settings_window)
+        self.assertIn('"Open Plugin Source"', settings_window)
+        self.assertIn('"Skip Restart Confirmation"', settings_window)
+        self.assertIn('"Omarchy Settings Link"', settings_window)
+
+        self.assertNotIn('"Runtime", hint: "Diagnostics and maintenance"', settings_window)
+        self.assertNotIn('"Shortcuts for the host theme workflow."', settings_window)
+        self.assertNotIn('"Theme", "Switch Omarchy theme"', settings_window)
+        self.assertNotIn('"Background", "Switch the active theme background"', settings_window)
+        self.assertNotIn('"Wallpaper Catalog"', settings_window)
+        self.assertNotIn('"Restart Shell"', settings_window)
+        self.assertNotIn('"Open Log"', settings_window)
+
+        for path in [
+            "lacuna.menu/settings/OmarchyShellSettingsWindow.qml",
+            "lacuna.shell-settings/settings/OmarchyShellSettingsWindow.qml",
+        ]:
+            qml = read(path)
+            self.assertIn('"Theme", "Switch Omarchy theme"', qml, path)
+            self.assertIn('"Background", "Switch active theme background"', qml, path)
+            self.assertIn('"Wallpaper Catalog"', qml, path)
+            self.assertIn('"Restart Shell"', qml, path)
+            self.assertIn('"Open Log"', qml, path)
 
     def test_lacuna_settings_windows_use_parent_control_state(self):
         settings_window = read("lacuna.menu/settings/SettingsWindow.qml")
@@ -783,6 +861,43 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("function entryWithDesiredChecked", settings_window)
         self.assertIn("next.desiredChecked = desiredChecked === true", settings_window)
         self.assertIn("function desiredChecked", read("lacuna.menu/menu/MenuWindow.qml"))
+
+    def test_omarchy_shell_settings_sections_have_distinct_models(self):
+        for path in [
+            "lacuna.menu/settings/OmarchyShellSettingsWindow.qml",
+            "lacuna.shell-settings/settings/OmarchyShellSettingsWindow.qml",
+        ]:
+            qml = read(path)
+
+            self.assertIn("property var currentItems", qml, path)
+            self.assertIn("property string modelError", qml, path)
+            self.assertIn("function refreshItems()", qml, path)
+            self.assertIn("try {", qml, path)
+            self.assertIn('"Section Error"', qml, path)
+            self.assertIn("function registryCommand(name)", qml, path)
+            self.assertIn("model: root.currentItems", qml, path)
+            self.assertIn('if (sectionId === "notifications")', qml, path)
+            self.assertIn('if (sectionId === "plugins") return pluginItems()', qml, path)
+            self.assertIn("typeof root.registry.installedShellPluginRows", qml, path)
+            self.assertIn('commandRow("refresh", "Restart Shell"', qml, path)
+            self.assertIn("showLabels: true", qml, path)
+
+        menu = read("lacuna.menu/menu/MenuWindow.qml")
+        self.assertIn("property var registryRef: registry", menu)
+        self.assertIn("registry: shellSettingsPanel.registryRef", menu)
+        self.assertIn("onCurrentSectionChanged: root.shellSettingsSection = currentSection", menu)
+
+        for path in [
+            "lacuna.menu/settings/SettingsRail.qml",
+            "lacuna.shell-settings/settings/SettingsRail.qml",
+        ]:
+            qml = read(path)
+
+            self.assertIn("signal sectionSelected(string sectionId)", qml, path)
+            self.assertIn("readonly property string sectionId", qml, path)
+            self.assertIn("property bool showLabels", qml, path)
+            self.assertIn("text: modelData.label || \"\"", qml, path)
+            self.assertIn("onTriggered: root.sectionSelected(parent.sectionId)", qml, path)
 
     def test_simple_bar_helpers_match_canonical_vendored_templates(self):
         color_template = read("shared/qml/simple-bar/ColorProfile.qml")
