@@ -32,6 +32,7 @@ Item {
   property color navAccent: menuTheme.soft
   property color muted: menuTheme.muted
   property string version: ""
+  property string bodyFontFamily: "JetBrains Mono"
   property bool compact: compactState.compact
   property real compactProgress: compact ? 1 : 0
   property bool forceCompactRail: false
@@ -231,6 +232,10 @@ Item {
 
   function sizeMix(fullValue, compactValue) {
     return Number(fullValue) + (Number(compactValue) - Number(fullValue)) * compactProgress
+  }
+
+  function safeValue(value, fallback) {
+    return value === undefined || value === null ? fallback : value
   }
 
   function configBarHeight() {
@@ -1582,6 +1587,8 @@ Item {
       Loader {
         id: shellSettingsPanel
 
+        property var registryRef: registry
+
         anchors.fill: parent
         active: root.renderShellSettingsContent
         visible: root.renderShellSettingsContent
@@ -1594,7 +1601,7 @@ Item {
             compact: root.compact
             drawBackground: false
             designTokens: designTokens
-            registry: registry
+            registry: shellSettingsPanel.registryRef
             settingsService: root.shellSettingsService
             foreground: root.foreground
             background: root.background
@@ -1604,6 +1611,7 @@ Item {
             dangerAccent: root.dangerAccent
             navAccent: root.navAccent
             muted: root.muted
+            onCurrentSectionChanged: root.shellSettingsSection = currentSection
             onActivated: function(entry) {
               root.holdFlyoutAfterSettingsActivation()
               root.activate(entry)
@@ -1715,8 +1723,8 @@ Item {
           anchors.rightMargin: 16
           anchors.verticalCenter: restartConfirmIcon.verticalCenter
           text: "Restart System?"
-          color: root.foreground
-          fontFamily: root.bodyFontFamily
+          color: root.safeValue(root.foreground, "#d8dee9")
+          fontFamily: root.safeValue(root.bodyFontFamily, "JetBrains Mono")
           font.pixelSize: root.compact ? 12 : 13
           font.weight: Font.DemiBold
         }
@@ -1729,8 +1737,8 @@ Item {
           anchors.top: restartConfirmIcon.bottom
           anchors.topMargin: root.compact ? 16 : 18
           text: "This will reboot the machine now. Unsaved work in other apps may be lost."
-          color: root.muted
-          font.family: root.bodyFontFamily
+          color: root.safeValue(root.muted, "#8b949e")
+          font.family: root.safeValue(root.bodyFontFamily, "JetBrains Mono")
           font.pixelSize: root.compact ? 10 : 11
           wrapMode: Text.WordWrap
           lineHeight: 1.16
@@ -1759,8 +1767,8 @@ Item {
               anchors.centerIn: parent
               width: parent.width - 14
               text: "Cancel"
-              color: root.muted
-              fontFamily: root.bodyFontFamily
+              color: root.safeValue(root.muted, "#8b949e")
+              fontFamily: root.safeValue(root.bodyFontFamily, "JetBrains Mono")
               font.pixelSize: root.compact ? 10 : 11
               font.weight: Font.DemiBold
               horizontalAlignment: Text.AlignHCenter
@@ -1787,8 +1795,8 @@ Item {
               anchors.centerIn: parent
               width: parent.width - 14
               text: "Restart"
-              color: root.foreground
-              fontFamily: root.bodyFontFamily
+              color: root.safeValue(root.foreground, "#d8dee9")
+              fontFamily: root.safeValue(root.bodyFontFamily, "JetBrains Mono")
               font.pixelSize: root.compact ? 10 : 11
               font.weight: Font.DemiBold
               horizontalAlignment: Text.AlignHCenter

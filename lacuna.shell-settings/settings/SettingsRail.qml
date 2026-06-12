@@ -4,7 +4,7 @@ import "../components"
 Column {
   id: root
 
-  signal sectionSelected(string section)
+  signal sectionSelected(string sectionId)
 
   property var sections: []
   property string currentSection: "overview"
@@ -14,8 +14,9 @@ Column {
   property color accent: "#88c0d0"
   property color background: "#101315"
   property var designTokens: null
+  property bool showLabels: false
 
-  width: compact ? 44 : 48
+  width: showLabels ? (compact ? 122 : 140) : (compact ? 44 : 48)
   spacing: compact ? 5 : 6
 
   Repeater {
@@ -24,7 +25,8 @@ Column {
     LacunaRect {
       required property var modelData
 
-      readonly property bool active: modelData.id === root.currentSection
+      readonly property string sectionId: String(modelData.id || "")
+      readonly property bool active: sectionId === root.currentSection
       readonly property color itemColor: active || layer.containsMouse ? root.accent : root.muted
 
       width: root.width
@@ -47,10 +49,26 @@ Column {
       }
 
       LacunaTablerIcon {
-        anchors.centerIn: parent
+        x: root.showLabels ? 12 : Math.round((parent.width - width) / 2)
+        anchors.verticalCenter: parent.verticalCenter
         name: modelData.icon
         color: itemColor
         iconSize: root.compact ? 15 : 17
+      }
+
+      LacunaText {
+        visible: root.showLabels
+        anchors.left: parent.left
+        anchors.leftMargin: root.compact ? 34 : 38
+        anchors.right: parent.right
+        anchors.rightMargin: 8
+        anchors.verticalCenter: parent.verticalCenter
+        text: modelData.label || ""
+        color: itemColor
+        fontFamily: "JetBrains Mono"
+        font.pixelSize: root.compact ? 10 : 11
+        font.weight: active ? Font.DemiBold : Font.Medium
+        elide: Text.ElideRight
       }
 
       LacunaStateLayer {
@@ -59,7 +77,7 @@ Column {
         stateColor: root.accent
         hoverOpacity: root.designTokens ? root.designTokens.hoverOpacity : 0.06
         pressOpacity: root.designTokens ? root.designTokens.activeOpacity : 0.11
-        onTriggered: root.sectionSelected(modelData.id)
+        onTriggered: root.sectionSelected(parent.sectionId)
       }
     }
   }

@@ -29,11 +29,18 @@ Item {
   property int stateRevision: 0
   property var controlOverrides: ({})
   property int controlRevision: 0
+  property var currentItems: []
+  property string modelError: ""
   readonly property int panelRadius: Math.max(tokenNumber("radius", 0), compact ? 10 : 14)
   readonly property real curveKappa: 0.5522847498
 
   onOpenChanged: if (open && settingsService) settingsService.refresh()
-  onCurrentSectionChanged: clearControlOverrides()
+  onCurrentSectionChanged: {
+    clearControlOverrides()
+    refreshItems()
+  }
+
+  Component.onCompleted: refreshItems()
 
   function tokenNumber(name, fallback) {
     if (!designTokens || designTokens[name] === undefined || designTokens[name] === null) return fallback
@@ -187,6 +194,10 @@ Item {
     var rows = [
       section("Installed Plugins", "Enable or disable shell plugins referenced from shell.json.", "shell")
     ]
+    if (!root.registry || typeof root.registry.installedShellPluginRows !== "function") {
+      rows.push(row("apps", "Plugin registry unavailable", "The host shell did not inject plugin registry helpers", "", "shell", "", "value"))
+      return rows
+    }
     var plugins = root.registry.installedShellPluginRows()
     if (plugins.length === 0) {
       rows.push(row("apps", "No third-party plugins", "Only first-party shell infrastructure is installed", "", "shell", "", "value"))
@@ -200,6 +211,11 @@ Item {
       rows.push(item)
     }
     return rows
+  }
+
+  function registryCommand(name) {
+    if (root.registry && typeof root.registry[name] === "function") return root.registry[name]()
+    return ""
   }
 
   function itemsFor(sectionId) {
@@ -282,13 +298,26 @@ Item {
       section("State", "Refresh the values shown by this panel.", "shell"),
       actionRow("refresh", "Refresh Settings State", root.settingsService.loading ? "Reading Omarchy state" : root.settingsService.errorText !== "" ? root.settingsService.errorText : "Defaults, fonts, toggles, and monitor status", "refresh-shell-settings-state", "shell", root.settingsService.loading ? "Busy" : "Refresh"),
       section("Shell", "Operational commands for the live Omarchy shell.", "shell"),
-      commandRow("refresh", "Restart Shell", "Restart Omarchy shell", root.registry.restartLacunaCommand(), "shell"),
-      commandRow("file-search", "Open Log", "View the current shell log", root.registry.openLogCommand(), "shell"),
-      commandRow("edit", "Open shell.json", "Edit Omarchy shell user config", root.registry.editShellConfigCommand(), "shell"),
+      commandRow("refresh", "Restart Shell", "Restart Omarchy shell", registryCommand("restartLacunaCommand"), "shell"),
+      commandRow("file-search", "Open Log", "View the current shell log", registryCommand("openLogCommand"), "shell"),
+      commandRow("edit", "Open shell.json", "Edit Omarchy shell user config", registryCommand("editShellConfigCommand"), "shell"),
       section("Diagnostics", "Useful shell and idle diagnostics.", "shell"),
-      commandRow("settings", "Omarchy Debug", "Open debug output in a terminal", root.registry.debugCommand(), "shell"),
-      commandRow("moon", "Idle Debug", "Open idle diagnostics in a terminal", root.registry.debugIdleCommand(), "shell")
+      commandRow("settings", "Omarchy Debug", "Open debug output in a terminal", registryCommand("debugCommand"), "shell"),
+      commandRow("moon", "Idle Debug", "Open idle diagnostics in a terminal", registryCommand("debugIdleCommand"), "shell")
     ]
+  }
+
+  function refreshItems() {
+    try {
+      modelError = ""
+      currentItems = itemsFor(currentSection)
+    } catch (e) {
+      modelError = String(e)
+      currentItems = [
+        section("Unavailable", "Unable to build this settings section.", "danger"),
+        row("settings", "Section Error", modelError, "", "danger", "", "value")
+      ]
+    }
   }
 
   function handleEntry(entry, desiredChecked) {
@@ -357,9 +386,9 @@ Item {
 
   Connections {
     target: root.settingsService
-    function onStateChanged() { root.stateRevision++; root.clearControlOverrides() }
-    function onShellConfigChanged() { root.stateRevision++; root.clearControlOverrides() }
-    function onLoadingChanged() { root.stateRevision++ }
+    function onStateChanged() { root.stateRevision++; root.clearControlOverrides(); root.refreshItems() }
+    function onShellConfigChanged() { root.stateRevision++; root.clearControlOverrides(); root.refreshItems() }
+    function onLoadingChanged() { root.stateRevision++; root.refreshItems() }
   }
 
   width: 430
@@ -434,13 +463,14 @@ Item {
       sections: root.sections()
       currentSection: root.currentSection
       compact: root.compact
+      showLabels: true
       foreground: root.foreground
       background: root.background
       muted: root.muted
       accent: root.accent
       designTokens: root.designTokens
-      onSectionSelected: function(section) {
-        root.currentSection = section
+      onSectionSelected: function(sectionId) {
+        if (sectionId !== "") root.currentSection = sectionId
       }
     }
 
@@ -483,7 +513,7 @@ Item {
           spacing: root.compact ? 5 : 6
 
           Repeater {
-            model: root.itemsFor(root.currentSection)
+            model: root.currentItems
 
             Loader {
               property var entry: modelData
