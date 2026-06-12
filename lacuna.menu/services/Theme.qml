@@ -14,8 +14,10 @@ Item {
   property string themeTitle: formatTitle(themeName)
   property color foreground: shellColor("menu.text", color("foreground"))
   property color background: color("background")
-  // Lacuna panel shells intentionally ignore shell.toml popup/menu background roles.
-  property color panelBackground: color("background")
+  // Lacuna's sidebar attaches to the Omarchy bar, so use the same bar base
+  // color. Keep it opaque; translucent layers composite over different
+  // windows/wallpaper and drift visibly at the join.
+  property color panelBackground: shellColor("bar.background", color("background"))
   property color accent: shellColor("menu.selected", color("accent"))
   property color voidColor: withAlpha(background, 0.18)
   property color border: withAlpha(foreground, 0.18)
@@ -38,6 +40,10 @@ Item {
     var value = shellValues[name]
     if (typeof value !== "string" || value.length === 0) return fallbackColor
 
+    return resolveColor(value, fallbackColor)
+  }
+
+  function resolveColor(value, fallbackColor) {
     var role = value.toLowerCase()
     if (role === "foreground" || role === "text") return color("foreground")
     if (role === "background") return color("background")
@@ -95,7 +101,10 @@ Item {
         continue
       }
 
-      var match = line.match(/^([A-Za-z0-9_-]+)\s*=\s*["']([^"']+)["']\s*(#.*)?$/)
+      var stringKv = line.match(/^([A-Za-z0-9_-]+)\s*=\s*["']([^"']+)["']\s*(#.*)?$/)
+      var numKv = line.match(/^([A-Za-z0-9_-]+)\s*=\s*(-?\d+(?:\.\d+)?)\s*(#.*)?$/)
+      var bareKv = line.match(/^([A-Za-z0-9_-]+)\s*=\s*([A-Za-z][A-Za-z0-9_-]*)\s*(#.*)?$/)
+      var match = stringKv || numKv || bareKv
       if (match && section) next[section + "." + match[1]] = match[2]
     }
 
