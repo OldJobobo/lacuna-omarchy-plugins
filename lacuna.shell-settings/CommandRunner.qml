@@ -41,7 +41,6 @@ Item {
     stdoutText = ""
     stderrText = ""
 
-    console.log("lacuna command:", command)
     proc.command = shouldDetach(command) ? ["setsid", "-f", "bash", "-lc", command] : ["bash", "-lc", command]
     proc.running = true
   }
