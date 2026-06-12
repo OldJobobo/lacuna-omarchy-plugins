@@ -174,14 +174,13 @@ def values_match(values, desired):
 
 
 def reload_shell_theme():
-    shell_bin = OMARCHY_PATH / "bin" / "omarchy-shell"
     try:
         colors_b64 = base64.b64encode(COLORS_PATH.read_bytes()).decode("ascii")
         shell_b64 = base64.b64encode(SHELL_PATH.read_bytes()).decode("ascii")
         env = os.environ.copy()
         env["OMARCHY_PATH"] = str(OMARCHY_PATH)
         subprocess.run(
-            [str(shell_bin), "shell", "applyTheme", colors_b64, shell_b64],
+            ["omarchy", "shell", "shell", "applyTheme", colors_b64, shell_b64],
             env=env,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

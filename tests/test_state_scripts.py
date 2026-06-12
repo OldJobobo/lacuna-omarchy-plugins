@@ -151,13 +151,13 @@ class StateScriptTests(unittest.TestCase):
             fake_bin = tmp_path / "bin"
             fake_bin.mkdir()
             shell_log = tmp_path / "omarchy-shell.log"
-            fake_shell = fake_bin / "omarchy-shell"
-            fake_shell.write_text(
+            fake_omarchy = fake_bin / "omarchy"
+            fake_omarchy.write_text(
                 "#!/usr/bin/env bash\n"
                 "printf '%s\\n' \"$*\" >> \"$OMARCHY_SHELL_LOG\"\n",
                 encoding="utf-8",
             )
-            fake_shell.chmod(0o755)
+            fake_omarchy.chmod(0o755)
 
             run_shell_script(
                 REFRESH_THEME_BACKGROUND,
@@ -171,4 +171,4 @@ class StateScriptTests(unittest.TestCase):
             )
 
             self.assertEqual(background_link.resolve(), source_background)
-            self.assertIn("background set " + str(source_background), shell_log.read_text(encoding="utf-8"))
+            self.assertIn("shell -q background set " + str(source_background), shell_log.read_text(encoding="utf-8"))

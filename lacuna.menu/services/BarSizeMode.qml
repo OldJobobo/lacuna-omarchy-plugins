@@ -221,8 +221,7 @@ Item {
 
     var colorsB64 = Qt.btoa(colorsRaw || "")
     var shellB64 = Qt.btoa(nextShellRaw || shellRaw || "")
-    var shellBin = quote(omarchyPath + "/bin/omarchy-shell")
-    var command = "OMARCHY_PATH=" + quote(omarchyPath) + " " + shellBin
+    var command = "OMARCHY_PATH=" + quote(omarchyPath) + " omarchy shell"
       + " shell applyTheme " + quote(colorsB64) + " " + quote(shellB64)
     commandRunner.run(command)
   }

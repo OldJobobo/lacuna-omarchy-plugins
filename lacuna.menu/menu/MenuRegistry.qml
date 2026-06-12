@@ -683,9 +683,9 @@ Item {
 
   function controlEntries() {
     return [
-      entries.command({ icon: "wifi", label: "Wi-Fi", hint: "Open Wi-Fi controls", command: shellIpcCommand("panels.network", "toggle"), tone: "session", priority: "normal", group: "controls" }),
-      entries.command({ icon: "bluetooth", label: "Bluetooth", hint: "Open Bluetooth controls", command: shellIpcCommand("panels.bluetooth", "toggle"), tone: "session", priority: "normal", group: "controls" }),
-      entries.command({ icon: "volume", label: "Audio", hint: "Open audio mixer", command: shellIpcCommand("panels.audio", "toggle"), tone: "session", priority: "normal", group: "controls" }),
+      entries.command({ icon: "wifi", label: "Wi-Fi", hint: "Show network status", command: "omarchy notification send \"$(omarchy network status --verbose 2>/dev/null || omarchy network status)\"", tone: "session", priority: "normal", group: "controls" }),
+      entries.command({ icon: "bluetooth", label: "Bluetooth", hint: "Show Bluetooth status", command: "omarchy notification send -g 󰂯 \"Bluetooth\" \"$(bluetoothctl show 2>/dev/null; bluetoothctl devices Connected 2>/dev/null)\"", tone: "session", priority: "normal", group: "controls" }),
+      entries.command({ icon: "volume", label: "Audio", hint: "Switch audio output", command: "omarchy audio output switch", tone: "session", priority: "normal", group: "controls" }),
       entries.command({ icon: "camera", label: "Screenshot", hint: "Capture screen or region", command: "omarchy capture screenshot", tone: "session", priority: "normal", group: "controls" }),
       entries.action({ icon: "video", label: "Record", hint: "Choose screen recording mode", action: "open-screenrecord-menu", tone: "session", priority: "normal", group: "controls" }),
       entries.command({ icon: "idle", label: "Idle", hint: "Toggle idle behavior", command: "omarchy toggle idle", tone: "session", priority: "normal", group: "controls" })

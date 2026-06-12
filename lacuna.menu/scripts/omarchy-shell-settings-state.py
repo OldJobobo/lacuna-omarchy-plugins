@@ -99,7 +99,7 @@ def focused_monitor():
 
 
 def idle_status():
-  raw = run_redirected("omarchy-shell idle status")
+  raw = run_redirected("omarchy shell idle status")
   if not raw:
     return {}
   try:
@@ -110,7 +110,7 @@ def idle_status():
 
 
 def notification_dnd():
-  value = run_redirected("omarchy-shell notifications isDnd").lower()
+  value = run_redirected("omarchy shell notifications isDnd").lower()
   if value == "on":
     return True
   return False

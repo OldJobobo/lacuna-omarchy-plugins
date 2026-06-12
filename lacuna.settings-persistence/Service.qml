@@ -84,7 +84,7 @@ Item {
   function requestIdleStatus(reason) {
     if (idleStatusProc.running) return
     idleStatusProc.reason = String(reason || "poll")
-    idleStatusProc.command = ["bash", "-lc", "omarchy-shell idle status 2>/dev/null"]
+    idleStatusProc.command = ["bash", "-lc", "omarchy shell idle status 2>/dev/null"]
     idleStatusProc.running = true
   }
 
@@ -166,7 +166,7 @@ Item {
     lastStatus = "applying"
     idleApplyProc.expected = enabled === true
     idleApplyProc.reason = String(reason || "manual")
-    idleApplyProc.command = ["bash", "-lc", "omarchy-shell idle " + (enabled ? "enable" : "disable") + " 2>/dev/null"]
+    idleApplyProc.command = ["bash", "-lc", "omarchy shell idle " + (enabled ? "enable" : "disable") + " 2>/dev/null"]
     idleApplyProc.running = true
   }
 
@@ -177,7 +177,7 @@ Item {
     nightlightApplyProc.expected = enabled === true
     nightlightApplyProc.reason = String(reason || "manual")
     var temp = enabled ? "4000" : "6000"
-    nightlightApplyProc.command = ["bash", "-lc", "if ! pgrep -x hyprsunset >/dev/null; then setsid uwsm-app -- hyprsunset >/dev/null 2>&1 & sleep 1; fi; hyprctl hyprsunset temperature " + temp + " >/dev/null 2>&1; omarchy-shell -q omarchy.indicators refresh"]
+    nightlightApplyProc.command = ["bash", "-lc", "if ! pgrep -x hyprsunset >/dev/null; then setsid uwsm-app -- hyprsunset >/dev/null 2>&1 & sleep 1; fi; hyprctl hyprsunset temperature " + temp + " >/dev/null 2>&1; omarchy shell -q omarchy.indicators refresh"]
     nightlightApplyProc.running = true
   }
 

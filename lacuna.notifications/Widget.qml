@@ -102,7 +102,7 @@ Item {
           if (root.notificationService) root.notificationService.setDoNotDisturb(!root.notificationService.doNotDisturb)
           else root.bar.run("omarchy toggle notification silencing")
         } else {
-          root.bar.run("omarchy-shell notifications showHistory")
+          root.bar.run("omarchy shell notifications showHistory")
         }
       }
     }

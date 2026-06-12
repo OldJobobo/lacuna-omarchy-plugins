@@ -38,7 +38,7 @@ Item {
 
   function shellIpcCommand(target, method, args) {
     var path = omarchyPath()
-    var command = "OMARCHY_PATH=" + shellQuote(path) + " " + shellQuote(path + "/bin/omarchy-shell")
+    var command = "OMARCHY_PATH=" + shellQuote(path) + " omarchy shell"
       + " " + shellQuote(target) + " " + shellQuote(method)
     for (var i = 0; i < args.length; i++) command += " " + shellQuote(args[i])
     return command

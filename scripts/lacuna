@@ -10,12 +10,30 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = "lacuna"
 LEGACY_PLUGIN = "lacuna.compact-pill"
+OMARCHY_NATIVE_REPLACEMENT_PLUGINS = {
+    "lacuna.audio",
+    "lacuna.bluetooth",
+    "lacuna.clock",
+    "lacuna.idle-inhibitor",
+    "lacuna.indicators",
+    "lacuna.mpris",
+    "lacuna.network",
+    "lacuna.nightlight",
+    "lacuna.notifications",
+    "lacuna.power",
+    "lacuna.screen-recording",
+    "lacuna.system-update",
+    "lacuna.tray",
+    "lacuna.weather",
+    "lacuna.workspaces",
+}
 
 PROFILE_IDS = {
     "core": [
@@ -161,20 +179,22 @@ def dependency_closure(ids: set[str], plugins: dict[str, Plugin]) -> set[str]:
     return resolved
 
 
-def full_profile(plugins: dict[str, Plugin], include_legacy: bool) -> set[str]:
+def full_profile(plugins: dict[str, Plugin], include_legacy: bool, include_replacements: bool) -> set[str]:
     ids = {
         plugin_id
         for plugin_id, plugin in plugins.items()
         if plugin_id != LEGACY_PLUGIN and plugin.bundle != "legacy"
     }
+    if not include_replacements:
+        ids -= OMARCHY_NATIVE_REPLACEMENT_PLUGINS
     if include_legacy and LEGACY_PLUGIN in plugins:
         ids.add(LEGACY_PLUGIN)
     return ids
 
 
-def profile_ids(profile: str, plugins: dict[str, Plugin], include_legacy: bool) -> set[str]:
+def profile_ids(profile: str, plugins: dict[str, Plugin], include_legacy: bool, include_replacements: bool) -> set[str]:
     if profile == "full":
-        return full_profile(plugins, include_legacy)
+        return full_profile(plugins, include_legacy, include_replacements)
     return {plugin_id for plugin_id in PROFILE_IDS[profile] if plugin_id in plugins}
 
 
@@ -201,7 +221,7 @@ def run_gum(args: list[str], input_text: str | None = None) -> str | None:
             input=input_text,
             text=True,
             stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
+            stderr=None,
             check=False,
         )
     except OSError:
@@ -248,6 +268,7 @@ def confirm(prompt: str, assume_yes: bool) -> bool:
     if assume_yes:
         return True
     if has_gum():
+        print(f"\nWaiting for confirmation: {prompt}", flush=True)
         return subprocess.run(["gum", "confirm", prompt], check=False).returncode == 0
     if not sys.stdin.isatty():
         return False
@@ -295,6 +316,57 @@ def repo_remote_url() -> str | None:
     return result.stdout.strip() or None
 
 
+def default_source_url() -> str | None:
+    if (ROOT / ".git").exists():
+        return str(ROOT)
+    return repo_remote_url()
+
+
+def source_catalog_ids() -> set[str] | None:
+    try:
+        result = subprocess.run(
+            ["omarchy-plugin-scan"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    try:
+        entries = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return None
+    ids: set[str] = set()
+    for entry in entries:
+        manifest = entry.get("manifest", {})
+        plugin_id = manifest.get("id")
+        if isinstance(plugin_id, str):
+            ids.add(plugin_id)
+    return ids
+
+
+def verify_source_catalog(source: str, selected_ids: list[str]) -> int:
+    catalog = source_catalog_ids()
+    if catalog is None:
+        print("Could not verify Omarchy's source catalog; continuing with install attempt.")
+        return 0
+    missing = [plugin_id for plugin_id in selected_ids if plugin_id not in catalog]
+    if not missing:
+        return 0
+
+    print(f"\nSource '{source}' is configured, but Omarchy does not see the selected Lacuna plugins.")
+    print("This usually means the source cache points at an older repo state.")
+    print("\nRepair this local checkout source with:")
+    print(f"  omarchy plugin source remove {source} --yes")
+    print(f"  omarchy plugin source add {ROOT} --as {source} --yes")
+    print("\nThen rerun the installer.")
+    print(f"\nFirst missing plugin: {missing[0]}")
+    return 1
+
+
 def print_plan(title: str, ids: list[str], plugins: dict[str, Plugin]) -> None:
     print(f"\n{title}")
     if not ids:
@@ -306,13 +378,15 @@ def print_plan(title: str, ids: list[str], plugins: dict[str, Plugin]) -> None:
         print(f"  - {plugin.id} ({kind_text})")
 
 
-def install_commands(ids: list[str], source: str) -> list[list[str]]:
-    commands = []
-    for index, plugin_id in enumerate(ids):
-        command = ["omarchy", "plugin", "add", plugin_id, "--from", source, "--enable", "--yes"]
-        if index > 0:
-            command.append("--no-refresh")
-        commands.append(command)
+def stage_commands(ids: list[str]) -> list[str]:
+    commands = [f"stage {plugin_id} -> {plugins_dir() / plugin_id}" for plugin_id in ids]
+    if ids:
+        commands.append("omarchy plugin rescan")
+    return commands
+
+
+def activation_commands(ids: list[str]) -> list[list[str]]:
+    commands = [["omarchy", "plugin", "enable", plugin_id] for plugin_id in ids]
     commands.append(["omarchy", "plugin", "rescan"])
     return commands
 
@@ -349,9 +423,13 @@ def layout_commands(selected: set[str]) -> list[list[str]]:
     return commands
 
 
-def uninstall_commands(ids: list[str]) -> list[list[str]]:
-    commands = [["omarchy", "plugin", "remove", plugin_id, "--yes"] for plugin_id in ids]
-    commands.append(["omarchy", "plugin", "rescan"])
+def uninstall_stage_commands(ids: list[str]) -> list[str]:
+    commands = []
+    for plugin_id in ids:
+        commands.append(f"disable {plugin_id} if enabled")
+        commands.append(f"remove {plugins_dir() / plugin_id}")
+    if ids:
+        commands.append("omarchy plugin rescan")
     return commands
 
 
@@ -360,12 +438,21 @@ def print_commands(commands: list[list[str]]) -> None:
         print("  " + " ".join(command))
 
 
-def run_command(command: list[str], dry_run: bool) -> int:
+def print_stage_commands(commands: list[str]) -> None:
+    for command in commands:
+        print("  " + command)
+
+
+def run_command(command: list[str], dry_run: bool, timeout_seconds: int = 60) -> int:
     if dry_run:
         print("  " + " ".join(command))
         return 0
-    print("  " + " ".join(command))
-    return subprocess.run(command, check=False).returncode
+    print("  " + " ".join(command), flush=True)
+    try:
+        return subprocess.run(command, check=False, timeout=timeout_seconds).returncode
+    except subprocess.TimeoutExpired:
+        print(f"Command timed out after {timeout_seconds}s: {' '.join(command)}")
+        return 124
 
 
 def run_commands(commands: list[list[str]], dry_run: bool) -> int:
@@ -373,6 +460,115 @@ def run_commands(commands: list[list[str]], dry_run: bool) -> int:
         code = run_command(command, dry_run)
         if code != 0:
             return code
+    return 0
+
+
+def remove_path(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+    elif path.exists():
+        shutil.rmtree(path)
+
+
+def backup_target(target: Path) -> Path | None:
+    if not target.exists() and not target.is_symlink():
+        return None
+    if target.is_symlink():
+        target.unlink()
+        return None
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    base = target.parent / f".{target.name}.bak.{timestamp}"
+    backup = base
+    suffix = 1
+    while backup.exists():
+        backup = target.parent / f"{base.name}-{suffix}"
+        suffix += 1
+    shutil.move(str(target), str(backup))
+    return backup
+
+
+def validate_plugin(plugin_id: str, source_dir: Path, dry_run: bool) -> int:
+    command = ["omarchy", "plugin", "validate", str(source_dir)]
+    if dry_run:
+        print("  " + " ".join(command))
+        return 0
+    return run_command(command, dry_run=False)
+
+
+def stage_plugin(plugin_id: str, dry_run: bool, reinstall: bool) -> int:
+    source_dir = ROOT / plugin_id
+    target = plugins_dir() / plugin_id
+    if not source_dir.is_dir():
+        print(f"Missing plugin source directory: {source_dir}")
+        return 1
+    if (target.exists() or target.is_symlink()) and not reinstall:
+        print(f"  {plugin_id} already staged")
+        return 0
+
+    print(f"  stage {plugin_id} -> {target}", flush=True)
+    code = validate_plugin(plugin_id, source_dir, dry_run)
+    if code != 0:
+        return code
+    if dry_run:
+        return 0
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    stage = target.parent / f".{plugin_id}.tmp.{os.getpid()}"
+    remove_path(stage)
+    backup = None
+    try:
+        shutil.copytree(source_dir, stage, symlinks=True)
+        backup = backup_target(target)
+        shutil.move(str(stage), str(target))
+    except Exception as error:
+        remove_path(stage)
+        if backup and backup.exists() and not target.exists():
+            shutil.move(str(backup), str(target))
+        print(f"Failed to stage {plugin_id}: {error}")
+        return 1
+    if backup:
+        print(f"    previous install backed up to {backup}")
+    return 0
+
+
+def stage_plugins(ids: list[str], dry_run: bool, reinstall: bool) -> int:
+    for plugin_id in ids:
+        code = stage_plugin(plugin_id, dry_run, reinstall)
+        if code != 0:
+            return code
+    if ids:
+        return run_command(["omarchy", "plugin", "rescan"], dry_run)
+    return 0
+
+
+def remove_plugin(plugin_id: str, dry_run: bool) -> int:
+    target = plugins_dir() / plugin_id
+    print(f"  remove {target}", flush=True)
+    if dry_run:
+        return 0
+    if not target.exists() and not target.is_symlink():
+        print(f"    {plugin_id} is not installed")
+        return 0
+    backup = backup_target(target)
+    if backup:
+        print(f"    backed up to {backup}")
+    else:
+        print(f"    removed {plugin_id}")
+    return 0
+
+
+def uninstall_plugins(ids: list[str], dry_run: bool) -> int:
+    for plugin_id in ids:
+        code = run_command(["omarchy", "plugin", "disable", plugin_id], dry_run, timeout_seconds=20)
+        if code not in (0, 1):
+            return code
+    for plugin_id in ids:
+        code = remove_plugin(plugin_id, dry_run)
+        if code != 0:
+            return code
+    if ids:
+        return run_command(["omarchy", "plugin", "rescan"], dry_run)
     return 0
 
 
@@ -416,7 +612,7 @@ def ensure_source(source: str, source_url: str | None, dry_run: bool, assume_yes
         print("Could not verify Omarchy plugin sources; continuing with install attempt.")
         return 0
 
-    url = source_url or repo_remote_url()
+    url = source_url or default_source_url()
     if not url:
         print(f"Plugin source '{source}' is not configured.")
         print(f"Add it first: omarchy plugin source add <repo-url> --as {source}")
@@ -430,6 +626,7 @@ def ensure_source(source: str, source_url: str | None, dry_run: bool, assume_yes
         print(f"Add it later with: omarchy plugin source add {url} --as {source}")
         return 1
     print("\nAdding plugin source")
+    print("This clones the trusted source into Omarchy's plugin cache and can take a moment.", flush=True)
     return run_command(command, dry_run)
 
 
@@ -437,7 +634,7 @@ def resolve_install_selection(args: argparse.Namespace, plugins: dict[str, Plugi
     if args.plugins:
         selected = {item for value in args.plugins for item in value.split(",") if item}
     else:
-        selected = profile_ids(args.profile, plugins, args.include_legacy)
+        selected = profile_ids(args.profile, plugins, args.include_legacy, args.include_replacements)
 
     unknown = sorted(selected - set(plugins))
     if unknown:
@@ -450,6 +647,8 @@ def resolve_install_selection(args: argparse.Namespace, plugins: dict[str, Plugi
         selected = dependency_closure(selected, plugins)
     if not args.include_legacy:
         selected.discard(LEGACY_PLUGIN)
+    if args.profile == "full" and not args.include_replacements and not args.plugins:
+        selected -= OMARCHY_NATIVE_REPLACEMENT_PLUGINS
     return selected
 
 
@@ -457,21 +656,53 @@ def install(args: argparse.Namespace) -> int:
     plugins = load_plugins()
     selected = resolve_install_selection(args, plugins)
     ids = ordered(selected, plugins)
+    installed = set(installed_lacuna_plugins(plugins))
+    install_ids = ids if args.reinstall else [plugin_id for plugin_id in ids if plugin_id not in installed]
+    source_state = None if args.dry_run else source_exists(args.source)
 
     print_plan("Install plan", ids, plugins)
-    commands = install_commands(ids, args.source)
+    if installed and not args.reinstall:
+        already = [plugin_id for plugin_id in ids if plugin_id in installed]
+        if already:
+            print("\nAlready installed; will not reinstall unless --reinstall is passed:")
+            for plugin_id in already:
+                print(f"  - {plugin_id}")
+    if source_state is False:
+        print(f"\nSource '{args.source}' is not configured yet; the installer will offer to add it before installing.")
+    commands = stage_commands(install_ids)
     print("\nCommands")
-    print_commands(commands)
+    if commands:
+        print_stage_commands(commands)
+    else:
+        print("  No plugin copy commands needed.")
 
     apply_layout_choice = args.apply_layout
-    if apply_layout_choice is None and args.profile == "full" and not args.yes and not args.dry_run:
-        apply_layout_choice = confirm("Apply the recommended Lacuna bar layout after install?", False)
-    elif apply_layout_choice is None:
+    if apply_layout_choice is None:
         apply_layout_choice = False
 
-    if apply_layout_choice:
-        print("\nLayout commands")
-        print_commands(layout_commands(selected))
+    activate_choice = args.activate
+    if activate_choice is None and not args.yes and not args.dry_run:
+        activate_choice = confirm(
+            "Enable selected Lacuna plugins now? Full activation reloads many shell plugins.",
+            False,
+        )
+    elif activate_choice is None:
+        activate_choice = False
+
+    if activate_choice:
+        print("\nActivation")
+        if args.dry_run:
+            print_commands(activation_commands(ids))
+        else:
+            print(f"  Will enable {len(ids)} selected Lacuna plugins.")
+        if apply_layout_choice:
+            print("\nLayout")
+            if args.dry_run:
+                print_commands(layout_commands(selected))
+            else:
+                print("  Will apply the recommended Lacuna bar layout.")
+    elif apply_layout_choice:
+        print("\nLayout was requested, but plugins will not be enabled. Re-run with --activate --apply-layout to apply it.")
 
     if args.dry_run:
         return 0
@@ -481,11 +712,23 @@ def install(args: argparse.Namespace) -> int:
     code = ensure_source(args.source, args.source_url, args.dry_run, args.yes)
     if code != 0:
         return code
-    code = run_commands(commands, args.dry_run)
+    code = verify_source_catalog(args.source, ids)
     if code != 0:
         return code
-    if apply_layout_choice:
-        code = apply_layout(selected, args.dry_run)
+    if install_ids:
+        code = stage_plugins(install_ids, args.dry_run, args.reinstall)
+        if code != 0:
+            return code
+    if activate_choice:
+        code = run_commands(activation_commands(ids), args.dry_run)
+        if code != 0:
+            return code
+        if apply_layout_choice:
+            code = apply_layout(selected, args.dry_run)
+    else:
+        print("\nInstalled files are staged but disabled.")
+        print("Enable a smaller profile first, for example:")
+        print("  ./scripts/lacuna install --profile core --activate")
     return code
 
 
@@ -504,10 +747,10 @@ def uninstall(args: argparse.Namespace) -> int:
 
     ids = ordered(selected, plugins)
     print_plan("Uninstall plan", ids, plugins)
-    commands = uninstall_commands(ids) if ids else []
+    commands = uninstall_stage_commands(ids)
     if commands:
         print("\nCommands")
-        print_commands(commands)
+        print_stage_commands(commands)
     if args.purge_state:
         print(f"\nPurge state: {lacuna_state_dir()}")
 
@@ -519,7 +762,7 @@ def uninstall(args: argparse.Namespace) -> int:
     if not confirm("Remove selected Lacuna plugins?", args.yes):
         print("Uninstall cancelled.")
         return 1
-    code = run_commands(commands, args.dry_run)
+    code = uninstall_plugins(ids, args.dry_run)
     if code != 0:
         return code
     if args.purge_state:
@@ -604,6 +847,11 @@ def menu(args: argparse.Namespace) -> int:
         args.profile = "full"
         args.plugins = []
         args.include_recommended = False
+        args.include_replacements = False
+        args.activate = False
+        args.apply_layout = False
+        print("\nFull install will stage the safe Lacuna suite disabled.")
+        print("Native Omarchy replacement widgets are opt-in: ./scripts/lacuna install --profile native --activate")
         return install(args)
     if action == "Custom install":
         args.command = "install"
@@ -635,6 +883,12 @@ def common_parser() -> argparse.ArgumentParser:
         default=argparse.SUPPRESS,
         help="Include legacy bundle plugins.",
     )
+    common.add_argument(
+        "--include-replacements",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="Include Lacuna replacements for native Omarchy bar widgets in the full profile.",
+    )
     return common
 
 
@@ -651,6 +905,10 @@ def parser() -> argparse.ArgumentParser:
     install_parser.add_argument("--profile", choices=["full", *PROFILE_IDS.keys()], default="full")
     install_parser.add_argument("--plugin", dest="plugins", action="append", default=[], help="Plugin id or comma list.")
     install_parser.add_argument("--include-recommended", action="store_true", help="Include recommended companion plugins.")
+    install_parser.add_argument("--reinstall", action="store_true", help="Replace plugins that are already installed.")
+    activate = install_parser.add_mutually_exclusive_group()
+    activate.add_argument("--activate", action="store_true", default=None, help="Enable plugins after installing them.")
+    activate.add_argument("--no-activate", dest="activate", action="store_false", help="Install files but leave plugins disabled.")
     layout = install_parser.add_mutually_exclusive_group()
     layout.add_argument("--apply-layout", action="store_true", default=None, help="Apply the recommended Lacuna bar layout.")
     layout.add_argument("--keep-layout", dest="apply_layout", action="store_false", help="Do not modify the bar layout.")
@@ -675,12 +933,18 @@ def normalize_args(args: argparse.Namespace) -> argparse.Namespace:
         args.yes = False
     if not hasattr(args, "include_legacy"):
         args.include_legacy = False
+    if not hasattr(args, "include_replacements"):
+        args.include_replacements = False
     if not hasattr(args, "plugins"):
         args.plugins = []
     if not hasattr(args, "profile"):
         args.profile = "full"
     if not hasattr(args, "include_recommended"):
         args.include_recommended = False
+    if not hasattr(args, "reinstall"):
+        args.reinstall = False
+    if not hasattr(args, "activate"):
+        args.activate = None
     if not hasattr(args, "apply_layout"):
         args.apply_layout = None
     if not hasattr(args, "all"):
@@ -692,16 +956,20 @@ def normalize_args(args: argparse.Namespace) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = normalize_args(parser().parse_args(argv))
-    if args.command == "install":
-        return install(args)
-    if args.command == "uninstall":
-        return uninstall(args)
-    if args.command == "status":
-        return status(args)
-    if sys.stdin.isatty():
-        return menu(args)
-    parser().print_help()
-    return 0
+    try:
+        if args.command == "install":
+            return install(args)
+        if args.command == "uninstall":
+            return uninstall(args)
+        if args.command == "status":
+            return status(args)
+        if sys.stdin.isatty():
+            return menu(args)
+        parser().print_help()
+        return 0
+    except KeyboardInterrupt:
+        print("\nInterrupted. Installed plugins may be staged; check with: omarchy plugin list")
+        return 130
 
 
 if __name__ == "__main__":

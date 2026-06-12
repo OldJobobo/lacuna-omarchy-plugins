@@ -46,17 +46,18 @@ The first screen offers:
 - Uninstall Lacuna
 - Status
 
-Full install enables the maintained Lacuna suite and asks before applying the
-recommended Lacuna bar layout. Custom install lets you pick groups or individual
-standalone plugins, then automatically includes required companions such as
-`lacuna.state` and `lacuna.shell-settings`.
+Full install stages the safe Lacuna suite disabled, leaving native Omarchy
+bar-widget replacements opt-in. Custom install lets you pick groups or
+individual standalone plugins, then automatically includes required companions
+such as `lacuna.state` and `lacuna.shell-settings`.
 
 Scripted installs are supported too:
 
 ```bash
 ./scripts/lacuna install --profile full
 ./scripts/lacuna install --profile core
-./scripts/lacuna install --profile native --apply-layout
+./scripts/lacuna install --profile native --activate --apply-layout
+./scripts/lacuna install --profile full --include-replacements
 ./scripts/lacuna install --plugin lacuna.clock,lacuna.weather
 ```
 
@@ -115,7 +116,7 @@ Use `qmllint` for changed QML and validate manifests with
 
 ```bash
 omarchy plugin list
-OMARCHY_PATH="$HOME/.local/share/omarchy" omarchy-shell shell toggle lacuna.menu '{}'
+OMARCHY_PATH="$HOME/.local/share/omarchy" omarchy shell shell toggle lacuna.menu '{}'
 hyprctl layers
 ```
 

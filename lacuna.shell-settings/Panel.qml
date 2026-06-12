@@ -151,7 +151,7 @@ Item {
     }
 
     function applyCurrentBackgroundCommand() {
-      return "current=$(readlink -f \"$HOME/.config/omarchy/current/background\" 2>/dev/null || true); [ -n \"$current\" ] && omarchy-shell -q background setInstant \"$current\""
+      return "current=$(readlink -f \"$HOME/.config/omarchy/current/background\" 2>/dev/null || true); [ -n \"$current\" ] && omarchy shell -q background setInstant \"$current\""
     }
   }
 

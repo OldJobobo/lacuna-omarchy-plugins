@@ -218,7 +218,7 @@ Item {
 
   function shellIpcCommand(target, method, args) {
     var path = resolvedOmarchyPath()
-    var command = "OMARCHY_PATH=" + commands.quote(path) + " " + commands.quote(path + "/bin/omarchy-shell")
+    var command = "OMARCHY_PATH=" + commands.quote(path) + " omarchy shell"
       + " " + commands.quote(target) + " " + commands.quote(method)
     for (var i = 0; i < args.length; i++) command += " " + commands.quote(args[i])
     return command
@@ -1157,7 +1157,7 @@ Item {
 
     if (entry.action === "open-screenrecord-menu") {
       commands.run("omarchy capture screenrecording --stop-recording || "
-        + shellIpcCommand("menu", "toggle", ["trigger.capture.screenrecord"]))
+        + "omarchy menu toggle trigger.capture.screenrecord")
       applySidebarDefaultState()
       return true
     }

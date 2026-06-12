@@ -60,5 +60,5 @@ fi
 
 if [[ -n $TARGET_BACKGROUND && -f $TARGET_BACKGROUND ]]; then
   ln -nsf "$TARGET_BACKGROUND" "$CURRENT_BACKGROUND_LINK"
-  omarchy-shell -q background set "$TARGET_BACKGROUND" >/dev/null 2>&1 || true
+  omarchy shell -q background set "$TARGET_BACKGROUND" >/dev/null 2>&1 || true
 fi

@@ -20,7 +20,7 @@ Item {
 
   function shellIpcCommand(target, method) {
     var path = Quickshell.env("OMARCHY_PATH") || ((Quickshell.env("HOME") || "") + "/.local/share/omarchy")
-    return "OMARCHY_PATH=" + shellQuote(path) + " " + shellQuote(path + "/bin/omarchy-shell") + " " + shellQuote(target) + " " + shellQuote(method)
+    return "OMARCHY_PATH=" + shellQuote(path) + " omarchy shell " + shellQuote(target) + " " + shellQuote(method)
   }
 
   function terminalCommand(command, title, holdOpen) {
@@ -97,6 +97,6 @@ Item {
   }
 
   function applyCurrentBackgroundCommand() {
-    return "current=$(readlink -f \"$HOME/.config/omarchy/current/background\" 2>/dev/null || true); [ -n \"$current\" ] && omarchy-shell -q background setInstant \"$current\""
+    return "current=$(readlink -f \"$HOME/.config/omarchy/current/background\" 2>/dev/null || true); [ -n \"$current\" ] && omarchy shell -q background setInstant \"$current\""
   }
 }
