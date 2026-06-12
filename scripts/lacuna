@@ -378,64 +378,195 @@ def print_plan(title: str, ids: list[str], plugins: dict[str, Plugin]) -> None:
         print(f"  - {plugin.id} ({kind_text})")
 
 
-def stage_commands(ids: list[str]) -> list[str]:
+def stage_commands(ids: list[str], rescan: bool = True) -> list[str]:
     commands = [f"stage {plugin_id} -> {plugins_dir() / plugin_id}" for plugin_id in ids]
-    if ids:
+    if ids and rescan:
         commands.append("omarchy plugin rescan")
     return commands
 
 
-def activation_commands(ids: list[str]) -> list[list[str]]:
-    commands = [["omarchy", "plugin", "enable", plugin_id] for plugin_id in ids]
-    commands.append(["omarchy", "plugin", "rescan"])
-    return commands
+def shell_config_path() -> Path:
+    return config_home() / "omarchy" / "shell.json"
 
 
-def layout_entries() -> list[tuple[str, int, str]]:
+def default_shell_config() -> dict:
+    return {
+        "version": 1,
+        "bar": {"layout": {"left": [], "center": [], "right": []}},
+        "plugins": [],
+    }
+
+
+def read_shell_config() -> dict:
+    path = shell_config_path()
+    if not path.exists():
+        return default_shell_config()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise SystemExit(f"Could not parse {path}: {error}") from error
+    if not isinstance(data, dict):
+        raise SystemExit(f"{path} must contain a JSON object.")
+    return data
+
+
+def ensure_shell_config_shape(config: dict) -> dict:
+    config.setdefault("version", 1)
+    bar = config.setdefault("bar", {})
+    if not isinstance(bar, dict):
+        config["bar"] = bar = {}
+    layout = bar.setdefault("layout", {})
+    if not isinstance(layout, dict):
+        bar["layout"] = layout = {}
+    for section in ("left", "center", "right"):
+        if not isinstance(layout.get(section), list):
+            layout[section] = []
+    if not isinstance(config.get("plugins"), list):
+        config["plugins"] = []
+    return config
+
+
+def write_shell_config(config: dict) -> None:
+    path = shell_config_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(config, indent=2) + "\n"
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(payload, encoding="utf-8")
+    tmp.replace(path)
+
+
+def entry_id(entry: object) -> str | None:
+    if isinstance(entry, dict) and isinstance(entry.get("id"), str):
+        return entry["id"]
+    return None
+
+
+def remove_shell_entries(config: dict, plugin_id: str) -> list[dict]:
+    removed: list[dict] = []
+    layout = config["bar"]["layout"]
+    for section in ("left", "center", "right"):
+        kept = []
+        for entry in layout[section]:
+            if entry_id(entry) == plugin_id:
+                if isinstance(entry, dict):
+                    removed.append(entry)
+            else:
+                kept.append(entry)
+        layout[section] = kept
+
+    kept_plugins = []
+    for entry in config["plugins"]:
+        if entry_id(entry) == plugin_id:
+            if isinstance(entry, dict):
+                removed.append(entry)
+        else:
+            kept_plugins.append(entry)
+    config["plugins"] = kept_plugins
+
+    if config["bar"].get("id") == plugin_id:
+        del config["bar"]["id"]
+
+    return removed
+
+
+def has_shell_entry(config: dict, plugin_id: str) -> bool:
+    layout = config["bar"]["layout"]
+    for section in ("left", "center", "right"):
+        if any(entry_id(entry) == plugin_id for entry in layout[section]):
+            return True
+    return any(entry_id(entry) == plugin_id for entry in config["plugins"])
+
+
+def is_bar_widget(plugin: Plugin) -> bool:
+    return "bar-widget" in plugin.kinds
+
+
+def enable_shell_entry(config: dict, plugin: Plugin) -> None:
+    if is_bar_widget(plugin):
+        removed = remove_shell_entries(config, plugin.id)
+        entry = next((item for item in removed if entry_id(item) == plugin.id), {"id": plugin.id})
+        config["bar"]["layout"]["right"].append(entry)
+    elif not has_shell_entry(config, plugin.id):
+        config["plugins"].append({"id": plugin.id})
+
+
+def layout_template_entries() -> list[tuple[str, int, dict]]:
     path = ROOT / "config" / "shell.lacuna-native-replacements.example.json"
     data = json.loads(path.read_text(encoding="utf-8"))
-    entries: list[tuple[str, int, str]] = []
+    entries: list[tuple[str, int, dict]] = []
     for section in ("left", "center", "right"):
         for index, item in enumerate(data.get("bar", {}).get("layout", {}).get(section, [])):
-            plugin_id = item.get("id")
+            plugin_id = item.get("id") if isinstance(item, dict) else None
             if isinstance(plugin_id, str) and plugin_id.startswith("lacuna."):
-                entries.append((section, index, plugin_id))
+                entries.append((section, index, dict(item)))
     return entries
 
 
-def layout_commands(selected: set[str]) -> list[list[str]]:
+def apply_layout_to_config(config: dict, selected: set[str]) -> None:
+    for section, index, template_entry in layout_template_entries():
+        plugin_id = template_entry["id"]
+        if plugin_id not in selected:
+            continue
+        removed = remove_shell_entries(config, plugin_id)
+        entry = next((item for item in removed if entry_id(item) == plugin_id), template_entry)
+        for key, value in template_entry.items():
+            entry.setdefault(key, value)
+        target = config["bar"]["layout"][section]
+        target.insert(min(index, len(target)), entry)
+
+
+def activate_plugins(ids: list[str], plugins: dict[str, Plugin], selected: set[str], apply_layout_choice: bool, dry_run: bool) -> int:
+    if not ids:
+        return 0
+    if dry_run:
+        print(f"  update {shell_config_path()} once")
+        print("  omarchy plugin rescan")
+        return 0
+
+    config = ensure_shell_config_shape(read_shell_config())
+    for plugin_id in ids:
+        enable_shell_entry(config, plugins[plugin_id])
+    if apply_layout_choice:
+        apply_layout_to_config(config, selected)
+    write_shell_config(config)
+    print(f"  updated {shell_config_path()}", flush=True)
+    return run_command(["omarchy", "plugin", "rescan"], dry_run)
+
+
+def deactivate_plugins(ids: list[str], dry_run: bool) -> int:
+    if not ids:
+        return 0
+    if dry_run:
+        print(f"  update {shell_config_path()} once")
+        return 0
+
+    config = ensure_shell_config_shape(read_shell_config())
+    for plugin_id in ids:
+        remove_shell_entries(config, plugin_id)
+    write_shell_config(config)
+    print(f"  updated {shell_config_path()}", flush=True)
+    return 0
+
+
+def activation_commands(ids: list[str], apply_layout_choice: bool = False) -> list[str]:
     commands = []
-    for section, index, plugin_id in layout_entries():
-        if plugin_id in selected:
-            commands.append(
-                [
-                    "omarchy",
-                    "plugin",
-                    "bar",
-                    "move",
-                    plugin_id,
-                    "--section",
-                    section,
-                    "--index",
-                    str(index),
-                ]
-            )
+    if ids:
+        commands.append(f"update {shell_config_path()} once")
+        if apply_layout_choice:
+            commands.append("apply Lacuna bar layout in shell.json")
+        commands.append("omarchy plugin rescan")
     return commands
 
 
 def uninstall_stage_commands(ids: list[str]) -> list[str]:
     commands = []
+    if ids:
+        commands.append(f"update {shell_config_path()} once")
     for plugin_id in ids:
-        commands.append(f"disable {plugin_id} if enabled")
         commands.append(f"remove {plugins_dir() / plugin_id}")
     if ids:
         commands.append("omarchy plugin rescan")
     return commands
-
-
-def print_commands(commands: list[list[str]]) -> None:
-    for command in commands:
-        print("  " + " ".join(command))
 
 
 def print_stage_commands(commands: list[str]) -> None:
@@ -532,12 +663,12 @@ def stage_plugin(plugin_id: str, dry_run: bool, reinstall: bool) -> int:
     return 0
 
 
-def stage_plugins(ids: list[str], dry_run: bool, reinstall: bool) -> int:
+def stage_plugins(ids: list[str], dry_run: bool, reinstall: bool, rescan: bool = True) -> int:
     for plugin_id in ids:
         code = stage_plugin(plugin_id, dry_run, reinstall)
         if code != 0:
             return code
-    if ids:
+    if ids and rescan:
         return run_command(["omarchy", "plugin", "rescan"], dry_run)
     return 0
 
@@ -559,48 +690,15 @@ def remove_plugin(plugin_id: str, dry_run: bool) -> int:
 
 
 def uninstall_plugins(ids: list[str], dry_run: bool) -> int:
-    for plugin_id in ids:
-        code = run_command(["omarchy", "plugin", "disable", plugin_id], dry_run, timeout_seconds=20)
-        if code not in (0, 1):
-            return code
+    code = deactivate_plugins(ids, dry_run)
+    if code != 0:
+        return code
     for plugin_id in ids:
         code = remove_plugin(plugin_id, dry_run)
         if code != 0:
             return code
     if ids:
         return run_command(["omarchy", "plugin", "rescan"], dry_run)
-    return 0
-
-
-def apply_layout(selected: set[str], dry_run: bool) -> int:
-    commands = layout_commands(selected)
-    if not commands:
-        return 0
-    print("\nApplying Lacuna bar layout")
-    if dry_run:
-        print_commands(commands)
-        return 0
-
-    for command in commands:
-        print("  " + " ".join(command))
-        result = subprocess.run(command, check=False)
-        if result.returncode == 0:
-            continue
-        add_command = [
-            "omarchy",
-            "plugin",
-            "bar",
-            "add",
-            command[4],
-            "--section",
-            command[6],
-            "--index",
-            command[8],
-        ]
-        print("  " + " ".join(add_command))
-        add_result = subprocess.run(add_command, check=False)
-        if add_result.returncode != 0:
-            return add_result.returncode
     return 0
 
 
@@ -660,6 +758,19 @@ def install(args: argparse.Namespace) -> int:
     install_ids = ids if args.reinstall else [plugin_id for plugin_id in ids if plugin_id not in installed]
     source_state = None if args.dry_run else source_exists(args.source)
 
+    apply_layout_choice = args.apply_layout
+    if apply_layout_choice is None:
+        apply_layout_choice = False
+
+    activate_choice = args.activate
+    if activate_choice is None and not args.yes and not args.dry_run:
+        activate_choice = confirm(
+            "Enable selected Lacuna plugins now? Full activation reloads the shell once.",
+            False,
+        )
+    elif activate_choice is None:
+        activate_choice = False
+
     print_plan("Install plan", ids, plugins)
     if installed and not args.reinstall:
         already = [plugin_id for plugin_id in ids if plugin_id in installed]
@@ -669,38 +780,22 @@ def install(args: argparse.Namespace) -> int:
                 print(f"  - {plugin_id}")
     if source_state is False:
         print(f"\nSource '{args.source}' is not configured yet; the installer will offer to add it before installing.")
-    commands = stage_commands(install_ids)
+    commands = stage_commands(install_ids, rescan=not activate_choice)
     print("\nCommands")
     if commands:
         print_stage_commands(commands)
     else:
         print("  No plugin copy commands needed.")
 
-    apply_layout_choice = args.apply_layout
-    if apply_layout_choice is None:
-        apply_layout_choice = False
-
-    activate_choice = args.activate
-    if activate_choice is None and not args.yes and not args.dry_run:
-        activate_choice = confirm(
-            "Enable selected Lacuna plugins now? Full activation reloads many shell plugins.",
-            False,
-        )
-    elif activate_choice is None:
-        activate_choice = False
-
     if activate_choice:
         print("\nActivation")
         if args.dry_run:
-            print_commands(activation_commands(ids))
+            print_stage_commands(activation_commands(ids, apply_layout_choice))
         else:
-            print(f"  Will enable {len(ids)} selected Lacuna plugins.")
+            print(f"  Will update shell.json once for {len(ids)} selected Lacuna plugins.")
         if apply_layout_choice:
-            print("\nLayout")
-            if args.dry_run:
-                print_commands(layout_commands(selected))
-            else:
-                print("  Will apply the recommended Lacuna bar layout.")
+            if not args.dry_run:
+                print("  Will apply the recommended Lacuna bar layout in the same shell.json update.")
     elif apply_layout_choice:
         print("\nLayout was requested, but plugins will not be enabled. Re-run with --activate --apply-layout to apply it.")
 
@@ -716,15 +811,11 @@ def install(args: argparse.Namespace) -> int:
     if code != 0:
         return code
     if install_ids:
-        code = stage_plugins(install_ids, args.dry_run, args.reinstall)
+        code = stage_plugins(install_ids, args.dry_run, args.reinstall, rescan=not activate_choice)
         if code != 0:
             return code
     if activate_choice:
-        code = run_commands(activation_commands(ids), args.dry_run)
-        if code != 0:
-            return code
-        if apply_layout_choice:
-            code = apply_layout(selected, args.dry_run)
+        code = activate_plugins(ids, plugins, selected, apply_layout_choice, args.dry_run)
     else:
         print("\nInstalled files are staged but disabled.")
         print("Enable a smaller profile first, for example:")
