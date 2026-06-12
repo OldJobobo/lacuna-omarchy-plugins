@@ -42,7 +42,7 @@ Item {
       { id: "layout", icon: "density-normal", label: "Layout", hint: "Sidebar and density behavior" },
       { id: "preferred-apps", icon: "preferred-apps", label: "Preferred Apps", hint: "Role-based app launch targets" },
       { id: "desktop-clock", icon: "clock", label: "Desktop Clock", hint: "Desktop layer clock placement" },
-      { id: "runtime", icon: "settings", label: "Runtime", hint: "Diagnostics and maintenance" },
+      { id: "runtime", icon: "settings", label: "Lacuna Tools", hint: "Plugin maintenance and menu behavior" },
       { id: "about", icon: "lacuna", label: "About", hint: "Plugin metadata" }
     ]
   }
@@ -231,7 +231,7 @@ Item {
         navRow(root.registry.compact ? "density-compact" : "density-normal", "Layout", sidebarModeName() + " / default " + sidebarDefaultModeName(), "layout", "lacuna", densityName()),
         navRow("preferred-apps", "Preferred Apps", preferredSummary(), "preferred-apps", "lacuna", "Edit"),
         navRow("clock", "Desktop Clock", clockAnchorName(), "desktop-clock", "lacuna", root.registry.desktopClockEnabled ? "On" : "Off"),
-        navRow("settings", "Runtime", "Shell commands, logs, and diagnostics", "runtime", "shell", "Tools"),
+        navRow("settings", "Lacuna Tools", "Plugin source, app catalog, and menu safety", "runtime", "lacuna", "Tools"),
         navRow("lacuna", "About", root.version !== "" ? root.version : "Lacuna plugin", "about", "lacuna", "Info")
       ]
     }
@@ -252,12 +252,7 @@ Item {
           { value: "fullframe", label: "On" }
         ], root.registry.frameMode, "set-frame-mode-"),
         row("photo", "Frame Shadow", root.registry.frameShadow ? "Apply one cohesive shadow pass to the frame layer" : "Keep frame pieces fill-only", root.registry.frameShadow ? "On" : "Off", "lacuna", "toggle-frame-shadow", "toggle", root.registry.frameShadow),
-      ].concat(backgroundEffectRows()).concat([
-        section("Omarchy", "Shortcuts for the host theme workflow.", "shell"),
-        commandRow("palette", "Theme", "Switch Omarchy theme", root.registry.switchThemeCommand(), "shell"),
-        commandRow("background", "Background", "Switch the active theme background", root.registry.switchBackgroundCommand(), "shell"),
-        commandRow("photo", "Wallpaper Catalog", "Open wallpaper picker", "jobowalls-gui", "shell")
-      ])
+      ].concat(backgroundEffectRows())
     }
 
     if (sectionId === "layout") {
@@ -273,8 +268,8 @@ Item {
           { value: "rail", label: "Rail" }
         ], root.registry.sidebarDefaultMode, "set-sidebar-default-"),
         row("sidebar-overlay", "Window Mode", root.registry.sidebarExclusive ? "Float over windows" : "Reserve screen space", sidebarModeName(), "lacuna", "toggle-sidebar-mode", "toggle", root.registry.sidebarExclusive),
-        section("Omarchy Settings", "Choose how the shell settings surface opens from Lacuna.", "shell"),
-        row("settings", "Shell Settings Surface", root.registry.shellSettingsSurfaceHint(), root.registry.shellSettingsSurfaceName(), "shell", "", "segments", false, [
+        section("Settings Link", "Choose how Lacuna opens the separate Omarchy shell settings surface.", "lacuna"),
+        row("settings", "Omarchy Settings Link", root.registry.shellSettingsSurfaceHint(), root.registry.shellSettingsSurfaceName(), "lacuna", "", "segments", false, [
           { value: "flyout", label: "Flyout" },
           { value: "window", label: "Window" }
         ], root.registry.shellSettingsSurface, "set-shell-settings-surface-")
@@ -319,13 +314,11 @@ Item {
 
     if (sectionId === "runtime") {
       return [
-        section("Shell", "Operational commands for the live Omarchy shell.", "shell"),
-        commandRow("refresh", "Restart Shell", "Restart Omarchy shell", root.registry.restartLacunaCommand(), "shell"),
-        commandRow("file-search", "Open Log", "View the current shell log", root.registry.openLogCommand(), "shell"),
-        row("refresh", "Reload App Catalog", "Rescan desktop launchers", "Reload", "shell", "reload-apps", "button"),
+        section("Lacuna Maintenance", "Plugin-owned tools and cached app metadata.", "lacuna"),
+        row("refresh", "Reload App Catalog", "Rescan desktop launchers used by Lacuna launch rows", "Reload", "lacuna", "reload-apps", "button"),
         commandRow("edit", "Open Plugin Source", "Edit the Lacuna plugin repository", root.registry.editPluginCommand(), "lacuna"),
-        section("Power", "Dangerous system actions ask first by default.", "danger"),
-        row("refresh", "Instant Restart", root.registry.instantRestart ? "System restart runs without confirmation" : "System restart opens a confirmation popup", root.registry.instantRestart ? "On" : "Off", "danger", "toggle-instant-restart", "toggle", root.registry.instantRestart)
+        section("Menu Safety", "Controls Lacuna's confirmation step before system restart actions.", "danger"),
+        row("refresh", "Skip Restart Confirmation", root.registry.instantRestart ? "Lacuna restarts the system immediately" : "Lacuna asks before rebooting", root.registry.instantRestart ? "On" : "Off", "danger", "toggle-instant-restart", "toggle", root.registry.instantRestart)
       ]
     }
 
