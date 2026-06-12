@@ -25,7 +25,8 @@
         "ScreenRecording",
         "Dictation"
       ],
-      "showInactive": false
+      "showInactive": false,
+      "colorProfile": "semantic"
     },
     "schema": [
       {
@@ -39,12 +40,20 @@
           "ScreenRecording",
           "Dictation"
         ],
-        "noSelectionText": "None selected"
+        "noSelectionText": "None selected",
+        "defaultValue": [
+          "Dnd",
+          "NightLight",
+          "StayAwake",
+          "ScreenRecording",
+          "Dictation"
+        ]
       },
       {
         "key": "showInactive",
         "type": "boolean",
-        "label": "Show inactive indicators"
+        "label": "Show inactive indicators",
+        "defaultValue": false
       },
       {
         "key": "colorProfile",
@@ -54,7 +63,8 @@
           "semantic",
           "colorful"
         ],
-        "description": "Override the global Lacuna color profile for this widget."
+        "description": "Override the global Lacuna color profile for this widget.",
+        "defaultValue": "semantic"
       }
     ]
   },

@@ -20,7 +20,8 @@
     "defaults": {
       "interval": 30000,
       "maxTextLength": 32,
-      "showIcon": true
+      "showIcon": true,
+      "colorProfile": "semantic"
     },
     "schema": [
       {
@@ -29,7 +30,8 @@
         "label": "Refresh interval (ms)",
         "min": 1000,
         "step": 1000,
-        "description": "How often to read local Claude usage state."
+        "description": "How often to read local Claude usage state.",
+        "defaultValue": 30000
       },
       {
         "key": "maxTextLength",
@@ -37,12 +39,14 @@
         "label": "Max text length",
         "min": 4,
         "max": 80,
-        "step": 1
+        "step": 1,
+        "defaultValue": 32
       },
       {
         "key": "showIcon",
         "type": "boolean",
-        "label": "Show icon"
+        "label": "Show icon",
+        "defaultValue": true
       },
       {
         "key": "colorProfile",
@@ -52,7 +56,8 @@
           "semantic",
           "colorful"
         ],
-        "description": "Override the global Lacuna color profile for this widget."
+        "description": "Override the global Lacuna color profile for this widget.",
+        "defaultValue": "semantic"
       }
     ]
   },

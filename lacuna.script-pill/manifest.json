@@ -21,21 +21,24 @@
       "script": "",
       "interval": 30000,
       "maxTextLength": 32,
-      "showWhenEmpty": false
+      "showWhenEmpty": false,
+      "colorProfile": "semantic"
     },
     "schema": [
       {
         "key": "script",
         "type": "command",
         "label": "Script command",
-        "description": "Absolute path, plugin-relative scripts/foo, or shell command."
+        "description": "Absolute path, plugin-relative scripts/foo, or shell command.",
+        "defaultValue": ""
       },
       {
         "key": "interval",
         "type": "integer",
         "label": "Refresh interval (ms)",
         "min": 1000,
-        "step": 1000
+        "step": 1000,
+        "defaultValue": 30000
       },
       {
         "key": "maxTextLength",
@@ -43,12 +46,14 @@
         "label": "Max text length",
         "min": 4,
         "max": 80,
-        "step": 1
+        "step": 1,
+        "defaultValue": 32
       },
       {
         "key": "showWhenEmpty",
         "type": "boolean",
-        "label": "Show empty output"
+        "label": "Show empty output",
+        "defaultValue": false
       },
       {
         "key": "colorProfile",
@@ -58,7 +63,8 @@
           "semantic",
           "colorful"
         ],
-        "description": "Override the global Lacuna color profile for this widget."
+        "description": "Override the global Lacuna color profile for this widget.",
+        "defaultValue": "semantic"
       }
     ]
   },

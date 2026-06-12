@@ -26,37 +26,44 @@
     {
       "key": "effectEnabled",
       "type": "boolean",
-      "label": "Effect enabled"
+      "label": "Effect enabled",
+      "defaultValue": true
     },
     {
       "key": "intensity",
       "type": "number",
-      "label": "Intensity"
+      "label": "Intensity",
+      "defaultValue": 0.95
     },
     {
       "key": "speed",
       "type": "number",
-      "label": "Speed"
+      "label": "Speed",
+      "defaultValue": 1.35
     },
     {
       "key": "ribbonCount",
       "type": "number",
-      "label": "Ribbon count"
+      "label": "Ribbon count",
+      "defaultValue": 6
     },
     {
       "key": "blurSoftness",
       "type": "number",
-      "label": "Ribbon softness"
+      "label": "Ribbon softness",
+      "defaultValue": 0.9
     },
     {
       "key": "accentBlend",
       "type": "number",
-      "label": "Accent blend"
+      "label": "Accent blend",
+      "defaultValue": 0.88
     },
     {
       "key": "vignette",
       "type": "boolean",
-      "label": "Vignette"
+      "label": "Vignette",
+      "defaultValue": true
     }
   ],
   "lacuna": {

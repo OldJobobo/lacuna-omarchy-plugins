@@ -28,47 +28,56 @@
     {
       "key": "effectEnabled",
       "type": "boolean",
-      "label": "Effect enabled"
+      "label": "Effect enabled",
+      "defaultValue": true
     },
     {
       "key": "intensity",
       "type": "number",
-      "label": "Intensity"
+      "label": "Intensity",
+      "defaultValue": 0.92
     },
     {
       "key": "speed",
       "type": "number",
-      "label": "Speed"
+      "label": "Speed",
+      "defaultValue": 0.62
     },
     {
       "key": "dropCount",
       "type": "number",
-      "label": "Drop count"
+      "label": "Drop count",
+      "defaultValue": 180
     },
     {
       "key": "slant",
       "type": "number",
-      "label": "Rain slant"
+      "label": "Rain slant",
+      "defaultValue": 0.08
     },
     {
       "key": "mistAmount",
       "type": "number",
-      "label": "Mist amount"
+      "label": "Mist amount",
+      "defaultValue": 0.42
     },
     {
       "key": "splashAmount",
       "type": "number",
-      "label": "Splash amount"
+      "label": "Splash amount",
+      "defaultValue": 0.5
     },
     {
       "key": "accentBlend",
       "type": "number",
-      "label": "Accent blend"
+      "label": "Accent blend",
+      "defaultValue": 0.42
     },
     {
       "key": "vignette",
       "type": "boolean",
-      "label": "Vignette"
+      "label": "Vignette",
+      "defaultValue": true
     }
   ],
   "lacuna": {

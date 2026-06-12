@@ -17,7 +17,9 @@
     "description": "Shows Bluetooth adapter and connected-device state.",
     "category": "Lacuna",
     "allowMultiple": false,
-    "defaults": {},
+    "defaults": {
+      "colorProfile": "semantic"
+    },
     "schema": [
       {
         "key": "colorProfile",
@@ -27,7 +29,8 @@
           "semantic",
           "colorful"
         ],
-        "description": "Override the global Lacuna color profile for this widget."
+        "description": "Override the global Lacuna color profile for this widget.",
+        "defaultValue": "semantic"
       }
     ]
   },

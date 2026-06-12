@@ -19,7 +19,8 @@
     "allowMultiple": false,
     "defaults": {
       "interval": 60000,
-      "showText": true
+      "showText": true,
+      "colorProfile": "semantic"
     },
     "schema": [
       {
@@ -27,12 +28,14 @@
         "type": "integer",
         "label": "Refresh interval (ms)",
         "min": 10000,
-        "step": 10000
+        "step": 10000,
+        "defaultValue": 60000
       },
       {
         "key": "showText",
         "type": "boolean",
-        "label": "Show text"
+        "label": "Show text",
+        "defaultValue": true
       },
       {
         "key": "colorProfile",
@@ -42,7 +45,8 @@
           "semantic",
           "colorful"
         ],
-        "description": "Override the global Lacuna color profile for this widget."
+        "description": "Override the global Lacuna color profile for this widget.",
+        "defaultValue": "semantic"
       }
     ]
   },

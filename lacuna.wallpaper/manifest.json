@@ -20,7 +20,8 @@
     "defaults": {
       "enabled": true,
       "maxTextLength": 18,
-      "showIcon": true
+      "showIcon": true,
+      "colorProfile": "semantic"
     },
     "schema": [
       {

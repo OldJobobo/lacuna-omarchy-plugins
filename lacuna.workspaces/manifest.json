@@ -19,7 +19,8 @@
     "allowMultiple": false,
     "defaults": {
       "workspaceCount": 7,
-      "showDynamicExtra": false
+      "showDynamicExtra": false,
+      "colorProfile": "semantic"
     },
     "schema": [
       {
@@ -28,12 +29,14 @@
         "label": "Workspace count",
         "min": 1,
         "max": 10,
-        "step": 1
+        "step": 1,
+        "defaultValue": 7
       },
       {
         "key": "showDynamicExtra",
         "type": "boolean",
-        "label": "Show dynamic extra workspaces"
+        "label": "Show dynamic extra workspaces",
+        "defaultValue": false
       },
       {
         "key": "colorProfile",
@@ -43,7 +46,8 @@
           "semantic",
           "colorful"
         ],
-        "description": "Override the global Lacuna color profile for this widget."
+        "description": "Override the global Lacuna color profile for this widget.",
+        "defaultValue": "semantic"
       }
     ]
   },

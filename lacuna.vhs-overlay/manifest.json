@@ -29,52 +29,62 @@
     {
       "key": "effectEnabled",
       "type": "boolean",
-      "label": "Effect enabled"
+      "label": "Effect enabled",
+      "defaultValue": true
     },
     {
       "key": "foregroundOverlay",
       "type": "boolean",
-      "label": "Foreground overlay"
+      "label": "Foreground overlay",
+      "defaultValue": false
     },
     {
       "key": "intensity",
       "type": "number",
-      "label": "Intensity"
+      "label": "Intensity",
+      "defaultValue": 0.68
     },
     {
       "key": "speed",
       "type": "number",
-      "label": "Speed"
+      "label": "Speed",
+      "defaultValue": 1
     },
     {
       "key": "lineSpacing",
       "type": "number",
-      "label": "Scanline spacing"
+      "label": "Scanline spacing",
+      "defaultValue": 4
     },
     {
       "key": "trackingBands",
       "type": "number",
-      "label": "Tracking bands"
+      "label": "Tracking bands",
+      "defaultValue": 4
     },
     {
       "key": "noiseAmount",
       "type": "number",
-      "label": "Noise amount"
+      "label": "Noise amount",
+      "defaultValue": 0.42
     },
     {
       "key": "glitchAmount",
       "type": "number",
-      "label": "Glitch amount"
+      "label": "Glitch amount",
+      "defaultValue": 0.34
     },
     {
       "key": "chromaBleed",
       "type": "boolean",
-      "label": "Chroma bleed"
+      "label": "Chroma bleed",
+      "defaultValue": true
     },
     {
       "key": "vignette",
       "type": "boolean",
-      "label": "Vignette"
+      "label": "Vignette",
+      "defaultValue": true
     }
   ],
   "lacuna": {

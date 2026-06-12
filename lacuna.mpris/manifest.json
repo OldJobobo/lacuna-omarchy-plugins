@@ -20,7 +20,8 @@
     "defaults": {
       "maxTextLength": 34,
       "sweepOnPlaying": true,
-      "hideWhenVertical": true
+      "hideWhenVertical": true,
+      "colorProfile": "semantic"
     },
     "schema": [
       {
@@ -29,17 +30,20 @@
         "label": "Maximum text length",
         "min": 8,
         "max": 80,
-        "step": 1
+        "step": 1,
+        "defaultValue": 34
       },
       {
         "key": "sweepOnPlaying",
         "type": "boolean",
-        "label": "Sweep text while playing"
+        "label": "Sweep text while playing",
+        "defaultValue": true
       },
       {
         "key": "hideWhenVertical",
         "type": "boolean",
-        "label": "Hide on vertical bars"
+        "label": "Hide on vertical bars",
+        "defaultValue": true
       },
       {
         "key": "colorProfile",
@@ -49,7 +53,8 @@
           "semantic",
           "colorful"
         ],
-        "description": "Override the global Lacuna color profile for this widget."
+        "description": "Override the global Lacuna color profile for this widget.",
+        "defaultValue": "semantic"
       }
     ]
   },

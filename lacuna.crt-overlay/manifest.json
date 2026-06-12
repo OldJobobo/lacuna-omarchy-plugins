@@ -33,72 +33,86 @@
     {
       "key": "effectEnabled",
       "type": "boolean",
-      "label": "Effect enabled"
+      "label": "Effect enabled",
+      "defaultValue": true
     },
     {
       "key": "foregroundOverlay",
       "type": "boolean",
-      "label": "Foreground overlay"
+      "label": "Foreground overlay",
+      "defaultValue": false
     },
     {
       "key": "intensity",
       "type": "number",
-      "label": "Intensity"
+      "label": "Intensity",
+      "defaultValue": 0.58
     },
     {
       "key": "speed",
       "type": "number",
-      "label": "Speed"
+      "label": "Speed",
+      "defaultValue": 1
     },
     {
       "key": "scanlineSpacing",
       "type": "number",
-      "label": "Scanline spacing"
+      "label": "Scanline spacing",
+      "defaultValue": 3
     },
     {
       "key": "staticBandHeight",
       "type": "number",
-      "label": "Static band height"
+      "label": "Static band height",
+      "defaultValue": 150
     },
     {
       "key": "staticAmount",
       "type": "number",
-      "label": "Static amount"
+      "label": "Static amount",
+      "defaultValue": 0.24
     },
     {
       "key": "glowAmount",
       "type": "number",
-      "label": "Glow amount"
+      "label": "Glow amount",
+      "defaultValue": 0.22
     },
     {
       "key": "bloomPulse",
       "type": "boolean",
-      "label": "Bloom pulse"
+      "label": "Bloom pulse",
+      "defaultValue": true
     },
     {
       "key": "bloomPulseAmount",
       "type": "number",
-      "label": "Bloom pulse amount"
+      "label": "Bloom pulse amount",
+      "defaultValue": 0.52
     },
     {
       "key": "bloomPulseInterval",
       "type": "number",
-      "label": "Bloom pulse interval"
+      "label": "Bloom pulse interval",
+      "defaultValue": 18000
     },
     {
       "key": "distortion",
       "type": "boolean",
-      "label": "Foreground distortion"
+      "label": "Foreground distortion",
+      "defaultValue": true
     },
     {
       "key": "distortionAmount",
       "type": "number",
-      "label": "Distortion amount"
+      "label": "Distortion amount",
+      "defaultValue": 0.45
     },
     {
       "key": "vignette",
       "type": "boolean",
-      "label": "Vignette"
+      "label": "Vignette",
+      "defaultValue": true
     }
   ],
   "lacuna": {

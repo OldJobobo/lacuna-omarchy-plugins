@@ -29,17 +29,20 @@
     {
       "key": "effectEnabled",
       "type": "boolean",
-      "label": "Effect enabled"
+      "label": "Effect enabled",
+      "defaultValue": true
     },
     {
       "key": "intensity",
       "type": "number",
-      "label": "Intensity"
+      "label": "Intensity",
+      "defaultValue": 1
     },
     {
       "key": "speed",
       "type": "number",
-      "label": "Speed"
+      "label": "Speed",
+      "defaultValue": 1
     },
     {
       "key": "stylePreset",
@@ -49,37 +52,44 @@
         "lightLeak",
         "cinematicFlare",
         "anamorphicGlow"
-      ]
+      ],
+      "defaultValue": "lightLeak"
     },
     {
       "key": "slowDrift",
       "type": "boolean",
-      "label": "Slow drift"
+      "label": "Slow drift",
+      "defaultValue": true
     },
     {
       "key": "occasionalSweeps",
       "type": "boolean",
-      "label": "Occasional sweeps"
+      "label": "Occasional sweeps",
+      "defaultValue": false
     },
     {
       "key": "activeShimmer",
       "type": "boolean",
-      "label": "Active shimmer"
+      "label": "Active shimmer",
+      "defaultValue": false
     },
     {
       "key": "flareCount",
       "type": "number",
-      "label": "Flare count"
+      "label": "Flare count",
+      "defaultValue": 4
     },
     {
       "key": "accentBlend",
       "type": "number",
-      "label": "Accent blend"
+      "label": "Accent blend",
+      "defaultValue": 0.5
     },
     {
       "key": "vignette",
       "type": "boolean",
-      "label": "Vignette"
+      "label": "Vignette",
+      "defaultValue": true
     }
   ],
   "lacuna": {

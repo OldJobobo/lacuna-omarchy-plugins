@@ -18,7 +18,8 @@
     "category": "Lacuna",
     "allowMultiple": false,
     "defaults": {
-      "wheelStep": 5
+      "wheelStep": 5,
+      "colorProfile": "semantic"
     },
     "schema": [
       {
@@ -27,7 +28,8 @@
         "label": "Wheel step (%)",
         "min": 1,
         "max": 25,
-        "step": 1
+        "step": 1,
+        "defaultValue": 5
       },
       {
         "key": "colorProfile",
@@ -37,7 +39,8 @@
           "semantic",
           "colorful"
         ],
-        "description": "Override the global Lacuna color profile for this widget."
+        "description": "Override the global Lacuna color profile for this widget.",
+        "defaultValue": "semantic"
       }
     ]
   },

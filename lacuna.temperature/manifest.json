@@ -20,7 +20,8 @@
     "defaults": {
       "interval": 5000,
       "warmF": 150,
-      "criticalF": 185
+      "criticalF": 185,
+      "colorProfile": "semantic"
     },
     "schema": [
       {
@@ -28,21 +29,24 @@
         "type": "integer",
         "label": "Refresh interval (ms)",
         "min": 1000,
-        "step": 1000
+        "step": 1000,
+        "defaultValue": 5000
       },
       {
         "key": "warmF",
         "type": "integer",
         "label": "Warm threshold F",
         "min": 1,
-        "step": 1
+        "step": 1,
+        "defaultValue": 150
       },
       {
         "key": "criticalF",
         "type": "integer",
         "label": "Critical threshold F",
         "min": 2,
-        "step": 1
+        "step": 1,
+        "defaultValue": 185
       },
       {
         "key": "colorProfile",
@@ -52,7 +56,8 @@
           "semantic",
           "colorful"
         ],
-        "description": "Override the global Lacuna color profile for this widget."
+        "description": "Override the global Lacuna color profile for this widget.",
+        "defaultValue": "semantic"
       }
     ]
   },

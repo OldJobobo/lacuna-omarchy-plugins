@@ -18,7 +18,8 @@
     "category": "Lacuna",
     "allowMultiple": false,
     "defaults": {
-      "interval": 21600000
+      "interval": 21600000,
+      "colorProfile": "semantic"
     },
     "schema": [
       {
@@ -26,7 +27,8 @@
         "type": "integer",
         "label": "Refresh interval (ms)",
         "min": 60000,
-        "step": 60000
+        "step": 60000,
+        "defaultValue": 21600000
       },
       {
         "key": "colorProfile",
@@ -36,7 +38,8 @@
           "semantic",
           "colorful"
         ],
-        "description": "Override the global Lacuna color profile for this widget."
+        "description": "Override the global Lacuna color profile for this widget.",
+        "defaultValue": "semantic"
       }
     ]
   },
