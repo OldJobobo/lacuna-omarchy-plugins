@@ -137,21 +137,12 @@ Item {
       return terminalCommand("omarchy debug idle; printf '\\nCommand exited. Press Enter to close...'; read -r _", "Omarchy Idle Debug", false)
     }
 
-    function refreshThemeBackgroundCommand(themeVariable) {
-      var variable = String(themeVariable || "theme")
-      return "{ fixer=\"$HOME/.config/omarchy/plugins/lacuna.theme-preloader/scripts/refresh-theme-background.sh\"; [ -x \"$fixer\" ] && \"$fixer\" \"$" + variable + "\" || true; }"
-    }
-
     function switchThemeCommand() {
-      return "theme=$(omarchy theme switcher); [ -n \"$theme\" ] && omarchy theme set \"$theme\" && " + refreshThemeBackgroundCommand("theme")
+      return "theme=$(omarchy theme switcher); [ -n \"$theme\" ] && omarchy theme set \"$theme\""
     }
 
     function switchBackgroundCommand() {
-      return "background=$(omarchy theme bg-switcher); [ -n \"$background\" ] && omarchy theme bg set \"$background\" && " + applyCurrentBackgroundCommand()
-    }
-
-    function applyCurrentBackgroundCommand() {
-      return "current=$(readlink -f \"$HOME/.config/omarchy/current/background\" 2>/dev/null || true); [ -n \"$current\" ] && omarchy shell -q background setInstant \"$current\""
+      return "background=$(omarchy theme bg-switcher); [ -n \"$background\" ] && omarchy theme bg set \"$background\""
     }
   }
 

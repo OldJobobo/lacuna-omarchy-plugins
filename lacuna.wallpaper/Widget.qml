@@ -53,15 +53,11 @@ Item {
   }
 
   function switchBackgroundCommand() {
-    return "background=$(omarchy theme bg-switcher); [ -n \"$background\" ] && omarchy theme bg set \"$background\" && " + applyCurrentBackgroundCommand()
+    return "background=$(omarchy theme bg-switcher); [ -n \"$background\" ] && omarchy theme bg set \"$background\""
   }
 
   function nextBackgroundCommand() {
-    return "omarchy theme bg next && " + applyCurrentBackgroundCommand()
-  }
-
-  function applyCurrentBackgroundCommand() {
-    return "current=$(readlink -f \"$HOME/.config/omarchy/current/background\" 2>/dev/null || true); [ -n \"$current\" ] && omarchy shell -q background setInstant \"$current\""
+    return "omarchy theme bg next"
   }
 
   function clipped(value) {
