@@ -52,6 +52,8 @@ Item {
   readonly property color flareBlue: mixColor(themeColor("color12", themeAccent), themeBright, 0.32)
   readonly property color flareCore: mixColor(themeBright, "#fff6df", 0.52)
   readonly property color leakShadow: mixColor(themeBackground, flareAccent, 0.32)
+  readonly property real ambientWashOpacity: (slowDriftEnabled ? 0.18 : 0.06) * leakWeight
+  readonly property real ambientBandOpacity: (slowDriftEnabled ? 0.28 : 0.1) * lineWeight
 
   function clamp(value, minimum, maximum) {
     var numeric = Number(value)
@@ -284,6 +286,71 @@ Item {
         anchors.fill: parent
         enabled: false
         opacity: root.effectiveIntensity
+        property real ambientPulse: 0.65
+
+        SequentialAnimation on ambientPulse {
+          loops: Animation.Infinite
+          running: root.effectVisible && root.slowDriftEnabled
+          NumberAnimation {
+            from: 0.55
+            to: 1
+            duration: Math.max(4800, 9000 / root.speed)
+            easing.type: Easing.InOutSine
+          }
+          NumberAnimation {
+            from: 1
+            to: 0.55
+            duration: Math.max(5200, 11000 / root.speed)
+            easing.type: Easing.InOutSine
+          }
+        }
+
+        Item {
+          id: ambientLight
+
+          anchors.fill: parent
+          visible: root.slowDriftEnabled || root.stylePreset === "lightLeak"
+          opacity: effect.ambientPulse
+
+          Rectangle {
+            anchors.fill: parent
+            opacity: root.ambientWashOpacity
+            gradient: Gradient {
+              orientation: Gradient.Vertical
+              GradientStop { position: 0; color: "#00000000" }
+              GradientStop { position: 0.34; color: Qt.rgba(root.leakShadow.r, root.leakShadow.g, root.leakShadow.b, 0.18) }
+              GradientStop { position: 0.52; color: Qt.rgba(root.flareAccent.r, root.flareAccent.g, root.flareAccent.b, 0.24) }
+              GradientStop { position: 0.72; color: Qt.rgba(root.themeBackground.r, root.themeBackground.g, root.themeBackground.b, 0.08) }
+              GradientStop { position: 1; color: "#00000000" }
+            }
+          }
+
+          Rectangle {
+            x: -Math.round(width * 0.12)
+            y: Math.round(parent.height * 0.42 - height * 0.5)
+            width: Math.round(parent.width * 1.24)
+            height: Math.round(parent.height * (root.stylePreset === "anamorphicGlow" ? 0.11 : 0.18))
+            radius: Math.max(1, height / 2)
+            rotation: root.stylePreset === "anamorphicGlow" ? -0.4 : -1.1
+            opacity: root.ambientBandOpacity
+            layer.enabled: true
+            layer.smooth: true
+            layer.effect: MultiEffect {
+              blurEnabled: true
+              blurMax: 96
+              blur: 1
+              autoPaddingEnabled: true
+            }
+            gradient: Gradient {
+              orientation: Gradient.Horizontal
+              GradientStop { position: 0; color: "#00000000" }
+              GradientStop { position: 0.2; color: Qt.rgba(root.flareAccent.r, root.flareAccent.g, root.flareAccent.b, 0.16) }
+              GradientStop { position: 0.5; color: Qt.rgba(root.flareCore.r, root.flareCore.g, root.flareCore.b, 0.42) }
+              GradientStop { position: 0.8; color: Qt.rgba(root.filmGold.r, root.filmGold.g, root.filmGold.b, 0.16) }
+              GradientStop { position: 1; color: "#00000000" }
+            }
+          }
+        }
 
         Repeater {
           model: root.stylePreset === "lightLeak" ? 4 : 2
@@ -299,7 +366,9 @@ Item {
             readonly property real leakPeak: root.leakWeight * (0.34 + root.seededNoise(seed + 11) * 0.22)
             readonly property int initialDelay: Math.round(root.seededNoise(seed + 13) * 9000)
             readonly property int glowHold: Math.round((900 + root.seededNoise(seed + 15) * 1600) / Math.max(0.25, root.speed))
-            readonly property int hiddenPause: Math.round((5200 + root.seededNoise(seed + 17) * 9000) / Math.max(0.25, root.speed * root.motionFactor))
+            readonly property int hiddenPause: root.slowDriftEnabled
+              ? Math.round((900 + root.seededNoise(seed + 17) * 1700) / Math.max(0.25, root.speed))
+              : Math.round((5200 + root.seededNoise(seed + 17) * 9000) / Math.max(0.25, root.speed * root.motionFactor))
             property int cycle: 0
             readonly property real cycleSeed: seed + cycle * 97
             readonly property bool cycleLeftSide: root.seededNoise(cycleSeed + 1) > 0.42
@@ -377,7 +446,9 @@ Item {
             readonly property real flarePeak: pulseHigh
             readonly property int fadeDelay: Math.round(root.seededNoise(seed + 21) * 11000)
             readonly property int visibleHold: Math.round((1200 + root.seededNoise(seed + 25) * 2400) / Math.max(0.25, root.speed))
-            readonly property int darkPause: Math.round((4200 + root.seededNoise(seed + 27) * 10500) / Math.max(0.25, root.speed * root.motionFactor))
+            readonly property int darkPause: root.slowDriftEnabled
+              ? Math.round((1800 + root.seededNoise(seed + 27) * 3600) / Math.max(0.25, root.speed))
+              : Math.round((4200 + root.seededNoise(seed + 27) * 10500) / Math.max(0.25, root.speed * root.motionFactor))
             readonly property int fadeInDuration: Math.max(1600, (3200 + root.seededNoise(cycleSeed + 47) * 4200) / (root.speed * (0.5 + root.shimmerAmount)))
             readonly property int fadeOutDuration: Math.max(1800, (3600 + root.seededNoise(cycleSeed + 53) * 5200) / (root.speed * (0.5 + root.shimmerAmount)))
             readonly property int driftDuration: fadeInDuration + visibleHold + fadeOutDuration
