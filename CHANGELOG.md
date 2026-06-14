@@ -36,5 +36,14 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
 - `LacunaLog`: a level-gated, prefixed logging helper shared across plugins.
 - A structural plugin load-smoke test (`tests/test_plugin_load_smoke.py`)
   enforcing entry-point integrity and self-contained relative imports.
+- Plugin stability tiers via `manifest.lacuna.stability` (`stable`,
+  `experimental`, `deprecated`); the installer marks non-stable plugins.
+  `lacuna.compact-pill` is deprecated (removal targeted for `0.2.0`).
+- Distribution scaffolding: `CHANGELOG.md`, `CONTRIBUTING.md`, GitHub
+  PR/issue templates, lint config (`.shellcheckrc`, `ruff.toml`,
+  `.pre-commit-config.yaml`), and a tag-triggered release workflow.
+- Test coverage for the ambience overlays, desktop clock,
+  settings-persistence, script pill, and `desktop-app-catalog.py`; CI now
+  installs pytest and reports coverage.
 
 [Unreleased]: https://github.com/jsbrown7/lacuna-omarchy-plugins/compare/HEAD
