@@ -40,7 +40,9 @@ PanelWindow {
   readonly property bool bottomBar: barPosition === "bottom"
   readonly property bool leftBar: barPosition === "left"
   readonly property bool rightBar: barPosition === "right"
-  readonly property real curveKappa: 0.5522847498
+  readonly property real curveKappa: lacunaGeometry.curveKappa
+
+  LacunaGeometry { id: lacunaGeometry }
 
   visible: active
   screen: targetScreen

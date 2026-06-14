@@ -32,7 +32,9 @@ Item {
   property var currentItems: []
   property string modelError: ""
   readonly property int panelRadius: Math.max(tokenNumber("radius", 0), compact ? 10 : 14)
-  readonly property real curveKappa: 0.5522847498
+  readonly property real curveKappa: lacunaGeometry.curveKappa
+
+  LacunaGeometry { id: lacunaGeometry }
 
   onOpenChanged: if (open && settingsService) settingsService.refresh()
   onCurrentSectionChanged: {
