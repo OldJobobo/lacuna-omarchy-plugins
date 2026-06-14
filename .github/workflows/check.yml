@@ -16,5 +16,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck qml6-dev-tools
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pytest pytest-cov
       - name: Run checks
         run: ./scripts/check.sh
+      - name: Coverage report
+        run: python3 -m pytest --cov=. --cov-report=term-missing

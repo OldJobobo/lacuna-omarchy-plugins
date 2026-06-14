@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify tag matches VERSION
+        run: |
+          version="$(cat VERSION)"
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$version" != "$tag" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match VERSION ${version}" >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Validate manifest/VERSION parity
+        run: |
+          python3 -m pip install pytest
+          python3 -m pytest tests/test_manifest_contracts.py -q
+
+      - name: Build archive and checksums
+        run: |
+          version="$(cat VERSION)"
+          name="lacuna-omarchy-plugins-${version}"
+          tar --exclude-vcs --exclude='__pycache__' -czf "${name}.tar.gz" \
+            lacuna.* shared scripts docs config \
+            README.md LICENSE VERSION CHANGELOG.md AGENTS.md
+          sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            *.tar.gz
+            *.tar.gz.sha256
