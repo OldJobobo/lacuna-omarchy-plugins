@@ -42,6 +42,22 @@ class QmlContractTests(unittest.TestCase):
         self.assertNotIn("property color panelBackground: color(\"background\")", qml)
         self.assertNotIn("Keep it opaque", qml)
 
+    def test_theme_parse_fallbacks_emit_diagnostics(self):
+        qml = read("lacuna.menu/services/Theme.qml")
+        # An unparseable (non-empty) color value and a non-empty theme file
+        # that yields no entries are real authoring mistakes, so they warn
+        # instead of silently snapping to the built-in fallback palette.
+        self.assertIn("could not parse color value", qml)
+        self.assertIn("colors.toml has content but produced no parseable entries", qml)
+        self.assertIn("shell.toml has content but produced no parseable entries", qml)
+        # Only the genuine-mistake paths warn; routine per-key misses do not.
+        self.assertIn("if (raw.length > 0)", qml)
+        self.assertNotIn("function rawColor(name) {\n    console.warn", qml)
+        # Documented color formats stay supported (#RRGGBB[AA], rgb/rgba, 0xAARRGGBB).
+        self.assertIn("/^#?([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/", qml)
+        self.assertIn("/^rgba\\(\\s*#?([0-9a-f]{6})([0-9a-f]{2})\\s*\\)$/", qml)
+        self.assertIn("/^0x([0-9a-f]{2})([0-9a-f]{6})$/", qml)
+
     def test_lacuna_panel_surfaces_use_rgba_bar_surface_color(self):
         menu = read("lacuna.menu/menu/MenuWindow.qml")
         shell_settings = read("lacuna.shell-settings/Panel.qml")
