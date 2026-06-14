@@ -106,6 +106,18 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("merged.customQuickLaunchApps = loadedBase.customQuickLaunchApps", qml)
         self.assertIn("merged.customQuickLaunchNames = loadedBase.customQuickLaunchNames", qml)
 
+    def test_bar_size_mode_debounces_theme_changes_and_verifies_writes(self):
+        qml = read("lacuna.menu/services/BarSizeMode.qml")
+        # Theme-name flicker is debounced through a timer rather than reloading
+        # both FileViews inline on every change.
+        self.assertIn("id: themeReloadTimer", qml)
+        self.assertIn("themeReloadTimer.restart()", qml)
+        # The patched shell.toml must re-parse to the intended sizes before it
+        # is written, so a bad patch can never half-apply a bar size.
+        self.assertIn("function patchedValuesMatch", qml)
+        self.assertIn("if (!patchedValuesMatch(patched, desired.sizeHorizontal, desired.sizeVertical))", qml)
+        self.assertIn("if (!patchedValuesMatch(restored, snapshot.sizeHorizontal, snapshot.sizeVertical))", qml)
+
     def test_bar_size_theme_mode_is_reachable(self):
         settings = read("lacuna.menu/services/LacunaSettings.qml")
         state_service = read("lacuna.state/Service.qml")
