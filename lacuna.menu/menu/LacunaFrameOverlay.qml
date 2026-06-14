@@ -56,7 +56,9 @@ Item {
   readonly property bool bottomBar: barPosition === "bottom"
   readonly property bool leftBar: barPosition === "left"
   readonly property bool rightBar: barPosition === "right"
-  readonly property real curveKappa: 0.5522847498
+  readonly property real curveKappa: lacunaGeometry.curveKappa
+
+  LacunaGeometry { id: lacunaGeometry }
   readonly property real cornerSize: Math.max(t, joinRadius)
   readonly property real frameAlpha: Math.max(0, Math.min(1, frameColor.a === undefined ? 1 : frameColor.a))
   readonly property color solidFrameColor: Qt.rgba(frameColor.r, frameColor.g, frameColor.b, 1)

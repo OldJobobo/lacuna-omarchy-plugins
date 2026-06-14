@@ -34,7 +34,9 @@ Item {
   readonly property int bottomJoinTop: Math.max(0, surface.height - frameThickness - bodyRightInset)
   readonly property real surfaceAlpha: Math.max(0, Math.min(1, panelColor.a === undefined ? 1 : panelColor.a))
   readonly property color solidPanelColor: Qt.rgba(panelColor.r, panelColor.g, panelColor.b, 1)
-  readonly property real curveKappa: 0.5522847498
+  readonly property real curveKappa: lacunaGeometry.curveKappa
+
+  LacunaGeometry { id: lacunaGeometry }
 
   width: panelWidth + bodyRightInset
 

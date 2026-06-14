@@ -30,7 +30,9 @@ Item {
   property var controlOverrides: ({})
   property int controlRevision: 0
   readonly property int panelRadius: Math.max(designTokens.radius, compact ? 10 : 14)
-  readonly property real curveKappa: 0.5522847498
+  readonly property real curveKappa: lacunaGeometry.curveKappa
+
+  LacunaGeometry { id: lacunaGeometry }
 
   onOpenChanged: if (!open) clearControlOverrides()
   onCurrentSectionChanged: clearControlOverrides()

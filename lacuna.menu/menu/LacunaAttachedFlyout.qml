@@ -22,7 +22,9 @@ Item {
   property color foreground: "#d8dee9"
   property var designTokens: fallbackDesignTokens
 
-  readonly property real curveKappa: 0.5522847498
+  readonly property real curveKappa: lacunaGeometry.curveKappa
+
+  LacunaGeometry { id: lacunaGeometry }
   readonly property real clampedProgress: Math.max(0, Math.min(1, progress))
   readonly property real currentWidth: Math.max(0, panelWidth * clampedProgress)
   readonly property real contentOpacity: Math.max(0, Math.min(1, contentProgress))

@@ -12,7 +12,9 @@ Item {
   property int contentHeight: 0
   property color panelColor: "#101315"
 
-  readonly property real curveKappa: 0.5522847498
+  readonly property real curveKappa: lacunaGeometry.curveKappa
+
+  LacunaGeometry { id: lacunaGeometry }
   readonly property real clampedProgress: Math.max(0, Math.min(1, progress))
   readonly property real surfaceAlpha: Math.max(0, Math.min(1, panelColor.a === undefined ? 1 : panelColor.a))
   readonly property color solidPanelColor: Qt.rgba(panelColor.r, panelColor.g, panelColor.b, 1)

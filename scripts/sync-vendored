@@ -69,6 +69,10 @@ def vendored_pairs() -> list[tuple[Path, Path]]:
 
     pairs.extend([
         (
+            ROOT / "lacuna.shell-settings/components/LacunaGeometry.qml",
+            ROOT / "lacuna.bar/LacunaGeometry.qml",
+        ),
+        (
             OMARCHY_ROOT / "shell/plugins/bar/Bar.qml",
             ROOT / "lacuna.bar/OmarchyBar.qml",
         ),

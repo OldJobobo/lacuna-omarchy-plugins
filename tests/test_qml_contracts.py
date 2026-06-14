@@ -80,7 +80,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertNotIn("Rectangle.radius", flyout)
         self.assertIn("readonly property real surfaceAlpha", read("lacuna.menu/menu/LacunaShapeSurface.qml"))
         self.assertIn("readonly property color solidPanelColor", read("lacuna.menu/menu/LacunaShapeSurface.qml"))
-        self.assertIn("readonly property real curveKappa: 0.5522847498", connector)
+        self.assertIn("readonly property real curveKappa: lacunaGeometry.curveKappa", connector)
         self.assertIn("opacity: clampedProgress * surfaceAlpha", connector)
         self.assertIn("height: contentHeight + connectorWidth * 2", connector)
         self.assertIn("y: root.connectorWidth + root.contentHeight", connector)
@@ -170,6 +170,40 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("recoveredFromCorruptSettings", qml, path)
             self.assertIn("settingsBackupFileView.setText(corrupt)", qml, path)
             self.assertIn('path: root.settingsFile + ".bak"', qml, path)
+
+    def test_curve_kappa_constant_has_single_definition(self):
+        # The Bezier circular-arc kappa is defined once in LacunaGeometry and
+        # referenced everywhere else, so the molding geometry can never drift.
+        literal = "0.5522847498"
+        geometry_files = {
+            "lacuna.shell-settings/components/LacunaGeometry.qml",
+            "lacuna.menu/components/LacunaGeometry.qml",
+            "lacuna.bar/LacunaGeometry.qml",
+        }
+        for path in sorted(geometry_files):
+            self.assertIn("readonly property real curveKappa: " + literal, read(path), path)
+
+        consumers = [
+            "lacuna.menu/menu/MenuSurface.qml",
+            "lacuna.menu/menu/LacunaFrameOverlay.qml",
+            "lacuna.menu/menu/LacunaPanelConnector.qml",
+            "lacuna.menu/menu/LacunaAttachedFlyout.qml",
+            "lacuna.menu/settings/SettingsWindow.qml",
+            "lacuna.menu/settings/OmarchyShellSettingsWindow.qml",
+            "lacuna.shell-settings/settings/OmarchyShellSettingsWindow.qml",
+            "lacuna.bar/LacunaFrameWindow.qml",
+        ]
+        for path in consumers:
+            qml = read(path)
+            self.assertIn("readonly property real curveKappa: lacunaGeometry.curveKappa", qml, path)
+            self.assertIn("LacunaGeometry { id: lacunaGeometry }", qml, path)
+
+        # The literal must not leak into any other QML file in the suite.
+        for qml_path in ROOT.glob("lacuna.*/**/*.qml"):
+            rel = qml_path.relative_to(ROOT).as_posix()
+            if rel in geometry_files:
+                continue
+            self.assertNotIn(literal, qml_path.read_text(encoding="utf-8"), rel)
 
     def test_lacuna_menu_state_uses_fileview_for_load_save(self):
         qml = read("lacuna.menu/services/LacunaMenuState.qml")
