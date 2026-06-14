@@ -1,0 +1,40 @@
+# Changelog
+
+All notable changes to the Lacuna Omarchy plugin suite are recorded here.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
+`manifest.json`.
+
+## [Unreleased]
+
+### Fixed
+- Settings service no longer shadows its `loaded()` signal; the signal fires
+  and the pending-save replay runs (`lacuna.state`, `lacuna.menu`).
+- Corrupt `settings.json` is backed up to `settings.json.bak` and flagged via
+  `recoveredFromCorruptSettings` instead of silently restoring defaults.
+- Shell-settings state load gained a timeout watchdog so a hung helper process
+  can no longer wedge the service; failures mark the data stale and retry.
+- `BarSizeMode` debounces theme-name changes and verifies a patched
+  `shell.toml` re-parses to the intended sizes before writing.
+- `MenuWindow` flyout focus-clear debounce uses a `Timer` instead of
+  `Date.now()` arithmetic.
+- Theme parse fallbacks now emit diagnostics via the new `LacunaLog` helper
+  instead of failing silently.
+
+### Changed
+- The Bézier corner constant `curveKappa` is defined once in a shared
+  `LacunaGeometry` component and referenced everywhere (was duplicated across
+  seven files in three plugins).
+- `sync-vendored` derives its divergent-copy exclusions from each plugin's
+  `manifest.lacuna.vendorExclude` and gained an explicit `--fix` alias.
+- `SidebarState` names the persisted preference (`desiredDefaultMode`) and the
+  session toggle (`runtimeCollapsed`) distinctly and persists the real collapse.
+- Extracted pure value validators/converters out of `MenuWindow` into a
+  stateless `MenuValueHelpers` component.
+
+### Added
+- `LacunaLog`: a level-gated, prefixed logging helper shared across plugins.
+- A structural plugin load-smoke test (`tests/test_plugin_load_smoke.py`)
+  enforcing entry-point integrity and self-contained relative imports.
+
+[Unreleased]: https://github.com/jsbrown7/lacuna-omarchy-plugins/compare/HEAD

@@ -58,6 +58,20 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("Current full suite result: 86 Python tests passing.", tracker)
         self.assertIn("Architecture update 2026-06-14", tracker)
 
+    def test_distribution_scaffolding_exists(self):
+        for name in [
+            "CHANGELOG.md",
+            "CONTRIBUTING.md",
+            ".github/PULL_REQUEST_TEMPLATE.md",
+            ".github/ISSUE_TEMPLATE/bug_report.md",
+            ".github/ISSUE_TEMPLATE/feature_request.md",
+            ".pre-commit-config.yaml",
+            ".shellcheckrc",
+            "ruff.toml",
+        ]:
+            self.assertTrue((ROOT / name).exists(), name)
+        self.assertIn("## [Unreleased]", (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()

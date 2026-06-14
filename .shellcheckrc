@@ -1,0 +1,5 @@
+# Shared shellcheck configuration so local runs match CI.
+# Conservative on purpose: keep shellcheck's default check set (which the
+# suite's scripts already pass) and only allow sourced files it cannot follow
+# at lint time, rather than turning on every optional style check.
+external-sources=true

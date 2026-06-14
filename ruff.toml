@@ -1,0 +1,14 @@
+# Python lint/format config for the installer, tests, and helper scripts.
+# Kept intentionally light: the Python here is glue around QML plugins, not a
+# library. Run `ruff check .` and `ruff format .` (or via pre-commit).
+line-length = 100
+target-version = "py310"
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+  "E501",  # long lines are tolerated in test string-contract assertions
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["E741"]  # short names like `l` appear in contract fixtures
