@@ -80,6 +80,28 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("log.warn(", qml, path)
             self.assertNotIn("console.warn(", qml, path)
 
+    def test_menu_value_helpers_extracted_and_delegated(self):
+        # Pure validators/converters moved out of MenuWindow into a stateless
+        # helper; MenuWindow keeps same-named delegators so call sites and the
+        # source contract are unchanged.
+        helpers = read("lacuna.menu/menu/MenuValueHelpers.qml")
+        window = read("lacuna.menu/menu/MenuWindow.qml")
+        for fn in [
+            "function localPath", "function positiveInt", "function safeValue",
+            "function numberSetting", "function boolSetting", "function validFrameMode",
+            "function validFrameReserveMode", "function validShellSettingsSurface",
+            "function desiredChecked", "function validClockAnchor",
+            "function clockAnchorHorizontal", "function clockAnchorVertical",
+            "function clockAnchorFromParts",
+        ]:
+            self.assertIn(fn, helpers, fn)
+        self.assertIn("MenuValueHelpers {", window)
+        self.assertIn("id: valueHelpers", window)
+        self.assertIn("return valueHelpers.validClockAnchor(value)", window)
+        self.assertIn("return valueHelpers.boolSetting(value, fallback)", window)
+        # The pure bodies no longer live in MenuWindow.
+        self.assertNotIn('"top-left": true', window)
+
     def test_lacuna_panel_surfaces_use_rgba_bar_surface_color(self):
         menu = read("lacuna.menu/menu/MenuWindow.qml")
         shell_settings = read("lacuna.shell-settings/Panel.qml")

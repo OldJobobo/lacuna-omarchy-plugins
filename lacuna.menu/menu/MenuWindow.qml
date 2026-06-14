@@ -190,9 +190,7 @@ Item {
   }
 
   function localPath(url) {
-    var value = String(url || "")
-    if (value.indexOf("file://") === 0) value = value.slice(7)
-    return decodeURIComponent(value)
+    return valueHelpers.localPath(url)
   }
 
   function resolvedOmarchyPath() {
@@ -239,8 +237,7 @@ Item {
   }
 
   function positiveInt(value, fallback) {
-    var parsed = Number(value)
-    return isFinite(parsed) && parsed > 0 ? Math.round(parsed) : fallback
+    return valueHelpers.positiveInt(value, fallback)
   }
 
   function sizeMix(fullValue, compactValue) {
@@ -248,7 +245,7 @@ Item {
   }
 
   function safeValue(value, fallback) {
-    return value === undefined || value === null ? fallback : value
+    return valueHelpers.safeValue(value, fallback)
   }
 
   function configBarHeight() {
@@ -322,9 +319,7 @@ Item {
   }
 
   function validShellSettingsSurface(value) {
-    var surface = String(value || "").toLowerCase()
-    if (surface === "window" || surface === "floating" || surface === "panel") return "window"
-    return "flyout"
+    return valueHelpers.validShellSettingsSurface(value)
   }
 
   function open(payloadJson) {
@@ -665,28 +660,19 @@ Item {
   }
 
   function numberSetting(value, fallback) {
-    var parsed = Number(value)
-    return isFinite(parsed) ? parsed : fallback
+    return valueHelpers.numberSetting(value, fallback)
   }
 
   function boolSetting(value, fallback) {
-    if (value === true || value === false) return value
-    var normalized = String(value || "").toLowerCase()
-    if (normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "on") return true
-    if (normalized === "false" || normalized === "0" || normalized === "no" || normalized === "off") return false
-    return fallback
+    return valueHelpers.boolSetting(value, fallback)
   }
 
   function validFrameMode(value) {
-    var mode = String(value || "off").toLowerCase()
-    if (mode === "fullframe" || mode === "on" || mode === "true" || mode === "1") return "fullframe"
-    return "off"
+    return valueHelpers.validFrameMode(value)
   }
 
   function validFrameReserveMode(value) {
-    var mode = String(value || "auto").toLowerCase()
-    if (mode === "comfort" || mode === "flush") return mode
-    return "auto"
+    return valueHelpers.validFrameReserveMode(value)
   }
 
   function activeHyprWorkspace() {
@@ -757,7 +743,7 @@ Item {
   }
 
   function desiredChecked(entry, fallback) {
-    return entry && entry.desiredChecked !== undefined ? entry.desiredChecked === true : fallback
+    return valueHelpers.desiredChecked(entry, fallback)
   }
 
   function setBackgroundEffect(effectId) {
@@ -823,42 +809,19 @@ Item {
   }
 
   function validClockAnchor(value) {
-    var anchor = String(value || "bottom-right").toLowerCase()
-    var valid = {
-      "top-left": true,
-      "top": true,
-      "top-right": true,
-      "left": true,
-      "center": true,
-      "right": true,
-      "bottom-left": true,
-      "bottom": true,
-      "bottom-right": true
-    }
-
-    return valid[anchor] ? anchor : "bottom-right"
+    return valueHelpers.validClockAnchor(value)
   }
 
   function clockAnchorHorizontal(anchor) {
-    if (anchor.indexOf("left") !== -1) return "left"
-    if (anchor.indexOf("right") !== -1) return "right"
-    return "center"
+    return valueHelpers.clockAnchorHorizontal(anchor)
   }
 
   function clockAnchorVertical(anchor) {
-    if (anchor.indexOf("top") !== -1) return "top"
-    if (anchor.indexOf("bottom") !== -1) return "bottom"
-    return "center"
+    return valueHelpers.clockAnchorVertical(anchor)
   }
 
   function clockAnchorFromParts(horizontal, vertical) {
-    var h = String(horizontal || "center")
-    var v = String(vertical || "center")
-
-    if (h === "center" && v === "center") return "center"
-    if (h === "center") return v
-    if (v === "center") return h
-    return v + "-" + h
+    return valueHelpers.clockAnchorFromParts(horizontal, vertical)
   }
 
   function setShellPluginEnabled(id, enabled) {
@@ -1450,6 +1413,10 @@ Item {
 
   CommandRunner {
     id: commands
+  }
+
+  MenuValueHelpers {
+    id: valueHelpers
   }
 
   LacunaPanelWindow {
