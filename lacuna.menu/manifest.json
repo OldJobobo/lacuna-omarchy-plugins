@@ -16,6 +16,9 @@
   "lacuna": {
     "standalone": false,
     "bundle": "core",
+    "vendorExclude": [
+      "services/MotionTokens.qml"
+    ],
     "requires": [
       "lacuna.state",
       "lacuna.shell-settings"

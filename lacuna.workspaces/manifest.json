@@ -54,6 +54,10 @@
   "lacuna": {
     "standalone": true,
     "bundle": "standalone",
+    "vendorExclude": [
+      "ColorProfile.qml",
+      "components/MotionTokens.qml"
+    ],
     "requires": [],
     "recommends": []
   }

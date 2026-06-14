@@ -61,6 +61,9 @@
   "lacuna": {
     "standalone": true,
     "bundle": "standalone",
+    "vendorExclude": [
+      "ColorProfile.qml"
+    ],
     "requires": [],
     "recommends": [
       "lacuna.theme-preloader"

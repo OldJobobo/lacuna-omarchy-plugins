@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import filecmp
+import json
 import os
 import shutil
 import sys
@@ -15,24 +16,6 @@ ROOT = Path(__file__).resolve().parents[1]
 OMARCHY_ROOT = Path(os.environ.get("OMARCHY_PATH", Path.home() / ".local/share/omarchy"))
 
 
-COLOR_PROFILE_EXCLUSIONS = {
-    "lacuna.mpris/ColorProfile.qml",
-    "lacuna.theme/ColorProfile.qml",
-    "lacuna.wallpaper/ColorProfile.qml",
-    "lacuna.workspaces/ColorProfile.qml",
-}
-
-MOTION_TOKEN_EXCLUSIONS = {
-    # The menu service has richer panel/sidebar motion tokens, not the simple
-    # bar-widget contract.
-    "lacuna.menu/services/MotionTokens.qml",
-    # These component-local copies carry widget-specific timing extensions.
-    "lacuna.mpris/components/MotionTokens.qml",
-    "lacuna.shell-settings/services/MotionTokens.qml",
-    "lacuna.workspaces/components/MotionTokens.qml",
-}
-
-
 def rel(path: Path) -> str:
     try:
         return path.relative_to(ROOT).as_posix()
@@ -40,17 +23,39 @@ def rel(path: Path) -> str:
         return str(path)
 
 
+def vendor_exclusions() -> set[str]:
+    """Target rel-paths that intentionally diverge from their vendored source.
+
+    Declared per-plugin in manifest.json under ``lacuna.vendorExclude`` (a list
+    of plugin-relative paths). Keeping this next to the plugin that owns the
+    customized copy means adding a widget with a divergent ColorProfile or
+    MotionTokens cannot silently break parity against a central hardcoded list.
+    """
+    excluded: set[str] = set()
+    for manifest_path in sorted(ROOT.glob("lacuna.*/manifest.json")):
+        try:
+            data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        entries = (data.get("lacuna") or {}).get("vendorExclude") or []
+        plugin_dir = manifest_path.parent
+        for entry in entries:
+            excluded.add(rel(plugin_dir / str(entry)))
+    return excluded
+
+
 def vendored_pairs() -> list[tuple[Path, Path]]:
     pairs: list[tuple[Path, Path]] = []
+    excluded = vendor_exclusions()
 
     color_source = ROOT / "shared/qml/simple-bar/ColorProfile.qml"
     for target in sorted(ROOT.glob("lacuna.*/ColorProfile.qml")):
-        if rel(target) not in COLOR_PROFILE_EXCLUSIONS:
+        if rel(target) not in excluded:
             pairs.append((color_source, target))
 
     motion_source = ROOT / "shared/qml/simple-bar/MotionTokens.qml"
     for target in sorted(ROOT.glob("lacuna.*/MotionTokens.qml")):
-        if rel(target) not in MOTION_TOKEN_EXCLUSIONS:
+        if rel(target) not in excluded:
             pairs.append((motion_source, target))
 
     settings_source = ROOT / "lacuna.shell-settings/settings"
@@ -130,6 +135,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="Fail if any vendored file has drifted.")
     parser.add_argument("--list", action="store_true", help="Print source and target pairs.")
+    parser.add_argument(
+        "--fix",
+        "--apply",
+        dest="fix",
+        action="store_true",
+        help="Copy each canonical source over its vendored target (the default action).",
+    )
     args = parser.parse_args(argv)
 
     pairs = vendored_pairs()
