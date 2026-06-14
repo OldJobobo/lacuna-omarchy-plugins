@@ -730,6 +730,26 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("live_gaps_enabled = any(value and value > 0 for value in [gaps_in, gaps_out])", state_script)
         self.assertIn("Use the active theme's tiled-window gap size", settings_window)
 
+    def test_shell_settings_service_load_has_timeout_watchdog(self):
+        # A hung state subprocess must not wedge the service. A watchdog
+        # terminates it, a single resolver clears `loading` exactly once
+        # (so process-exit and timeout can't double-count), the data is
+        # marked stale, and a bounded retry is scheduled.
+        for path in [
+            "lacuna.shell-settings/Service.qml",
+            "lacuna.menu/services/OmarchyShellSettingsService.qml",
+        ]:
+            qml = read(path)
+            self.assertIn("function resolveLoad", qml, path)
+            self.assertIn("function handleLoadTimeout", qml, path)
+            self.assertIn("id: loadWatchdog", qml, path)
+            self.assertIn("onTriggered: root.handleLoadTimeout()", qml, path)
+            self.assertIn("loadWatchdog.restart()", qml, path)
+            self.assertIn("if (loadProc.running) loadProc.running = false", qml, path)
+            self.assertIn("property bool stale: false", qml, path)
+            self.assertIn("loadFailureStreak <= maxAutoRetries", qml, path)
+            self.assertIn("id: retryTimer", qml, path)
+
     def test_fake_frame_topbar_reserve_matches_rendered_caster_size(self):
         window = read("lacuna.menu/menu/MenuWindow.qml")
         overlay = read("lacuna.menu/menu/LacunaFrameOverlay.qml")

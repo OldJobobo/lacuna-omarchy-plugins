@@ -15,6 +15,10 @@ Item {
   property var shellConfig: ({})
   property bool loading: false
   property string errorText: ""
+  property bool stale: false
+  property int loadFailureStreak: 0
+  readonly property int loadTimeoutMs: 8000
+  readonly property int maxAutoRetries: 2
   property var state: defaultState()
   readonly property string homeDir: Quickshell.env("HOME") || ""
   readonly property int roundedWindowRadius: 12
@@ -209,10 +213,42 @@ Item {
     loadProc.output = ""
     loadProc.command = ["python3", lacunaPath + "/scripts/omarchy-shell-settings-state.py"]
     loadProc.running = true
+    loadWatchdog.restart()
   }
 
   function scheduleRefresh() {
     refreshTimer.restart()
+  }
+
+  // Resolve a single load cycle exactly once. Whichever of the process exit or
+  // the watchdog timeout fires first wins; the other call no-ops because the
+  // loading flag is already cleared. This keeps a hung subprocess from wedging
+  // the service (loading stuck true, every refresh() blocked) and avoids
+  // double-counting a failure when the watchdog terminates the process.
+  function resolveLoad(success, message) {
+    if (!loading) return
+    loading = false
+    loadWatchdog.stop()
+    if (success) {
+      stale = false
+      loadFailureStreak = 0
+      errorText = ""
+      return
+    }
+    if (message) errorText = message
+    else if (errorText === "") errorText = "Unable to read Omarchy settings state"
+    stale = true
+    loadFailureStreak += 1
+    if (loadFailureStreak <= maxAutoRetries) {
+      retryTimer.interval = Math.min(30000, 2000 * loadFailureStreak)
+      retryTimer.restart()
+    }
+  }
+
+  function handleLoadTimeout() {
+    if (!loading) return
+    if (loadProc.running) loadProc.running = false
+    resolveLoad(false, "Timed out reading Omarchy settings state")
   }
 
   function run(command) {
@@ -398,6 +434,20 @@ Item {
     onTriggered: root.refresh()
   }
 
+  Timer {
+    id: loadWatchdog
+    interval: root.loadTimeoutMs
+    repeat: false
+    onTriggered: root.handleLoadTimeout()
+  }
+
+  Timer {
+    id: retryTimer
+    interval: 2000
+    repeat: false
+    onTriggered: root.refresh()
+  }
+
   Process {
     id: loadProc
     property string output: ""
@@ -415,15 +465,15 @@ Item {
     }
 
     onExited: function(exitCode) {
-      root.loading = false
       if (exitCode !== 0) {
-        if (root.errorText === "") root.errorText = "Unable to read Omarchy settings state"
+        root.resolveLoad(false, "")
         return
       }
       try {
         root.state = JSON.parse(loadProc.output || "{}")
+        root.resolveLoad(true, "")
       } catch (error) {
-        root.errorText = "Unable to parse Omarchy settings state"
+        root.resolveLoad(false, "Unable to parse Omarchy settings state")
       }
     }
   }
