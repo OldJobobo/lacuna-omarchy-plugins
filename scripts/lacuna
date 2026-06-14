@@ -162,6 +162,7 @@ class Plugin:
     bundle: str
     requires: tuple[str, ...]
     recommends: tuple[str, ...]
+    stability: str = "stable"
 
 
 def config_home() -> Path:
@@ -189,6 +190,7 @@ def load_plugins() -> dict[str, Plugin]:
             bundle=meta.get("bundle", "standalone"),
             requires=tuple(meta.get("requires", [])),
             recommends=tuple(meta.get("recommends", [])),
+            stability=str(meta.get("stability", "stable")),
         )
         plugins[plugin.id] = plugin
     return plugins
@@ -379,7 +381,10 @@ def confirm(prompt: str, assume_yes: bool) -> bool:
 
 
 def label(plugin: Plugin) -> str:
-    return f"{plugin.id} - {plugin.name}"
+    text = f"{plugin.id} - {plugin.name}"
+    if plugin.stability != "stable":
+        text += f" [{plugin.stability}]"
+    return text
 
 
 def id_from_label(value: str) -> str:

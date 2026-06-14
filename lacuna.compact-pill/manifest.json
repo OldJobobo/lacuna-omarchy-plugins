@@ -46,6 +46,7 @@
   "lacuna": {
     "standalone": false,
     "bundle": "legacy",
+    "stability": "deprecated",
     "requires": [
       "lacuna.bar-size-pill"
     ],

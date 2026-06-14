@@ -89,6 +89,22 @@ Every plugin manifest includes:
 - `lacuna.bundle`: one of `standalone`, `core`, `theme`, or `legacy`.
 - `lacuna.requires`: companion plugins required for the advertised workflow.
 - `lacuna.recommends`: optional companions that improve the workflow.
+- `lacuna.stability` (optional, default `stable`): see below.
+- `lacuna.vendorExclude` (optional): plugin-relative paths whose vendored copy
+  intentionally diverges from the canonical source, so `scripts/sync-vendored`
+  skips them.
 
 This metadata is for Lacuna tests, docs, and future tooling. Omarchy ignores it
 when validating or installing plugins.
+
+## Stability Tiers
+
+`lacuna.stability` marks how settled a plugin is. Absent means `stable`. The
+installer appends a `[tier]` marker to non-stable plugins in its menus.
+
+- `stable` (default): supported; safe to depend on.
+- `experimental`: a proving ground that may change or be promoted/removed.
+  Currently: `lacuna.script-pill` (the script-backed widget experiment path).
+- `deprecated`: kept for compatibility, slated for removal. Currently:
+  `lacuna.compact-pill` (superseded by `lacuna.bar-size-pill`); planned for
+  removal in the `0.2.0` release.

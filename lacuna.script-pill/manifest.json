@@ -71,6 +71,7 @@
   "lacuna": {
     "standalone": true,
     "bundle": "standalone",
+    "stability": "experimental",
     "requires": [],
     "recommends": []
   }

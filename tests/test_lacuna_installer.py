@@ -268,6 +268,23 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertEqual(data["plugins"], [{"id": "lacuna.state"}])
         self.assertEqual(data["bar"]["layout"]["right"], [{"id": "lacuna.menu-button"}])
 
+    def test_plugin_stability_is_read_and_surfaced_in_labels(self):
+        module = load_installer_module()
+        plugins = module.load_plugins()
+
+        self.assertEqual(plugins["lacuna.script-pill"].stability, "experimental")
+        self.assertEqual(plugins["lacuna.compact-pill"].stability, "deprecated")
+        self.assertEqual(plugins["lacuna.menu"].stability, "stable")
+
+        self.assertIn("[experimental]", module.label(plugins["lacuna.script-pill"]))
+        self.assertIn("[deprecated]", module.label(plugins["lacuna.compact-pill"]))
+        # Stable plugins carry no marker, and id parsing still round-trips.
+        self.assertNotIn("[", module.label(plugins["lacuna.menu"]))
+        self.assertEqual(
+            module.id_from_label(module.label(plugins["lacuna.script-pill"])),
+            "lacuna.script-pill",
+        )
+
     def test_activation_selects_bar_options_with_bar_id(self):
         module = load_installer_module()
 
