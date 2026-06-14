@@ -58,6 +58,28 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("/^rgba\\(\\s*#?([0-9a-f]{6})([0-9a-f]{2})\\s*\\)$/", qml)
         self.assertIn("/^0x([0-9a-f]{2})([0-9a-f]{6})$/", qml)
 
+    def test_lacuna_log_helper_exists_and_is_adopted(self):
+        # Shared level-gated logger, vendored to both component dirs.
+        for path in [
+            "lacuna.shell-settings/components/LacunaLog.qml",
+            "lacuna.menu/components/LacunaLog.qml",
+        ]:
+            log = read(path)
+            self.assertIn("function warn(message)", log, path)
+            self.assertIn("property int level: 1", log, path)
+            self.assertIn("console.warn(format(message))", log, path)
+        # Adopted by the menu-only services that have real failure sites; their
+        # diagnostics route through log.warn instead of bare console.warn.
+        for path in [
+            "lacuna.menu/services/Theme.qml",
+            "lacuna.menu/services/BarSizeMode.qml",
+        ]:
+            qml = read(path)
+            self.assertIn('import "../components"', qml, path)
+            self.assertIn("LacunaLog {", qml, path)
+            self.assertIn("log.warn(", qml, path)
+            self.assertNotIn("console.warn(", qml, path)
+
     def test_lacuna_panel_surfaces_use_rgba_bar_surface_color(self):
         menu = read("lacuna.menu/menu/MenuWindow.qml")
         shell_settings = read("lacuna.shell-settings/Panel.qml")

@@ -1,9 +1,15 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import "../components"
 
 Item {
   id: root
+
+  LacunaLog {
+    id: log
+    prefix: "lacuna bar size mode"
+  }
 
   property var settingsService: null
   property var commandRunner: null
@@ -187,7 +193,7 @@ Item {
 
       var restored = patchBarValues(shellRaw, snapshot.sizeHorizontal, snapshot.sizeVertical)
       if (!patchedValuesMatch(restored, snapshot.sizeHorizontal, snapshot.sizeVertical)) {
-        console.warn("lacuna bar size mode: restored shell.toml did not yield the snapshot sizes; skipping write")
+        log.warn("restored shell.toml did not yield the snapshot sizes; skipping write")
         return
       }
       savePatch({ barSizeSnapshot: null })
@@ -212,7 +218,7 @@ Item {
 
     var patched = patchBarValues(shellRaw, desired.sizeHorizontal, desired.sizeVertical)
     if (!patchedValuesMatch(patched, desired.sizeHorizontal, desired.sizeVertical)) {
-      console.warn("lacuna bar size mode: patched shell.toml did not yield the desired bar sizes; skipping write")
+      log.warn("patched shell.toml did not yield the desired bar sizes; skipping write")
       return
     }
     writeShell(patched)
@@ -231,7 +237,7 @@ Item {
   function reloadShellTheme(nextShellRaw) {
     if (!commandRunner || !commandRunner.run) return
     if (!Qt.btoa) {
-      console.warn("lacuna bar size mode: Qt.btoa unavailable; shell theme reload skipped")
+      log.warn("Qt.btoa unavailable; shell theme reload skipped")
       return
     }
 

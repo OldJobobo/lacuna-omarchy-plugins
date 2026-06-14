@@ -1,9 +1,15 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import "../components"
 
 Item {
   id: root
+
+  LacunaLog {
+    id: log
+    prefix: "Lacuna Theme"
+  }
 
   readonly property string colorsPath: Quickshell.env("XDG_CONFIG_HOME") ? Quickshell.env("XDG_CONFIG_HOME") + "/omarchy/current/theme/colors.toml" : Quickshell.env("HOME") + "/.config/omarchy/current/theme/colors.toml"
   readonly property string shellPath: Quickshell.env("XDG_CONFIG_HOME") ? Quickshell.env("XDG_CONFIG_HOME") + "/omarchy/current/theme/shell.toml" : Quickshell.env("HOME") + "/.config/omarchy/current/theme/shell.toml"
@@ -156,7 +162,7 @@ Item {
     }
 
     if (raw.length > 0)
-      console.warn("Lacuna Theme: could not parse color value '" + raw + "'; using fallback")
+      log.warn("could not parse color value '" + raw + "'; using fallback")
     return fallbackColor
   }
 
@@ -191,7 +197,7 @@ Item {
     }
 
     if (String(raw || "").trim().length > 0 && Object.keys(next).length === 0)
-      console.warn("Lacuna Theme: colors.toml has content but produced no parseable entries; check its syntax")
+      log.warn("colors.toml has content but produced no parseable entries; check its syntax")
     palette = next
   }
 
@@ -215,7 +221,7 @@ Item {
     }
 
     if (String(raw || "").trim().length > 0 && Object.keys(next).length === 0)
-      console.warn("Lacuna Theme: shell.toml has content but produced no parseable entries; check its syntax")
+      log.warn("shell.toml has content but produced no parseable entries; check its syntax")
     shellValues = next
   }
 
