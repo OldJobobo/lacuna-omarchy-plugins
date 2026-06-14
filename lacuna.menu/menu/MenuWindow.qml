@@ -131,7 +131,6 @@ Item {
   property bool pendingSystemRestartConfirmation: false
   property int pluginStateRevision: 0
   property int hyprWorkspaceRevision: 0
-  property double ignoreFlyoutFocusClearUntil: 0
   readonly property var shellConfig: shell && shell.shellConfig ? shell.shellConfig : ({})
   readonly property var shellBarConfig: shellConfig && shellConfig.bar ? shellConfig.bar : ({})
   readonly property var shellIdleConfig: shellConfig && shellConfig.idle ? shellConfig.idle : ({})
@@ -339,13 +338,22 @@ Item {
   }
 
   function closeFlyouts() {
-    if (Date.now() < ignoreFlyoutFocusClearUntil) return
+    if (flyoutFocusClearHold.running) return
     pendingFlyoutFocus = ""
     panelController.closeActiveFlyout()
   }
 
   function holdFlyoutAfterSettingsActivation() {
-    ignoreFlyoutFocusClearUntil = Date.now() + 900
+    flyoutFocusClearHold.restart()
+  }
+
+  // While this one-shot is running, closeFlyouts() is suppressed so a focus
+  // change triggered by activating a settings control does not immediately
+  // dismiss the flyout it just opened.
+  Timer {
+    id: flyoutFocusClearHold
+    interval: 900
+    repeat: false
   }
 
   function applySidebarDefaultState() {
