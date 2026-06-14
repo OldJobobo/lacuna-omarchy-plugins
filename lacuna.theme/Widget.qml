@@ -135,7 +135,7 @@ Item {
     printErrors: false
     onLoaded: root.loadTheme(text())
     onFileChanged: reload()
-    onLoadFailed: themeRetry.restart()
+    onLoadFailed: root.loadTheme("")
   }
 
   FileView {
@@ -144,21 +144,8 @@ Item {
     watchChanges: true
     printErrors: false
     onLoaded: root.themeName = text().trim()
-    onFileChanged: {
-      reload()
-      themeRetry.restart()
-    }
-    onLoadFailed: themeRetry.restart()
-  }
-
-  Timer {
-    id: themeRetry
-    interval: 500
-    repeat: false
-    onTriggered: {
-      colorsFile.reload()
-      themeNameFile.reload()
-    }
+    onFileChanged: reload()
+    onLoadFailed: root.themeName = ""
   }
 
   Item {

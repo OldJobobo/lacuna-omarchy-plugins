@@ -7,28 +7,25 @@
     "layout": {
       "left": [
         { "id": "lacuna.menu-button" },
-        { "id": "omarchy.spacer", "size": 24 },
         { "id": "lacuna.workspaces", "workspaceCount": 7 },
-        { "id": "omarchy.spacer", "size": 24 },
         { "id": "lacuna.codex-usage" },
         { "id": "lacuna.claude-usage" },
-        { "id": "omarchy.spacer", "size": 24 },
         { "id": "lacuna.mpris" }
       ],
       "center": [
-        { "id": "lacuna.system-update" },
+        { "id": "lacuna.voxtype" },
         {
           "id": "lacuna.clock",
           "format": "ddd d h:mm AP",
           "formatAlt": "dd MMMM 'W'ww yyyy",
-          "verticalFormat": "HH\n—\nmm"
+          "verticalFormat": "HH\n-\nmm"
         },
         { "id": "lacuna.weather" },
+        { "id": "lacuna.system-update" },
         { "id": "lacuna.notifications" },
         { "id": "lacuna.nightlight" },
         { "id": "lacuna.idle-inhibitor" },
-        { "id": "lacuna.screen-recording" },
-        { "id": "lacuna.voxtype" }
+        { "id": "lacuna.screen-recording" }
       ],
       "right": [
         { "id": "lacuna.tray" },

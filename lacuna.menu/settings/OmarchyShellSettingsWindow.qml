@@ -70,8 +70,11 @@ Item {
   }
 
   function toneAccent(tone) {
+    if (tone === "lacuna") return root.accent
+    if (tone === "shell") return root.shellAccent
+    if (tone === "session") return root.sessionAccent
     if (tone === "danger") return root.dangerAccent
-    return root.accent
+    return root.navAccent
   }
 
   function section(label, note, tone) {
@@ -467,7 +470,7 @@ Item {
       foreground: root.foreground
       background: root.background
       muted: root.muted
-      accent: root.accent
+      accent: root.shellAccent
       designTokens: root.designTokens
       onSectionSelected: function(sectionId) {
         if (sectionId !== "") root.currentSection = sectionId
@@ -489,7 +492,7 @@ Item {
         compact: root.compact
         foreground: root.foreground
         muted: root.muted
-        accent: root.accent
+        accent: root.shellAccent
         titleFontFamily: root.itemFontFamily
         bodyFontFamily: root.bodyFontFamily
         designTokens: root.designTokens
@@ -628,6 +631,6 @@ Item {
     compact: root.compact
     foreground: root.foreground
     background: root.background
-    accent: root.accent
+    accent: root.shellAccent
   }
 }

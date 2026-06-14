@@ -20,6 +20,7 @@ Item {
   readonly property string lacunaPath: manifest && manifest.__sourceDir ? manifest.__sourceDir : localPath(Qt.resolvedUrl("."))
   readonly property var shellConfig: shell && shell.shellConfig ? shell.shellConfig : ({})
   readonly property var activeService: service || fallbackService
+  readonly property color surfaceBackground: Color.bar.background
 
   function localPath(url) {
     var value = String(url || "")
@@ -66,6 +67,8 @@ Item {
       if (holdOpen) {
         terminalBody = command + "; status=$?; printf '\\nCommand exited with status %s. Press Enter to close...' \"$status\"; read -r _; exit \"$status\""
       }
+      // Interactive terminal sessions intentionally use a login shell so user
+      // profile setup matches a normal Omarchy terminal launch.
       return "foot --app-id=org.omarchy.terminal --title=" + shellQuote(title || "Lacuna") + " -e bash -lc " + shellQuote(terminalBody)
     }
 
@@ -159,7 +162,7 @@ Item {
     id: window
 
     title: "Lacuna Shell Settings"
-    color: Color.background
+    color: "transparent"
     visible: false
     implicitWidth: Style.space(500)
     implicitHeight: Style.space(620)
@@ -172,7 +175,7 @@ Item {
 
     Rectangle {
       anchors.fill: parent
-      color: Color.background
+      color: root.surfaceBackground
 
       OmarchyShellSettingsWindow {
         id: settingsPanel

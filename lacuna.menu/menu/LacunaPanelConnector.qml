@@ -14,11 +14,13 @@ Item {
 
   readonly property real curveKappa: 0.5522847498
   readonly property real clampedProgress: Math.max(0, Math.min(1, progress))
+  readonly property real surfaceAlpha: Math.max(0, Math.min(1, panelColor.a === undefined ? 1 : panelColor.a))
+  readonly property color solidPanelColor: Qt.rgba(panelColor.r, panelColor.g, panelColor.b, 1)
 
   width: connectorWidth
   height: contentHeight + connectorWidth * 2
   visible: renderable && clampedProgress > 0.001 && connectorWidth > 0 && contentHeight > 0
-  opacity: clampedProgress
+  opacity: clampedProgress * surfaceAlpha
   enabled: false
 
   LacunaRect {
@@ -26,7 +28,7 @@ Item {
     y: root.connectorWidth
     width: parent.width + 1
     height: root.contentHeight
-    color: root.panelColor
+    color: root.solidPanelColor
   }
 
   Shape {
@@ -37,7 +39,7 @@ Item {
     preferredRendererType: Shape.CurveRenderer
 
     ShapePath {
-      fillColor: root.panelColor
+      fillColor: root.solidPanelColor
       strokeWidth: 0
       startX: 0
       startY: root.connectorWidth
@@ -64,7 +66,7 @@ Item {
     preferredRendererType: Shape.CurveRenderer
 
     ShapePath {
-      fillColor: root.panelColor
+      fillColor: root.solidPanelColor
       strokeWidth: 0
       startX: 0
       startY: 0

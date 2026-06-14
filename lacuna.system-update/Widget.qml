@@ -52,7 +52,7 @@ Item {
 
   Process {
     id: updateProc
-    command: ["bash", "-lc", "omarchy update available"]
+    command: ["omarchy", "update", "available"]
     onExited: function(exitCode) { root.updateAvailable = exitCode === 0 }
   }
 

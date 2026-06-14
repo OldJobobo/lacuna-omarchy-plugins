@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.bar",
+  "name": "Lacuna Bar",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Lacuna's primary Omarchy bar host with frame-aware surface ownership.",
+  "kinds": [
+    "bar"
+  ],
+  "entryPoints": {
+    "bar": "Bar.qml"
+  },
+  "lacuna": {
+    "standalone": false,
+    "bundle": "core",
+    "requires": [
+      "lacuna.state",
+      "lacuna.shell-settings",
+      "lacuna.menu"
+    ],
+    "recommends": [
+      "lacuna.menu-button",
+      "lacuna.background-vignette",
+      "lacuna.cinematic-light-overlay",
+      "lacuna.crt-overlay",
+      "lacuna.desktop-clock",
+      "lacuna.theme-preloader",
+      "lacuna.tray",
+      "lacuna.vhs-overlay"
+    ]
+  }
+}

@@ -26,7 +26,7 @@ Item {
     if (settingsService.normalizeBarSizeMode) return settingsService.normalizeBarSizeMode(settingsService.data.barSizeMode, settingsService.data.compact === true)
 
     var mode = String(settingsService.data.barSizeMode || "").toLowerCase()
-    if (mode === "compact" || mode === "full") return mode
+    if (mode === "theme" || mode === "compact" || mode === "full") return mode
     return settingsService.data.compact === true ? "compact" : "full"
   }
 
@@ -45,7 +45,7 @@ Item {
 
   function normalizeMode(mode) {
     var value = String(mode || "").toLowerCase()
-    if (value === "compact" || value === "full") return value
+    if (value === "theme" || value === "compact" || value === "full") return value
     return "full"
   }
 

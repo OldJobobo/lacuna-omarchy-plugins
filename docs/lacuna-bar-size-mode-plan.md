@@ -1,7 +1,6 @@
 # Lacuna Bar Size Mode Plan
 
-Status: updated for the current repository state. This is still a plan; the
-bar-size mode service and UI control are not implemented yet.
+Status: implemented; retained as design notes and manual smoke checklist.
 
 ## Goal
 
@@ -98,8 +97,8 @@ The repo has moved past the original scaffold. The relevant current files are:
     - Example Lacuna runtime settings file. It should be updated with the new
       defaults when implementation lands.
 
-There is no `BarSizeMode.qml` service yet, and no settings UI exposes
-`barSizeMode` yet.
+`BarSizeMode.qml` exists, settings normalization accepts `theme`, `compact`,
+and `full`, and the settings UI exposes the mode as a segment control.
 
 ## Chosen Design
 

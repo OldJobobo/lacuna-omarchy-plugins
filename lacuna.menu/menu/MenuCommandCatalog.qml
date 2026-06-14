@@ -28,6 +28,8 @@ Item {
     if (holdOpen) {
       terminalBody = command + "; status=$?; printf '\\nCommand exited with status %s. Press Enter to close...' \"$status\"; read -r _; exit \"$status\""
     }
+    // Interactive terminal sessions intentionally use a login shell so user
+    // profile setup matches a normal Omarchy terminal launch.
     return "foot --app-id=org.omarchy.terminal --title=" + shellQuote(title || "Lacuna") + " -e bash -lc " + shellQuote(terminalBody)
   }
 

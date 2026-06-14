@@ -18,6 +18,8 @@ PanelWindow {
   color: "transparent"
   implicitWidth: horizontal ? 0 : reserveSize
   implicitHeight: horizontal ? reserveSize : 0
+  // Callers may share a base namespace for one frame; the edge suffix keeps
+  // each reserve layer unique when all four edges are active.
   WlrLayershell.namespace: layerNamespace + "-" + edge
   WlrLayershell.layer: WlrLayer.Top
   WlrLayershell.exclusionMode: visible ? ExclusionMode.Auto : ExclusionMode.Ignore

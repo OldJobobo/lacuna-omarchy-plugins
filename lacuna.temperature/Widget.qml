@@ -46,7 +46,7 @@ Item {
   }
 
   function refresh() {
-    tempProc.command = ["bash", "-lc", temperatureCommand]
+    tempProc.command = ["bash", "-c", temperatureCommand]
     if (!tempProc.running) tempProc.running = true
   }
 

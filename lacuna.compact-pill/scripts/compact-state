@@ -16,7 +16,7 @@ BAR_SIZE_STATE = CONFIG_HOME / "omarchy" / "plugins" / "lacuna.bar-size-pill" / 
 
 def load_settings():
     if not SETTINGS_PATH.exists():
-        return {"version": 1, "colorProfile": "semantic", "compact": False, "barSizeMode": "full", "sizeTransition": {"holdCompact": False, "holdUntil": 0}, "sidebar": {"collapsed": False, "exclusive": True, "cornerPieces": True}}
+        return {"version": 1, "colorProfile": "semantic", "compact": False, "barSizeMode": "theme", "sizeTransition": {"holdCompact": False, "holdUntil": 0}, "sidebar": {"collapsed": False, "exclusive": True, "cornerPieces": True}}
     try:
         data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
     except Exception:
@@ -27,7 +27,7 @@ def load_settings():
     if data.get("colorProfile") not in ("semantic", "colorful"):
         data["colorProfile"] = "semantic"
     compact_fallback = bool(data.get("compact", False))
-    if data.get("barSizeMode") not in ("compact", "full"):
+    if data.get("barSizeMode") not in ("theme", "compact", "full"):
         data["barSizeMode"] = "compact" if compact_fallback else "full"
     data["compact"] = data["barSizeMode"] == "compact"
     sidebar = data.setdefault("sidebar", {})
@@ -48,19 +48,20 @@ def save_settings(data):
 
 
 def emit(data):
-    compact = data.get("barSizeMode") == "compact"
+    mode = data.get("barSizeMode") if data.get("barSizeMode") in ("theme", "compact", "full") else "full"
+    compact = mode == "compact"
     print(json.dumps({
         "compact": compact,
-        "tooltip": "<b>Lacuna Size</b><br/>Mode: " + ("compact" if compact else "full"),
+        "tooltip": "<b>Lacuna Size</b><br/>Mode: " + mode,
     }, separators=(",", ":")))
 
 
 def emit_from_bar_size_state(payload):
-    mode = payload.get("mode") if payload.get("mode") in ("compact", "full") else "full"
+    mode = payload.get("mode") if payload.get("mode") in ("theme", "compact", "full") else "full"
     compact = mode == "compact"
     print(json.dumps({
         "compact": compact,
-        "tooltip": "<b>Lacuna Size</b><br/>Mode: " + ("compact" if compact else "full"),
+        "tooltip": "<b>Lacuna Size</b><br/>Mode: " + mode,
     }, separators=(",", ":")))
 
 

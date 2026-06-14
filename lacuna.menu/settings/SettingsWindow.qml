@@ -183,6 +183,14 @@ Item {
     return root.registry.frameMode === "fullframe" ? "On" : "Off"
   }
 
+  function frameReserveModeName() {
+    return root.registry.frameReserveModeName ? root.registry.frameReserveModeName() : "Auto"
+  }
+
+  function frameReserveModeHint() {
+    return root.registry.frameReserveModeHint ? root.registry.frameReserveModeHint() : "Collapse extra frame reserve when the focused workspace is gapsless"
+  }
+
   function sidebarModeName() {
     return root.registry.sidebarExclusive ? "Overlay" : "Docked"
   }
@@ -196,6 +204,7 @@ Item {
   }
 
   function densityName() {
+    if (root.registry.barSizeMode === "theme") return "Theme"
     return root.registry.barSizeMode === "compact" ? "Compact" : "Full"
   }
 
@@ -252,6 +261,11 @@ Item {
           { value: "fullframe", label: "On" }
         ], root.registry.frameMode, "set-frame-mode-"),
         row("photo", "Frame Shadow", root.registry.frameShadow ? "Apply one cohesive shadow pass to the frame layer" : "Keep frame pieces fill-only", root.registry.frameShadow ? "On" : "Off", "lacuna", "toggle-frame-shadow", "toggle", root.registry.frameShadow),
+        row("density-normal", "Frame Reserve", frameReserveModeHint(), frameReserveModeName(), "lacuna", "", "segments", false, [
+          { value: "auto", label: "Auto" },
+          { value: "comfort", label: "Comfort" },
+          { value: "flush", label: "Flush" }
+        ], root.registry.frameReserveMode, "set-frame-reserve-mode-"),
       ].concat(backgroundEffectRows())
     }
 
@@ -259,6 +273,7 @@ Item {
       return [
         section("Sidebar", "Keep launcher behavior separate from Lacuna settings.", "lacuna"),
         row(root.registry.compact ? "density-compact" : "density-normal", "Lacuna Size", barSizeModeHint(), barSizeModeName(), "lacuna", "", "segments", false, [
+          { value: "theme", label: "Theme" },
           { value: "compact", label: "Compact" },
           { value: "full", label: "Full" }
         ], root.registry.barSizeMode, "set-bar-size-mode-"),

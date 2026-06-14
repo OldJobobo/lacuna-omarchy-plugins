@@ -25,6 +25,8 @@ Item {
   property bool desiredNightlightKnown: false
   property bool currentNightlightEnabled: false
   property int currentNightlightTemperature: 6000
+  property int warmNightlightTemperature: 4000
+  property int neutralNightlightTemperature: 6000
   property bool haveCurrentNightlight: false
   property string lastStatus: "starting"
   property string lastError: ""
@@ -65,6 +67,9 @@ Item {
     desiredIdleEnabled = data.idleEnabled === false ? false : true
     desiredNightlightKnown = typeof data.nightlightEnabled === "boolean"
     desiredNightlightEnabled = desiredNightlightKnown ? data.nightlightEnabled === true : false
+    if (typeof data.nightlightTemperature === "number" && data.nightlightTemperature > 0) {
+      noteNightlightTemperature(data.nightlightTemperature, data.nightlightTemperature < 5000)
+    }
 
     loaded = true
     lastStatus = "loaded"
@@ -84,14 +89,14 @@ Item {
   function requestIdleStatus(reason) {
     if (idleStatusProc.running) return
     idleStatusProc.reason = String(reason || "poll")
-    idleStatusProc.command = ["bash", "-lc", "omarchy shell idle status 2>/dev/null"]
+    idleStatusProc.command = ["bash", "-c", "omarchy shell idle status 2>/dev/null"]
     idleStatusProc.running = true
   }
 
   function requestNightlightStatus(reason) {
     if (nightlightStatusProc.running) return
     nightlightStatusProc.reason = String(reason || "poll")
-    nightlightStatusProc.command = ["bash", "-lc", "omarchy toggle nightlight --status 2>/dev/null"]
+    nightlightStatusProc.command = ["bash", "-c", "omarchy toggle nightlight --status 2>/dev/null"]
     nightlightStatusProc.running = true
   }
 
@@ -134,7 +139,9 @@ Item {
 
     var enabled = data.enabled === true
     currentNightlightEnabled = enabled
-    currentNightlightTemperature = typeof data.temperature === "number" ? data.temperature : currentNightlightTemperature
+    if (typeof data.temperature === "number" && data.temperature > 0) {
+      noteNightlightTemperature(data.temperature, enabled)
+    }
     haveCurrentNightlight = true
 
     if (!nightlightRestoreComplete) {
@@ -166,7 +173,7 @@ Item {
     lastStatus = "applying"
     idleApplyProc.expected = enabled === true
     idleApplyProc.reason = String(reason || "manual")
-    idleApplyProc.command = ["bash", "-lc", "omarchy shell idle " + (enabled ? "enable" : "disable") + " 2>/dev/null"]
+    idleApplyProc.command = ["bash", "-c", "omarchy shell idle " + (enabled ? "enable" : "disable") + " 2>/dev/null"]
     idleApplyProc.running = true
   }
 
@@ -176,9 +183,32 @@ Item {
     lastStatus = "applying"
     nightlightApplyProc.expected = enabled === true
     nightlightApplyProc.reason = String(reason || "manual")
-    var temp = enabled ? "4000" : "6000"
-    nightlightApplyProc.command = ["bash", "-lc", "if ! pgrep -x hyprsunset >/dev/null; then setsid uwsm-app -- hyprsunset >/dev/null 2>&1 & sleep 1; fi; hyprctl hyprsunset temperature " + temp + " >/dev/null 2>&1; omarchy shell -q omarchy.indicators refresh"]
+    nightlightApplyProc.appliedTemperature = targetNightlightTemperature(enabled)
+    var temp = String(nightlightApplyProc.appliedTemperature)
+    nightlightApplyProc.command = ["bash", "-c", "if ! pgrep -x hyprsunset >/dev/null; then setsid uwsm-app -- hyprsunset >/dev/null 2>&1 & sleep 1; fi; hyprctl hyprsunset temperature " + temp + " >/dev/null 2>&1; omarchy shell -q omarchy.indicators refresh"]
     nightlightApplyProc.running = true
+  }
+
+  function noteNightlightTemperature(value, enabled) {
+    var temp = Math.round(Number(value))
+    if (!isFinite(temp) || temp <= 0) return
+
+    currentNightlightTemperature = temp
+    if (enabled === true || temp < 5000) {
+      warmNightlightTemperature = temp
+    } else {
+      neutralNightlightTemperature = temp
+    }
+  }
+
+  function targetNightlightTemperature(enabled) {
+    if (enabled) {
+      if (currentNightlightTemperature > 0 && currentNightlightTemperature < 5000) return currentNightlightTemperature
+      return warmNightlightTemperature > 0 ? warmNightlightTemperature : 4000
+    }
+
+    if (currentNightlightTemperature >= 5000) return currentNightlightTemperature
+    return neutralNightlightTemperature >= 5000 ? neutralNightlightTemperature : 6000
   }
 
   function setManagedToggles(idle, nightlight) {
@@ -220,7 +250,7 @@ Item {
       updatedAt: lastUpdatedAt || timestamp()
     }, null, 2) + "\n"
 
-    saveProc.command = ["bash", "-lc", "mkdir -p " + quote(stateDir)
+    saveProc.command = ["bash", "-c", "mkdir -p " + quote(stateDir)
       + "; tmp=$(mktemp); printf %s " + quote(json) + " > \"$tmp\"; mv \"$tmp\" " + quote(stateFile)]
     saveProc.running = true
   }
@@ -299,12 +329,13 @@ Item {
     id: nightlightApplyProc
     property bool expected: true
     property string reason: "manual"
+    property int appliedTemperature: 6000
 
     onExited: function(exitCode) {
       root.applyingNightlight = false
       if (exitCode === 0) {
         root.currentNightlightEnabled = expected
-        root.currentNightlightTemperature = expected ? 4000 : 6000
+        root.noteNightlightTemperature(nightlightApplyProc.appliedTemperature, expected)
         root.haveCurrentNightlight = true
         root.desiredNightlightKnown = true
         root.nightlightRestoreComplete = true

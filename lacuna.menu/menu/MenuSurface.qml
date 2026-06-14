@@ -20,6 +20,8 @@ Item {
   property int joinRadius: 18
   property int connectorOverlap: 33
   property int bodyRightInset: joinRadius
+  property bool fullFrame: false
+  property int frameThickness: 8
   property bool cornerPieces: true
   property bool openFromRight: false
   property color panelColor: "#101315"
@@ -29,6 +31,9 @@ Item {
 
   readonly property int bodyTop: barBottomY
   readonly property int joinTop: bodyTop - 1
+  readonly property int bottomJoinTop: Math.max(0, surface.height - frameThickness - bodyRightInset)
+  readonly property real surfaceAlpha: Math.max(0, Math.min(1, panelColor.a === undefined ? 1 : panelColor.a))
+  readonly property color solidPanelColor: Qt.rgba(panelColor.r, panelColor.g, panelColor.b, 1)
   readonly property real curveKappa: 0.5522847498
 
   width: panelWidth + bodyRightInset
@@ -59,15 +64,16 @@ Item {
 
       visible: root.cornerPieces && root.bodyRightInset > 0
       width: root.bodyRightInset
-      height: Math.max(0, surface.height - root.joinTop)
+      height: Math.max(0, (root.fullFrame ? root.bottomJoinTop : surface.height) - root.joinTop)
       x: root.panelWidth
       y: root.joinTop
       asynchronous: false
       antialiasing: true
+      opacity: root.surfaceAlpha
       preferredRendererType: Shape.CurveRenderer
 
       ShapePath {
-        fillColor: root.panelColor
+        fillColor: root.solidPanelColor
         strokeWidth: 0
         startX: 0
         startY: 0
@@ -91,6 +97,44 @@ Item {
         PathLine {
           x: 0
           y: 0
+        }
+      }
+    }
+
+    Shape {
+      id: bottomFrameJoinShape
+
+      visible: root.fullFrame && root.cornerPieces && root.bodyRightInset > 0
+      width: root.bodyRightInset
+      height: root.bodyRightInset
+      x: root.panelWidth
+      y: Math.max(0, surface.height - root.frameThickness - root.bodyRightInset)
+      asynchronous: false
+      antialiasing: true
+      opacity: root.surfaceAlpha
+      preferredRendererType: Shape.CurveRenderer
+
+      ShapePath {
+        fillColor: root.solidPanelColor
+        strokeWidth: 0
+        startX: 0
+        startY: root.bodyRightInset
+
+        PathLine {
+          x: root.bodyRightInset
+          y: root.bodyRightInset
+        }
+        PathCubic {
+          x: 0
+          y: 0
+          control1X: root.bodyRightInset * (1 - root.curveKappa)
+          control1Y: root.bodyRightInset
+          control2X: 0
+          control2Y: root.bodyRightInset * (1 - root.curveKappa)
+        }
+        PathLine {
+          x: 0
+          y: root.bodyRightInset
         }
       }
     }

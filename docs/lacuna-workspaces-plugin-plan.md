@@ -1,5 +1,7 @@
 # Lacuna Workspaces Plugin Plan
 
+Status: done
+
 ## Goal
 
 Add an Omarchy bar-widget plugin that recreates the original Lacuna workspace

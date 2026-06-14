@@ -1,5 +1,7 @@
 # Lacuna Omarchy Shell Refactor Plan
 
+Status: superseded by the current plugin-suite architecture
+
 ## Goal
 
 Move Lacuna from a standalone Quickshell experiment into the future

@@ -13,6 +13,7 @@ FIXTURE = ROOT / "tests" / "fixtures" / "full-settings.json"
 BAR_SIZE_STATE = ROOT / "lacuna.bar-size-pill" / "scripts" / "bar-size-state"
 COMPACT_STATE = ROOT / "lacuna.compact-pill" / "scripts" / "compact-state"
 REFRESH_THEME_BACKGROUND = ROOT / "lacuna.theme-preloader" / "scripts" / "refresh-theme-background.sh"
+SHELL_SETTINGS_STATE = ROOT / "lacuna.shell-settings" / "scripts" / "omarchy-shell-settings-state.py"
 
 PRESERVED_KEYS = [
     "customQuickLaunchApps",
@@ -91,6 +92,15 @@ def assert_preserved(testcase, before, after):
 
 
 class StateScriptTests(unittest.TestCase):
+    def test_shell_settings_state_uses_direct_subprocess_capture(self):
+        script = SHELL_SETTINGS_STATE.read_text(encoding="utf-8")
+
+        self.assertIn("shlex.split(command)", script)
+        self.assertIn("stderr=subprocess.DEVNULL", script)
+        self.assertNotIn('["bash", "-lc"', script)
+        self.assertNotIn("NamedTemporaryFile", script)
+        self.assertIn("int(digits) < 5000", script)
+
     def test_bar_size_state_preserves_user_runtime_state_on_toggle(self):
         with tempfile.TemporaryDirectory() as tmp:
             config_home, omarchy_path, settings_path, before = seed_config(Path(tmp))
@@ -104,6 +114,30 @@ class StateScriptTests(unittest.TestCase):
             self.assertIs(after["compact"], True)
             self.assertGreater(after["sizeTransition"]["holdUntil"], 0)
             assert_preserved(self, before, after)
+
+    def test_bar_size_state_restores_theme_snapshot(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home, omarchy_path, settings_path, before = seed_config(Path(tmp))
+            shell_path = config_home / "omarchy" / "current" / "theme" / "shell.toml"
+
+            compact_result = run_script(BAR_SIZE_STATE, "compact", config_home, omarchy_path)
+            compact_payload = json.loads(compact_result.stdout)
+            self.assertEqual(compact_payload["mode"], "compact")
+            self.assertIn("size-horizontal = 26", shell_path.read_text(encoding="utf-8"))
+            self.assertIn("size-vertical = 28", shell_path.read_text(encoding="utf-8"))
+
+            theme_result = run_script(BAR_SIZE_STATE, "theme", config_home, omarchy_path)
+            theme_payload = json.loads(theme_result.stdout)
+            after = read_json(settings_path)
+            shell = shell_path.read_text(encoding="utf-8")
+
+        self.assertEqual(theme_payload["mode"], "theme")
+        self.assertEqual(after["barSizeMode"], "theme")
+        self.assertIs(after["compact"], False)
+        self.assertIsNone(after["barSizeSnapshot"])
+        self.assertIn("size-horizontal = 30", shell)
+        self.assertIn("size-vertical = 32", shell)
+        assert_preserved(self, before, after)
 
     def test_compact_state_preserves_user_runtime_state_without_delegate(self):
         with tempfile.TemporaryDirectory() as tmp:

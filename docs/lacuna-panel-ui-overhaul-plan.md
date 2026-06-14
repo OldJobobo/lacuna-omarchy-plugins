@@ -1,5 +1,7 @@
 # Lacuna Panel UI Overhaul Plan
 
+Status: active
+
 ## Goal
 
 Overhaul Lacuna's sidebar and attached flyout control so panel lifecycle, rendering, input masking, focus handling, and animation are driven by one coherent transition model. The public Omarchy plugin contract remains unchanged: `open(payloadJson)` and `close()`.

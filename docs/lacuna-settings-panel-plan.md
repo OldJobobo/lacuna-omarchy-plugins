@@ -1,5 +1,7 @@
 # Lacuna Settings Panel Plan
 
+Status: done
+
 ## Goal
 
 Move Lacuna settings out of the main sidebar item flow and into a dedicated

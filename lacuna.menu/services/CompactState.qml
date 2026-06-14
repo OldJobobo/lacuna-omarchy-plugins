@@ -55,7 +55,7 @@ Item {
 
   function normalizeMode(mode, compactFallback) {
     var value = String(mode || "").toLowerCase()
-    if (value === "compact" || value === "full") return value
+    if (value === "theme" || value === "compact" || value === "full") return value
     return compactFallback === true ? "compact" : "full"
   }
 

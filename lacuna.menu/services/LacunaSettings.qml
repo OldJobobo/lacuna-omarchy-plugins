@@ -12,6 +12,11 @@ Item {
   property var data: defaultData()
   property var lastLoadedData: defaultData()
   property var pendingSave: null
+  property bool pendingSaveTouchedQuickLaunch: false
+  property string queuedSavePayload: ""
+  property string lastWrittenPayload: ""
+  property bool writeInFlight: false
+  property int suppressFileReloads: 0
   property bool hasLoaded: false
 
   function defaultData() {
@@ -20,7 +25,7 @@ Item {
       designStyle: "lacuna",
       colorProfile: "semantic",
       compact: false,
-      barSizeMode: "full",
+      barSizeMode: "theme",
       quickLaunchLayout: "list",
       dailyLaunchLayout: "list",
       shortcutsLayout: "list",
@@ -78,6 +83,7 @@ Item {
       },
       frame: {
         mode: "off",
+        reserveMode: "auto",
         shadow: false,
         thickness: 8,
         radius: 14,
@@ -117,6 +123,7 @@ Item {
       next.backgroundVignette = normalizeBackgroundVignette(value.backgroundVignette || value.bgVignette || value.vignette)
       if (value.frame && typeof value.frame === "object") {
         next.frame.mode = normalizeFrameMode(value.frame.mode)
+        next.frame.reserveMode = normalizeFrameReserveMode(value.frame.reserveMode)
         next.frame.shadow = value.frame.shadow === true
         next.frame.thickness = boundedInt(value.frame.thickness, 8, 2, 24)
         next.frame.radius = boundedInt(value.frame.radius, 14, 0, 32)
@@ -230,6 +237,12 @@ Item {
     return "off"
   }
 
+  function normalizeFrameReserveMode(value) {
+    var mode = String(value || "").toLowerCase()
+    if (mode === "comfort" || mode === "flush") return mode
+    return "auto"
+  }
+
   function normalizeShadowDirection(value) {
     var direction = String(value || "").toLowerCase()
     var valid = {
@@ -261,7 +274,7 @@ Item {
 
   function normalizeBarSizeMode(value, compactFallback) {
     var mode = String(value || "").toLowerCase()
-    if (mode === "compact" || mode === "full") return mode
+    if (mode === "theme" || mode === "compact" || mode === "full") return mode
     return compactFallback === true ? "compact" : "full"
   }
 
@@ -368,30 +381,70 @@ Item {
   }
 
   function load() {
-    if (!loadProc.running) {
-      loadProc.output = ""
-      loadProc.running = true
+    settingsFileView.reload()
+  }
+
+  function applyLoadedText(raw) {
+    var loaded
+    try {
+      loaded = normalize(JSON.parse(String(raw || "{}")))
+    } catch (e) {
+      loaded = defaultData()
+    }
+
+    data = loaded
+    lastLoadedData = data
+    hasLoaded = true
+    loaded()
+    if (pendingSave) {
+      var queuedTouchedQuickLaunch = pendingSaveTouchedQuickLaunch
+      var queued = mergePendingSave(lastLoadedData, pendingSave, queuedTouchedQuickLaunch)
+      pendingSave = null
+      pendingSaveTouchedQuickLaunch = false
+      save(queued, queuedTouchedQuickLaunch)
     }
   }
 
-  function save(next) {
+  function writePayload(payload) {
+    if (writeInFlight) {
+      queuedSavePayload = payload
+      return
+    }
+
+    writeInFlight = true
+    lastWrittenPayload = payload
+    suppressFileReloads += 1
+    settingsFileView.setText(payload)
+    writeInFlight = false
+
+    if (queuedSavePayload !== "" && queuedSavePayload !== payload) {
+      var nextPayload = queuedSavePayload
+      queuedSavePayload = ""
+      writePayload(nextPayload)
+    } else {
+      queuedSavePayload = ""
+    }
+  }
+
+  function save(next, touchedQuickLaunch) {
     if (!hasLoaded) {
       pendingSave = normalize(next)
+      pendingSaveTouchedQuickLaunch = pendingSaveTouchedQuickLaunch || touchedQuickLaunch === true
       load()
       return
     }
 
     data = normalize(next)
     var json = JSON.stringify(data, null, 2) + "\n"
-    saveProc.command = ["bash", "-lc", "mkdir -p " + quote(configDir) + "; tmp=$(mktemp); printf %s " + quote(json) + " > \"$tmp\"; mv \"$tmp\" " + quote(settingsFile)]
-    saveProc.running = true
+    writePayload(json)
   }
 
-  function mergePendingSave(base, queued) {
+  function mergePendingSave(base, queued, queuedTouchedQuickLaunch) {
     var merged = normalize(queued)
     var loadedBase = normalize(base)
 
-    if ((!merged.customQuickLaunchApps || merged.customQuickLaunchApps.length === 0)
+    if (queuedTouchedQuickLaunch !== true
+        && (!merged.customQuickLaunchApps || merged.customQuickLaunchApps.length === 0)
         && loadedBase.customQuickLaunchApps && loadedBase.customQuickLaunchApps.length > 0) {
       merged.customQuickLaunchApps = loadedBase.customQuickLaunchApps
       merged.customQuickLaunchNames = loadedBase.customQuickLaunchNames || {}
@@ -400,51 +453,23 @@ Item {
     return merged
   }
 
-  function quote(value) {
-    return "'" + String(value).replace(/'/g, "'\\''") + "'"
-  }
-
   Component.onCompleted: load()
 
-  Process {
-    id: loadProc
-    property string output: ""
-    command: ["bash", "-lc", "cat " + root.quote(root.settingsFile) + " 2>/dev/null || true"]
-
-    stdout: SplitParser {
-      onRead: function(chunk) {
-        loadProc.output += chunk
-      }
-    }
-
-    onExited: {
-      try {
-        root.data = root.normalize(JSON.parse(loadProc.output || "{}"))
-      } catch (e) {
-        root.data = root.defaultData()
-      }
-      root.lastLoadedData = root.data
-      root.hasLoaded = true
-      root.loaded()
-      if (root.pendingSave) {
-        var queued = root.mergePendingSave(root.lastLoadedData, root.pendingSave)
-        root.pendingSave = null
-        root.save(queued)
-      }
-    }
-  }
-
-  Process {
-    id: saveProc
-  }
-
   FileView {
-    id: settingsWatcher
+    id: settingsFileView
 
     path: root.settingsFile
     watchChanges: true
+    atomicWrites: true
     printErrors: false
-    onFileChanged: root.load()
-    onLoadFailed: {}
+    onLoaded: root.applyLoadedText(text())
+    onFileChanged: {
+      if (root.suppressFileReloads > 0) {
+        root.suppressFileReloads -= 1
+      } else {
+        reload()
+      }
+    }
+    onLoadFailed: root.applyLoadedText("{}")
   }
 }

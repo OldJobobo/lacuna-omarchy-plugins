@@ -1,5 +1,7 @@
 # Beginner Guide: Make a Tiny Omarchy Topbar Plugin
 
+Status: reference
+
 This makes the smallest useful Omarchy topbar plugin: a widget that shows
 `hello` in the bar. No CPU stats, scripts, assets, or Lacuna styling.
 
@@ -184,4 +186,3 @@ Restart the shell after changing QML:
 ```bash
 omarchy restart shell
 ```
-

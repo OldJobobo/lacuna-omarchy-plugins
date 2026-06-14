@@ -32,8 +32,8 @@ Item {
   }
 
   function refresh() {
-    if (!cpuProc.running) cpuProc.running = true
-    if (!memProc.running) memProc.running = true
+    cpuFile.reload()
+    memFile.reload()
     if (!diskProc.running) diskProc.running = true
   }
 
@@ -94,22 +94,20 @@ Item {
     onTriggered: root.refresh()
   }
 
-  Process {
-    id: cpuProc
-    command: ["bash", "-lc", "head -n1 /proc/stat"]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: root.parseCpu(text)
-    }
+  FileView {
+    id: cpuFile
+    path: "/proc/stat"
+    watchChanges: false
+    printErrors: false
+    onLoaded: root.parseCpu(text())
   }
 
-  Process {
-    id: memProc
-    command: ["bash", "-lc", "head -n3 /proc/meminfo"]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: root.parseMemory(text)
-    }
+  FileView {
+    id: memFile
+    path: "/proc/meminfo"
+    watchChanges: false
+    printErrors: false
+    onLoaded: root.parseMemory(text())
   }
 
   Process {

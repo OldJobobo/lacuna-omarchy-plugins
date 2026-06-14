@@ -12,31 +12,18 @@ Item {
   readonly property string currentView: stack.length > 0 ? stack[stack.length - 1] : "main"
 
   function load() {
-    if (!loadProc.running) {
-      loadProc.output = ""
-      loadProc.running = true
-    }
+    stateFileView.reload()
   }
 
   function save() {
-    saveProc.command = ["bash", "-lc", saveCommand()]
-    saveProc.running = true
+    stateFileView.setText(savePayload())
   }
 
-  function saveCommand() {
+  function savePayload() {
     // Open/closed is runtime-only. Persisting "open" can make the plugin host
     // revive the sidebar on a shell restart, sometimes on the wrong monitor.
     var lines = ["closed"].concat(stack)
-    var commands = []
-    for (var i = 0; i < lines.length; i++) {
-      commands.push("echo " + quote(lines[i]))
-    }
-
-    return "mkdir -p " + quote(stateDir) + "; { " + commands.join("; ") + "; } > " + quote(stateFile)
-  }
-
-  function quote(value) {
-    return "'" + String(value).replace(/'/g, "'\\''") + "'"
+    return lines.join("\n") + "\n"
   }
 
   function show() {
@@ -73,19 +60,15 @@ Item {
 
   Component.onCompleted: load()
 
-  Process {
-    id: loadProc
-    property string output: ""
-    command: ["bash", "-lc", "cat " + root.quote(root.stateFile) + " 2>/dev/null || { echo closed; echo main; }"]
+  FileView {
+    id: stateFileView
 
-    stdout: SplitParser {
-      onRead: function(data) {
-        loadProc.output += data + "\n"
-      }
-    }
-
-    onExited: {
-      var lines = loadProc.output.trim().split(/\r?\n/)
+    path: root.stateFile
+    watchChanges: false
+    atomicWrites: true
+    printErrors: false
+    onLoaded: {
+      var lines = text().trim().split(/\r?\n/)
       var wasOpen = root.open
       var restoredStack = lines.slice(1).filter(function(view) {
         return view !== ""
@@ -94,9 +77,8 @@ Item {
       root.stack = restoredStack.length > 0 ? restoredStack : ["main"]
       root.open = wasOpen
     }
-  }
-
-  Process {
-    id: saveProc
+    onLoadFailed: {
+      root.stack = ["main"]
+    }
   }
 }

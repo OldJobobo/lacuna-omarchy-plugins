@@ -78,7 +78,7 @@ Item {
 
   Process {
     id: statusProc
-    command: ["bash", "-lc", "omarchy network status"]
+    command: ["omarchy", "network", "status"]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: root.updateNetwork(text)

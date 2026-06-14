@@ -8,6 +8,7 @@ Item {
   property string currentCommand: ""
   property string stdoutText: ""
   property string stderrText: ""
+  property var failureQueue: []
 
   function quote(value) {
     return "'" + String(value).replace(/'/g, "'\\''") + "'"
@@ -16,7 +17,7 @@ Item {
   function failureText() {
     var detail = stderrText.trim()
     if (detail === "") detail = stdoutText.trim()
-    if (detail === "") detail = currentCommand
+    if (detail === "") detail = "Command exited without output."
 
     return detail.length > 220 ? detail.substring(0, 217) + "..." : detail
   }
@@ -29,7 +30,7 @@ Item {
   }
 
   function shouldDetach(command) {
-    return command.indexOf("foot ") !== 0 && command.indexOf("xdg-terminal-exec ") !== 0
+    return command.indexOf("foot ") === 0 || command.indexOf("xdg-terminal-exec ") === 0
   }
 
   function drain() {
@@ -41,8 +42,22 @@ Item {
     stdoutText = ""
     stderrText = ""
 
-    proc.command = shouldDetach(command) ? ["setsid", "-f", "bash", "-lc", command] : ["bash", "-lc", command]
+    proc.command = shouldDetach(command) ? ["setsid", "-f", "bash", "-c", command] : ["bash", "-c", command]
     proc.running = true
+  }
+
+  function notifyFailure(message) {
+    failureQueue = failureQueue.concat([message])
+    drainFailures()
+  }
+
+  function drainFailures() {
+    if (failProc.running || failureQueue.length === 0) return
+
+    var message = failureQueue[0]
+    failureQueue = failureQueue.slice(1)
+    failProc.command = ["notify-send", "Lacuna command failed", message]
+    failProc.running = true
   }
 
   Process {
@@ -62,9 +77,9 @@ Item {
 
     onExited: function(exitCode, exitStatus) {
       if (exitCode !== 0) {
-        console.warn("lacuna command failed:", exitCode, root.currentCommand, root.failureText())
-        failProc.command = ["notify-send", "Lacuna command failed", root.failureText()]
-        failProc.running = true
+        var message = root.failureText()
+        console.warn("lacuna command failed:", exitCode, message)
+        root.notifyFailure(message)
       }
 
       root.drain()
@@ -73,5 +88,7 @@ Item {
 
   Process {
     id: failProc
+
+    onExited: root.drainFailures()
   }
 }

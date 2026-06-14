@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import filecmp
 import json
 import os
 import shutil
@@ -17,6 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = "lacuna"
 LEGACY_PLUGIN = "lacuna.compact-pill"
+BACKUPS_TO_KEEP = 2
 OMARCHY_NATIVE_REPLACEMENT_PLUGINS = {
     "lacuna.audio",
     "lacuna.bluetooth",
@@ -35,8 +37,52 @@ OMARCHY_NATIVE_REPLACEMENT_PLUGINS = {
     "lacuna.workspaces",
 }
 
+LACUNA_BAR_LAYOUT = {
+    "left": [
+        {"id": "lacuna.menu-button"},
+        {"id": "lacuna.workspaces", "workspaceCount": 7},
+        {"id": "lacuna.codex-usage"},
+        {"id": "lacuna.claude-usage"},
+        {"id": "lacuna.mpris"},
+    ],
+    "center": [
+        {"id": "lacuna.voxtype"},
+        {
+            "id": "lacuna.clock",
+            "format": "ddd d h:mm AP",
+            "formatAlt": "dd MMMM 'W'ww yyyy",
+            "verticalFormat": "HH\n-\nmm",
+        },
+        {"id": "lacuna.weather"},
+        {"id": "lacuna.system-update"},
+        {"id": "lacuna.notifications"},
+        {"id": "lacuna.nightlight"},
+        {"id": "lacuna.idle-inhibitor"},
+        {"id": "lacuna.screen-recording"},
+    ],
+    "right": [
+        {"id": "lacuna.tray"},
+        {"id": "lacuna.theme"},
+        {"id": "lacuna.wallpaper"},
+        {"id": "lacuna.bluetooth"},
+        {"id": "lacuna.network"},
+        {"id": "lacuna.audio"},
+        {"id": "lacuna.power"},
+        {"id": "lacuna.system-stats"},
+        {"id": "lacuna.temperature"},
+        {"id": "lacuna.bar-size-pill"},
+    ],
+}
+
+LACUNA_BAR_LAYOUT_PLUGIN_IDS = {
+    item["id"]
+    for section in LACUNA_BAR_LAYOUT.values()
+    for item in section
+}
+
 PROFILE_IDS = {
     "core": [
+        "lacuna.bar",
         "lacuna.state",
         "lacuna.shell-settings",
         "lacuna.menu",
@@ -48,12 +94,14 @@ PROFILE_IDS = {
         "lacuna.theme-preloader",
     ],
     "native": [
+        "lacuna.bar",
         "lacuna.menu-button",
         "lacuna.workspaces",
         "lacuna.codex-usage",
         "lacuna.claude-usage",
         "lacuna.mpris",
         "lacuna.system-update",
+        "lacuna.indicators",
         "lacuna.clock",
         "lacuna.weather",
         "lacuna.notifications",
@@ -210,6 +258,61 @@ def installed_lacuna_plugins(plugins: dict[str, Plugin]) -> list[str]:
     return ordered(set(ids), plugins)
 
 
+def manifest_version(path: Path) -> str:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return "unknown"
+    value = data.get("version")
+    return str(value) if value else "unknown"
+
+
+def repo_plugin_version(plugin_id: str) -> str:
+    return manifest_version(ROOT / plugin_id / "manifest.json")
+
+
+def installed_plugin_version(plugin_id: str) -> str:
+    return manifest_version(plugins_dir() / plugin_id / "manifest.json")
+
+
+def relative_payload_paths(base: Path) -> set[Path]:
+    paths: set[Path] = set()
+    if not base.exists():
+        return paths
+    for root, dirs, files in os.walk(base):
+        dirs[:] = [name for name in dirs if name != "__pycache__"]
+        root_path = Path(root)
+        for name in files:
+            if name == "__pycache__":
+                continue
+            paths.add((root_path / name).relative_to(base))
+    return paths
+
+
+def plugin_source_differs(plugin_id: str) -> bool:
+    source = ROOT / plugin_id
+    target = plugins_dir() / plugin_id
+    if not source.is_dir() or not target.is_dir():
+        return True
+
+    source_paths = relative_payload_paths(source)
+    target_paths = relative_payload_paths(target)
+    if source_paths != target_paths:
+        return True
+
+    for relative in source_paths:
+        source_path = source / relative
+        target_path = target / relative
+        if source_path.is_symlink() or target_path.is_symlink():
+            if not source_path.is_symlink() or not target_path.is_symlink():
+                return True
+            if os.readlink(source_path) != os.readlink(target_path):
+                return True
+        elif not filecmp.cmp(source_path, target_path, shallow=False):
+            return True
+    return False
+
+
 def has_gum() -> bool:
     return shutil.which("gum") is not None and sys.stdin.isatty() and sys.stdout.isatty()
 
@@ -348,6 +451,10 @@ def source_catalog_ids() -> set[str] | None:
     return ids
 
 
+def checkout_contains_plugins(selected_ids: list[str]) -> bool:
+    return all((ROOT / plugin_id / "manifest.json").exists() for plugin_id in selected_ids)
+
+
 def verify_source_catalog(source: str, selected_ids: list[str]) -> int:
     catalog = source_catalog_ids()
     if catalog is None:
@@ -355,6 +462,11 @@ def verify_source_catalog(source: str, selected_ids: list[str]) -> int:
         return 0
     missing = [plugin_id for plugin_id in selected_ids if plugin_id not in catalog]
     if not missing:
+        return 0
+
+    if checkout_contains_plugins(selected_ids):
+        print("\nOmarchy's source catalog is stale, but this checkout contains the selected plugins.")
+        print("Continuing with the local checkout payload.")
         return 0
 
     print(f"\nSource '{source}' is configured, but Omarchy does not see the selected Lacuna plugins.")
@@ -470,6 +582,8 @@ def remove_shell_entries(config: dict, plugin_id: str) -> list[dict]:
 
 
 def has_shell_entry(config: dict, plugin_id: str) -> bool:
+    if config["bar"].get("id") == plugin_id:
+        return True
     layout = config["bar"]["layout"]
     for section in ("left", "center", "right"):
         if any(entry_id(entry) == plugin_id for entry in layout[section]):
@@ -481,8 +595,14 @@ def is_bar_widget(plugin: Plugin) -> bool:
     return "bar-widget" in plugin.kinds
 
 
+def is_bar_option(plugin: Plugin) -> bool:
+    return "bar" in plugin.kinds
+
+
 def enable_shell_entry(config: dict, plugin: Plugin) -> None:
-    if is_bar_widget(plugin):
+    if is_bar_option(plugin):
+        config["bar"]["id"] = plugin.id
+    elif is_bar_widget(plugin):
         removed = remove_shell_entries(config, plugin.id)
         entry = next((item for item in removed if entry_id(item) == plugin.id), {"id": plugin.id})
         config["bar"]["layout"]["right"].append(entry)
@@ -491,6 +611,14 @@ def enable_shell_entry(config: dict, plugin: Plugin) -> None:
 
 
 def layout_template_entries() -> list[tuple[str, int, dict]]:
+    entries: list[tuple[str, int, dict]] = []
+    for section in ("left", "center", "right"):
+        for index, item in enumerate(LACUNA_BAR_LAYOUT[section]):
+            entries.append((section, index, dict(item)))
+    return entries
+
+
+def example_layout_entries() -> list[tuple[str, int, dict]]:
     path = ROOT / "config" / "shell.lacuna-native-replacements.example.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     entries: list[tuple[str, int, dict]] = []
@@ -503,7 +631,7 @@ def layout_template_entries() -> list[tuple[str, int, dict]]:
 
 
 def apply_layout_to_config(config: dict, selected: set[str]) -> None:
-    for section, index, template_entry in layout_template_entries():
+    for section, index, template_entry in example_layout_entries():
         plugin_id = template_entry["id"]
         if plugin_id not in selected:
             continue
@@ -515,22 +643,60 @@ def apply_layout_to_config(config: dict, selected: set[str]) -> None:
         target.insert(min(index, len(target)), entry)
 
 
+def apply_lacuna_bar_layout_to_config(config: dict, available: set[str]) -> None:
+    removed_by_id: dict[str, dict] = {}
+    layout = config["bar"]["layout"]
+    for section in ("left", "center", "right"):
+        for item in layout[section]:
+            plugin_id = entry_id(item)
+            if plugin_id and plugin_id in LACUNA_BAR_LAYOUT_PLUGIN_IDS and isinstance(item, dict):
+                removed_by_id.setdefault(plugin_id, item)
+        layout[section] = []
+
+    for section, index, template_entry in layout_template_entries():
+        plugin_id = template_entry["id"]
+        if plugin_id not in available:
+            continue
+        entry = removed_by_id.get(plugin_id, dict(template_entry))
+        for key, value in template_entry.items():
+            entry.setdefault(key, value)
+        target = config["bar"]["layout"][section]
+        target.insert(min(index, len(target)), entry)
+    config["bar"]["centerAnchor"] = "lacuna.clock"
+
+
+def activation_reload_command(selected: set[str]) -> list[str]:
+    if "lacuna.bar" in selected:
+        return ["omarchy", "restart", "shell"]
+    return ["omarchy", "plugin", "rescan"]
+
+
+def activation_reload_label(selected: set[str]) -> str:
+    command = activation_reload_command(selected)
+    return " ".join(command)
+
+
 def activate_plugins(ids: list[str], plugins: dict[str, Plugin], selected: set[str], apply_layout_choice: bool, dry_run: bool) -> int:
     if not ids:
         return 0
     if dry_run:
         print(f"  update {shell_config_path()} once")
-        print("  omarchy plugin rescan")
+        if "lacuna.bar" in selected:
+            print("  apply Lacuna bar host layout in shell.json")
+        print(f"  {activation_reload_label(selected)}")
         return 0
 
     config = ensure_shell_config_shape(read_shell_config())
     for plugin_id in ids:
         enable_shell_entry(config, plugins[plugin_id])
+    if "lacuna.bar" in selected or config["bar"].get("id") == "lacuna.bar":
+        available = selected | set(installed_lacuna_plugins(plugins))
+        apply_lacuna_bar_layout_to_config(config, available)
     if apply_layout_choice:
         apply_layout_to_config(config, selected)
     write_shell_config(config)
     print(f"  updated {shell_config_path()}", flush=True)
-    return run_command(["omarchy", "plugin", "rescan"], dry_run)
+    return run_command(activation_reload_command(selected), dry_run)
 
 
 def deactivate_plugins(ids: list[str], dry_run: bool) -> int:
@@ -552,9 +718,11 @@ def activation_commands(ids: list[str], apply_layout_choice: bool = False) -> li
     commands = []
     if ids:
         commands.append(f"update {shell_config_path()} once")
+        if "lacuna.bar" in ids:
+            commands.append("apply Lacuna bar host layout in shell.json")
         if apply_layout_choice:
             commands.append("apply Lacuna bar layout in shell.json")
-        commands.append("omarchy plugin rescan")
+        commands.append(activation_reload_label(set(ids)))
     return commands
 
 
@@ -616,7 +784,21 @@ def backup_target(target: Path) -> Path | None:
         backup = target.parent / f"{base.name}-{suffix}"
         suffix += 1
     shutil.move(str(target), str(backup))
+    prune_backups(target.name)
     return backup
+
+
+def prune_backups(plugin_id: str, keep: int = BACKUPS_TO_KEEP) -> None:
+    if keep < 0:
+        keep = 0
+    base = plugins_dir()
+    backups = sorted(
+        base.glob(f".{plugin_id}.bak.*"),
+        key=lambda path: (path.stat().st_mtime, path.name),
+        reverse=True,
+    )
+    for backup in backups[keep:]:
+        remove_path(backup)
 
 
 def validate_plugin(plugin_id: str, source_dir: Path, dry_run: bool) -> int:
@@ -649,7 +831,12 @@ def stage_plugin(plugin_id: str, dry_run: bool, reinstall: bool) -> int:
     remove_path(stage)
     backup = None
     try:
-        shutil.copytree(source_dir, stage, symlinks=True)
+        shutil.copytree(
+            source_dir,
+            stage,
+            symlinks=True,
+            ignore=shutil.ignore_patterns("__pycache__"),
+        )
         backup = backup_target(target)
         shutil.move(str(stage), str(target))
     except Exception as error:
@@ -830,7 +1017,11 @@ def uninstall(args: argparse.Namespace) -> int:
     elif args.all:
         selected = set(installed_lacuna_plugins(plugins))
     else:
-        selected = set(installed_lacuna_plugins(plugins))
+        if sys.stdin.isatty() and not args.yes and not args.dry_run:
+            next_args = uninstall_menu(args)
+            return uninstall(next_args) if next_args else 0
+        print("Refusing to uninstall every Lacuna plugin implicitly. Pass --all or --plugin.", file=sys.stderr)
+        return 2
 
     unknown = sorted(selected - set(plugins))
     if unknown:
@@ -864,14 +1055,72 @@ def uninstall(args: argparse.Namespace) -> int:
     return 0
 
 
+def resolve_update_selection(args: argparse.Namespace, plugins: dict[str, Plugin]) -> list[str]:
+    installed = set(installed_lacuna_plugins(plugins))
+    if args.plugins:
+        selected = {item for value in args.plugins for item in value.split(",") if item}
+        unknown = sorted(selected - set(plugins))
+        if unknown:
+            raise SystemExit(f"Unknown Lacuna plugin id: {', '.join(unknown)}")
+
+        missing = ordered(selected - installed, plugins)
+        for plugin_id in missing:
+            print(f"  {plugin_id} is not installed; skipping.")
+        selected &= installed
+    else:
+        selected = installed
+    return ordered(selected, plugins)
+
+
+def update(args: argparse.Namespace) -> int:
+    plugins = load_plugins()
+    ids = resolve_update_selection(args, plugins)
+    update_ids = [plugin_id for plugin_id in ids if plugin_source_differs(plugin_id)]
+
+    print_plan("Update plan", update_ids, plugins)
+    if ids and len(update_ids) != len(ids):
+        unchanged = [plugin_id for plugin_id in ids if plugin_id not in update_ids]
+        print(f"\nAlready current: {len(unchanged)} plugin(s)")
+
+    print("\nCommands")
+    commands = stage_commands(update_ids, rescan=True)
+    if commands:
+        print_stage_commands(commands)
+    else:
+        print("  No plugin copy commands needed.")
+
+    if args.dry_run:
+        return 0
+    if not update_ids:
+        print("\nNo installed Lacuna plugins need updates.")
+        for plugin_id in ids:
+            prune_backups(plugin_id)
+        return 0
+    if not confirm("Update changed Lacuna plugins?", args.yes):
+        print("Update cancelled.")
+        return 1
+    for plugin_id in ids:
+        prune_backups(plugin_id)
+    return stage_plugins(update_ids, args.dry_run, reinstall=True, rescan=True)
+
+
 def status(_args: argparse.Namespace) -> int:
     plugins = load_plugins()
     installed = set(installed_lacuna_plugins(plugins))
+    try:
+        shell_config = ensure_shell_config_shape(read_shell_config())
+        enabled = {plugin_id for plugin_id in plugins if has_shell_entry(shell_config, plugin_id)}
+    except SystemExit:
+        enabled = set()
+
     print("Lacuna status")
     print(f"  Source configured: {source_exists(DEFAULT_SOURCE)}")
     print(f"  Installed plugins: {len(installed)}")
     for plugin_id in ordered(installed, plugins):
-        print(f"  - {plugin_id}")
+        state = "enabled" if plugin_id in enabled else "staged"
+        installed_version = installed_plugin_version(plugin_id)
+        repo_version = repo_plugin_version(plugin_id)
+        print(f"  - {plugin_id} ({state}) installed {installed_version}, repo {repo_version}")
     if not installed:
         print("  No Lacuna plugins are installed.")
     return 0
@@ -928,6 +1177,7 @@ def menu(args: argparse.Namespace) -> int:
         [
             "Full Lacuna install",
             "Custom install",
+            "Update installed Lacuna plugins",
             "Uninstall Lacuna",
             "Status",
             "Exit",
@@ -948,6 +1198,9 @@ def menu(args: argparse.Namespace) -> int:
         args.command = "install"
         next_args = custom_install_menu(args)
         return install(next_args) if next_args else 0
+    if action == "Update installed Lacuna plugins":
+        args.command = "update"
+        return update(args)
     if action == "Uninstall Lacuna":
         args.command = "uninstall"
         next_args = uninstall_menu(args)
@@ -1009,6 +1262,9 @@ def parser() -> argparse.ArgumentParser:
     uninstall_parser.add_argument("--plugin", dest="plugins", action="append", default=[], help="Plugin id or comma list.")
     uninstall_parser.add_argument("--purge-state", action="store_true", help="Also remove ~/.config/omarchy/lacuna after confirmation.")
 
+    update_parser = subparsers.add_parser("update", parents=[common], help="Restage installed Lacuna plugins that changed in this checkout.")
+    update_parser.add_argument("--plugin", dest="plugins", action="append", default=[], help="Plugin id or comma list.")
+
     subparsers.add_parser("status", parents=[common], help="Show installed Lacuna plugins.")
     return base
 
@@ -1052,6 +1308,8 @@ def main(argv: list[str] | None = None) -> int:
             return install(args)
         if args.command == "uninstall":
             return uninstall(args)
+        if args.command == "update":
+            return update(args)
         if args.command == "status":
             return status(args)
         if sys.stdin.isatty():

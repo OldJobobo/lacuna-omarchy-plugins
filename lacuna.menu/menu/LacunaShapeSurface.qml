@@ -12,6 +12,8 @@ Item {
   property int bottomLeftCornerState: -1
 
   readonly property real minimumRadius: 0.01
+  readonly property real surfaceAlpha: Math.max(0, Math.min(1, panelColor.a === undefined ? 1 : panelColor.a))
+  readonly property color solidPanelColor: Qt.rgba(panelColor.r, panelColor.g, panelColor.b, 1)
   readonly property real effectiveRadius: Math.max(minimumRadius, cornerHelper.flattenedRadius(Math.min(width, height), panelRadius))
 
   readonly property real tlMultX: cornerHelper.multX(topLeftCornerState)
@@ -39,10 +41,11 @@ Item {
     anchors.fill: parent
     asynchronous: false
     antialiasing: true
+    opacity: root.surfaceAlpha
     preferredRendererType: Shape.CurveRenderer
 
     ShapePath {
-      fillColor: root.panelColor
+      fillColor: root.solidPanelColor
       strokeWidth: 0
       startX: root.tlRadius * root.tlMultX
       startY: 0

@@ -207,7 +207,7 @@ Item {
 
   Process {
     id: idleProc
-    command: ["bash", "-lc", "omarchy shell idle status 2>/dev/null"]
+    command: ["bash", "-c", "omarchy shell idle status 2>/dev/null"]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
@@ -224,7 +224,7 @@ Item {
   }
 
   Process {
-    command: ["bash", "-lc", "omarchy voxtype status"]
+    command: ["omarchy", "voxtype", "status"]
     running: true
     stdout: SplitParser {
       onRead: function(data) {

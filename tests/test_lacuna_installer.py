@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -28,6 +29,23 @@ def run_lacuna(args, config_home=None):
     )
 
 
+def run_lacuna_unchecked(args, config_home=None):
+    if config_home is None:
+        with tempfile.TemporaryDirectory() as tmp:
+            return run_lacuna_unchecked(args, config_home=Path(tmp) / "config")
+
+    env = os.environ.copy()
+    env["XDG_CONFIG_HOME"] = str(config_home)
+    return subprocess.run(
+        [str(INSTALLER), *args],
+        check=False,
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
 def load_installer_module():
     import importlib.util
     import importlib.machinery
@@ -45,6 +63,7 @@ class LacunaInstallerTests(unittest.TestCase):
         result = run_lacuna(["install", "--profile", "core", "--dry-run", "--yes"])
 
         self.assertIn("Install plan", result.stdout)
+        self.assertIn("stage lacuna.bar ->", result.stdout)
         self.assertIn("stage lacuna.state ->", result.stdout)
         self.assertIn("stage lacuna.menu-button ->", result.stdout)
         self.assertIn("omarchy plugin rescan", result.stdout)
@@ -88,8 +107,10 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertIn("Activation", result.stdout)
         self.assertIn("update", result.stdout)
         self.assertIn("shell.json once", result.stdout)
+        self.assertIn("apply Lacuna bar host layout in shell.json", result.stdout)
         self.assertIn("apply Lacuna bar layout in shell.json", result.stdout)
-        self.assertEqual(result.stdout.count("omarchy plugin rescan"), 1)
+        self.assertEqual(result.stdout.count("omarchy restart shell"), 1)
+        self.assertEqual(result.stdout.count("omarchy plugin rescan"), 0)
         self.assertNotIn("omarchy plugin enable", result.stdout)
         self.assertNotIn("omarchy plugin bar move", result.stdout)
 
@@ -109,6 +130,61 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertIn("omarchy plugin rescan", result.stdout)
         self.assertNotIn("disable lacuna.clock if enabled", result.stdout)
         self.assertNotIn("omarchy plugin remove", result.stdout)
+
+    def test_uninstall_requires_all_or_plugin_selection(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            installed = config_home / "omarchy" / "plugins" / "lacuna.clock"
+            installed.mkdir(parents=True)
+            (installed / "manifest.json").write_text("{}", encoding="utf-8")
+
+            result = run_lacuna_unchecked(["uninstall", "--dry-run", "--yes"], config_home=config_home)
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("Pass --all or --plugin", result.stderr)
+
+    def test_prune_backups_keeps_latest_two_per_plugin(self):
+        module = load_installer_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            backup_dir = config_home / "omarchy" / "plugins"
+            backup_dir.mkdir(parents=True)
+            for index in range(4):
+                backup = backup_dir / f".lacuna.clock.bak.2026010100000{index}"
+                backup.mkdir()
+                os.utime(backup, (index, index))
+
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}):
+                module.prune_backups("lacuna.clock", keep=2)
+
+            remaining = sorted(path.name for path in backup_dir.glob(".lacuna.clock.bak.*"))
+
+        self.assertEqual(remaining, [".lacuna.clock.bak.20260101000002", ".lacuna.clock.bak.20260101000003"])
+
+    def test_stage_plugin_ignores_pycache_directories(self):
+        module = load_installer_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_home = tmp_path / "config"
+            source = tmp_path / "repo" / "lacuna.fake"
+            (source / "__pycache__").mkdir(parents=True)
+            (source / "__pycache__" / "stale.pyc").write_bytes(b"cache")
+            (source / "manifest.json").write_text('{"id":"lacuna.fake"}\n', encoding="utf-8")
+
+            with mock.patch.object(module, "ROOT", tmp_path / "repo"), \
+                mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+                mock.patch.object(module, "validate_plugin", return_value=0):
+                result = module.stage_plugin("lacuna.fake", dry_run=False, reinstall=True)
+
+            target = config_home / "omarchy" / "plugins" / "lacuna.fake"
+            manifest_staged = (target / "manifest.json").exists()
+            pycache_staged = (target / "__pycache__").exists()
+
+        self.assertEqual(result, 0)
+        self.assertTrue(manifest_staged)
+        self.assertFalse(pycache_staged)
 
     def test_gum_wrapper_does_not_hide_interactive_ui(self):
         module = load_installer_module()
@@ -131,10 +207,20 @@ class LacunaInstallerTests(unittest.TestCase):
     def test_stale_source_catalog_reports_repair_commands(self):
         module = load_installer_module()
 
-        with mock.patch.object(module, "source_catalog_ids", return_value=set()):
+        with tempfile.TemporaryDirectory() as tmp, \
+            mock.patch.object(module, "ROOT", Path(tmp)), \
+            mock.patch.object(module, "source_catalog_ids", return_value=set()):
             result = module.verify_source_catalog("lacuna", ["lacuna.state"])
 
         self.assertEqual(result, 1)
+
+    def test_stale_source_catalog_allows_local_checkout_plugins(self):
+        module = load_installer_module()
+
+        with mock.patch.object(module, "source_catalog_ids", return_value=set()):
+            result = module.verify_source_catalog("lacuna", ["lacuna.state"])
+
+        self.assertEqual(result, 0)
 
     def test_menu_full_install_stages_without_activation_or_layout(self):
         module = load_installer_module()
@@ -181,6 +267,143 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertEqual(run_command.call_args.args[0], ["omarchy", "plugin", "rescan"])
         self.assertEqual(data["plugins"], [{"id": "lacuna.state"}])
         self.assertEqual(data["bar"]["layout"]["right"], [{"id": "lacuna.menu-button"}])
+
+    def test_activation_selects_bar_options_with_bar_id(self):
+        module = load_installer_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            shell_json = config_home / "omarchy" / "shell.json"
+            shell_json.parent.mkdir(parents=True)
+            shell_json.write_text(
+                '{"version":1,"bar":{"layout":{"left":[],"center":[],"right":[]}},"plugins":[]}\n',
+                encoding="utf-8",
+            )
+            plugins = module.load_plugins()
+
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+                mock.patch.object(module, "run_command", return_value=0) as run_command:
+                result = module.activate_plugins(
+                    ["lacuna.bar", "lacuna.state"],
+                    plugins,
+                    {"lacuna.bar", "lacuna.state"},
+                    False,
+                    False,
+                )
+
+            data = __import__("json").loads(shell_json.read_text(encoding="utf-8"))
+
+        self.assertEqual(result, 0)
+        self.assertEqual(run_command.call_count, 1)
+        self.assertEqual(run_command.call_args.args[0], ["omarchy", "restart", "shell"])
+        self.assertEqual(data["bar"]["id"], "lacuna.bar")
+        self.assertEqual(data["plugins"], [{"id": "lacuna.state"}])
+        self.assertEqual(data["bar"]["layout"]["right"], [])
+
+    def test_lacuna_bar_activation_replaces_omarchy_layout_with_lacuna_modules(self):
+        module = load_installer_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            shell_json = config_home / "omarchy" / "shell.json"
+            shell_json.parent.mkdir(parents=True)
+            shell_json.write_text(
+                """
+{
+  "version": 1,
+  "bar": {
+    "layout": {
+      "left": [
+        { "id": "omarchy.menu" },
+        { "id": "omarchy.workspaces" }
+      ],
+      "center": [
+        { "id": "omarchy.clock" }
+      ],
+      "right": [
+        { "id": "omarchy.tray" },
+        { "id": "lacuna.temperature", "mode": "compact" }
+      ]
+    }
+  },
+  "plugins": []
+}
+""",
+                encoding="utf-8",
+            )
+            plugins = module.load_plugins()
+            selected = {"lacuna.bar"} | module.LACUNA_BAR_LAYOUT_PLUGIN_IDS
+
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+                mock.patch.object(module, "installed_lacuna_plugins", return_value=[]), \
+                mock.patch.object(module, "run_command", return_value=0):
+                result = module.activate_plugins(
+                    module.ordered(selected, plugins),
+                    plugins,
+                    selected,
+                    False,
+                    False,
+                )
+
+            data = __import__("json").loads(shell_json.read_text(encoding="utf-8"))
+            layout_ids = [
+                entry["id"]
+                for section in ("left", "center", "right")
+                for entry in data["bar"]["layout"][section]
+            ]
+
+        self.assertEqual(result, 0)
+        self.assertEqual(data["bar"]["id"], "lacuna.bar")
+        self.assertFalse([plugin_id for plugin_id in layout_ids if plugin_id.startswith("omarchy.")])
+        self.assertEqual(data["bar"]["layout"]["left"][0]["id"], "lacuna.menu-button")
+        self.assertEqual(data["bar"]["layout"]["center"][0]["id"], "lacuna.voxtype")
+        self.assertEqual(data["bar"]["layout"]["right"][0]["id"], "lacuna.tray")
+        self.assertIn({"id": "lacuna.temperature", "mode": "compact"}, data["bar"]["layout"]["right"])
+
+    def test_status_reports_staged_vs_enabled_plugins(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            plugins_dir = config_home / "omarchy" / "plugins"
+            for plugin_id in ("lacuna.clock", "lacuna.state"):
+                target = plugins_dir / plugin_id
+                target.mkdir(parents=True)
+                (target / "manifest.json").write_text("{}", encoding="utf-8")
+
+            shell_json = config_home / "omarchy" / "shell.json"
+            shell_json.parent.mkdir(parents=True, exist_ok=True)
+            shell_json.write_text(
+                '{"version":1,"bar":{"layout":{"left":[],"center":[],"right":[{"id":"lacuna.clock"}]}},"plugins":[]}\n',
+                encoding="utf-8",
+            )
+
+            result = run_lacuna(["status"], config_home=config_home)
+
+        self.assertIn("lacuna.clock (enabled)", result.stdout)
+        self.assertIn("lacuna.state (staged)", result.stdout)
+        self.assertIn("installed unknown, repo 0.1.0", result.stdout)
+
+    def test_update_dry_run_lists_only_changed_installed_plugins(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            plugins_dir = config_home / "omarchy" / "plugins"
+            for plugin_id in ("lacuna.clock", "lacuna.state"):
+                shutil.copytree(
+                    ROOT / plugin_id,
+                    plugins_dir / plugin_id,
+                    ignore=shutil.ignore_patterns("__pycache__"),
+                )
+
+            widget = plugins_dir / "lacuna.clock" / "Widget.qml"
+            widget.write_text(widget.read_text(encoding="utf-8") + "\n// local drift\n", encoding="utf-8")
+
+            result = run_lacuna(["update", "--dry-run", "--yes"], config_home=config_home)
+
+        self.assertIn("Update plan", result.stdout)
+        self.assertIn("lacuna.clock", result.stdout)
+        self.assertNotIn("lacuna.state", result.stdout)
+        self.assertIn("Already current: 1 plugin(s)", result.stdout)
+        self.assertIn("stage lacuna.clock ->", result.stdout)
+        self.assertIn("omarchy plugin rescan", result.stdout)
 
 
 if __name__ == "__main__":

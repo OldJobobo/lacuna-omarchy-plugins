@@ -64,7 +64,7 @@ Item {
 
   Process {
     id: statusProc
-    command: ["bash", "-lc", "omarchy shell idle status 2>/dev/null"]
+    command: ["bash", "-c", "omarchy shell idle status 2>/dev/null"]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {

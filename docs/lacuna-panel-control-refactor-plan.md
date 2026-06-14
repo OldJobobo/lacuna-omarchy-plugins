@@ -1,5 +1,7 @@
 # Lacuna Panel Control Refactor Plan
 
+Status: active
+
 ## Goal
 
 Refactor Lacuna's menu and attached flyout control so Omarchy/Quickshell behavior primitives handle lifecycle, focus, input regions, and outside-click dismissal while Lacuna keeps ownership of visual styling, connector geometry, and animation.

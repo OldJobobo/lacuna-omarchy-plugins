@@ -1,4 +1,5 @@
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import QtQuick
 import "../services"
@@ -13,6 +14,7 @@ Item {
   property var manifest: null
   property var pluginRegistry: null
   property var barWidgetRegistry: null
+  property bool hostManaged: false
   property string pluginId: manifest && manifest.id ? manifest.id : "lacuna.menu"
   property var menuState: localMenuState
   property bool initialSidebarDefaultApplied: false
@@ -24,7 +26,8 @@ Item {
   readonly property var sidebarState: sharedSidebarState || localSidebarState
   property color foreground: menuTheme.foreground
   property color background: menuTheme.background
-  property color panelColor: menuTheme.panelBackground
+  property color surfaceBackground: menuTheme.panelBackground
+  property color panelColor: surfaceBackground
   property color accent: menuTheme.accent
   property color shellAccent: menuTheme.color("color6")
   property color sessionAccent: menuTheme.color("color11")
@@ -44,6 +47,7 @@ Item {
   readonly property bool leftBar: barPosition === "left"
   readonly property bool rightBar: barPosition === "right"
   readonly property bool hostBarHidden: shell && shell.bar && shell.bar.barHidden === true
+  readonly property bool barOwnsLacunaFrame: shell && shell.bar && shell.bar.lacunaFrameHost === true
   readonly property bool lacunaEnabled: !hostBarHidden
   // Lacuna is its own left sidebar. The Omarchy bar position only affects
   // offsets and sizing, not which edge Lacuna owns.
@@ -68,7 +72,7 @@ Item {
   property int settingsConnectorWidth: effectiveCornerPieces ? joinRadius : 0
   property int barEdgeCasterSize: frameThickness
   property int frameReservePadding: 4
-  property int sidebarReserveExtra: 2
+  property int sidebarReserveExtra: 0
   property int flyoutLaneWidth: lacunaEnabled && panelController.menuRenderable ? maxFlyoutLaneWidth : 0
   // In exclusive mode the compositor already places this window below the top
   // bar, so the bar edge is local y=0. In overlay mode the window starts at
@@ -101,11 +105,15 @@ Item {
   readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutShellSettings ? shellSettingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : 0
   readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutShellSettings ? shellSettingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : 0
   readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutShellSettings ? shellSettingsFlyoutY(shellSettingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : 0
-  readonly property int frameOverlayWidth: !lacunaEnabled || frameMode === "off" ? 0 : ((sidebarScreen ? sidebarScreen.width : 0) + 100)
-  readonly property bool frameReserveActive: lacunaEnabled && sidebarState.exclusive && (panelController.menuRenderable || frameMode === "fullframe") && frameMode !== "off"
+  readonly property int frameOverlayWidth: !lacunaEnabled || barOwnsLacunaFrame || frameMode === "off" ? 0 : ((sidebarScreen ? sidebarScreen.width : 0) + 100)
+  readonly property bool frameReserveActive: !barOwnsLacunaFrame && lacunaEnabled && sidebarState.exclusive && (panelController.menuRenderable || frameMode === "fullframe") && frameMode !== "off"
   readonly property bool sidebarReserveActive: lacunaEnabled && sidebarState.exclusive && panelController.menuRenderable && sidebarSurfaceVisible
-  readonly property int reservePadding: lacunaEnabled && frameMode !== "off" ? frameReservePadding : 0
-  readonly property int sidebarReserveSize: sidebarReserveActive ? panelWidth + reservePadding + sidebarReserveExtra : 0
+  readonly property bool frameReserveFlush: frameReserveMode === "flush" || hyprWindowGapsDisabled || (frameReserveMode === "auto" && fakeFullscreenWorkspaceActive())
+  readonly property int reservePadding: lacunaEnabled && frameMode !== "off" && !frameReserveFlush ? frameReservePadding : 0
+  readonly property int effectiveSidebarReserveExtra: frameReserveFlush ? 0 : sidebarReserveExtra
+  readonly property bool externalLeftFrameReserveActive: frameMode === "fullframe" && !root.leftBar && !root.panelOnRight
+  readonly property int barOwnedLeftFrameReserve: externalLeftFrameReserveActive ? frameThickness : 0
+  readonly property int sidebarReserveSize: sidebarReserveActive ? Math.max(0, panelWidth + effectiveSidebarReserveExtra - barOwnedLeftFrameReserve) : 0
   readonly property int visualTopInset: lacunaEnabled && sidebarState.exclusive && root.topBar ? root.barHeight : 0
   readonly property int visualBottomInset: lacunaEnabled && sidebarState.exclusive && root.bottomBar ? root.barHeight : 0
   readonly property int visualLeftInset: lacunaEnabled && sidebarState.exclusive && root.leftBar ? root.barControlSize : 0
@@ -120,6 +128,7 @@ Item {
   property string pendingFlyoutFocus: ""
   property bool pendingSystemRestartConfirmation: false
   property int pluginStateRevision: 0
+  property int hyprWorkspaceRevision: 0
   property double ignoreFlyoutFocusClearUntil: 0
   readonly property var shellConfig: shell && shell.shellConfig ? shell.shellConfig : ({})
   readonly property var shellBarConfig: shellConfig && shellConfig.bar ? shellConfig.bar : ({})
@@ -144,10 +153,13 @@ Item {
   readonly property var shellSettingsSettings: lacunaSettings.data && lacunaSettings.data.shellSettings ? lacunaSettings.data.shellSettings : ({})
   readonly property string shellSettingsSurface: validShellSettingsSurface(shellSettingsSettings.surface)
   readonly property var shellSettingsService: resolveShellSettingsService()
+  readonly property var shellHyprState: shellSettingsService && shellSettingsService.state && shellSettingsService.state.hypr ? shellSettingsService.state.hypr : ({})
+  readonly property bool hyprWindowGapsDisabled: shellHyprState.windowGapsEnabled === false || (hyprGapValue(shellHyprState.gapsIn) === 0 && hyprGapValue(shellHyprState.gapsOut) === 0)
   readonly property var powerSettings: lacunaSettings.data && lacunaSettings.data.power ? lacunaSettings.data.power : ({})
   readonly property bool instantRestart: boolSetting(powerSettings.instantRestart, false)
   readonly property var frameSettings: lacunaSettings.data && lacunaSettings.data.frame ? lacunaSettings.data.frame : ({})
   readonly property string frameMode: validFrameMode(frameSettings.mode)
+  readonly property string frameReserveMode: validFrameReserveMode(frameSettings.reserveMode)
   readonly property bool frameShadow: boolSetting(frameSettings.shadow, false)
   readonly property int frameThickness: positiveInt(frameSettings.thickness, 8)
   readonly property int frameRadius: Math.max(0, positiveInt(frameSettings.radius, 14))
@@ -413,7 +425,7 @@ Item {
 
     var next = lacunaSettings.normalize(lacunaSettings.data)
     next.customQuickLaunchApps = next.customQuickLaunchApps.concat([String(id)]).slice(0, 12)
-    lacunaSettings.save(next)
+    lacunaSettings.save(next, true)
   }
 
   function moveCustomQuickLaunchApp(id, targetIndex) {
@@ -433,7 +445,7 @@ Item {
 
     ids.splice(target, 0, appId)
     next.customQuickLaunchApps = ids
-    lacunaSettings.save(next)
+    lacunaSettings.save(next, true)
   }
 
   function renameCustomQuickLaunchApp(id, label) {
@@ -450,7 +462,7 @@ Item {
     else names[appId] = trimmed
 
     next.customQuickLaunchNames = names
-    lacunaSettings.save(next)
+    lacunaSettings.save(next, true)
   }
 
   function removeCustomQuickLaunchApp(id) {
@@ -472,7 +484,7 @@ Item {
 
     next.customQuickLaunchApps = ids
     next.customQuickLaunchNames = names
-    lacunaSettings.save(next)
+    lacunaSettings.save(next, true)
   }
 
   function setPreferredApp(role, id) {
@@ -659,9 +671,58 @@ Item {
     return "off"
   }
 
+  function validFrameReserveMode(value) {
+    var mode = String(value || "auto").toLowerCase()
+    if (mode === "comfort" || mode === "flush") return mode
+    return "auto"
+  }
+
+  function activeHyprWorkspace() {
+    hyprWorkspaceRevision
+    var monitor = root.sidebarScreen && Hyprland.monitorFor ? Hyprland.monitorFor(root.sidebarScreen) : null
+    if (monitor && monitor.activeWorkspace) return monitor.activeWorkspace
+    return Hyprland.focusedWorkspace || null
+  }
+
+  function activeWorkspaceWindowCount() {
+    var workspace = activeHyprWorkspace()
+    if (!workspace) return 0
+    if (workspace.toplevels && workspace.toplevels.values) return Number(workspace.toplevels.values.length || 0)
+    if (workspace.lastIpcObject && workspace.lastIpcObject.windows !== undefined) return Number(workspace.lastIpcObject.windows || 0)
+    return 0
+  }
+
+  function hyprGapValue(value) {
+    var parsed = Number(value)
+    return isFinite(parsed) ? Math.round(parsed) : -1
+  }
+
+  function fakeFullscreenWorkspaceActive() {
+    var workspace = activeHyprWorkspace()
+    if (!workspace) return false
+    if (workspace.hasFullscreen === true) return true
+    return activeWorkspaceWindowCount() <= 1
+  }
+
+  function gapslessWorkspaceActive() {
+    return hyprWindowGapsDisabled || fakeFullscreenWorkspaceActive()
+  }
+
+  function refreshHyprWorkspaceState() {
+    if (Hyprland.refreshWorkspaces) Hyprland.refreshWorkspaces()
+    if (Hyprland.refreshToplevels) Hyprland.refreshToplevels()
+    hyprWorkspaceRevision += 1
+  }
+
   function setFrameMode(mode) {
     var next = lacunaSettings.normalize(lacunaSettings.data)
     next.frame.mode = validFrameMode(mode)
+    lacunaSettings.save(next)
+  }
+
+  function setFrameReserveMode(mode) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    next.frame.reserveMode = validFrameReserveMode(mode)
     lacunaSettings.save(next)
   }
 
@@ -1003,6 +1064,11 @@ Item {
       return true
     }
 
+    if (entry.action.indexOf("set-frame-reserve-mode-") === 0) {
+      setFrameReserveMode(entry.action.substring("set-frame-reserve-mode-".length))
+      return true
+    }
+
     if (entry.action === "toggle-frame-shadow") {
       setFrameShadow(desiredChecked(entry, !lacunaSettings.normalize(lacunaSettings.data).frame.shadow))
       return true
@@ -1197,6 +1263,7 @@ Item {
   Component.onCompleted: {
     versionFile.reload()
     applyInitialSidebarDefault()
+    refreshHyprWorkspaceState()
   }
 
   LacunaMenuState {
@@ -1236,6 +1303,36 @@ Item {
     commandRunner: commands
     themeName: menuTheme.themeName
     omarchyPath: root.resolvedOmarchyPath()
+  }
+
+  Timer {
+    id: hyprWorkspaceRefreshTimer
+    interval: 80
+    repeat: false
+    onTriggered: root.refreshHyprWorkspaceState()
+  }
+
+  Connections {
+    target: Hyprland
+
+    function onRawEvent(event) {
+      var name = event.name
+      if (name.indexOf("workspace") >= 0 || name === "focusedmon" || name.indexOf("window") >= 0 || name === "fullscreen") {
+        hyprWorkspaceRefreshTimer.restart()
+      }
+    }
+
+    function onFocusedWorkspaceChanged() {
+      root.hyprWorkspaceRevision += 1
+    }
+  }
+
+  Connections {
+    target: Hyprland.workspaces
+
+    function onValuesChanged() {
+      root.hyprWorkspaceRevision += 1
+    }
   }
 
   AppCatalog {
@@ -1297,6 +1394,7 @@ Item {
     controlsLayout: lacunaSettings.data && lacunaSettings.data.controlsLayout ? lacunaSettings.data.controlsLayout : "grid"
     shellSettingsSurface: root.shellSettingsSurface
     frameMode: root.frameMode
+    frameReserveMode: root.frameReserveMode
     frameShadow: root.frameShadow
     backgroundEffects: root.backgroundEffectsSettings
     backgroundVignette: root.backgroundVignetteSettings
@@ -1332,6 +1430,7 @@ Item {
     onFlyoutInteractiveChanged: root.applyPendingFlyoutFocus()
     onActiveFlyoutChanged: root.applyPendingFlyoutFocus()
     onHostHideRequested: {
+      if (root.hostManaged) return
       if (root.frameMode === "fullframe") return
       if (root.shell && root.shell.hide) root.shell.hide(root.pluginId)
     }
@@ -1445,6 +1544,8 @@ Item {
       joinRadius: root.joinRadius
       connectorOverlap: root.connectorOverlap
       bodyRightInset: root.surfaceRightInset
+      fullFrame: root.frameMode === "fullframe"
+      frameThickness: root.frameThickness
       cornerPieces: root.effectiveCornerPieces
       openFromRight: root.panelOnRight
       panelColor: root.panelColor

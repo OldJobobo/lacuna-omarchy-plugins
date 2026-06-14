@@ -45,6 +45,10 @@ Item {
   }
 
   function openMenu() {
+    if (bar && bar.lacunaFrameHost === true && typeof bar.toggleMenu === "function") {
+      bar.toggleMenu("{}")
+      return
+    }
     if (bar) bar.run(shellIpcCommand("shell", "toggle", ["lacuna.menu", "{}"]))
   }
 

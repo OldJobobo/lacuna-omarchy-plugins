@@ -1,5 +1,7 @@
 # Lacuna Theme Preloader Plugin Plan
 
+Status: done
+
 ## Goal
 
 Reduce the perceived startup delay of the stock Omarchy theme switcher by keeping the caches it already uses warm before the user opens it.

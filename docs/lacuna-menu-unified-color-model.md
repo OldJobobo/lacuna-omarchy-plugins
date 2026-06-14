@@ -1,5 +1,7 @@
 # Lacuna Menu Unified Color Model
 
+Status: done
+
 ## Goal
 
 Keep Lacuna menu surfaces cohesive while still using the active Omarchy theme

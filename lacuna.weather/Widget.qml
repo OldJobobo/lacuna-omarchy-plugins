@@ -80,7 +80,7 @@ Item {
 
   Process {
     id: weatherProc
-    command: ["bash", "-lc", "[ -x " + shellQuote(root.weatherScript) + " ] && " + shellQuote(root.weatherScript) + " || omarchy weather status | head -n 1"]
+    command: ["bash", "-c", "[ -x " + shellQuote(root.weatherScript) + " ] && " + shellQuote(root.weatherScript) + " || omarchy weather status | head -n 1"]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: root.weatherText = String(text || "").trim()

@@ -55,6 +55,7 @@
   },
   "frame": {
     "mode": "off",
+    "reserveMode": "auto",
     "shadow": false,
     "thickness": 8,
     "radius": 14,

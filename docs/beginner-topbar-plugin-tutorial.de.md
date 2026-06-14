@@ -1,5 +1,7 @@
 # Einsteigeranleitung: Ein kleines Omarchy-Topbar-Plugin bauen
 
+Status: reference
+
 Diese Anleitung baut das kleinstmoegliche nuetzliche Omarchy-Topbar-Plugin:
 ein Widget, das `hello` in der Leiste anzeigt. Keine CPU-Statistiken, keine
 Skripte, keine Assets und kein Lacuna-Styling.
@@ -187,4 +189,3 @@ Starte die Shell nach QML-Aenderungen neu:
 ```bash
 omarchy restart shell
 ```
-

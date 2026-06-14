@@ -85,7 +85,7 @@ Item {
     printErrors: false
     onLoaded: root.loadTheme(text())
     onFileChanged: reload()
-    onLoadFailed: retry.restart()
+    onLoadFailed: root.loadTheme("")
   }
 
   FileView {
@@ -103,16 +103,6 @@ Item {
     printErrors: false
     onLoaded: root.loadSettings(text())
     onFileChanged: reload()
-    onLoadFailed: retry.restart()
-  }
-
-  Timer {
-    id: retry
-    interval: 500
-    repeat: false
-    onTriggered: {
-      colorsFile.reload()
-      lacunaSettingsFile.reload()
-    }
+    onLoadFailed: root.loadSettings("")
   }
 }

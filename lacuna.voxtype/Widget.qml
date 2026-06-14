@@ -53,7 +53,7 @@ Item {
   }
 
   Process {
-    command: ["bash", "-lc", "omarchy voxtype status"]
+    command: ["omarchy", "voxtype", "status"]
     running: true
     stdout: SplitParser {
       onRead: function(data) {

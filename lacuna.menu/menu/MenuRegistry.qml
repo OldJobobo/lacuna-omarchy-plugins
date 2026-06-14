@@ -25,6 +25,7 @@ Item {
   property string shellSettingsSurface: "flyout"
   property bool instantRestart: false
   property string frameMode: "off"
+  property string frameReserveMode: "auto"
   property bool frameShadow: false
   property var backgroundEffects: ({})
   property var backgroundVignette: ({})
@@ -134,11 +135,25 @@ Item {
   }
 
   function barSizeModeName() {
+    if (root.barSizeMode === "theme") return "Theme"
     return root.barSizeMode === "compact" ? "Compact" : "Full"
   }
 
   function barSizeModeHint() {
+    if (root.barSizeMode === "theme") return "Use the active Omarchy theme bar sizing"
     return root.barSizeMode === "compact" ? "Compact topbar, sidebar, and rail sizing" : "Full topbar, sidebar, and rail sizing"
+  }
+
+  function frameReserveModeName() {
+    if (root.frameReserveMode === "comfort") return "Comfort"
+    if (root.frameReserveMode === "flush") return "Flush"
+    return "Auto"
+  }
+
+  function frameReserveModeHint() {
+    if (root.frameReserveMode === "comfort") return "Always reserve room for Lacuna frame shadows"
+    if (root.frameReserveMode === "flush") return "Keep tiled windows flush to the visible Lacuna frame"
+    return "Collapse extra frame reserve on single-window or fullscreen workspaces"
   }
 
   function shellBarPositionHint() {

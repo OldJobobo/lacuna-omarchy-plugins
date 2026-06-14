@@ -5,7 +5,6 @@ import re
 import shlex
 import shutil
 import subprocess
-import tempfile
 
 
 def run(args, timeout=2):
@@ -20,18 +19,21 @@ def run(args, timeout=2):
 
 
 def run_redirected(command, timeout=2):
-  with tempfile.NamedTemporaryFile() as out:
-    script = f"{command} > {shlex.quote(out.name)} 2>/dev/null"
-    try:
-      proc = subprocess.run(["bash", "-lc", script], check=False, capture_output=True, text=True, timeout=timeout)
-    except Exception:
-      return ""
+  try:
+    proc = subprocess.run(
+      shlex.split(command),
+      check=False,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.DEVNULL,
+      text=True,
+      timeout=timeout,
+    )
+  except Exception:
+    return ""
 
-    if proc.returncode != 0:
-      return ""
-
-    out.seek(0)
-    return out.read().decode("utf-8", errors="replace").strip()
+  if proc.returncode != 0:
+    return ""
+  return proc.stdout.strip()
 
 
 def available(*commands):
@@ -119,9 +121,12 @@ def notification_dnd():
 def nightlight_on():
   raw = run_redirected("hyprctl hyprsunset temperature")
   digits = "".join(ch for ch in raw if ch.isdigit())
-  if digits == "4000":
-    return True
-  return False
+  if not digits:
+    return False
+  try:
+    return int(digits) < 5000
+  except ValueError:
+    return False
 
 
 def hypr_option(name):

@@ -113,7 +113,7 @@ Item {
     id: readlinkProc
     command: [
       "bash",
-      "-lc",
+      "-c",
       "link=$1; current=$(readlink -f \"$link\" 2>/dev/null || true); printf '%s\\n' \"$current\"; if [ -z \"$current\" ]; then printf '\\n'; exit 0; fi; dir=${current%/*}; mapfile -t files < <(find -L \"$dir\" -maxdepth 1 -type f \\( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.gif' -o -iname '*.bmp' \\) | sort); next=''; count=${#files[@]}; if [ \"$count\" -gt 0 ]; then for i in \"${!files[@]}\"; do resolved=$(readlink -f \"${files[$i]}\" 2>/dev/null || true); if [ \"$resolved\" = \"$current\" ]; then next=${files[$(( (i + 1) % count ))]}; break; fi; done; fi; printf '%s\\n' \"$next\"",
       "lacuna-wallpaper",
       root.backgroundLink

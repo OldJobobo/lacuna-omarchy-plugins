@@ -13,8 +13,10 @@ Keep plugin code self-contained under its plugin directory. Do not depend on the
 
 ## Build, Test, and Development Commands
 
-There is no build system or automated test command yet. Use shell inspection while the repo is scaffolded:
+Use the repository check script for local validation:
 
+- `./scripts/check.sh`: validate example JSON, manifests, vendored-file equality, optional `qmllint`/`shellcheck`, and the Python test suite.
+- `python3 -m pytest`: run the test suite directly.
 - `rg --files`: list tracked source-like files quickly.
 - `find . -maxdepth 2 -path './lacuna.*' -print`: inspect plugin layout.
 - `omarchy plugin rescan`: ask Omarchy shell to reload installed plugins.

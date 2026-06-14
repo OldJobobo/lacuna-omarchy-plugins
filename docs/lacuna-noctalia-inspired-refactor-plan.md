@@ -1,5 +1,7 @@
 # Lacuna Noctalia-Inspired Refactor Plan
 
+Status: superseded by later panel/control refactor plans
+
 ## Goal
 
 Refactor the Lacuna Omarchy plugins so the sidebar, flyouts, and Lacuna-owned bar widgets behave more like Noctalia's Quickshell surfaces: coherent panel lifecycle, geometry-driven motion, centralized animation tokens, stable input masks, and reusable visual primitives.

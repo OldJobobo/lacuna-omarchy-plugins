@@ -67,7 +67,7 @@ Item {
 
     pendingRefresh = false
     proc.output = ""
-    proc.command = ["bash", "-lc", command]
+    proc.command = ["bash", "-c", command]
     proc.running = true
   }
 

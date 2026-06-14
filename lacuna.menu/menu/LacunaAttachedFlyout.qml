@@ -48,10 +48,10 @@ Item {
       anchors.fill: parent
       panelColor: root.panelColor
       panelRadius: root.panelRadius
-      topLeftCornerState: -1
-      bottomLeftCornerState: -1
-      topRightCornerState: 0
-      bottomRightCornerState: 0
+      topLeftCornerState: root.openToLeft ? 0 : -1
+      bottomLeftCornerState: root.openToLeft ? 0 : -1
+      topRightCornerState: root.openToLeft ? -1 : 0
+      bottomRightCornerState: root.openToLeft ? -1 : 0
     }
 
     Item {

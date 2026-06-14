@@ -14,10 +14,7 @@ Item {
   property string themeTitle: formatTitle(themeName)
   property color foreground: shellColor("menu.text", color("foreground"))
   property color background: color("background")
-  // Lacuna's sidebar attaches to the Omarchy bar, so use the same bar base
-  // color. Keep it opaque; translucent layers composite over different
-  // windows/wallpaper and drift visibly at the join.
-  property color panelBackground: shellColor("bar.background", color("background"))
+  property color panelBackground: shellSurfaceColor("bar.background", color("background"))
   property color accent: shellColor("menu.selected", color("accent"))
   property color voidColor: withAlpha(background, 0.18)
   property color border: withAlpha(foreground, 0.18)
@@ -40,7 +37,53 @@ Item {
     var value = shellValues[name]
     if (typeof value !== "string" || value.length === 0) return fallbackColor
 
-    return resolveColor(value, fallbackColor)
+    return parseColor(resolveColor(value, fallbackColor), fallbackColor)
+  }
+
+  function shellSurfaceColor(name, fallbackColor) {
+    var base = shellColor(name, fallbackColor)
+    var alphaValue = alphaFor(name)
+    if (alphaValue < 0) return base
+    return withAlpha(base, alphaValue)
+  }
+
+  function alphaFor(name) {
+    var value = shellValues[name + "-alpha"]
+    if (value === undefined || value === null || String(value).length === 0) return -1
+    var parsed = Number(value)
+    if (!isFinite(parsed)) return -1
+    return Math.max(0, Math.min(1, parsed))
+  }
+
+  function stripInlineComment(value) {
+    var text = String(value || "")
+    var quote = ""
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charAt(i)
+      if (quote !== "") {
+        if (ch === quote && text.charAt(i - 1) !== "\\") quote = ""
+        continue
+      }
+      if (ch === "\"" || ch === "'") {
+        quote = ch
+        continue
+      }
+      if (ch === "#" && i > 0 && /\s/.test(text.charAt(i - 1))) {
+        return text.slice(0, i).trim()
+      }
+    }
+    return text.trim()
+  }
+
+  function unquoteValue(value) {
+    var text = stripInlineComment(value)
+    if (text.length >= 2) {
+      var first = text.charAt(0)
+      var last = text.charAt(text.length - 1)
+      if ((first === "\"" && last === "\"") || (first === "'" && last === "'"))
+        return text.slice(1, -1)
+    }
+    return text
   }
 
   function resolveColor(value, fallbackColor) {
@@ -51,6 +94,68 @@ Item {
     if (role === "urgent") return color("color1")
     if (role === "transparent") return "transparent"
     return value
+  }
+
+  function parseColor(value, fallbackColor) {
+    if (value && value.r !== undefined && value.g !== undefined && value.b !== undefined) return value
+
+    var raw = String(value || "").trim()
+    var lower = raw.toLowerCase()
+    if (lower === "transparent") return Qt.rgba(0, 0, 0, 0)
+
+    var hex = raw.match(/^#?([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/)
+    if (hex) {
+      var body = hex[1]
+      var alpha = hex[2] ? parseInt(hex[2], 16) / 255 : 1
+      return Qt.rgba(
+        parseInt(body.substring(0, 2), 16) / 255,
+        parseInt(body.substring(2, 4), 16) / 255,
+        parseInt(body.substring(4, 6), 16) / 255,
+        alpha
+      )
+    }
+
+    var rgbHexAlpha = lower.match(/^rgba\(\s*#?([0-9a-f]{6})([0-9a-f]{2})\s*\)$/)
+    if (rgbHexAlpha) {
+      return Qt.rgba(
+        parseInt(rgbHexAlpha[1].substring(0, 2), 16) / 255,
+        parseInt(rgbHexAlpha[1].substring(2, 4), 16) / 255,
+        parseInt(rgbHexAlpha[1].substring(4, 6), 16) / 255,
+        parseInt(rgbHexAlpha[2], 16) / 255
+      )
+    }
+
+    var rgbHex = lower.match(/^rgba?\(\s*#?([0-9a-f]{6})\s*(?:,\s*([0-9.]+)\s*)?\)$/)
+    if (rgbHex) {
+      return Qt.rgba(
+        parseInt(rgbHex[1].substring(0, 2), 16) / 255,
+        parseInt(rgbHex[1].substring(2, 4), 16) / 255,
+        parseInt(rgbHex[1].substring(4, 6), 16) / 255,
+        rgbHex[2] === undefined ? 1 : Math.max(0, Math.min(1, Number(rgbHex[2])))
+      )
+    }
+
+    var rgb = lower.match(/^rgba?\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*(?:,\s*([0-9.]+)\s*)?\)$/)
+    if (rgb) {
+      return Qt.rgba(
+        Math.max(0, Math.min(255, Number(rgb[1]))) / 255,
+        Math.max(0, Math.min(255, Number(rgb[2]))) / 255,
+        Math.max(0, Math.min(255, Number(rgb[3]))) / 255,
+        rgb[4] === undefined ? 1 : Math.max(0, Math.min(1, Number(rgb[4])))
+      )
+    }
+
+    var hyprHex = lower.match(/^0x([0-9a-f]{2})([0-9a-f]{6})$/)
+    if (hyprHex) {
+      return Qt.rgba(
+        parseInt(hyprHex[2].substring(0, 2), 16) / 255,
+        parseInt(hyprHex[2].substring(2, 4), 16) / 255,
+        parseInt(hyprHex[2].substring(4, 6), 16) / 255,
+        parseInt(hyprHex[1], 16) / 255
+      )
+    }
+
+    return fallbackColor
   }
 
   function fallback(name) {
@@ -101,11 +206,8 @@ Item {
         continue
       }
 
-      var stringKv = line.match(/^([A-Za-z0-9_-]+)\s*=\s*["']([^"']+)["']\s*(#.*)?$/)
-      var numKv = line.match(/^([A-Za-z0-9_-]+)\s*=\s*(-?\d+(?:\.\d+)?)\s*(#.*)?$/)
-      var bareKv = line.match(/^([A-Za-z0-9_-]+)\s*=\s*([A-Za-z][A-Za-z0-9_-]*)\s*(#.*)?$/)
-      var match = stringKv || numKv || bareKv
-      if (match && section) next[section + "." + match[1]] = match[2]
+      var match = line.match(/^([A-Za-z0-9_-]+)\s*=\s*(.+)$/)
+      if (match && section) next[section + "." + match[1]] = unquoteValue(match[2])
     }
 
     shellValues = next
@@ -132,7 +234,7 @@ Item {
     onFileChanged: {
       reload()
     }
-    onLoadFailed: themeRetry.restart()
+    onLoadFailed: root.load("")
   }
 
   FileView {
@@ -143,10 +245,7 @@ Item {
     printErrors: false
     onLoaded: root.loadShell(text())
     onFileChanged: reload()
-    onLoadFailed: {
-      root.loadShell("")
-      themeRetry.restart()
-    }
+    onLoadFailed: root.loadShell("")
   }
 
   FileView {
@@ -157,18 +256,6 @@ Item {
     printErrors: false
     onLoaded: root.loadThemeName(text())
     onFileChanged: reload()
-    onLoadFailed: themeRetry.restart()
-  }
-
-  Timer {
-    id: themeRetry
-
-    interval: 500
-    repeat: false
-    onTriggered: {
-      themeFile.reload()
-      shellFile.reload()
-      themeNameFile.reload()
-    }
+    onLoadFailed: root.loadThemeName("")
   }
 }

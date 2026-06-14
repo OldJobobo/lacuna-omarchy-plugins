@@ -1,5 +1,7 @@
 # Lacuna Fake Fullscreen Frame Plan
 
+Status: active
+
 ## Goal
 
 Add a Lacuna-owned visual frame mode that can make the Omarchy bar, Lacuna

@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+"""Sync and verify vendored Lacuna plugin files."""
+
+from __future__ import annotations
+
+import argparse
+import filecmp
+import os
+import shutil
+import sys
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+OMARCHY_ROOT = Path(os.environ.get("OMARCHY_PATH", Path.home() / ".local/share/omarchy"))
+
+
+COLOR_PROFILE_EXCLUSIONS = {
+    "lacuna.mpris/ColorProfile.qml",
+    "lacuna.theme/ColorProfile.qml",
+    "lacuna.wallpaper/ColorProfile.qml",
+    "lacuna.workspaces/ColorProfile.qml",
+}
+
+MOTION_TOKEN_EXCLUSIONS = {
+    # The menu service has richer panel/sidebar motion tokens, not the simple
+    # bar-widget contract.
+    "lacuna.menu/services/MotionTokens.qml",
+    # These component-local copies carry widget-specific timing extensions.
+    "lacuna.mpris/components/MotionTokens.qml",
+    "lacuna.shell-settings/services/MotionTokens.qml",
+    "lacuna.workspaces/components/MotionTokens.qml",
+}
+
+
+def rel(path: Path) -> str:
+    try:
+        return path.relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def vendored_pairs() -> list[tuple[Path, Path]]:
+    pairs: list[tuple[Path, Path]] = []
+
+    color_source = ROOT / "shared/qml/simple-bar/ColorProfile.qml"
+    for target in sorted(ROOT.glob("lacuna.*/ColorProfile.qml")):
+        if rel(target) not in COLOR_PROFILE_EXCLUSIONS:
+            pairs.append((color_source, target))
+
+    motion_source = ROOT / "shared/qml/simple-bar/MotionTokens.qml"
+    for target in sorted(ROOT.glob("lacuna.*/MotionTokens.qml")):
+        if rel(target) not in MOTION_TOKEN_EXCLUSIONS:
+            pairs.append((motion_source, target))
+
+    settings_source = ROOT / "lacuna.shell-settings/settings"
+    settings_target = ROOT / "lacuna.menu/settings"
+    for source in sorted(settings_source.glob("*.qml")):
+        target = settings_target / source.name
+        if target.exists():
+            pairs.append((source, target))
+
+    components_source = ROOT / "lacuna.shell-settings/components"
+    components_target = ROOT / "lacuna.menu/components"
+    for source in sorted(components_source.glob("*.qml")):
+        target = components_target / source.name
+        if target.exists():
+            pairs.append((source, target))
+
+    pairs.extend([
+        (
+            OMARCHY_ROOT / "shell/plugins/bar/Bar.qml",
+            ROOT / "lacuna.bar/OmarchyBar.qml",
+        ),
+        (
+            OMARCHY_ROOT / "shell/plugins/bar/BarModel.js",
+            ROOT / "lacuna.bar/BarModel.js",
+        ),
+        (
+            ROOT / "lacuna.shell-settings/Service.qml",
+            ROOT / "lacuna.menu/services/OmarchyShellSettingsService.qml",
+        ),
+        (
+            ROOT / "lacuna.shell-settings/CommandRunner.qml",
+            ROOT / "lacuna.menu/services/CommandRunner.qml",
+        ),
+        (
+            ROOT / "lacuna.shell-settings/scripts/omarchy-shell-settings-state.py",
+            ROOT / "lacuna.menu/scripts/omarchy-shell-settings-state.py",
+        ),
+        (
+            ROOT / "lacuna.state/Service.qml",
+            ROOT / "lacuna.menu/services/LacunaSettings.qml",
+        ),
+    ])
+
+    return pairs
+
+
+def check_pairs(pairs: list[tuple[Path, Path]]) -> int:
+    drifted = []
+    for source, target in pairs:
+        if not source.exists() or not target.exists():
+            drifted.append((source, target, "missing"))
+        elif not filecmp.cmp(source, target, shallow=False):
+            drifted.append((source, target, "differs"))
+
+    for source, target, reason in drifted:
+        print(f"{reason}: {rel(source)} -> {rel(target)}")
+
+    return 1 if drifted else 0
+
+
+def sync_pairs(pairs: list[tuple[Path, Path]]) -> int:
+    for source, target in pairs:
+        if not source.exists():
+            print(f"missing source: {rel(source)}", file=sys.stderr)
+            return 1
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        print(f"synced {rel(source)} -> {rel(target)}")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check", action="store_true", help="Fail if any vendored file has drifted.")
+    parser.add_argument("--list", action="store_true", help="Print source and target pairs.")
+    args = parser.parse_args(argv)
+
+    pairs = vendored_pairs()
+    if args.list:
+        for source, target in pairs:
+            print(f"{rel(source)} -> {rel(target)}")
+        return 0
+    if args.check:
+        return check_pairs(pairs)
+    return sync_pairs(pairs)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

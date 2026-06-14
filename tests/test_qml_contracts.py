@@ -26,19 +26,144 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('style === "lacuna" || style === "carbon"', qml)
         self.assertIn('return "lacuna"', qml)
 
-    def test_lacuna_menu_surface_tracks_omarchy_bar_background(self):
+    def test_lacuna_menu_surface_accepts_shell_surface_alpha(self):
         qml = read("lacuna.menu/services/Theme.qml")
 
-        self.assertIn('property color panelBackground: shellColor("bar.background", color("background"))', qml)
-        self.assertIn("var numKv = line.match", qml)
+        self.assertIn('property color panelBackground: shellSurfaceColor("bar.background", color("background"))', qml)
+        self.assertIn("function shellSurfaceColor", qml)
+        self.assertIn('var value = shellValues[name + "-alpha"]', qml)
+        self.assertIn("function parseColor", qml)
+        self.assertIn("rgba?", qml)
+        self.assertIn("rgbHexAlpha", qml)
+        self.assertIn("hyprHex", qml)
+        self.assertIn("function stripInlineComment", qml)
+        self.assertIn("function unquoteValue", qml)
+        self.assertIn('var match = line.match(/^([A-Za-z0-9_-]+)\\s*=\\s*(.+)$/)', qml)
         self.assertNotIn("property color panelBackground: color(\"background\")", qml)
+        self.assertNotIn("Keep it opaque", qml)
+
+    def test_lacuna_panel_surfaces_use_rgba_bar_surface_color(self):
+        menu = read("lacuna.menu/menu/MenuWindow.qml")
+        shell_settings = read("lacuna.shell-settings/Panel.qml")
+
+        self.assertIn("property color surfaceBackground: menuTheme.panelBackground", menu)
+        self.assertIn("property color panelColor: surfaceBackground", menu)
+        self.assertIn("panelColor: root.panelColor", menu)
+        self.assertIn("frameColor: root.panelColor", menu)
+        self.assertIn("background: root.background", menu)
+        self.assertNotIn("background: root.surfaceBackground", menu)
+        self.assertNotIn("color: root.surfaceBackground", menu)
+        self.assertIn("readonly property color surfaceBackground: Color.bar.background", shell_settings)
+        self.assertIn('color: "transparent"', shell_settings)
+        self.assertIn("color: root.surfaceBackground", shell_settings)
+        self.assertIn("background: Color.background", shell_settings)
+
+    def test_lacuna_panel_surface_geometry_is_owned_by_surface_components(self):
+        host = read("lacuna.menu/menu/LacunaPanelHost.qml")
+        flyout = read("lacuna.menu/menu/LacunaAttachedFlyout.qml")
+        overlay = read("lacuna.menu/menu/LacunaFrameOverlay.qml")
+        surface = read("lacuna.menu/menu/MenuSurface.qml")
+        window = read("lacuna.menu/menu/MenuWindow.qml")
+
+        self.assertIn("connectorRenderable ? effectiveFlyoutHeight + effectiveConnectorWidth * 2 : 0", host)
+        self.assertIn("topLeftCornerState: root.openToLeft ? 0 : -1", flyout)
+        self.assertIn("topRightCornerState: root.openToLeft ? -1 : 0", flyout)
+        self.assertIn("readonly property real surfaceAlpha", read("lacuna.menu/menu/LacunaShapeSurface.qml"))
+        self.assertIn("readonly property color solidPanelColor", read("lacuna.menu/menu/LacunaShapeSurface.qml"))
+        self.assertIn("opacity: clampedProgress * surfaceAlpha", read("lacuna.menu/menu/LacunaPanelConnector.qml"))
+        self.assertIn("readonly property color solidPanelColor", surface)
+        self.assertIn("height: Math.max(0, (root.fullFrame ? root.bottomJoinTop : surface.height) - root.joinTop)", surface)
+        self.assertIn("id: barJoinShape", surface)
+        self.assertIn("id: bottomFrameJoinShape", surface)
+        self.assertIn("y: root.barBottomY", overlay)
+        self.assertIn("readonly property color solidFrameColor", overlay)
+        self.assertIn("readonly property real shadowAlphaCompensation", overlay)
+        self.assertIn("shadowOpacity: root.shadowOpacity * root.shadowAlphaCompensation", overlay)
+        self.assertNotIn("id: sidebarTopFrameCornerPiece", window)
+        self.assertNotIn("id: sidebarBottomFrameCornerPiece", window)
 
     def test_lacuna_settings_has_pending_save_merge_for_quick_launch_state(self):
         qml = read("lacuna.menu/services/LacunaSettings.qml")
 
         self.assertIn("function mergePendingSave", qml)
+        self.assertIn("pendingSaveTouchedQuickLaunch", qml)
+        self.assertIn("queuedTouchedQuickLaunch", qml)
+        self.assertIn("queuedTouchedQuickLaunch !== true", qml)
         self.assertIn("merged.customQuickLaunchApps = loadedBase.customQuickLaunchApps", qml)
         self.assertIn("merged.customQuickLaunchNames = loadedBase.customQuickLaunchNames", qml)
+
+    def test_bar_size_theme_mode_is_reachable(self):
+        settings = read("lacuna.menu/services/LacunaSettings.qml")
+        state_service = read("lacuna.state/Service.qml")
+        bar_size = read("lacuna.menu/services/BarSizeMode.qml")
+        registry = read("lacuna.menu/menu/MenuRegistry.qml")
+        settings_window = read("lacuna.menu/settings/SettingsWindow.qml")
+
+        for qml in [settings, state_service]:
+            self.assertIn('barSizeMode: "theme"', qml)
+            self.assertIn('mode === "theme" || mode === "compact" || mode === "full"', qml)
+
+        self.assertIn('if (value === "theme" || value === "compact" || value === "full") return value', bar_size)
+        self.assertIn('if (mode === "theme")', bar_size)
+        self.assertIn('savePatch({ barSizeSnapshot: null })', bar_size)
+        self.assertIn('if (root.barSizeMode === "theme") return "Theme"', registry)
+        self.assertIn('if (root.barSizeMode === "theme") return "Use the active Omarchy theme bar sizing"', registry)
+        self.assertIn('{ value: "theme", label: "Theme" }', settings_window)
+
+    def test_lacuna_settings_uses_fileview_for_load_save(self):
+        for path in [
+            "lacuna.state/Service.qml",
+            "lacuna.menu/services/LacunaSettings.qml",
+        ]:
+            qml = read(path)
+
+            self.assertIn("function applyLoadedText", qml, path)
+            self.assertIn("function writePayload", qml, path)
+            self.assertIn("settingsFileView.setText(payload)", qml, path)
+            self.assertIn("atomicWrites: true", qml, path)
+            self.assertIn("suppressFileReloads", qml, path)
+            self.assertNotIn("id: loadProc", qml, path)
+            self.assertNotIn("id: saveProc", qml, path)
+            self.assertNotIn('"bash", "-lc"', qml, path)
+
+    def test_lacuna_menu_state_uses_fileview_for_load_save(self):
+        qml = read("lacuna.menu/services/LacunaMenuState.qml")
+
+        self.assertIn("function savePayload", qml)
+        self.assertIn("stateFileView.setText(savePayload())", qml)
+        self.assertIn("atomicWrites: true", qml)
+        self.assertNotIn("saveCommand", qml)
+        self.assertNotIn("id: loadProc", qml)
+        self.assertNotIn("id: saveProc", qml)
+        self.assertNotIn('"bash", "-lc"', qml)
+
+    def test_qml_processes_do_not_use_noninteractive_login_shells(self):
+        login_shell_exceptions = {
+            "lacuna.bar/OmarchyBar.qml",
+            "lacuna.shell-settings/Panel.qml",
+        }
+        for path in sorted(ROOT.glob("lacuna.*/*.qml")):
+            if path.relative_to(ROOT).as_posix() in login_shell_exceptions:
+                continue
+            qml = path.read_text(encoding="utf-8")
+            self.assertNotIn('"bash", "-lc"', qml, str(path.relative_to(ROOT)))
+            self.assertNotIn('"-lc"', qml, str(path.relative_to(ROOT)))
+
+        for path in [
+            "lacuna.menu/menu/MenuCommandCatalog.qml",
+            "lacuna.shell-settings/Panel.qml",
+        ]:
+            qml = read(path)
+            self.assertIn("Interactive terminal sessions intentionally use a login shell", qml, path)
+
+    def test_settings_persistence_preserves_observed_nightlight_temperatures(self):
+        qml = read("lacuna.settings-persistence/Service.qml")
+
+        self.assertIn("function noteNightlightTemperature", qml)
+        self.assertIn("function targetNightlightTemperature", qml)
+        self.assertIn("temp < 5000", qml)
+        self.assertIn("nightlightApplyProc.appliedTemperature", qml)
+        self.assertNotIn("expected ? 4000 : 6000", qml)
 
     def test_custom_quick_launch_context_menu_can_delete_items(self):
         content = read("lacuna.menu/menu/MenuContent.qml")
@@ -52,6 +177,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("function removeCustomQuickLaunchApp(id)", window)
         self.assertIn("next.customQuickLaunchApps = ids", window)
         self.assertIn("next.customQuickLaunchNames = names", window)
+        self.assertIn("lacunaSettings.save(next, true)", window)
         self.assertIn("onQuickLaunchRemoveRequested", window)
 
     def test_app_picker_does_not_cap_search_results(self):
@@ -198,6 +324,10 @@ class QmlContractTests(unittest.TestCase):
         system_stats = read("lacuna.system-stats/Widget.qml")
         self.assertIn("readonly property bool tooltipHovered", system_stats)
         self.assertIn("parent.bar.showTooltip(parent, parent.tooltip)", system_stats)
+        self.assertIn('path: "/proc/stat"', system_stats)
+        self.assertIn('path: "/proc/meminfo"', system_stats)
+        self.assertNotIn('"head -n1 /proc/stat"', system_stats)
+        self.assertNotIn('"head -n3 /proc/meminfo"', system_stats)
 
         for path in [
             "lacuna.mpris/components/LacunaMprisButton.qml",
@@ -499,10 +629,14 @@ class QmlContractTests(unittest.TestCase):
             tone_function = qml.split("function toneAccent", 1)[1].split("\n  }", 1)[0]
 
             self.assertIn('if (tone === "danger") return root.dangerAccent', tone_function, path)
-            self.assertIn("return root.accent", tone_function, path)
-            self.assertNotIn("return root.shellAccent", tone_function, path)
-            self.assertNotIn("return root.sessionAccent", tone_function, path)
-            self.assertNotIn("return root.navAccent", tone_function, path)
+            if path.endswith("OmarchyShellSettingsWindow.qml"):
+                self.assertIn('if (tone === "shell") return root.shellAccent', tone_function, path)
+                self.assertIn("return root.navAccent", tone_function, path)
+            else:
+                self.assertIn("return root.accent", tone_function, path)
+                self.assertNotIn("return root.shellAccent", tone_function, path)
+                self.assertNotIn("return root.sessionAccent", tone_function, path)
+                self.assertNotIn("return root.navAccent", tone_function, path)
 
         docs = read("docs/lacuna-menu-unified-color-model.md")
         self.assertIn("one primary theme accent", docs)
@@ -575,21 +709,65 @@ class QmlContractTests(unittest.TestCase):
     def test_fake_frame_topbar_reserve_matches_rendered_caster_size(self):
         window = read("lacuna.menu/menu/MenuWindow.qml")
         overlay = read("lacuna.menu/menu/LacunaFrameOverlay.qml")
+        reserve = read("lacuna.menu/menu/LacunaFrameReserveWindow.qml")
 
         self.assertIn("property int barEdgeCasterSize: frameThickness", window)
-        self.assertIn("property int sidebarReserveExtra: 2", window)
+        self.assertIn("property int sidebarReserveExtra: 0", window)
+        self.assertIn("readonly property bool externalLeftFrameReserveActive: frameMode === \"fullframe\" && !root.leftBar && !root.panelOnRight", window)
+        self.assertIn("readonly property int barOwnedLeftFrameReserve: externalLeftFrameReserveActive ? frameThickness : 0", window)
+        self.assertIn("readonly property int sidebarReserveSize: sidebarReserveActive ? Math.max(0, panelWidth + effectiveSidebarReserveExtra - barOwnedLeftFrameReserve) : 0", window)
+        self.assertIn('property string frameReserveMode: "auto"', read("lacuna.menu/menu/MenuRegistry.qml"))
+        self.assertIn('reserveMode: "auto"', read("lacuna.menu/services/LacunaSettings.qml"))
+        self.assertIn("readonly property bool frameReserveFlush: frameReserveMode === \"flush\" || hyprWindowGapsDisabled || (frameReserveMode === \"auto\" && fakeFullscreenWorkspaceActive())", window)
+        self.assertIn("readonly property bool barOwnsLacunaFrame: shell && shell.bar && shell.bar.lacunaFrameHost === true", window)
+        self.assertIn("property bool hostManaged: false", window)
+        self.assertIn("if (root.hostManaged) return", window)
+        self.assertIn("readonly property int frameOverlayWidth: !lacunaEnabled || barOwnsLacunaFrame || frameMode === \"off\" ? 0", window)
+        self.assertIn("readonly property bool frameReserveActive: !barOwnsLacunaFrame && lacunaEnabled", window)
+        self.assertIn("readonly property int effectiveSidebarReserveExtra: frameReserveFlush ? 0 : sidebarReserveExtra", window)
+        self.assertIn("readonly property bool hyprWindowGapsDisabled", window)
+        self.assertIn("shellHyprState.windowGapsEnabled === false", window)
+        self.assertIn("function hyprGapValue(value)", window)
+        self.assertIn("function fakeFullscreenWorkspaceActive()", window)
+        self.assertIn("function gapslessWorkspaceActive()", window)
+        self.assertIn("return hyprWindowGapsDisabled || fakeFullscreenWorkspaceActive()", window)
+        self.assertIn("Hyprland.monitorFor(root.sidebarScreen)", window)
+        self.assertIn("if (monitor && monitor.activeWorkspace) return monitor.activeWorkspace", window)
+        self.assertIn("import Quickshell.Hyprland", window)
         self.assertIn("barEdgeCasterSize: root.barEdgeCasterSize", window)
         self.assertIn("cornerPieces: sidebarState.cornerPieces", window)
         self.assertIn("function holdFlyoutAfterSettingsActivation()", window)
         self.assertIn("if (Date.now() < ignoreFlyoutFocusClearUntil) return", window)
         self.assertIn("property real barEdgeCasterSize: frameThickness", overlay)
+        self.assertIn("readonly property real sidebarOccupiedWidth: sidebarWidth + (sidebarCornerVisible ? sidebarCornerWidth : 0)", overlay)
+        self.assertIn("readonly property real horizontalBarShadowX: leftEdgeOccupied ? Math.max(0, sidebarX + sidebarOccupiedWidth) : 0", overlay)
+        self.assertIn("readonly property real horizontalBarShadowWidth", overlay)
+        self.assertIn("visible: root.topBar && root.horizontalBarShadowWidth > 0", overlay)
+        self.assertIn("x: root.horizontalBarShadowX", overlay)
         self.assertIn("property bool cornerPieces: true", overlay)
+        self.assertIn("id: surfaceShadowLayer", overlay)
+        self.assertIn("readonly property real surfaceShadowOpacity", overlay)
+        self.assertIn("source: frameSource", overlay)
+        self.assertNotIn("id: sidebarSilhouette", overlay)
+        self.assertNotIn("id: connectorSilhouette", overlay)
+        self.assertNotIn("id: flyoutSilhouette", overlay)
+        self.assertNotIn("drawCoveredSurfaceSilhouettes", overlay)
         self.assertIn("root.fullFrame && root.cornerPieces && root.topBar && !root.leftBar && !root.leftEdgeOccupied", overlay)
+        surface = read("lacuna.menu/menu/MenuSurface.qml")
+        self.assertIn("property bool fullFrame: false", surface)
+        self.assertIn("id: bottomFrameJoinShape", surface)
+        self.assertIn("visible: root.fullFrame && root.cornerPieces && root.bodyRightInset > 0", surface)
+        self.assertIn("fullFrame: root.frameMode === \"fullframe\"", window)
+        self.assertIn("frameThickness: root.frameThickness", window)
+        self.assertNotIn("import QtQuick.Shapes", window)
         self.assertIn("frameReserveRight: frameReserveActive && frameMode === \"fullframe\" && !root.panelOnRight && !root.rightBar ? frameThickness + reservePadding : 0", window)
         self.assertIn("topBarShadowReserve: frameReserveActive && root.topBar ? reservePadding : 0", window)
+        self.assertIn("WlrLayershell.namespace: layerNamespace + \"-\" + edge", reserve)
+        self.assertIn("edge suffix keeps", reserve)
 
     def test_plugin_manifests_have_existing_item_entrypoints(self):
         kind_entry_points = {
+            "bar": "bar",
             "bar-widget": "barWidget",
             "panel": "panel",
             "overlay": "overlay",
@@ -656,6 +834,10 @@ class QmlContractTests(unittest.TestCase):
             qml = read(path)
             self.assertNotIn("console.log", qml, path)
             self.assertIn("console.warn(\"lacuna command failed:\"", qml, path)
+            self.assertIn("property var failureQueue", qml, path)
+            self.assertIn("function notifyFailure", qml, path)
+            self.assertIn("function drainFailures", qml, path)
+            self.assertIn("onExited: root.drainFailures()", qml, path)
 
     def test_lacuna_manifest_metadata_describes_install_groups(self):
         manifests = {
@@ -701,6 +883,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertEqual(
             {
                 "lacuna.compact-pill",
+                "lacuna.bar",
                 "lacuna.menu",
                 "lacuna.menu-button",
                 "lacuna.shell-settings",
@@ -729,7 +912,77 @@ class QmlContractTests(unittest.TestCase):
             ["lacuna.state", "lacuna.shell-settings"],
             manifests["lacuna.menu"]["lacuna"]["requires"],
         )
+        self.assertEqual(
+            ["lacuna.state", "lacuna.shell-settings", "lacuna.menu"],
+            manifests["lacuna.bar"]["lacuna"]["requires"],
+        )
         self.assertEqual(["lacuna.bar-size-pill"], manifests["lacuna.compact-pill"]["lacuna"]["requires"])
+
+    def test_lacuna_bar_is_bar_option_frame_host(self):
+        manifest = read_json("lacuna.bar/manifest.json")
+        bar = read("lacuna.bar/Bar.qml")
+        adapter = read("lacuna.bar/OmarchyBarAdapter.qml")
+        frame = read("lacuna.bar/LacunaFrameWindow.qml")
+
+        self.assertEqual(["bar"], manifest["kinds"])
+        self.assertEqual("Bar.qml", manifest["entryPoints"]["bar"])
+        self.assertIn('property string omarchyPath: ""', bar)
+        self.assertIn("property var barWidgetRegistry: null", bar)
+        self.assertIn("property var barConfig: ({})", bar)
+        self.assertNotIn("required property string omarchyPath", bar)
+        self.assertIn("property bool lacunaFrameHost: true", bar)
+        self.assertIn("readonly property bool barHidden: omarchyBar.barItem && omarchyBar.barItem.barHidden === true", bar)
+        self.assertIn("readonly property bool hostedMenuOpen: hostedMenu.menuState && hostedMenu.menuState.open === true", bar)
+        self.assertIn('import "../lacuna.menu/menu"', bar)
+        self.assertIn('import "../lacuna.menu/services"', bar)
+        self.assertIn("readonly property string lacunaMenuSourceDir", bar)
+        self.assertIn('id: "lacuna.menu"', bar)
+        self.assertIn("readonly property bool hostedSidebarVisible", bar)
+        self.assertIn("readonly property real hostedSidebarOccupiedWidth", bar)
+        self.assertIn("Theme {", bar)
+        self.assertIn("function toggleMenu(payloadJson)", bar)
+        self.assertIn("MenuWindow", bar)
+        self.assertIn("hostManaged: true", bar)
+        self.assertIn('root.shell.ensureService("lacuna.state")', bar)
+
+        menu_entry = read("lacuna.menu/Menu.qml")
+        self.assertIn("readonly property bool barHostAvailable", menu_entry)
+        self.assertIn("shell.bar.lacunaFrameHost === true", menu_entry)
+        self.assertIn("function unloadFallback", menu_entry)
+        self.assertIn("onBarHostAvailableChanged", menu_entry)
+        self.assertIn("fallbackLoader.active = false", menu_entry)
+        self.assertIn("shell.bar.openMenu(payloadJson || \"{}\")", menu_entry)
+        self.assertIn("shell.bar.closeMenu()", menu_entry)
+        self.assertIn("Loader", menu_entry)
+        self.assertIn("MenuWindow", menu_entry)
+        self.assertIn('bar.toggleMenu("{}")', read("lacuna.menu-button/Widget.qml"))
+        self.assertIn('readonly property bool frameEnabled: frameMode === "fullframe"', bar)
+        self.assertIn("OmarchyBarAdapter", bar)
+        self.assertIn("LacunaFrameWindow", bar)
+        self.assertIn("OmarchyBar", adapter)
+        self.assertIn("readonly property var barItem: omarchyBar", adapter)
+        self.assertIn("function debugBarGeometry()", adapter)
+        self.assertIn("function openConfigPanel()", adapter)
+        self.assertIn('WlrLayershell.namespace: "lacuna-bar-frame"', frame)
+        self.assertIn("WlrLayershell.exclusionMode: ExclusionMode.Ignore", frame)
+        self.assertIn("mask: Region {}", frame)
+        self.assertIn("property bool leftEdgeOccupied: false", frame)
+        self.assertIn("property bool rightEdgeOccupied: false", frame)
+        self.assertIn("property real leftOccupiedWidth: 0", frame)
+        self.assertIn("readonly property real horizontalFrameX: leftOcclusion", frame)
+        self.assertIn("readonly property real horizontalFrameWidth: Math.max(0, width - leftOcclusion - rightOcclusion)", frame)
+        self.assertIn("readonly property int topInset: topBar ? Math.max(0, barSize) : t", frame)
+        self.assertIn("readonly property int leftInset: leftBar ? Math.max(0, barSize) : t", frame)
+        self.assertIn("readonly property color solidFrameColor", frame)
+        self.assertIn("frameColor: barTheme.panelBackground", bar)
+        self.assertIn("leftEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && !hostedMenu.panelOnRight", bar)
+        self.assertIn("leftOccupiedWidth: root.hostedSidebarOccupiedWidth", bar)
+        self.assertIn("visible: !root.leftBar && !root.leftEdgeOccupied", frame)
+        self.assertIn("visible: root.cornerPieces && !root.leftEdgeOccupied && root.r > 0", frame)
+        self.assertIn("x: root.leftInset", frame)
+        self.assertIn("y: root.topInset", frame)
+        self.assertIn("x: parent.width - root.rightInset - root.r", frame)
+        self.assertIn("y: parent.height - root.bottomInset - root.r", frame)
 
     def test_theme_preloader_is_loaded_as_a_service(self):
         manifest = read_json("lacuna.theme-preloader/manifest.json")
