@@ -155,6 +155,8 @@ Item {
       )
     }
 
+    if (raw.length > 0)
+      console.warn("Lacuna Theme: could not parse color value '" + raw + "'; using fallback")
     return fallbackColor
   }
 
@@ -188,6 +190,8 @@ Item {
       if (match) next[match[1]] = match[2].trim()
     }
 
+    if (String(raw || "").trim().length > 0 && Object.keys(next).length === 0)
+      console.warn("Lacuna Theme: colors.toml has content but produced no parseable entries; check its syntax")
     palette = next
   }
 
@@ -210,6 +214,8 @@ Item {
       if (match && section) next[section + "." + match[1]] = unquoteValue(match[2])
     }
 
+    if (String(raw || "").trim().length > 0 && Object.keys(next).length === 0)
+      console.warn("Lacuna Theme: shell.toml has content but produced no parseable entries; check its syntax")
     shellValues = next
   }
 
