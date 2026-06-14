@@ -140,6 +140,37 @@ class QmlContractTests(unittest.TestCase):
             self.assertNotIn("id: saveProc", qml, path)
             self.assertNotIn('"bash", "-lc"', qml, path)
 
+    def test_lacuna_settings_load_emits_loaded_signal_without_shadowing(self):
+        # Regression: a local `var loaded` in applyLoadedText shadowed the
+        # `signal loaded()`, so calling loaded() threw and the pending-save
+        # tail never ran. The local must not be named `loaded`.
+        for path in [
+            "lacuna.state/Service.qml",
+            "lacuna.menu/services/LacunaSettings.qml",
+        ]:
+            qml = read(path)
+
+            self.assertIn("signal loaded()", qml, path)
+            self.assertIn("function applyLoadedText", qml, path)
+            self.assertIn("var parsed", qml, path)
+            self.assertIn("data = parsed", qml, path)
+            # The buggy local assignment must be gone.
+            self.assertNotIn("data = loaded\n", qml, path)
+            self.assertNotIn("loaded = normalize(", qml, path)
+
+    def test_lacuna_settings_backs_up_corrupt_settings_before_defaults(self):
+        # Regression: corrupt settings.json silently wiped all customization.
+        # The parse-failure path must back the bad file up and flag recovery.
+        for path in [
+            "lacuna.state/Service.qml",
+            "lacuna.menu/services/LacunaSettings.qml",
+        ]:
+            qml = read(path)
+
+            self.assertIn("recoveredFromCorruptSettings", qml, path)
+            self.assertIn("settingsBackupFileView.setText(corrupt)", qml, path)
+            self.assertIn('path: root.settingsFile + ".bak"', qml, path)
+
     def test_lacuna_menu_state_uses_fileview_for_load_save(self):
         qml = read("lacuna.menu/services/LacunaMenuState.qml")
 

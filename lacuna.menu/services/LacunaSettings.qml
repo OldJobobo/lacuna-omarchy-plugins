@@ -18,6 +18,7 @@ Item {
   property bool writeInFlight: false
   property int suppressFileReloads: 0
   property bool hasLoaded: false
+  property bool recoveredFromCorruptSettings: false
 
   function defaultData() {
     return {
@@ -385,14 +386,20 @@ Item {
   }
 
   function applyLoadedText(raw) {
-    var loaded
+    var parsed
     try {
-      loaded = normalize(JSON.parse(String(raw || "{}")))
+      parsed = normalize(JSON.parse(String(raw || "{}")))
     } catch (e) {
-      loaded = defaultData()
+      console.warn("Lacuna settings.json is not valid JSON; backing up and restoring defaults:", e)
+      var corrupt = String(raw || "")
+      if (corrupt.trim().length > 0 && corrupt.trim() !== "{}") {
+        settingsBackupFileView.setText(corrupt)
+        recoveredFromCorruptSettings = true
+      }
+      parsed = defaultData()
     }
 
-    data = loaded
+    data = parsed
     lastLoadedData = data
     hasLoaded = true
     loaded()
@@ -471,5 +478,13 @@ Item {
       }
     }
     onLoadFailed: root.applyLoadedText("{}")
+  }
+
+  FileView {
+    id: settingsBackupFileView
+
+    path: root.settingsFile + ".bak"
+    atomicWrites: true
+    printErrors: false
   }
 }
