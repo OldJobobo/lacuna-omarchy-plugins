@@ -809,6 +809,13 @@ class QmlContractTests(unittest.TestCase):
 
         self.assertIn('defaultMode: "off"', settings)
         self.assertIn("function setDefaultMode", sidebar)
+        # The persisted preference and the session toggle are named distinctly,
+        # and save() persists the real runtime collapse rather than a value
+        # re-derived from defaultMode.
+        self.assertIn("readonly property string desiredDefaultMode: defaultMode", sidebar)
+        self.assertIn("readonly property bool runtimeCollapsed: collapsed", sidebar)
+        self.assertIn("collapsed: collapsed", sidebar)
+        self.assertNotIn('collapsed: defaultMode === "rail"', sidebar)
         self.assertIn('entry.action.indexOf("set-sidebar-default-")', window)
         self.assertIn('"Sidebar Default"', settings_window)
         self.assertNotIn('"set-sidebar-display-"', settings_window)

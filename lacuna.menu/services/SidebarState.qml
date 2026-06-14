@@ -12,6 +12,13 @@ Item {
   property string defaultMode: "off"
   property bool displayInitialized: false
 
+  // Two distinct concepts that previously bled together:
+  //   desiredDefaultMode - the persisted startup preference (off/rail/full).
+  //   runtimeCollapsed    - the live rail/full toggle for the current session.
+  // The aliases name the split so consumers can read intent directly.
+  readonly property string desiredDefaultMode: defaultMode
+  readonly property bool runtimeCollapsed: collapsed
+
   function load() {
     if (settingsService && settingsService.load) settingsService.load()
   }
@@ -65,7 +72,10 @@ Item {
     if (!next || typeof next !== "object") next = { version: 1 }
     next.sidebar = {
       defaultMode: defaultMode,
-      collapsed: defaultMode === "rail",
+      // Persist the real runtime toggle rather than a value re-derived from
+      // defaultMode, so changing the default preference no longer silently
+      // rewrites the stored collapsed state.
+      collapsed: collapsed,
       exclusive: exclusive,
       cornerPieces: cornerPieces
     }
@@ -76,6 +86,8 @@ Item {
     var sidebar = settingsService && settingsService.data ? settingsService.data.sidebar : null
     defaultMode = normalizeDefaultMode(sidebar && sidebar.defaultMode)
     if (!displayInitialized) {
+      // Seed the session toggle from the startup preference on first load; from
+      // then on it is session state that setDefaultMode/toggleCollapsed own.
       collapsed = defaultMode === "rail"
       displayInitialized = true
     }
