@@ -137,6 +137,13 @@ Item {
       && values.sizeVertical === desired.sizeVertical
   }
 
+  function patchedValuesMatch(nextRaw, sizeHorizontal, sizeVertical) {
+    var verify = parseBarValues(nextRaw)
+    return verify.valid
+      && verify.sizeHorizontal === sizeHorizontal
+      && verify.sizeVertical === sizeVertical
+  }
+
   function snapshotForCurrentTheme(values) {
     if (!values.valid || String(themeName || "").trim() === "") return null
     return {
@@ -179,6 +186,10 @@ Item {
       if (!snapshotMatchesTheme(snapshot)) return
 
       var restored = patchBarValues(shellRaw, snapshot.sizeHorizontal, snapshot.sizeVertical)
+      if (!patchedValuesMatch(restored, snapshot.sizeHorizontal, snapshot.sizeVertical)) {
+        console.warn("lacuna bar size mode: restored shell.toml did not yield the snapshot sizes; skipping write")
+        return
+      }
       savePatch({ barSizeSnapshot: null })
       if (restored !== shellRaw) writeShell(restored)
       return
@@ -199,7 +210,12 @@ Item {
     if (shouldSaveSettings) savePatch(settingsPatch)
     if (valuesMatch(currentValues, desired)) return
 
-    writeShell(patchBarValues(shellRaw, desired.sizeHorizontal, desired.sizeVertical))
+    var patched = patchBarValues(shellRaw, desired.sizeHorizontal, desired.sizeVertical)
+    if (!patchedValuesMatch(patched, desired.sizeHorizontal, desired.sizeVertical)) {
+      console.warn("lacuna bar size mode: patched shell.toml did not yield the desired bar sizes; skipping write")
+      return
+    }
+    writeShell(patched)
   }
 
   function writeShell(nextRaw) {
@@ -231,11 +247,11 @@ Item {
   }
 
   onThemeNameChanged: {
+    // Collapse rapid theme-name flicker into a single debounced reload so we
+    // never re-derive bar-size state against half-loaded theme files.
     colorsLoaded = false
     shellLoaded = false
-    colorsFile.reload()
-    shellFile.reload()
-    retryTimer.restart()
+    themeReloadTimer.restart()
   }
   onBarSizeModeChanged: applyTimer.restart()
 
@@ -321,6 +337,18 @@ Item {
     onTriggered: {
       colorsFile.reload()
       shellFile.reload()
+    }
+  }
+
+  Timer {
+    id: themeReloadTimer
+
+    interval: 90
+    repeat: false
+    onTriggered: {
+      colorsFile.reload()
+      shellFile.reload()
+      retryTimer.restart()
     }
   }
 }
