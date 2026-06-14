@@ -1,6 +1,6 @@
 # Lacuna Suite Improvement Plan
 
-Status: active implementation tracker (updated 2026-06-13)
+Status: active implementation tracker (updated 2026-06-14)
 
 This document started as a full-repository review plan for making Lacuna a
 first-class Omarchy Quickshell plugin suite. It is now the canonical progress
@@ -11,7 +11,7 @@ backlog.
 Current validation baseline:
 
 - `./scripts/check.sh` passes.
-- Current full suite result: 72 Python tests passing.
+- Current full suite result: 86 Python tests passing.
 - The check script validates example JSON, plugin manifests, vendored-file
   equality, optional `qmllint`/`shellcheck`, and the Python tests.
 
@@ -24,6 +24,12 @@ Current validation baseline:
 | Phase 3: Performance | Partly done | Login-shell I/O and system-stats spawn pressure are reduced. Polling and settings refresh cost still need follow-up. |
 | Phase 4: Architecture | Open | Sync tooling controls duplication, but structural decomposition and multi-monitor behavior remain backlog. |
 | Phase 5: Distribution, versioning, docs | Mostly done | Suite version, update command, CI coverage, manifest checks, and docs status markers exist. Release bump workflow remains. |
+
+Architecture update 2026-06-14: the Lacuna Bar host refactor checklist is
+complete. `lacuna.bar` is the dedicated bar option host, `lacuna.menu`
+delegates to the hosted menu when available, installer activation preserves the
+Lacuna host layout contract, and frame/flyout geometry rules are covered by
+tests.
 
 ## Completed Work
 

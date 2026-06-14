@@ -1,6 +1,12 @@
 # Lacuna Panel UI Overhaul Plan
 
-Status: active
+Status: complete; superseded by `docs/lacuna-noctalia-inspired-refactor-plan.md` and `docs/lacuna-bar-refactor-plan.md`
+
+Completion note 2026-06-14: the current implementation has controller-owned
+menu/flyout lifecycle, host-owned mask geometry, a single attached flyout host,
+progress-driven connector/flyout rendering, and explicit Lacuna Bar host frame
+ownership. The active contracts now live in `tests/test_qml_contracts.py` and
+the completed Lacuna Bar refactor plan.
 
 ## Goal
 

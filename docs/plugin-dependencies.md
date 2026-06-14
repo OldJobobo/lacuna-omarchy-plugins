@@ -55,6 +55,21 @@ theme/background workflow.
   `bar.layout`. The Lacuna installer treats it as the owner of the bar layout
   and strips stock `omarchy.*` bar widgets when applying the Lacuna host layout.
 
+## Reusable Extraction Candidates
+
+These plugins should stay free of unnecessary Lacuna frame/sidebar coupling so
+they can later become more universal plugins without changing the first Lacuna
+Bar refactor:
+
+- `lacuna.theme`
+- `lacuna.wallpaper`
+- `lacuna.claude-usage`
+- `lacuna.codex-usage`
+
+For the active Lacuna Bar refactor, keep the current plugin IDs and document
+the boundary only. Extraction should happen in a later pass after tests prove
+the modules do not depend on Lacuna-specific host behavior.
+
 ## Bundle-Only Plugins
 
 These plugins are intentionally not advertised as standalone installs:

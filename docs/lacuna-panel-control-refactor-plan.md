@@ -1,6 +1,12 @@
 # Lacuna Panel Control Refactor Plan
 
-Status: active
+Status: complete; superseded by `docs/lacuna-bar-refactor-plan.md`
+
+Completion note 2026-06-14: the menu-local panel controller, panel window
+wrapper, reusable attached flyout chrome, connector geometry, and host-managed
+frame ownership are implemented and covered by source contracts. Future panel
+work should start from the completed Lacuna Bar refactor plan rather than this
+historical outline.
 
 ## Goal
 

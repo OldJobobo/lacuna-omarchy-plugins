@@ -21,7 +21,7 @@ PanelWindow {
   property bool shadowEnabled: false
   property int shadowOffsetX: 2
   property int shadowOffsetY: 3
-  property real shadowOpacity: 0.32
+  property real shadowOpacity: 0.62
 
   readonly property int t: Math.max(1, frameThickness)
   readonly property int r: Math.max(t, frameRadius)
@@ -29,6 +29,7 @@ PanelWindow {
   readonly property real rightOcclusion: rightEdgeOccupied ? Math.max(0, rightOccupiedWidth) : 0
   readonly property real horizontalFrameX: leftOcclusion
   readonly property real horizontalFrameWidth: Math.max(0, width - leftOcclusion - rightOcclusion)
+  readonly property real edgeShadowSize: Math.max(16, t * 3)
   readonly property int topInset: topBar ? Math.max(0, barSize) : t
   readonly property int bottomInset: bottomBar ? Math.max(0, barSize) : t
   readonly property int leftInset: leftBar ? Math.max(0, barSize) : t
@@ -102,11 +103,11 @@ PanelWindow {
     }
 
     Rectangle {
-      visible: root.shadowEnabled && !root.topBar
+      visible: root.shadowEnabled
       x: root.horizontalFrameX
-      y: root.t
+      y: root.topInset
       width: root.horizontalFrameWidth
-      height: Math.max(8, root.t * 2)
+      height: root.edgeShadowSize
       opacity: root.shadowOpacity
       gradient: Gradient {
         GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.45) }
@@ -115,13 +116,41 @@ PanelWindow {
     }
 
     Rectangle {
-      visible: root.shadowEnabled && !root.bottomBar
+      visible: root.shadowEnabled
       x: root.horizontalFrameX
-      y: parent.height - root.t - height
+      y: parent.height - root.bottomInset - height
       width: root.horizontalFrameWidth
-      height: Math.max(8, root.t * 2)
+      height: root.edgeShadowSize
       opacity: root.shadowOpacity
       gradient: Gradient {
+        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.0) }
+        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.45) }
+      }
+    }
+
+    Rectangle {
+      visible: root.shadowEnabled && !root.leftBar && !root.leftEdgeOccupied
+      x: root.leftInset
+      y: root.topInset
+      width: root.edgeShadowSize
+      height: Math.max(0, parent.height - root.topInset - root.bottomInset)
+      opacity: root.shadowOpacity
+      gradient: Gradient {
+        orientation: Gradient.Horizontal
+        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.45) }
+        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.0) }
+      }
+    }
+
+    Rectangle {
+      visible: root.shadowEnabled && !root.rightBar && !root.rightEdgeOccupied
+      x: parent.width - root.rightInset - width
+      y: root.topInset
+      width: root.edgeShadowSize
+      height: Math.max(0, parent.height - root.topInset - root.bottomInset)
+      opacity: root.shadowOpacity
+      gradient: Gradient {
+        orientation: Gradient.Horizontal
         GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.0) }
         GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.45) }
       }

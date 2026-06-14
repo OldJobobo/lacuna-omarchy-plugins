@@ -1,6 +1,11 @@
 # Lacuna Fake Fullscreen Frame Plan
 
-Status: active
+Status: complete
+
+Completion note 2026-06-14: frame settings, frame overlay rendering,
+reserve-only frame edge windows, bar-hosted frame ownership, and regression
+contracts are implemented. The current Lacuna Bar refactor plan records the
+bar-owned frame/sidebar choreography as complete.
 
 ## Goal
 

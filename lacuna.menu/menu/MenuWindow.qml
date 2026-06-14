@@ -15,6 +15,7 @@ Item {
   property var pluginRegistry: null
   property var barWidgetRegistry: null
   property bool hostManaged: false
+  property int hostBarSize: 0
   property string pluginId: manifest && manifest.id ? manifest.id : "lacuna.menu"
   property var menuState: localMenuState
   property bool initialSidebarDefaultApplied: false
@@ -47,22 +48,23 @@ Item {
   readonly property bool leftBar: barPosition === "left"
   readonly property bool rightBar: barPosition === "right"
   readonly property bool hostBarHidden: shell && shell.bar && shell.bar.barHidden === true
-  readonly property bool barOwnsLacunaFrame: shell && shell.bar && shell.bar.lacunaFrameHost === true
+  readonly property bool barOwnsLacunaFrame: hostManaged || (shell && shell.bar && shell.bar.lacunaFrameHost === true)
   readonly property bool lacunaEnabled: !hostBarHidden
   // Lacuna is its own left sidebar. The Omarchy bar position only affects
   // offsets and sizing, not which edge Lacuna owns.
   readonly property bool panelOnRight: false
   readonly property bool sidebarSurfaceVisible: lacunaEnabled && panelController.menuRenderable
   readonly property bool effectiveCornerPieces: sidebarSurfaceVisible && sidebarState.cornerPieces && !panelOnRight
-  property int fullPanelWidth: Math.round(sizeMix(310, 270))
-  property real barControlSize: currentBarSize()
-  property int railButtonWidth: Math.round(forceCompactRail ? 24 : sizeMix(barControlSize, 24))
-  property int railLeftInset: railDesignTokens.railLeftInset
-  property int railRightInset: railDesignTokens.railRightInset
-  property int railPanelWidth: railButtonWidth + railLeftInset + railRightInset
-  property int panelWidth: sidebarSurfaceVisible ? (sidebarState.collapsed ? railPanelWidth : fullPanelWidth) : 0
   property int defaultTopBarHeight: 26
   property int barHeight: topBarHeight()
+  property int fullPanelWidth: Math.round(sizeMix(310, 270))
+  property real barControlSize: currentBarSize()
+  property int railReferenceBarHeight: Math.max(1, root.topBar && root.barHeight > 0 ? root.barHeight : configBarHeight())
+  property int railPanelWidth: Math.round(railReferenceBarHeight)
+  property int railButtonWidth: railPanelWidth
+  property int railLeftInset: 0
+  property int railRightInset: 0
+  property int panelWidth: sidebarSurfaceVisible ? (sidebarState.collapsed ? railPanelWidth : fullPanelWidth) : 0
   property int lacunaJoinRadius: Math.max(frameThickness, frameRadius)
   property int joinRadius: effectiveCornerPieces ? lacunaJoinRadius : 0
   property int connectorOverlap: effectiveCornerPieces ? Math.round(lacunaJoinRadius * 1.85) : 0
@@ -112,7 +114,7 @@ Item {
   readonly property int reservePadding: lacunaEnabled && frameMode !== "off" && !frameReserveFlush ? frameReservePadding : 0
   readonly property int effectiveSidebarReserveExtra: frameReserveFlush ? 0 : sidebarReserveExtra
   readonly property bool externalLeftFrameReserveActive: frameMode === "fullframe" && !root.leftBar && !root.panelOnRight
-  readonly property int barOwnedLeftFrameReserve: externalLeftFrameReserveActive ? frameThickness : 0
+  readonly property int barOwnedLeftFrameReserve: barOwnsLacunaFrame && externalLeftFrameReserveActive && !sidebarSurfaceVisible ? frameThickness : 0
   readonly property int sidebarReserveSize: sidebarReserveActive ? Math.max(0, panelWidth + effectiveSidebarReserveExtra - barOwnedLeftFrameReserve) : 0
   readonly property int visualTopInset: lacunaEnabled && sidebarState.exclusive && root.topBar ? root.barHeight : 0
   readonly property int visualBottomInset: lacunaEnabled && sidebarState.exclusive && root.bottomBar ? root.barHeight : 0
@@ -259,6 +261,7 @@ Item {
   function currentBarSize() {
     var liveBar = shell && shell.bar ? shell.bar : null
     var verticalFallback = (barPosition === "left" || barPosition === "right") ? 28 : configBarHeight()
+    if (hostBarSize > 0) return positiveInt(hostBarSize, verticalFallback)
     if (liveBar && liveBar.barSize !== undefined) return positiveInt(liveBar.barSize, verticalFallback)
     return verticalFallback
   }
@@ -280,6 +283,7 @@ Item {
     var position = currentBarPosition()
 
     if (position !== "top") return 0
+    if (hostBarSize > 0) return positiveInt(hostBarSize, configBarHeight())
     if (liveBar && !liveBar.barHidden && liveBar.barSize !== undefined) {
       return positiveInt(liveBar.barSize, configBarHeight())
     }
@@ -1494,8 +1498,8 @@ Item {
       id: frameOverlay
 
       anchors.fill: parent
-      mode: root.lacunaEnabled ? root.frameMode : "off"
-      shadowEnabled: root.lacunaEnabled && root.frameShadow && root.frameMode !== "off"
+      mode: root.lacunaEnabled && !root.barOwnsLacunaFrame ? root.frameMode : "off"
+      shadowEnabled: root.lacunaEnabled && !root.barOwnsLacunaFrame && root.frameShadow && root.frameMode !== "off"
       barPosition: root.barPosition
       barSize: root.barControlSize
       barBottomY: root.barBottomY

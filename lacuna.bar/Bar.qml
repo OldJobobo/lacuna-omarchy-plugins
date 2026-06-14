@@ -33,6 +33,15 @@ Item {
   readonly property bool cornerPieces: sidebarSettings.cornerPieces !== false
   readonly property bool hostedMenuOpen: hostedMenu.menuState && hostedMenu.menuState.open === true
   readonly property bool hostedSidebarVisible: hostedMenu.sidebarSurfaceVisible === true
+  readonly property bool hostedSidebarOnLeft: hostedSidebarVisible && !hostedMenu.panelOnRight
+  readonly property bool hostedSidebarOnRight: hostedSidebarVisible && hostedMenu.panelOnRight
+  // The hosted menu's total visible surface includes the molding inset used to
+  // join the sidebar to the frame. The bar-owned full-frame strips should start
+  // at the sidebar body edge, not after that inset, otherwise top/bottom frame
+  // shadows get a visible offset at the left corners.
+  readonly property real hostedSidebarFrameOcclusionWidth: hostedSidebarVisible
+    ? Math.max(0, Number(hostedMenu.panelWidth || 0))
+    : 0
   readonly property real hostedSidebarOccupiedWidth: hostedSidebarVisible
     ? Math.max(0, Number(hostedMenu.panelWidth || 0) + Number(hostedMenu.surfaceRightInset || 0))
     : 0
@@ -76,6 +85,11 @@ Item {
   function numberSetting(value, fallback) {
     var parsed = Number(value)
     return isFinite(parsed) ? Math.round(parsed) : fallback
+  }
+
+  function hostedSidebarOccupiesEdge(edge, screen) {
+    if (!hostedSidebarVisible || hostedMenu.sidebarScreen !== screen) return false
+    return (edge === "left" && hostedSidebarOnLeft) || (edge === "right" && hostedSidebarOnRight)
   }
 
   function debugBarGeometry() {
@@ -133,8 +147,8 @@ Item {
       frameColor: barTheme.panelBackground
       leftEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && !hostedMenu.panelOnRight
       rightEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && hostedMenu.panelOnRight
-      leftOccupiedWidth: root.hostedSidebarOccupiedWidth
-      rightOccupiedWidth: root.hostedSidebarOccupiedWidth
+      leftOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
+      rightOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
       shadowEnabled: root.frameShadow
       shadowOffsetX: root.frameShadowOffsetX
       shadowOffsetY: root.frameShadowOffsetY
@@ -142,11 +156,11 @@ Item {
   }
 
   // The full-frame paint surface is intentionally exclusion-ignored because it
-  // spans the whole monitor. Add invisible one-edge layer-shell surfaces for the
+  // spans the whole monitor. Add invisible one-edge layer-shell surfaces for
   // non-bar frame edges so Hyprland shrinks the work area before applying
-  // gaps_out. Lacuna's sidebar reserve compensates for the left frame reserve
-  // when the sidebar is visible, so the client edge still lands on the visible
-  // sidebar edge instead of frameThickness pixels to the right.
+  // gaps_out. When the hosted sidebar occupies an edge, that sidebar's own
+  // reserve owns the workarea there; keeping an extra frame reserve would leave
+  // a visible frameThickness gap at the bar end.
   Variants {
     model: Quickshell.screens
 
@@ -167,7 +181,9 @@ Item {
           readonly property string edgeName: String(modelData)
 
           targetScreen: frameReserveScreen.screenData
-          active: root.frameEnabled && edgeName !== root.position
+          active: root.frameEnabled
+            && edgeName !== root.position
+            && !root.hostedSidebarOccupiesEdge(edgeName, frameReserveScreen.screenData)
           edge: edgeName
           reserveSize: root.frameThickness
           layerNamespace: "lacuna-bar-frame-reserve-" + frameReserveScreen.screenNamespace
@@ -185,5 +201,6 @@ Item {
     pluginRegistry: root.pluginRegistry
     barWidgetRegistry: root.barWidgetRegistry
     hostManaged: true
+    hostBarSize: root.barSize
   }
 }

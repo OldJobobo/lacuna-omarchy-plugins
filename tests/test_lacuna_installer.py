@@ -360,6 +360,56 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertEqual(data["bar"]["layout"]["right"][0]["id"], "lacuna.tray")
         self.assertIn({"id": "lacuna.temperature", "mode": "compact"}, data["bar"]["layout"]["right"])
 
+    def test_lacuna_bar_layout_uses_available_modules_and_preserves_entry_settings(self):
+        module = load_installer_module()
+        config = module.ensure_shell_config_shape(
+            {
+                "version": 1,
+                "bar": {
+                    "centerAnchor": "omarchy.clock",
+                    "layout": {
+                        "left": [
+                            {"id": "lacuna.codex-usage", "interval": 60},
+                            {"id": "omarchy.workspaces"},
+                        ],
+                        "center": [
+                            {"id": "lacuna.clock", "format": "HH:mm"},
+                        ],
+                        "right": [
+                            {"id": "lacuna.temperature", "warmF": 140},
+                            {"id": "omarchy.tray"},
+                        ],
+                    },
+                },
+                "plugins": [],
+            }
+        )
+
+        module.apply_lacuna_bar_layout_to_config(
+            config,
+            {"lacuna.menu-button", "lacuna.codex-usage", "lacuna.clock", "lacuna.temperature"},
+        )
+
+        layout = config["bar"]["layout"]
+        layout_ids = [
+            entry["id"]
+            for section in ("left", "center", "right")
+            for entry in layout[section]
+        ]
+
+        self.assertEqual("lacuna.clock", config["bar"]["centerAnchor"])
+        self.assertEqual(["lacuna.menu-button", "lacuna.codex-usage"], [entry["id"] for entry in layout["left"]])
+        self.assertEqual(["lacuna.clock"], [entry["id"] for entry in layout["center"]])
+        self.assertEqual(["lacuna.temperature"], [entry["id"] for entry in layout["right"]])
+        self.assertNotIn("omarchy.workspaces", layout_ids)
+        self.assertNotIn("omarchy.tray", layout_ids)
+        self.assertNotIn("lacuna.tray", layout_ids)
+        self.assertIn({"id": "lacuna.codex-usage", "interval": 60}, layout["left"])
+        self.assertEqual("HH:mm", layout["center"][0]["format"])
+        self.assertIn("formatAlt", layout["center"][0])
+        self.assertIn("verticalFormat", layout["center"][0])
+        self.assertIn({"id": "lacuna.temperature", "warmF": 140}, layout["right"])
+
     def test_status_reports_staged_vs_enabled_plugins(self):
         with tempfile.TemporaryDirectory() as tmp:
             config_home = Path(tmp) / "config"
