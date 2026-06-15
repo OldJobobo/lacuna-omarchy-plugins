@@ -77,6 +77,6 @@ Tests are stdlib `unittest` run via pytest. `tests/test_qml_contracts.py` is sou
 - 2-space indentation for QML and JSON.
 - Plugin directories use full IDs (`lacuna.script-pill`).
 - Runtime actions inside Lacuna go through Omarchy commands (e.g. `omarchy restart shell`); do not port standalone Lacuna process controls into plugins.
-- Prefer Omarchy-native services/widgets for already-rich system surfaces (audio, network, battery, tray, …). `lacuna.script-pill` is the experiment path; promote a script-backed widget only when it proves a durable non-native workflow.
+- Prefer Omarchy-native services/widgets for already-rich system surfaces (audio, network, battery, tray, …). `lacuna.script-pill` is the experiment path; promote a script-backed widget only when it proves a durable non-native workflow. See `docs/omarchy-provider-alignment.md` for the provider inventory (the `omarchy.battery`/`omarchy.media`/`omarchy.idle` services + `Color`/`Style` singletons), the `shell`-vs-`bar` injection rule, and the standing consumption policy.
 - The desktop clock shells out to ImageMagick's `magick` for wallpaper contrast sampling but must degrade gracefully without it.
 - Commits are concise and imperative (`Add script pill manifest`).
