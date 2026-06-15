@@ -32,7 +32,6 @@ QtObject {
   readonly property string tooltipTreatment: lacuna ? "accent-strip" : omarchy ? "bordered" : "tonal"
   readonly property bool decorativeLinework: lacuna
   readonly property bool accentStrips: lacuna
-  readonly property bool voidWells: lacuna
   readonly property bool gappedDividers: lacuna
   readonly property int dividerGap: gappedDividers ? 22 : 0
   readonly property int contentInset: Math.round(mix(material ? 16 : 14, material ? 12 : 10))

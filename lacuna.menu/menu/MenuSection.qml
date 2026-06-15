@@ -57,6 +57,33 @@ Item {
     opacity: root.band ? 0.78 : 0.6
   }
 
+  // Section seam: a hairline along the header baseline, broken by a centered
+  // gap — the repeating lacuna mark that carries the identity. Lacuna only.
+  Item {
+    visible: root.designTokens && root.designTokens.lacuna
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    height: 1
+
+    readonly property int gap: root.designTokens ? root.designTokens.dividerGap : 0
+
+    LacunaRect {
+      anchors.left: parent.left
+      height: 1
+      width: parent.gap > 0 ? (parent.width - parent.gap) / 2 : parent.width
+      color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.14)
+    }
+
+    LacunaRect {
+      visible: parent.gap > 0
+      anchors.right: parent.right
+      height: 1
+      width: (parent.width - parent.gap) / 2
+      color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.14)
+    }
+  }
+
   LacunaText {
     id: label
 

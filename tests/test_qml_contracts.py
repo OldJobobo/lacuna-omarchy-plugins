@@ -965,29 +965,27 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("motionTokens: sharedMotion", window)
 
     def test_visible_metaphor_treatments_are_wired(self):
-        # Visible redesign: the gap/void/seam metaphor is now painted, not just
-        # documented. Treatments are gated to the lacuna style.
+        # Visible redesign: the identity is carried by seams + the gap (lacuna)
+        # motif, gated to the lacuna style. (The darker "void well" was dropped:
+        # tonal recess can't read on near-black themes.)
         for path in [
             "lacuna.menu/services/DesignTokens.qml",
             "lacuna.shell-settings/services/DesignTokens.qml",
         ]:
             tokens = read(path)
-            self.assertIn("readonly property bool voidWells: lacuna", tokens)
             self.assertIn("readonly property bool gappedDividers: lacuna", tokens)
             self.assertIn("readonly property int dividerGap:", tokens)
-
-        theme = read("lacuna.menu/services/Theme.qml")
-        self.assertIn("readonly property color wellFill: Qt.darker(plate", theme)
-        self.assertIn("readonly property color seamLight:", theme)
-        self.assertIn("readonly property color seamShadow:", theme)
-
-        window = read("lacuna.menu/menu/MenuWindow.qml")
-        self.assertIn("id: contentWell", window)
-        self.assertIn("color: menuTheme.wellFill", window)
+            self.assertNotIn("voidWells", tokens)
 
         content = read("lacuna.menu/menu/MenuContent.qml")
         self.assertIn("readonly property color seam:", content)
         self.assertIn("root.designTokens.dividerGap > 0", content)
+
+        # The section seam (gapped) repeats the lacuna mark down the menu.
+        self.assertIn("root.designTokens.dividerGap", read("lacuna.menu/menu/MenuSection.qml"))
+
+        # The void well is gone.
+        self.assertNotIn("contentWell", read("lacuna.menu/menu/MenuWindow.qml"))
 
     def test_daily_launch_system_editor_uses_omarchy_editor_launcher(self):
         qml = read("lacuna.menu/menu/MenuAppModel.qml")
