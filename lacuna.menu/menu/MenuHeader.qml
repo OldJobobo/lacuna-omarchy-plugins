@@ -183,55 +183,51 @@ Item {
       opacity: parent.ruleOpacity
     }
 
-    // "The gap breathes": a halo + core glow centered in the gap, fading in/out.
+    // "The gap breathes": a layered glow centered in the gap, fading in/out.
     Item {
       visible: parent.gap > 0 && root.designTokens.decorativeLinework
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.verticalCenter: parent.verticalCenter
-      width: parent.gap
-      height: 6
+      width: parent.gap + 14
+      height: 8
 
       LacunaRect {
         anchors.centerIn: parent
         width: parent.width
-        height: 3
-        radius: 1.5
+        height: 5
+        radius: 2.5
         color: root.accent
-        opacity: 0.08 + root.gapBreath * 0.20
+        opacity: 0.04 + root.gapBreath * 0.26
       }
 
       LacunaRect {
         anchors.centerIn: parent
-        width: Math.max(3, Math.round(parent.width * 0.45))
+        width: Math.round(parent.width * 0.6)
+        height: 3
+        radius: 1.5
+        color: root.accent
+        opacity: 0.12 + root.gapBreath * 0.40
+      }
+
+      LacunaRect {
+        anchors.centerIn: parent
+        width: Math.max(4, Math.round(parent.width * 0.28))
         height: 2
         radius: 1
         color: root.accent
-        opacity: 0.30 + root.gapBreath * 0.50
+        opacity: 0.30 + root.gapBreath * 0.65
       }
     }
   }
 
-  SequentialAnimation {
+  // Drive the breathing glow from a Timer. The declarative SequentialAnimation
+  // would not run in this context; a Timer reliably does. gapBreath oscillates
+  // 0..1 on a ~3.9s sine.
+  Timer {
     running: root.designTokens.decorativeLinework && root.visible
-    loops: Animation.Infinite
-
-    NumberAnimation {
-      target: root
-      property: "gapBreath"
-      from: 0
-      to: 1
-      duration: 1900
-      easing.type: Easing.InOutSine
-    }
-
-    NumberAnimation {
-      target: root
-      property: "gapBreath"
-      from: 1
-      to: 0
-      duration: 2300
-      easing.type: Easing.InOutSine
-    }
+    interval: 50
+    repeat: true
+    onTriggered: root.gapBreath = 0.5 + 0.5 * Math.sin(Date.now() / 620)
   }
 
   LacunaTokens {
