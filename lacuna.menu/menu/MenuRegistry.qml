@@ -45,6 +45,14 @@ Item {
   property var preferredApps: ({})
 
   onBarWidgetRegistryChanged: catalogRevision++
+  // The app-backed views (quick launch, daily launch) depend on this data,
+  // which loads asynchronously. Bump catalogRevision when it arrives so menu
+  // consumers rebuild their item models instead of staying empty until a
+  // manual refresh (e.g. clicking a section header).
+  onAppCatalogChanged: catalogRevision++
+  onCustomQuickLaunchAppsChanged: catalogRevision++
+  onCustomQuickLaunchNamesChanged: catalogRevision++
+  onPreferredAppsChanged: catalogRevision++
 
   Connections {
     target: root.barWidgetRegistry
