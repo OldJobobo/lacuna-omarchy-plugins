@@ -26,7 +26,7 @@ Item {
   readonly property bool hasVersion: version !== ""
   readonly property int controlSize: compact ? 24 : tokens.controlSmall
   readonly property int backButtonWidth: canGoBack ? controlSize : 0
-  property real ruleHighlightProgress: 0
+  property real gapBreath: 0
 
   width: parent ? parent.width : implicitWidth
   height: compact ? (hasSubtitle || hasVersion ? 50 : 36) : (hasSubtitle || hasVersion ? 62 : 46) + (designTokens.material ? 2 : 0)
@@ -153,48 +153,83 @@ Item {
     }
   }
 
-  LacunaRect {
+  // Notched header rule (the lacuna mark, matching the section seams) with a
+  // soft accent glow at the gap that slowly breathes — the signature motion.
+  Item {
     id: headerRule
 
     anchors.left: headerGlyph.left
     anchors.right: parent.right
     anchors.bottom: parent.bottom
     height: 1
-    color: root.accent
-    opacity: root.designTokens.headerTreatment === "body-border" ? 0.12 : root.designTokens.headerTreatment === "tonal" ? 0.18 : 0.24
-  }
 
-  LacunaRect {
-    id: headerRuleHighlight
+    readonly property real ruleOpacity: root.designTokens.headerTreatment === "body-border" ? 0.12 : root.designTokens.headerTreatment === "tonal" ? 0.18 : 0.24
+    readonly property int gap: root.designTokens.gappedDividers ? root.designTokens.dividerGap : 0
 
-    visible: root.designTokens.decorativeLinework
-    x: headerRule.x + Math.round(Math.max(0, headerRule.width - width) * root.ruleHighlightProgress)
-    y: parent.height - height
-    width: root.compact ? 26 : 34
-    height: 2
-    color: root.accent
-    opacity: 0.75
+    LacunaRect {
+      anchors.left: parent.left
+      height: 1
+      width: parent.gap > 0 ? (parent.width - parent.gap) / 2 : parent.width
+      color: root.accent
+      opacity: parent.ruleOpacity
+    }
+
+    LacunaRect {
+      visible: parent.gap > 0
+      anchors.right: parent.right
+      height: 1
+      width: (parent.width - parent.gap) / 2
+      color: root.accent
+      opacity: parent.ruleOpacity
+    }
+
+    // "The gap breathes": a halo + core glow centered in the gap, fading in/out.
+    Item {
+      visible: parent.gap > 0 && root.designTokens.decorativeLinework
+      anchors.horizontalCenter: parent.horizontalCenter
+      anchors.verticalCenter: parent.verticalCenter
+      width: parent.gap
+      height: 6
+
+      LacunaRect {
+        anchors.centerIn: parent
+        width: parent.width
+        height: 3
+        radius: 1.5
+        color: root.accent
+        opacity: 0.08 + root.gapBreath * 0.20
+      }
+
+      LacunaRect {
+        anchors.centerIn: parent
+        width: Math.max(3, Math.round(parent.width * 0.45))
+        height: 2
+        radius: 1
+        color: root.accent
+        opacity: 0.30 + root.gapBreath * 0.50
+      }
+    }
   }
 
   SequentialAnimation {
-    running: root.designTokens.decorativeLinework && root.visible && headerRule.width > headerRuleHighlight.width
+    running: root.designTokens.decorativeLinework && root.visible
     loops: Animation.Infinite
 
     NumberAnimation {
       target: root
-      property: "ruleHighlightProgress"
+      property: "gapBreath"
       from: 0
       to: 1
-      duration: root.compact ? 3200 : 3800
+      duration: 1900
       easing.type: Easing.InOutSine
     }
 
     NumberAnimation {
       target: root
-      property: "ruleHighlightProgress"
+      property: "gapBreath"
       from: 1
       to: 0
-      duration: root.compact ? 3200 : 3800
+      duration: 2300
       easing.type: Easing.InOutSine
     }
   }

@@ -96,7 +96,7 @@ LacunaRect {
     anchors.left: parent.left
     anchors.top: parent.top
     anchors.bottom: parent.bottom
-    width: root.featured ? 5 : root.primary ? 4 : 3
+    width: root.featured ? 4 : root.primary ? 3 : 2
     color: root.toneAccent
     opacity: root.featured ? 0.7 + root.reveal * 0.3 : root.primary ? 0.42 + root.reveal * 0.42 : root.reveal * 0.95
   }
@@ -110,7 +110,7 @@ LacunaRect {
     width: root.lineworkWidth
     height: root.lineworkHeight
     color: root.toneAccent
-    opacity: root.reveal * 0.42
+    opacity: root.reveal * 0.22
   }
 
   LacunaRect {
@@ -122,7 +122,7 @@ LacunaRect {
     width: root.lineworkWidth
     height: root.lineworkHeight
     color: root.toneAccent
-    opacity: root.reveal * 0.32
+    opacity: root.reveal * 0.16
   }
 
   SequentialAnimation {

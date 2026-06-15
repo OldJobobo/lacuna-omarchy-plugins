@@ -51,4 +51,28 @@ Item {
       font.pixelSize: root.compact ? 9 : 10
     }
   }
+
+  // Mirror the menu's gapped seam (the lacuna mark) under settings sections.
+  Item {
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    height: 1
+
+    readonly property int gap: 22
+
+    LacunaRect {
+      anchors.left: parent.left
+      height: 1
+      width: (parent.width - parent.gap) / 2
+      color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.14)
+    }
+
+    LacunaRect {
+      anchors.right: parent.right
+      height: 1
+      width: (parent.width - parent.gap) / 2
+      color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.14)
+    }
+  }
 }
