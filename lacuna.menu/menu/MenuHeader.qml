@@ -68,6 +68,8 @@ Item {
 
     anchors.left: root.canGoBack ? backButton.right : parent.left
     anchors.leftMargin: root.canGoBack ? tokens.spaceSmall : 0
+    anchors.right: versionTag.left
+    anchors.rightMargin: tokens.spaceNormal
     anchors.verticalCenter: backButton.verticalCenter
     text: root.title.toUpperCase()
     color: root.foreground
@@ -81,8 +83,8 @@ Item {
     id: versionTag
 
     visible: root.hasVersion
-    anchors.left: wordmark.right
-    anchors.leftMargin: tokens.spaceNormal
+    anchors.right: headerControls.left
+    anchors.rightMargin: tokens.spaceSmall
     anchors.baseline: wordmark.baseline
     text: root.version
     color: root.muted
