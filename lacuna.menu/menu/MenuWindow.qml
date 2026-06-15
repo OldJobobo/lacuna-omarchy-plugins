@@ -158,6 +158,7 @@ Item {
   readonly property var shellSettingsService: resolveShellSettingsService()
   readonly property var shellHyprState: shellSettingsService && shellSettingsService.state && shellSettingsService.state.hypr ? shellSettingsService.state.hypr : ({})
   readonly property bool hyprWindowGapsDisabled: shellHyprState.windowGapsEnabled === false || (hyprGapValue(shellHyprState.gapsIn) === 0 && hyprGapValue(shellHyprState.gapsOut) === 0)
+  readonly property bool reduceMotionEnabled: lacunaSettings.data && lacunaSettings.data.reduceMotion === true
   readonly property var powerSettings: lacunaSettings.data && lacunaSettings.data.power ? lacunaSettings.data.power : ({})
   readonly property bool instantRestart: boolSetting(powerSettings.instantRestart, false)
   readonly property var frameSettings: lacunaSettings.data && lacunaSettings.data.frame ? lacunaSettings.data.frame : ({})
@@ -1434,8 +1435,14 @@ Item {
     preferredApps: lacunaSettings.data && lacunaSettings.data.preferredApps ? lacunaSettings.data.preferredApps : ({})
   }
 
+  MotionTokens {
+    id: sharedMotion
+    animationDisabled: root.reduceMotionEnabled
+  }
+
   PanelController {
     id: panelController
+    motionTokens: sharedMotion
     menuState: root.menuState
     onFlyoutOpenChanged: {
       if (!flyoutOpen) root.pendingFlyoutFocus = ""
@@ -1613,6 +1620,7 @@ Item {
 
       MenuContent {
         visible: root.sidebarSurfaceVisible && !sidebarState.collapsed
+        motionTokens: sharedMotion
         anchors.fill: parent
         anchors.leftMargin: designTokens.contentInset
         anchors.rightMargin: designTokens.contentInset

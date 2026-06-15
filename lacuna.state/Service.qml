@@ -26,6 +26,7 @@ Item {
       designStyle: "lacuna",
       colorProfile: "semantic",
       compact: false,
+      reduceMotion: false,
       barSizeMode: "theme",
       quickLaunchLayout: "list",
       dailyLaunchLayout: "list",
@@ -107,6 +108,7 @@ Item {
       next.controlsLayout = normalizeControlsLayout(value.controlsLayout || value.controlLayout || value.controlsView)
       next.barSizeMode = normalizeBarSizeMode(value.barSizeMode, value.compact === true)
       next.compact = next.barSizeMode === "compact"
+      next.reduceMotion = value.reduceMotion === true
       next.barSizeSnapshot = normalizeBarSizeSnapshot(value.barSizeSnapshot)
       next.sizeTransition = normalizeSizeTransition(value.sizeTransition)
       next.customQuickLaunchApps = normalizeCustomQuickLaunchApps(value.customQuickLaunchApps || value.quickLaunch)

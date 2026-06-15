@@ -950,6 +950,20 @@ class QmlContractTests(unittest.TestCase):
         # Tektur remains the title/display face.
         self.assertIn("Tektur", read("lacuna.menu/menu/MenuContent.qml"))
 
+    def test_reduce_motion_setting_feeds_the_motion_hook(self):
+        # Cleanup follow-up: the central reduced-motion hook
+        # (MotionTokens.animationDisabled) is now bound to a real persisted
+        # setting and shared into the structural animators.
+        settings = read("lacuna.state/Service.qml")
+        self.assertIn("reduceMotion: false", settings)
+        self.assertIn("next.reduceMotion = value.reduceMotion === true", settings)
+
+        window = read("lacuna.menu/menu/MenuWindow.qml")
+        self.assertIn("reduceMotionEnabled", window)
+        self.assertIn("animationDisabled: root.reduceMotionEnabled", window)
+        # The shared instance reaches the panel + content animators.
+        self.assertIn("motionTokens: sharedMotion", window)
+
     def test_daily_launch_system_editor_uses_omarchy_editor_launcher(self):
         qml = read("lacuna.menu/menu/MenuAppModel.qml")
 
