@@ -9,11 +9,13 @@ MouseArea {
 
   property bool disabled: false
   property color stateColor: "#88c0d0"
-  property real hoverOpacity: 0.06
-  property real pressOpacity: 0.11
+  property real hoverOpacity: tokens.recessHover
+  property real pressOpacity: tokens.recessPress
   property bool showFill: true
   property bool acceptWheel: false
   property real reveal: pressed || containsMouse ? 1 : 0
+
+  LacunaTokens { id: tokens }
 
   anchors.fill: parent
   acceptedButtons: Qt.LeftButton | Qt.RightButton

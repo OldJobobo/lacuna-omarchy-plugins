@@ -873,6 +873,20 @@ class QmlContractTests(unittest.TestCase):
         self.assertNotIn('"carbon"', rail)
         self.assertIn('designStyle: "lacuna"', rail)
 
+    def test_recess_interaction_vocabulary_named_and_wired(self):
+        # Phase B of the Lacuna design language: the "recess" interaction-depth
+        # family is named in the token registry and consumed by the state
+        # layer, replacing inline alpha literals (pure indirection).
+        tokens = read("lacuna.shell-settings/components/LacunaTokens.qml")
+        for name in ("recessRest", "recessHover", "recessPress"):
+            self.assertIn(name, tokens)
+
+        layer = read("lacuna.shell-settings/components/LacunaStateLayer.qml")
+        self.assertIn("property real hoverOpacity: tokens.recessHover", layer)
+        self.assertIn("property real pressOpacity: tokens.recessPress", layer)
+        self.assertIn("LacunaTokens { id: tokens }", layer)
+        self.assertNotIn("property real hoverOpacity: 0.06", layer)
+
     def test_daily_launch_system_editor_uses_omarchy_editor_launcher(self):
         qml = read("lacuna.menu/menu/MenuAppModel.qml")
 
