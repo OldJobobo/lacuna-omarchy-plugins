@@ -91,8 +91,17 @@ Column {
   }
 
   function visibleItems() {
+    // Read every reactive dependency up front so the `model: visibleItems()`
+    // binding re-evaluates when any of them changes. Using root.currentView
+    // (a tracked string property) instead of the nested menuState.currentView,
+    // and reading catalogRevision, is what makes the list rebuild once the view
+    // settles and the catalog loads — without this the binding only tracked
+    // sectionRevision and stayed stale until a manual section toggle.
     var revision = root.sectionRevision
-    var source = root.registry.itemsFor(root.menuState.currentView)
+    var view = root.currentView
+    var catalogRevision = root.registry ? root.registry.catalogRevision : 0
+    if (!root.registry || !root.menuState) return []
+    var source = root.registry.itemsFor(view)
     var counts = {}
     var headerIndex = 0
     var activeKey = ""
@@ -222,7 +231,17 @@ Column {
     if (open) {
       viewProgress = 0
       viewReveal.restart()
+      Qt.callLater(root.refreshItems)
     }
+  }
+
+  // Guarantee one model rebuild on the next event-loop tick after creation,
+  // once the registry/view have settled. Belt-and-suspenders against the
+  // item model being built from not-yet-ready data and staying stale.
+  Component.onCompleted: Qt.callLater(root.refreshItems)
+
+  function refreshItems() {
+    root.sectionRevision++
   }
 
   // Visibility follows `open` directly (with the fade Behavior below) so content
