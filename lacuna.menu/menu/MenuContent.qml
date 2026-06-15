@@ -787,8 +787,6 @@ Column {
               readonly property bool hasIconSource: String(modelData.iconSource || "") !== ""
               readonly property bool hovered: stateLayer.containsMouse
               readonly property real reveal: stateLayer.reveal
-              property bool pulseActive: false
-              property real pulse: 0
 
               width: gridRoot.tileWidth
               height: gridRoot.tileHeight
@@ -804,23 +802,68 @@ Column {
                 width: Math.max(0, parent.width - (root.compact ? 6 : 8))
                 height: Math.max(0, parent.height - (root.compact ? 6 : 8))
                 radius: root.designTokens.material ? 8 : root.designTokens.radius
-                color: Qt.rgba(tile.itemAccent.r, tile.itemAccent.g, tile.itemAccent.b, tile.itemDanger ? 0.08 + tile.reveal * 0.08 : 0.06 + tile.reveal * 0.07)
+                color: Qt.rgba(tile.itemAccent.r, tile.itemAccent.g, tile.itemAccent.b, tile.itemDanger ? 0.07 + tile.reveal * 0.07 : 0.035 + tile.reveal * 0.06)
                 border.width: root.designTokens.lacuna ? 0 : 1
                 border.color: Qt.rgba(tile.itemAccent.r, tile.itemAccent.g, tile.itemAccent.b, tile.hovered ? 0.42 : 0.20)
 
                 Behavior on color {
                   LacunaColorAnim {}
                 }
-              }
 
-              LacunaRect {
-                visible: root.designTokens.accentStrips
-                anchors.left: tileBackground.left
-                anchors.right: tileBackground.right
-                anchors.top: tileBackground.top
-                height: 2
-                color: tile.itemAccent
-                opacity: tile.hovered ? 0.82 : 0.34
+                // Seam frame (lacuna): a fine carved-cell border. The top edge
+                // brightens to the accent on hover; the bottom edge is broken
+                // by a centered gap — the lacuna notch.
+                readonly property int notch: root.compact ? 10 : 14
+
+                LacunaRect {
+                  visible: root.designTokens.lacuna
+                  anchors.left: parent.left
+                  anchors.right: parent.right
+                  anchors.top: parent.top
+                  height: tile.hovered ? 2 : 1
+                  color: tile.hovered ? tile.itemAccent : root.seam
+                  opacity: tile.hovered ? 0.85 : 1
+
+                  Behavior on color {
+                    LacunaColorAnim {}
+                  }
+                }
+
+                LacunaRect {
+                  visible: root.designTokens.lacuna
+                  anchors.left: parent.left
+                  anchors.top: parent.top
+                  anchors.bottom: parent.bottom
+                  width: 1
+                  color: root.seam
+                }
+
+                LacunaRect {
+                  visible: root.designTokens.lacuna
+                  anchors.right: parent.right
+                  anchors.top: parent.top
+                  anchors.bottom: parent.bottom
+                  width: 1
+                  color: root.seam
+                }
+
+                LacunaRect {
+                  visible: root.designTokens.lacuna
+                  anchors.left: parent.left
+                  anchors.bottom: parent.bottom
+                  height: 1
+                  width: Math.max(0, (parent.width - parent.notch) / 2)
+                  color: root.seam
+                }
+
+                LacunaRect {
+                  visible: root.designTokens.lacuna
+                  anchors.right: parent.right
+                  anchors.bottom: parent.bottom
+                  height: 1
+                  width: Math.max(0, (parent.width - parent.notch) / 2)
+                  color: root.seam
+                }
               }
 
               LacunaRect {
@@ -829,7 +872,7 @@ Column {
                 anchors.centerIn: parent
                 width: root.compact ? 38 : 44
                 height: width
-                scale: 1 + tile.reveal * (0.12 + tile.pulse * 0.055)
+                scale: 1 + tile.reveal * 0.06
                 radius: root.designTokens.material ? width / 2 : root.designTokens.controlRadius
                 color: "transparent"
                 border.width: 0
@@ -845,7 +888,7 @@ Column {
                   source: tile.modelData.iconSource || ""
                   visible: tile.hasIconSource && status === Image.Ready
                   opacity: tile.hovered ? 1 : 0.92
-                  scale: 1 + tile.reveal * (0.24 + tile.pulse * 0.085)
+                  scale: 1 + tile.reveal * 0.12
                   transformOrigin: Item.Center
                 }
 
@@ -856,7 +899,7 @@ Column {
                   name: tile.modelData.icon || ""
                   color: tile.hovered ? root.foreground : tile.itemAccent
                   iconSize: root.compact ? 22 : 25
-                  scale: 1 + tile.reveal * (0.28 + tile.pulse * 0.085)
+                  scale: 1 + tile.reveal * 0.14
                   transformOrigin: Item.Center
                   visible: (!tile.hasIconSource || gridIconImage.status === Image.Error) && valid
                 }
@@ -870,42 +913,9 @@ Column {
                   fontFamily: root.bodyFontFamily
                   font.pixelSize: root.compact ? 15 : 17
                   horizontalAlignment: Text.AlignHCenter
-                  scale: 1 + tile.reveal * (0.24 + tile.pulse * 0.085)
+                  scale: 1 + tile.reveal * 0.12
                   transformOrigin: Item.Center
                 }
-              }
-
-              Timer {
-                id: pulseDelayTimer
-
-                interval: root.motionTokens.duration(180)
-                repeat: false
-                onTriggered: tile.pulseActive = tile.hovered
-              }
-
-              SequentialAnimation {
-                running: tile.pulseActive
-                loops: Animation.Infinite
-
-                NumberAnimation {
-                  target: tile
-                  property: "pulse"
-                  from: 0
-                  to: 1
-                  duration: root.motionTokens.duration(1050)
-                  easing.type: Easing.InOutSine
-                }
-
-                NumberAnimation {
-                  target: tile
-                  property: "pulse"
-                  from: 1
-                  to: 0
-                  duration: root.motionTokens.duration(1450)
-                  easing.type: Easing.InOutSine
-                }
-
-                PauseAnimation { duration: root.motionTokens.duration(180) }
               }
 
               LacunaStateLayer {
@@ -925,12 +935,8 @@ Column {
                 onContainsMouseChanged: {
                   if (containsMouse) {
                     gridRoot.scheduleTileTooltip(tile, tile.modelData, tile.itemAccent)
-                    pulseDelayTimer.restart()
                   } else {
                     gridRoot.cancelTileTooltip(tile)
-                    pulseDelayTimer.stop()
-                    tile.pulseActive = false
-                    tile.pulse = 0
                   }
                 }
               }
