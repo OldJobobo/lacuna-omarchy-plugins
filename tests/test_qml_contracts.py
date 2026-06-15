@@ -887,6 +887,22 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("LacunaTokens { id: tokens }", layer)
         self.assertNotIn("property real hoverOpacity: 0.06", layer)
 
+    def test_theme_exposes_design_language_color_roles(self):
+        # Phase C: named, theme-derived color roles (01-color.md). Additive
+        # aliases over the canonical derivations plus the exposed danger/warning
+        # roles; no rendered-value change.
+        theme = read("lacuna.menu/services/Theme.qml")
+        self.assertIn("readonly property color field: background", theme)
+        self.assertIn("readonly property color plate: panelBackground", theme)
+        self.assertIn("readonly property color ink: foreground", theme)
+        self.assertIn("readonly property color whisper: muted", theme)
+        self.assertIn("readonly property color seam: border", theme)
+        self.assertIn('readonly property color danger: color("color9")', theme)
+        self.assertIn('readonly property color warning: color("color11")', theme)
+
+        profile = read("shared/qml/simple-bar/ColorProfile.qml")
+        self.assertIn("readonly property color ink: foreground", profile)
+
     def test_daily_launch_system_editor_uses_omarchy_editor_launcher(self):
         qml = read("lacuna.menu/menu/MenuAppModel.qml")
 

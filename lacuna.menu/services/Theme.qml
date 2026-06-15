@@ -27,6 +27,20 @@ Item {
   property color muted: withAlpha(foreground, 0.48)
   property color soft: withAlpha(foreground, 0.78)
 
+  // Design-language color roles (docs/lacuna-design-system/01-color.md).
+  // Named, theme-derived aliases over the canonical derivations above: Lacuna
+  // owns form, the active Omarchy theme owns hue. The void family keeps the
+  // name voidColor ('void' is a reserved word); 'soft' and 'accent' already
+  // use their design-language names. danger/warning expose the destructive and
+  // caution roles for the unified color model.
+  readonly property color field: background
+  readonly property color plate: panelBackground
+  readonly property color ink: foreground
+  readonly property color whisper: muted
+  readonly property color seam: border
+  readonly property color danger: color("color9")
+  readonly property color warning: color("color11")
+
   function withAlpha(value, alpha) {
     return Qt.rgba(value.r, value.g, value.b, alpha)
   }

@@ -16,7 +16,12 @@ Item {
   readonly property string colorsPath: configHome + "/omarchy/current/theme/colors.toml"
   readonly property string themeNamePath: configHome + "/omarchy/current/theme.name"
   readonly property string profile: normalizeProfile(widgetSetting("colorProfile", settingsProfile))
+  // Design-language color roles (docs/lacuna-design-system/01-color.md) for the
+  // bar-widget layer. foreground is the 'ink' role; urgent/warning are status
+  // roles; the 'colorful' profile maps a widget's role to a theme palette hue
+  // via roleKey(). All hue is theme-derived (Principle 4).
   readonly property color foreground: bar ? bar.foreground : themeColor("foreground", "#d8dee9")
+  readonly property color ink: foreground
   readonly property color urgent: bar ? bar.urgent : themeColor("color9", "#d42b5b")
   readonly property color warning: themeColor("color11", "#ebcb8b")
 
