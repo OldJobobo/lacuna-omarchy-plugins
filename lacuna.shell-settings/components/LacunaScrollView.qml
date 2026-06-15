@@ -11,7 +11,7 @@ Flickable {
   property bool smoothWheel: true
   property bool showEdgeMasks: false
   property real wheelMultiplier: 1.0
-  property int wheelDuration: motionTokens.legacyNormal
+  property int wheelDuration: motionTokens.quick
   property int edgeMaskHeight: 14
   property color edgeMaskColor: "#101315"
   property real targetContentY: 0

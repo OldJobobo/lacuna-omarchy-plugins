@@ -226,7 +226,7 @@ Column {
     target: root
     property: "viewProgress"
     to: 1
-    duration: root.motionTokens.legacyNormal
+    duration: root.motionTokens.reveal
     easing.type: Easing.OutCubic
   }
 

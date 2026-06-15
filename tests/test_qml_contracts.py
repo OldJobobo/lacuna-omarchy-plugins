@@ -903,6 +903,34 @@ class QmlContractTests(unittest.TestCase):
         profile = read("shared/qml/simple-bar/ColorProfile.qml")
         self.assertIn("readonly property color ink: foreground", profile)
 
+    def test_motion_uses_one_named_reveal_scale(self):
+        # Phase D: a single named "reveal" scale (03-motion.md) replaces the
+        # legacy + noctalia timing sets. animation* survive as same-value
+        # aliases; the divergent legacy* scale is removed.
+        for path in [
+            "lacuna.menu/services/MotionTokens.qml",
+            "lacuna.shell-settings/services/MotionTokens.qml",
+        ]:
+            qml = read(path)
+            for name in ("instant", "quick", "color", "reveal", "settle",
+                         "ambient", "pulse", "sweep"):
+                self.assertIn("property int %s:" % name, qml, path)
+            self.assertNotIn("legacyFast", qml, path)
+            self.assertNotIn("legacyNormal", qml, path)
+            self.assertNotIn("legacySlow", qml, path)
+            self.assertNotIn("legacyDurationFor", qml, path)
+            self.assertIn("readonly property int animationNormal: reveal", qml, path)
+            self.assertIn("function duration(baseMs)", qml, path)
+            self.assertIn("panelBezierCurve", qml, path)
+
+        anim = read("lacuna.shell-settings/components/LacunaAnim.qml")
+        self.assertIn('if (value === "fast") return 150', anim)
+        self.assertIn('if (value === "slow") return 450', anim)
+
+        widget = read("shared/qml/simple-bar/MotionTokens.qml")
+        self.assertIn("readonly property int quick: 150", widget)
+        self.assertIn("readonly property int hoverDuration: quick", widget)
+
     def test_daily_launch_system_editor_uses_omarchy_editor_launcher(self):
         qml = read("lacuna.menu/menu/MenuAppModel.qml")
 

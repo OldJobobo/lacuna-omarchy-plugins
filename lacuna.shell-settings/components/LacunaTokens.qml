@@ -11,11 +11,14 @@ import QtQuick
 //   field/void/plate/ink/whisper/soft/seam/accent/danger
 //                      theme-derived color roles — Theme.qml / DesignTokens.qml
 //   reveal / threshold disclosure motion and its content-fade gate
-//                      — MotionTokens.qml (consolidated in a later phase)
+//                      — MotionTokens.qml (the named reveal scale)
 QtObject {
   id: root
 
   readonly property string monoFont: "JetBrains Mono"
+
+  // Motion durations live in MotionTokens (the named reveal scale,
+  // 03-motion.md), not here.
 
   // Interaction depth — the "recess" family (05-components.md). Pressing into
   // a surface is rendered as a sinking-in: an alpha of the state color, not a
@@ -23,13 +26,6 @@ QtObject {
   readonly property real recessRest: 0.0
   readonly property real recessHover: 0.06
   readonly property real recessPress: 0.11
-
-  readonly property int animFast: 120
-  readonly property int animNormal: 180
-  readonly property int animSlow: 260
-  readonly property int animPulse: 900
-  readonly property int animSweep: 2400
-  readonly property int animColor: 160
 
   readonly property int spaceTiny: 2
   readonly property int spaceSmall: 4
