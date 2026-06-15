@@ -236,6 +236,16 @@ Column {
     LacunaAnim { motion: "normal" }
   }
 
+  // The item model (visibleItems) is rebuilt from the registry, but only
+  // re-evaluates on sectionRevision/currentView changes. If the registry's
+  // catalog finishes loading after the menu first renders, the list/grid would
+  // stay empty until a manual refresh (clicking a section header). Refresh it
+  // whenever the catalog revision changes so items appear on their own.
+  Connections {
+    target: root.registry
+    function onCatalogRevisionChanged() { root.sectionRevision++ }
+  }
+
   NumberAnimation {
     id: viewReveal
 
