@@ -225,7 +225,11 @@ Column {
     }
   }
 
-  opacity: open ? viewProgress : 0
+  // Visibility follows `open` directly (with the fade Behavior below) so content
+  // can never be stranded invisible if the reveal animation fails to run — e.g.
+  // when viewProgress is reset during startup before the content is ready.
+  // viewProgress now only drives the slide-in offset, never visibility.
+  opacity: open ? 1 : 0
   x: open ? -6 * (1 - viewProgress) : -6
 
   Behavior on opacity {
