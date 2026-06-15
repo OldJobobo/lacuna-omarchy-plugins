@@ -839,9 +839,10 @@ class QmlContractTests(unittest.TestCase):
                 self.assertNotIn("return root.sessionAccent", tone_function, path)
                 self.assertNotIn("return root.navAccent", tone_function, path)
 
-        docs = read("docs/lacuna-menu-unified-color-model.md")
-        self.assertIn("one primary theme accent", docs)
-        self.assertIn("Reserve a separate danger accent", docs)
+        docs = read("docs/lacuna-design-system/01-color.md")
+        self.assertIn("One accent for everything non-destructive", docs)
+        self.assertIn("reserved for destructive actions only", docs)
+        self.assertIn('tone === "danger" ? danger : accent', docs)
 
     def test_design_token_consumers_use_lacuna_not_carbon_flag(self):
         paths = [

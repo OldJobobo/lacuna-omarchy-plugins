@@ -1,5 +1,11 @@
 # 06 · Roadmap — migrating the QML onto the language
 
+**Status: A–F complete** (branch `lacuna-design-system`). A — de-Carbon `DesignTokens`;
+B — named token vocabulary + `recess` wired; C — theme-derived color roles in `Theme.qml` /
+`ColorProfile.qml`; D — one named `reveal` motion scale; E — Hack Nerd Font adopted;
+F — docs/contract sync. The reduced-motion hook (`animationDisabled`/`animationSpeed`) exists
+centrally but is not yet bound to a user setting — the one tracked follow-up.
+
 This is the living migration guide from today's code to the language defined in 00–05. It is
 **staged and reversible**: each phase is independently shippable, and each phase that renames a
 token also updates the tests that assert on it (the contract tests are deliberately strict).

@@ -13,11 +13,11 @@ display face is reserved for titles.
 | **Mono** (body, chrome, data) | **Hack Nerd Font** | Even rhythm, excellent legibility at small sizes, and a Nerd Font glyph set that complements the inline Tabler icon paths. The mono grid *is* the manuscript. |
 | **Display** (titles) | **Tektur** | Wide, technical, architectural. Used sparingly for headers and section titles to mark the seams of the layout. |
 
-> **Migration note.** The codebase currently hardcodes `JetBrains Mono` (`monoFont` in
-> `lacuna.menu/components/LacunaTokens.qml`, default color/font in `LacunaText.qml`). Adopting
-> **Hack Nerd Font** is a deliberate change; this spec defines the target, and
-> [06-roadmap.md](06-roadmap.md) Phase E performs the swap (single token + re-vendor). Tektur is
-> already in use for settings titles/headers and is unchanged.
+> **Migration note (done, Phase E).** The codebase previously hardcoded `JetBrains Mono`
+> throughout; every literal — the `monoFont` token plus the per-component `bodyFontFamily`
+> defaults — was swapped to **Hack Nerd Font** (the exact resolvable fontconfig family). Tektur
+> remains the display/title face, and the Omarchy `bar.fontFamily` inheritance is untouched, so a
+> user's configured bar font still wins for bar widgets.
 
 ### The manuscript tie-in
 The name *lacuna* is a term from textual scholarship — the gap in a manuscript. A monospace face

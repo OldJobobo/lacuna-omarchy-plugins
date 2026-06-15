@@ -118,7 +118,8 @@ bundle. Reset to the stock Omarchy bar with `omarchy plugin bar reset`.
 
 The Lacuna menu uses a unified color model: normal entries share the active
 theme accent, while destructive actions keep the danger/urgent color. See
-`docs/lacuna-menu-unified-color-model.md` for the rationale.
+`docs/lacuna-design-system/01-color.md` for the rationale (part of the
+[Lacuna Design Language](docs/lacuna-design-system/)).
 
 `lacuna.bar` is the target owner for Lacuna frame/sidebar choreography. The
 `lacuna.menu` plugin remains a compatibility summon target and delegates to the

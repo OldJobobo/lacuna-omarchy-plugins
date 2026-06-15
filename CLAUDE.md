@@ -64,7 +64,7 @@ Omarchy ignores the `lacuna` block in each manifest; Lacuna's installer, tests, 
 
 ### lacuna.menu
 
-The largest plugin and the heart of the core bundle: `menu/` (surfaces, flyouts, panel windows), `services/` (`LacunaSettings.qml`, `Theme.qml`, `PanelController.qml`, `SidebarState.qml`, …), `components/` (Lacuna design primitives), `settings/` (settings panels). It owns Lacuna panel motion and sidebar choreography; specialized widgets own only their own interaction animation. The menu uses a unified color model: normal entries share the active theme accent, destructive actions use the danger color (`docs/lacuna-menu-unified-color-model.md`).
+The largest plugin and the heart of the core bundle: `menu/` (surfaces, flyouts, panel windows), `services/` (`LacunaSettings.qml`, `Theme.qml`, `PanelController.qml`, `SidebarState.qml`, …), `components/` (Lacuna design primitives), `settings/` (settings panels). It owns Lacuna panel motion and sidebar choreography; specialized widgets own only their own interaction animation. The menu uses a unified color model: normal entries share the active theme accent, destructive actions use the danger color (`docs/lacuna-design-system/01-color.md`). The full Lacuna Design Language lives in `docs/lacuna-design-system/` (philosophy, color, geometry, motion, typography, components, roadmap).
 
 Flyout panels attached to the sidebar follow strict geometry rules (square attachment edge, Omarchy-style molding connectors using the `curveKappa` constant from `lacuna.menu/menu/MenuSurface.qml`, fill-only background shapes, no `Rectangle.radius` on attached edges) — see "Flyout Surface Geometry" in `AGENTS.md` before touching them.
 
