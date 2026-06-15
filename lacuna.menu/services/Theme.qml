@@ -41,6 +41,14 @@ Item {
   readonly property color danger: color("color9")
   readonly property color warning: color("color11")
 
+  // Recessed-well + seam treatments (docs/lacuna-design-system/02-geometry.md).
+  // Derived so they read as depth under any theme: the well sits a step darker
+  // than the plate, the lip catches light at the top edge, the floor is a faint
+  // shadow at the bottom — together they make content read as sunken.
+  readonly property color wellFill: Qt.darker(plate, 1.32)
+  readonly property color seamLight: withAlpha(ink, 0.10)
+  readonly property color seamShadow: Qt.rgba(0, 0, 0, 0.32)
+
   function withAlpha(value, alpha) {
     return Qt.rgba(value.r, value.g, value.b, alpha)
   }

@@ -1618,6 +1618,36 @@ Item {
       designTokens: designTokens
       backgroundVisible: false
 
+      LacunaRect {
+        id: contentWell
+
+        // Recessed "void" well — content sits sunken into the surface
+        // (docs/lacuna-design-system/02-geometry.md). Lacuna style only.
+        visible: root.sidebarSurfaceVisible && !sidebarState.collapsed && designTokens.voidWells
+        anchors.fill: parent
+        anchors.leftMargin: designTokens.contentInset
+        anchors.rightMargin: designTokens.contentInset
+        anchors.topMargin: root.barBottomY + designTokens.topInset
+        anchors.bottomMargin: designTokens.bottomInset
+        color: menuTheme.wellFill
+
+        LacunaRect {
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: parent.top
+          height: 1
+          color: menuTheme.seamLight
+        }
+
+        LacunaRect {
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.bottom: parent.bottom
+          height: 1
+          color: menuTheme.seamShadow
+        }
+      }
+
       MenuContent {
         visible: root.sidebarSurfaceVisible && !sidebarState.collapsed
         motionTokens: sharedMotion
