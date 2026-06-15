@@ -88,6 +88,24 @@ around a flyout or panel shell. Edges are expressed by the `seam` color used on 
 dividers, controls, and explicit selected states — never as a hairline outlining the whole
 surface. A bordered shell reads as a card; Lacuna wants a recess in space.
 
+## Painted treatments (the visible metaphor)
+
+These make the metaphor *visible* rather than implied. All are gated to the `lacuna` design
+style (`omarchy`/`material` render flat) and derive their tone from the theme:
+
+- **Void wells** (`voidWells`). Menu and settings content sit in a **recessed well** a step
+  darker than the surface (`Theme.wellFill = Qt.darker(plate, 1.32)`), with a 1px light lip
+  (`seamLight = ink@0.10`) along the top edge and a faint shadow line (`seamShadow`) along the
+  bottom, so the content reads as *sunken*. "Absence has weight."
+- **Visible seams**. Structural dividers use a single derived `seam` hairline (`ink@0.16` under
+  lacuna, `~0.08` otherwise) instead of scattered faint values — joins are *shown*.
+- **Gapped dividers** (`gappedDividers` / `dividerGap = 22`). Full-width structural dividers are
+  drawn as two segments with a centered gap — a deliberate *lacuna* in the line, the signature
+  negative-space mark.
+
+A deliberate seam edge along a join or well lip is the sanctioned exception to "fill-only" — it
+is an *explicit edge*, not a frame around the shell.
+
 ## The radius scale
 
 Lacuna's interior is square; its *joins and exposed corners* carry the only radii. Values are

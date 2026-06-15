@@ -964,6 +964,31 @@ class QmlContractTests(unittest.TestCase):
         # The shared instance reaches the panel + content animators.
         self.assertIn("motionTokens: sharedMotion", window)
 
+    def test_visible_metaphor_treatments_are_wired(self):
+        # Visible redesign: the gap/void/seam metaphor is now painted, not just
+        # documented. Treatments are gated to the lacuna style.
+        for path in [
+            "lacuna.menu/services/DesignTokens.qml",
+            "lacuna.shell-settings/services/DesignTokens.qml",
+        ]:
+            tokens = read(path)
+            self.assertIn("readonly property bool voidWells: lacuna", tokens)
+            self.assertIn("readonly property bool gappedDividers: lacuna", tokens)
+            self.assertIn("readonly property int dividerGap:", tokens)
+
+        theme = read("lacuna.menu/services/Theme.qml")
+        self.assertIn("readonly property color wellFill: Qt.darker(plate", theme)
+        self.assertIn("readonly property color seamLight:", theme)
+        self.assertIn("readonly property color seamShadow:", theme)
+
+        window = read("lacuna.menu/menu/MenuWindow.qml")
+        self.assertIn("id: contentWell", window)
+        self.assertIn("color: menuTheme.wellFill", window)
+
+        content = read("lacuna.menu/menu/MenuContent.qml")
+        self.assertIn("readonly property color seam:", content)
+        self.assertIn("root.designTokens.dividerGap > 0", content)
+
     def test_daily_launch_system_editor_uses_omarchy_editor_launcher(self):
         qml = read("lacuna.menu/menu/MenuAppModel.qml")
 
