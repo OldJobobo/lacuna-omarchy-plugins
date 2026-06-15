@@ -31,6 +31,9 @@ Column {
   property color dangerAccent: "#bf616a"
   property color navAccent: "#d8dee9"
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
+  // Visible "seam" hairline (docs/lacuna-design-system/02-geometry.md). Stronger
+  // under the lacuna style so structural joins are shown, not hidden.
+  readonly property color seam: Qt.rgba(foreground.r, foreground.g, foreground.b, designTokens.lacuna ? 0.16 : 0.08)
   property string bodyFontFamily: "Hack Nerd Font"
   property string itemFontFamily: itemFont.name !== "" ? itemFont.name : "Tektur"
   property int iconRailWidth: 32
@@ -258,7 +261,7 @@ Column {
   LacunaRect {
     width: parent.width
     height: 1
-    color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.07)
+    color: root.seam
     opacity: root.designTokens.headerTreatment === "accent-line" ? 1 : 0.55
   }
 
@@ -390,7 +393,7 @@ Column {
             anchors.right: parent.right
             anchors.top: parent.top
             height: 1
-            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+            color: root.seam
           }
 
           LacunaText {
@@ -424,7 +427,7 @@ Column {
             anchors.right: parent.right
             anchors.top: parent.top
             height: 1
-            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+            color: root.seam
           }
 
           LacunaText {
@@ -963,7 +966,7 @@ Column {
       anchors.right: parent.right
       anchors.top: collapseRow.bottom
       height: 1
-      color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+      color: root.seam
     }
 
     Row {

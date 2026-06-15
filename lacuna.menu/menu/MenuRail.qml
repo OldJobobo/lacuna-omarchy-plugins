@@ -22,6 +22,7 @@ Column {
   property color dangerAccent: "#bf616a"
   property color navAccent: "#d8dee9"
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
+  readonly property color seam: Qt.rgba(foreground.r, foreground.g, foreground.b, designTokens.lacuna ? 0.16 : 0.08)
   property color panelColor: "#101315"
   property string bodyFontFamily: "Hack Nerd Font"
   property int railWidth: 32
@@ -143,7 +144,7 @@ Column {
 
     width: root.railWidth
     height: 1
-    color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
+    color: root.seam
   }
 
   MenuRailButton {
