@@ -43,6 +43,7 @@ class VendoredFileTests(unittest.TestCase):
                 "lacuna.wallpaper/ColorProfile.qml",
                 "lacuna.workspaces/ColorProfile.qml",
                 "lacuna.menu/services/MotionTokens.qml",
+                "lacuna.bar/OmarchyBar.qml",
                 "lacuna.mpris/components/MotionTokens.qml",
                 "lacuna.shell-settings/services/MotionTokens.qml",
                 "lacuna.workspaces/components/MotionTokens.qml",

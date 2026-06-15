@@ -60,9 +60,9 @@ Item {
 
   LacunaGeometry { id: lacunaGeometry }
   readonly property real cornerSize: Math.max(t, joinRadius)
-  readonly property real frameAlpha: Math.max(0, Math.min(1, frameColor.a === undefined ? 1 : frameColor.a))
+  readonly property real frameAlpha: 1
   readonly property color solidFrameColor: Qt.rgba(frameColor.r, frameColor.g, frameColor.b, 1)
-  readonly property real shadowAlphaCompensation: frameAlpha > 0 ? Math.min(2.5, 1 / Math.max(0.4, frameAlpha)) : 1
+  readonly property real shadowAlphaCompensation: 1
   readonly property real shadowExtent: Math.max(14, shadowBlurMax + Math.max(Math.abs(shadowOffsetX), Math.abs(shadowOffsetY)))
   property real barEdgeCasterSize: frameThickness
   readonly property real barEdgeCasterOverrun: 100
@@ -333,79 +333,6 @@ Item {
     shadowHorizontalOffset: root.shadowOffsetX
     shadowVerticalOffset: root.shadowOffsetY
     z: -2
-  }
-
-  Item {
-    id: surfaceShadowLayer
-
-    anchors.fill: parent
-    visible: root.shadowEnabled
-    z: -1
-
-    Rectangle {
-      visible: root.sidebarWidth > 0 && root.sidebarHeight > 0 && !root.sidebarOnRight
-      x: root.sidebarX + root.sidebarWidth - root.sidebarWidth * (1 - root.edgeProgress)
-      y: root.sidebarY
-      width: root.surfaceShadowSize
-      height: root.sidebarHeight
-      gradient: Gradient {
-        orientation: Gradient.Horizontal
-        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, root.surfaceShadowOpacity) }
-        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0) }
-      }
-    }
-
-    Rectangle {
-      visible: root.sidebarWidth > 0 && root.sidebarHeight > 0 && root.sidebarOnRight
-      x: root.sidebarX - root.surfaceShadowSize + root.sidebarWidth * (1 - root.edgeProgress)
-      y: root.sidebarY
-      width: root.surfaceShadowSize
-      height: root.sidebarHeight
-      gradient: Gradient {
-        orientation: Gradient.Horizontal
-        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0) }
-        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, root.surfaceShadowOpacity) }
-      }
-    }
-
-    Rectangle {
-      visible: root.connectorVisible && root.connectorWidth > 0 && root.connectorHeight > 0 && !root.sidebarOnRight
-      x: root.connectorX + root.connectorWidth
-      y: root.connectorY
-      width: root.surfaceShadowSize
-      height: root.connectorHeight
-      gradient: Gradient {
-        orientation: Gradient.Horizontal
-        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, root.surfaceShadowOpacity * 0.82) }
-        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0) }
-      }
-    }
-
-    Rectangle {
-      visible: root.flyoutVisible && root.flyoutWidth > 0 && root.flyoutHeight > 0
-      x: root.flyoutX + root.flyoutWidth
-      y: root.flyoutY
-      width: root.surfaceShadowSize
-      height: root.flyoutHeight
-      gradient: Gradient {
-        orientation: Gradient.Horizontal
-        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, root.surfaceShadowOpacity) }
-        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0) }
-      }
-    }
-
-    Rectangle {
-      visible: root.flyoutVisible && root.flyoutWidth > 0 && root.flyoutHeight > 0
-      x: root.flyoutX
-      y: root.flyoutY + root.flyoutHeight
-      width: root.flyoutWidth + root.surfaceShadowSize
-      height: root.surfaceShadowSize
-      gradient: Gradient {
-        orientation: Gradient.Vertical
-        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, root.surfaceShadowOpacity * 0.86) }
-        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0) }
-      }
-    }
   }
 
   Item {

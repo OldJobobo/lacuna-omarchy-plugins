@@ -48,6 +48,10 @@ def vendored_pairs() -> list[tuple[Path, Path]]:
     pairs: list[tuple[Path, Path]] = []
     excluded = vendor_exclusions()
 
+    def append_pair(source: Path, target: Path) -> None:
+        if rel(target) not in excluded:
+            pairs.append((source, target))
+
     color_source = ROOT / "shared/qml/simple-bar/ColorProfile.qml"
     for target in sorted(ROOT.glob("lacuna.*/ColorProfile.qml")):
         if rel(target) not in excluded:
@@ -72,7 +76,7 @@ def vendored_pairs() -> list[tuple[Path, Path]]:
         if target.exists():
             pairs.append((source, target))
 
-    pairs.extend([
+    for source, target in [
         (
             ROOT / "lacuna.shell-settings/components/LacunaGeometry.qml",
             ROOT / "lacuna.bar/LacunaGeometry.qml",
@@ -101,7 +105,8 @@ def vendored_pairs() -> list[tuple[Path, Path]]:
             ROOT / "lacuna.state/Service.qml",
             ROOT / "lacuna.menu/services/LacunaSettings.qml",
         ),
-    ])
+    ]:
+        append_pair(source, target)
 
     return pairs
 

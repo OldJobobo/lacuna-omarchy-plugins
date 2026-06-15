@@ -2,6 +2,7 @@ import Quickshell
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Shapes
+import "../lacuna.menu/components"
 
 PanelWindow {
   id: root
@@ -14,33 +15,42 @@ PanelWindow {
   property int frameRadius: 14
   property bool cornerPieces: true
   property color frameColor: "#17105a"
-  property bool leftEdgeOccupied: false
-  property bool rightEdgeOccupied: false
-  property real leftOccupiedWidth: 0
-  property real rightOccupiedWidth: 0
   property bool shadowEnabled: false
   property int shadowOffsetX: 2
   property int shadowOffsetY: 3
   property real shadowOpacity: 0.62
+  property real shadowBlur: 0.85
+  property int shadowBlurMax: 28
+  property bool leftEdgeOccupied: false
+  property bool rightEdgeOccupied: false
+  property real leftOccupiedWidth: 0
+  property real rightOccupiedWidth: 0
 
   readonly property int t: Math.max(1, frameThickness)
   readonly property int r: Math.max(t, frameRadius)
   readonly property real leftOcclusion: leftEdgeOccupied ? Math.max(0, leftOccupiedWidth) : 0
   readonly property real rightOcclusion: rightEdgeOccupied ? Math.max(0, rightOccupiedWidth) : 0
-  readonly property real horizontalFrameX: leftOcclusion
-  readonly property real horizontalFrameWidth: Math.max(0, width - leftOcclusion - rightOcclusion)
-  readonly property real edgeShadowSize: Math.max(16, t * 3)
-  readonly property int topInset: topBar ? Math.max(0, barSize) : t
-  readonly property int bottomInset: bottomBar ? Math.max(0, barSize) : t
-  readonly property int leftInset: leftBar ? Math.max(0, barSize) : t
-  readonly property int rightInset: rightBar ? Math.max(0, barSize) : t
-  readonly property real frameAlpha: Math.max(0, Math.min(1, frameColor.a === undefined ? 1 : frameColor.a))
-  readonly property color solidFrameColor: Qt.rgba(frameColor.r, frameColor.g, frameColor.b, 1)
   readonly property bool topBar: barPosition === "top"
   readonly property bool bottomBar: barPosition === "bottom"
   readonly property bool leftBar: barPosition === "left"
   readonly property bool rightBar: barPosition === "right"
+  readonly property int topInset: topBar ? Math.max(0, barSize) : t
+  readonly property int bottomInset: bottomBar ? Math.max(0, barSize) : t
+  readonly property int leftInset: leftBar ? Math.max(0, barSize) : t
+  readonly property int rightInset: rightBar ? Math.max(0, barSize) : t
+  readonly property real holeX: Math.max(0, leftEdgeOccupied ? leftOcclusion : leftInset)
+  readonly property real holeY: Math.max(0, topInset)
+  readonly property real holeRight: Math.max(holeX + 1, width - (rightEdgeOccupied ? rightOcclusion : rightInset))
+  readonly property real holeBottom: Math.max(holeY + 1, height - bottomInset)
+  readonly property real holeWidth: Math.max(1, holeRight - holeX)
+  readonly property real holeHeight: Math.max(1, holeBottom - holeY)
+  readonly property real minArcRadius: 0.01
+  readonly property real holeRadius: cornerPieces ? Math.max(minArcRadius, Math.min(r, holeWidth / 2, holeHeight / 2)) : minArcRadius
+  readonly property bool isRenderable: active && width > 0 && height > 0 && holeWidth > 0 && holeHeight > 0
   readonly property real curveKappa: lacunaGeometry.curveKappa
+  readonly property color effectiveFrameColor: isRenderable
+    ? Qt.rgba(frameColor.r, frameColor.g, frameColor.b, 1)
+    : "transparent"
 
   LacunaGeometry { id: lacunaGeometry }
 
@@ -64,213 +74,126 @@ PanelWindow {
   Item {
     anchors.fill: parent
 
-    Rectangle {
-      visible: !root.topBar
-      x: root.horizontalFrameX
-      y: 0
-      width: root.horizontalFrameWidth
-      height: root.t
-      color: root.solidFrameColor
-      opacity: root.frameAlpha
-    }
-
-    Rectangle {
-      visible: !root.bottomBar
-      x: root.horizontalFrameX
-      y: parent.height - root.t
-      width: root.horizontalFrameWidth
-      height: root.t
-      color: root.solidFrameColor
-      opacity: root.frameAlpha
-    }
-
-    Rectangle {
-      visible: !root.leftBar && !root.leftEdgeOccupied
-      x: 0
-      y: 0
-      width: root.t
-      height: parent.height
-      color: root.solidFrameColor
-      opacity: root.frameAlpha
-    }
-
-    Rectangle {
-      visible: !root.rightBar && !root.rightEdgeOccupied
-      x: parent.width - root.t
-      y: 0
-      width: root.t
-      height: parent.height
-      color: root.solidFrameColor
-      opacity: root.frameAlpha
-    }
-
-    Rectangle {
-      visible: root.shadowEnabled
-      x: root.horizontalFrameX
-      y: root.topInset
-      width: root.horizontalFrameWidth
-      height: root.edgeShadowSize
-      opacity: root.shadowOpacity
-      gradient: Gradient {
-        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.45) }
-        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.0) }
-      }
-    }
-
-    Rectangle {
-      visible: root.shadowEnabled
-      x: root.horizontalFrameX
-      y: parent.height - root.bottomInset - height
-      width: root.horizontalFrameWidth
-      height: root.edgeShadowSize
-      opacity: root.shadowOpacity
-      gradient: Gradient {
-        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.0) }
-        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.45) }
-      }
-    }
-
-    Rectangle {
-      visible: root.shadowEnabled && !root.leftBar && !root.leftEdgeOccupied
-      x: root.leftInset
-      y: root.topInset
-      width: root.edgeShadowSize
-      height: Math.max(0, parent.height - root.topInset - root.bottomInset)
-      opacity: root.shadowOpacity
-      gradient: Gradient {
-        orientation: Gradient.Horizontal
-        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.45) }
-        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.0) }
-      }
-    }
-
-    Rectangle {
-      visible: root.shadowEnabled && !root.rightBar && !root.rightEdgeOccupied
-      x: parent.width - root.rightInset - width
-      y: root.topInset
-      width: root.edgeShadowSize
-      height: Math.max(0, parent.height - root.topInset - root.bottomInset)
-      opacity: root.shadowOpacity
-      gradient: Gradient {
-        orientation: Gradient.Horizontal
-        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.0) }
-        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.45) }
-      }
+    LacunaDropShadow {
+      source: frameSource
+      shadowEnabled: root.active && root.shadowEnabled
+      shadowOpacity: root.shadowOpacity
+      shadowBlur: root.shadowBlur
+      blurMax: root.shadowBlurMax
+      shadowHorizontalOffset: root.shadowOffsetX
+      shadowVerticalOffset: root.shadowOffsetY
+      z: 0
     }
 
     Shape {
-      visible: root.cornerPieces && !root.leftEdgeOccupied && root.r > 0
-      x: root.leftInset
-      y: root.topInset
-      width: root.r
-      height: root.r
+      id: frameSource
+
+      anchors.fill: parent
       asynchronous: false
       antialiasing: true
-      opacity: root.frameAlpha
       preferredRendererType: Shape.CurveRenderer
+      z: 1
 
       ShapePath {
-        fillColor: root.solidFrameColor
-        strokeWidth: 0
-        startX: 0
-        startY: 0
-        PathLine { x: 0; y: root.r }
-        PathCubic {
-          x: root.r
-          y: 0
-          control1X: 0
-          control1Y: root.r * (1 - root.curveKappa)
-          control2X: root.r * root.curveKappa
-          control2Y: 0
+        strokeWidth: -1
+        fillColor: root.effectiveFrameColor
+        fillRule: ShapePath.OddEvenFill
+        startX: root.isRenderable ? root.minArcRadius : -0.75
+        startY: root.isRenderable ? 0 : -1
+
+        PathLine {
+          x: root.isRenderable ? (frameSource.width - root.minArcRadius) : 0
+          y: root.isRenderable ? 0 : -1
         }
-        PathLine { x: 0; y: 0 }
-      }
-    }
-
-    Shape {
-      visible: root.cornerPieces && !root.rightEdgeOccupied && root.r > 0
-      x: parent.width - root.rightInset - root.r
-      y: root.topInset
-      width: root.r
-      height: root.r
-      asynchronous: false
-      antialiasing: true
-      opacity: root.frameAlpha
-      preferredRendererType: Shape.CurveRenderer
-
-      ShapePath {
-        fillColor: root.solidFrameColor
-        strokeWidth: 0
-        startX: root.r
-        startY: 0
-        PathLine { x: root.r; y: root.r }
-        PathCubic {
-          x: 0
-          y: 0
-          control1X: root.r
-          control1Y: root.r * (1 - root.curveKappa)
-          control2X: root.r * (1 - root.curveKappa)
-          control2Y: 0
+        PathArc {
+          x: root.isRenderable ? frameSource.width : 0
+          y: root.isRenderable ? root.minArcRadius : -0.75
+          radiusX: root.isRenderable ? root.minArcRadius : 0
+          radiusY: root.isRenderable ? root.minArcRadius : 0
+          direction: PathArc.Clockwise
         }
-        PathLine { x: root.r; y: 0 }
-      }
-    }
-
-    Shape {
-      visible: root.cornerPieces && !root.leftEdgeOccupied && root.r > 0
-      x: root.leftInset
-      y: parent.height - root.bottomInset - root.r
-      width: root.r
-      height: root.r
-      asynchronous: false
-      antialiasing: true
-      opacity: root.frameAlpha
-      preferredRendererType: Shape.CurveRenderer
-
-      ShapePath {
-        fillColor: root.solidFrameColor
-        strokeWidth: 0
-        startX: 0
-        startY: root.r
-        PathLine { x: root.r; y: root.r }
-        PathCubic {
-          x: 0
-          y: 0
-          control1X: root.r * (1 - root.curveKappa)
-          control1Y: root.r
-          control2X: 0
-          control2Y: root.r * (1 - root.curveKappa)
+        PathLine {
+          x: root.isRenderable ? frameSource.width : 0
+          y: root.isRenderable ? (frameSource.height - root.minArcRadius) : 0
         }
-        PathLine { x: 0; y: root.r }
-      }
-    }
-
-    Shape {
-      visible: root.cornerPieces && !root.rightEdgeOccupied && root.r > 0
-      x: parent.width - root.rightInset - root.r
-      y: parent.height - root.bottomInset - root.r
-      width: root.r
-      height: root.r
-      asynchronous: false
-      antialiasing: true
-      opacity: root.frameAlpha
-      preferredRendererType: Shape.CurveRenderer
-
-      ShapePath {
-        fillColor: root.solidFrameColor
-        strokeWidth: 0
-        startX: root.r
-        startY: root.r
-        PathLine { x: 0; y: root.r }
-        PathCubic {
-          x: root.r
-          y: 0
-          control1X: root.r * (1 - root.curveKappa)
-          control1Y: root.r
-          control2X: root.r
-          control2Y: root.r * (1 - root.curveKappa)
+        PathArc {
+          x: root.isRenderable ? (frameSource.width - root.minArcRadius) : -0.25
+          y: root.isRenderable ? frameSource.height : 0
+          radiusX: root.isRenderable ? root.minArcRadius : 0
+          radiusY: root.isRenderable ? root.minArcRadius : 0
+          direction: PathArc.Clockwise
         }
-        PathLine { x: root.r; y: root.r }
+        PathLine {
+          x: root.isRenderable ? root.minArcRadius : -1
+          y: root.isRenderable ? frameSource.height : 0
+        }
+        PathArc {
+          x: root.isRenderable ? 0 : -1
+          y: root.isRenderable ? (frameSource.height - root.minArcRadius) : -0.25
+          radiusX: root.isRenderable ? root.minArcRadius : 0
+          radiusY: root.isRenderable ? root.minArcRadius : 0
+          direction: PathArc.Clockwise
+        }
+        PathLine {
+          x: root.isRenderable ? 0 : -1
+          y: root.isRenderable ? root.minArcRadius : -1
+        }
+        PathArc {
+          x: root.isRenderable ? root.minArcRadius : -0.75
+          y: root.isRenderable ? 0 : -1
+          radiusX: root.isRenderable ? root.minArcRadius : 0
+          radiusY: root.isRenderable ? root.minArcRadius : 0
+          direction: PathArc.Clockwise
+        }
+
+        PathMove {
+          x: root.isRenderable ? (root.holeX + root.holeRadius) : -2.75
+          y: root.isRenderable ? root.holeY : -3
+        }
+        PathLine {
+          x: root.isRenderable ? (root.holeRight - root.holeRadius) : -2
+          y: root.isRenderable ? root.holeY : -3
+        }
+        PathArc {
+          x: root.isRenderable ? root.holeRight : -2
+          y: root.isRenderable ? (root.holeY + root.holeRadius) : -2.75
+          radiusX: root.isRenderable ? root.holeRadius : 0
+          radiusY: root.isRenderable ? root.holeRadius : 0
+          direction: PathArc.Clockwise
+        }
+        PathLine {
+          x: root.isRenderable ? root.holeRight : -2
+          y: root.isRenderable ? (root.holeBottom - root.holeRadius) : -2
+        }
+        PathArc {
+          x: root.isRenderable ? (root.holeRight - root.holeRadius) : -2.25
+          y: root.isRenderable ? root.holeBottom : -2
+          radiusX: root.isRenderable ? root.holeRadius : 0
+          radiusY: root.isRenderable ? root.holeRadius : 0
+          direction: PathArc.Clockwise
+        }
+        PathLine {
+          x: root.isRenderable ? (root.holeX + root.holeRadius) : -3
+          y: root.isRenderable ? root.holeBottom : -2
+        }
+        PathArc {
+          x: root.isRenderable ? root.holeX : -3
+          y: root.isRenderable ? (root.holeBottom - root.holeRadius) : -2.25
+          radiusX: root.isRenderable ? root.holeRadius : 0
+          radiusY: root.isRenderable ? root.holeRadius : 0
+          direction: PathArc.Clockwise
+        }
+        PathLine {
+          x: root.isRenderable ? root.holeX : -3
+          y: root.isRenderable ? (root.holeY + root.holeRadius) : -3
+        }
+        PathArc {
+          x: root.isRenderable ? (root.holeX + root.holeRadius) : -2.75
+          y: root.isRenderable ? root.holeY : -3
+          radiusX: root.isRenderable ? root.holeRadius : 0
+          radiusY: root.isRenderable ? root.holeRadius : 0
+          direction: PathArc.Clockwise
+        }
       }
     }
   }

@@ -11,7 +11,7 @@ Item {
   property bool renderable: open
   property bool interactive: open
   property real progress: open ? 1 : 0
-  property real contentProgress: Math.max(0, Math.min(1, (progress - 0.45) / 0.55))
+  property real contentProgress: Math.max(0, Math.min(1, progress))
   property bool openToLeft: false
   property real openX: 0
   property real openY: 0
@@ -21,6 +21,7 @@ Item {
   property color panelColor: "#101315"
   property color foreground: "#d8dee9"
   property var designTokens: fallbackDesignTokens
+  property bool backgroundVisible: true
 
   readonly property real curveKappa: lacunaGeometry.curveKappa
 
@@ -47,6 +48,7 @@ Item {
     clip: true
 
     LacunaShapeSurface {
+      visible: root.backgroundVisible
       anchors.fill: parent
       panelColor: root.panelColor
       panelRadius: root.panelRadius

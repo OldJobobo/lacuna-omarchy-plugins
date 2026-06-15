@@ -59,7 +59,7 @@ Item {
   property color foreground: themeForeground
   property color barForeground: useTransparentForeground ? transparentForeground : themeForeground
   property bool foregroundAnimationEnabled: true
-  property color background: Color.bar.background
+  property color background: opaqueColor(Color.bar.background)
   property color urgent: Color.bar.active
 
   Behavior on barForeground { enabled: root.foregroundAnimationEnabled; ColorAnimation { duration: 420; easing.type: Easing.InOutCubic } }
@@ -589,18 +589,19 @@ Item {
     return "#" + hexChannel(c.r) + hexChannel(c.g) + hexChannel(c.b)
   }
 
+  function opaqueColor(colorValue) {
+    var c = colorValue
+    if (typeof c === "string") c = Qt.color(c)
+    return Qt.rgba(c.r, c.g, c.b, 1)
+  }
+
   function setRequestedTransparency(value) {
-    var nextTransparent = value === true
-    requestedTransparent = nextTransparent
-    if (!nextTransparent) {
-      foregroundAnimationEnabled = false
-      useTransparentForeground = false
-      transparent = false
-      transparentForeground = themeForeground
-      restoreForegroundAnimation()
-      return
-    }
-    scheduleTransparentForegroundRefresh()
+    requestedTransparent = false
+    foregroundAnimationEnabled = false
+    useTransparentForeground = false
+    transparent = false
+    transparentForeground = themeForeground
+    restoreForegroundAnimation()
   }
 
   function restoreForegroundAnimation() {
@@ -779,7 +780,7 @@ Item {
 
     implicitWidth: root.vertical ? root.barSize : 0
     implicitHeight: root.vertical ? 0 : root.barSize
-    color: root.transparent ? "transparent" : root.background
+    color: root.background
     WlrLayershell.namespace: "omarchy-bar"
     WlrLayershell.layer: WlrLayer.Top
 
@@ -937,10 +938,10 @@ Item {
 
       BorderSurface {
         anchors.fill: parent
-        color: root.transparent ? "transparent" : root.background
+        color: root.background
         borderSpec: Border.flat(root.barForeground, 1)
         radius: Math.min(Style.cornerRadius, height / 2)
-        opacity: root.transparent ? 0.45 : 0.94
+        opacity: 0.94
       }
 
       Image {
@@ -1282,10 +1283,10 @@ Item {
       visible: slot.dragSource
       anchors.fill: parent
       anchors.margins: Style.space(1)
-      color: root.transparent ? "transparent" : root.background
+      color: root.background
       borderSpec: Border.flat(root.barForeground, 1)
       radius: Math.min(Style.cornerRadius, height / 2)
-      opacity: root.transparent ? 0.22 : 0.32
+      opacity: 0.32
     }
 
     Loader {

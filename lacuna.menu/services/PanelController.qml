@@ -28,7 +28,7 @@ Item {
   readonly property bool menuRenderable: panelVisible
   readonly property bool flyoutRenderable: visibleFlyout !== ""
   readonly property bool menuInteractive: menuOpen && menuProgress > 0.98
-  readonly property real contentProgress: Math.max(0, Math.min(1, (flyoutProgress - 0.45) / 0.55))
+  readonly property real contentProgress: Math.max(0, Math.min(1, flyoutProgress))
   readonly property bool flyoutInteractive: flyoutOpen && flyoutVisible && contentProgress > 0.98
 
   property MotionTokens motionTokens: defaultMotionTokens

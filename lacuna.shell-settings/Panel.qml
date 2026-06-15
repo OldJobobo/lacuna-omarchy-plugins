@@ -20,7 +20,13 @@ Item {
   readonly property string lacunaPath: manifest && manifest.__sourceDir ? manifest.__sourceDir : localPath(Qt.resolvedUrl("."))
   readonly property var shellConfig: shell && shell.shellConfig ? shell.shellConfig : ({})
   readonly property var activeService: service || fallbackService
-  readonly property color surfaceBackground: Color.bar.background
+  readonly property color surfaceBackground: opaqueColor(Color.bar.background)
+
+  function opaqueColor(colorValue) {
+    var c = colorValue
+    if (typeof c === "string") c = Qt.color(c)
+    return Qt.rgba(c.r, c.g, c.b, 1)
+  }
 
   function localPath(url) {
     var value = String(url || "")

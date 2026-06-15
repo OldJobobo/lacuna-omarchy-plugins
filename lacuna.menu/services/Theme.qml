@@ -31,6 +31,10 @@ Item {
     return Qt.rgba(value.r, value.g, value.b, alpha)
   }
 
+  function opaqueColor(value) {
+    return Qt.rgba(value.r, value.g, value.b, 1)
+  }
+
   function color(name) {
     return rawColor(name)
   }
@@ -47,18 +51,7 @@ Item {
   }
 
   function shellSurfaceColor(name, fallbackColor) {
-    var base = shellColor(name, fallbackColor)
-    var alphaValue = alphaFor(name)
-    if (alphaValue < 0) return base
-    return withAlpha(base, alphaValue)
-  }
-
-  function alphaFor(name) {
-    var value = shellValues[name + "-alpha"]
-    if (value === undefined || value === null || String(value).length === 0) return -1
-    var parsed = Number(value)
-    if (!isFinite(parsed)) return -1
-    return Math.max(0, Math.min(1, parsed))
+    return opaqueColor(shellColor(name, fallbackColor))
   }
 
   function stripInlineComment(value) {

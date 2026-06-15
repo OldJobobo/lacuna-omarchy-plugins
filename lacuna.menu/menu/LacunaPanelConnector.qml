@@ -11,18 +11,18 @@ Item {
   property int connectorWidth: 18
   property int contentHeight: 0
   property color panelColor: "#101315"
+  property bool backgroundVisible: true
 
   readonly property real curveKappa: lacunaGeometry.curveKappa
 
   LacunaGeometry { id: lacunaGeometry }
   readonly property real clampedProgress: Math.max(0, Math.min(1, progress))
-  readonly property real surfaceAlpha: Math.max(0, Math.min(1, panelColor.a === undefined ? 1 : panelColor.a))
   readonly property color solidPanelColor: Qt.rgba(panelColor.r, panelColor.g, panelColor.b, 1)
 
   width: connectorWidth
   height: contentHeight + connectorWidth * 2
   visible: renderable && clampedProgress > 0.001 && connectorWidth > 0 && contentHeight > 0
-  opacity: clampedProgress * surfaceAlpha
+  opacity: backgroundVisible ? 1 : 0
   enabled: false
 
   LacunaRect {

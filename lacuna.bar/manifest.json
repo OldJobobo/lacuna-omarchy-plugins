@@ -19,6 +19,9 @@
       "lacuna.shell-settings",
       "lacuna.menu"
     ],
+    "vendorExclude": [
+      "OmarchyBar.qml"
+    ],
     "recommends": [
       "lacuna.menu-button",
       "lacuna.background-vignette",

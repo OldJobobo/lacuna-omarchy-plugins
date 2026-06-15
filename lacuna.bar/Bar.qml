@@ -35,15 +35,11 @@ Item {
   readonly property bool hostedSidebarVisible: hostedMenu.sidebarSurfaceVisible === true
   readonly property bool hostedSidebarOnLeft: hostedSidebarVisible && !hostedMenu.panelOnRight
   readonly property bool hostedSidebarOnRight: hostedSidebarVisible && hostedMenu.panelOnRight
-  // The hosted menu's total visible surface includes the molding inset used to
-  // join the sidebar to the frame. The bar-owned full-frame strips should start
-  // at the sidebar body edge, not after that inset, otherwise top/bottom frame
-  // shadows get a visible offset at the left corners.
+  // The full-frame cutout is cast from the visible sidebar body edge.
+  // The molding inset belongs to the sidebar join; including it here pushes
+  // the cutout and shadow past the actual frame edge.
   readonly property real hostedSidebarFrameOcclusionWidth: hostedSidebarVisible
     ? Math.max(0, Number(hostedMenu.panelWidth || 0))
-    : 0
-  readonly property real hostedSidebarOccupiedWidth: hostedSidebarVisible
-    ? Math.max(0, Number(hostedMenu.panelWidth || 0) + Number(hostedMenu.surfaceRightInset || 0))
     : 0
   readonly property string lacunaBarSourceDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : ""
   readonly property string lacunaRepoDir: lacunaBarSourceDir.replace(/\/lacuna\.bar\/?$/, "")
@@ -145,13 +141,13 @@ Item {
       frameRadius: root.frameRadius
       cornerPieces: root.cornerPieces
       frameColor: barTheme.panelBackground
+      shadowEnabled: root.frameShadow
+      shadowOffsetX: root.frameShadowOffsetX
+      shadowOffsetY: root.frameShadowOffsetY
       leftEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && !hostedMenu.panelOnRight
       rightEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && hostedMenu.panelOnRight
       leftOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
       rightOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
-      shadowEnabled: root.frameShadow
-      shadowOffsetX: root.frameShadowOffsetX
-      shadowOffsetY: root.frameShadowOffsetY
     }
   }
 

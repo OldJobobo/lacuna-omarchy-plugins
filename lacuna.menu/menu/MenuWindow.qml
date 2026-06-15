@@ -75,7 +75,7 @@ Item {
   property int barEdgeCasterSize: frameThickness
   property int frameReservePadding: 4
   property int sidebarReserveExtra: 0
-  property int flyoutLaneWidth: lacunaEnabled && panelController.menuRenderable ? maxFlyoutLaneWidth : 0
+  property int flyoutLaneWidth: lacunaEnabled && panelController.menuRenderable ? maxFlyoutLaneWidth + panelShadowOutset : 0
   // In exclusive mode the compositor already places this window below the top
   // bar, so the bar edge is local y=0. In overlay mode the window starts at
   // screen top and the bar edge is the live bar height.
@@ -96,6 +96,8 @@ Item {
   property string shellSettingsSection: "apps"
   property int appPickerWidth: Math.round(sizeMix(300, 260))
   readonly property int maxFlyoutLaneWidth: Math.max(settingsPanelWidth, shellSettingsPanelWidth, appPickerWidth)
+  readonly property int panelShadowBlurMax: 28
+  readonly property int panelShadowOutset: frameShadow ? Math.ceil(panelShadowBlurMax + Math.abs(frameShadowOffsetX)) : 0
   readonly property string visibleFlyout: panelController.visibleFlyout
   readonly property string outgoingFlyout: panelController.outgoingFlyout
   readonly property bool activeFlyoutSettings: visibleFlyout === "settings"
@@ -324,7 +326,44 @@ Item {
 
   function open(payloadJson) {
     if (!lacunaEnabled) return
+    var payload = openPayload(payloadJson)
     panelController.openMenu()
+    openPayloadFlyout(payload)
+  }
+
+  function openPayload(payloadJson) {
+    if (!payloadJson) return ({})
+    try {
+      var parsed = JSON.parse(String(payloadJson))
+      return parsed && typeof parsed === "object" ? parsed : ({})
+    } catch (error) {
+      return ({})
+    }
+  }
+
+  function openPayloadFlyout(payload) {
+    var flyout = payload && payload.flyout ? String(payload.flyout) : ""
+    if (flyout === "") return
+
+    if (flyout === "settings") {
+      if (payload.section) settingsPanel.currentSection = String(payload.section)
+      panelController.openFlyout("settings")
+      if (sidebarState.collapsed) sidebarState.expand()
+      requestFlyoutFocus("settings")
+      return
+    }
+
+    if (flyout === "shellSettings") {
+      shellSettingsSection = String(payload.section || "apps")
+      if (shellSettingsPanel.item) shellSettingsPanel.item.currentSection = shellSettingsSection
+      panelController.openFlyout("shellSettings")
+      requestFlyoutFocus("shellSettings")
+      return
+    }
+
+    if (flyout === "appPicker") {
+      openCustomQuickLaunchPicker()
+    }
   }
 
   function close() {
@@ -1508,6 +1547,46 @@ Item {
       flyoutVisible: panelController.flyoutRenderable
     }
 
+    LacunaPanelUnifiedSurface {
+      id: panelUnifiedSurface
+
+      anchors.fill: parent
+      sidebarVisible: root.sidebarSurfaceVisible
+      flyoutOpen: root.flyoutOpen
+      flyoutRenderable: panelController.flyoutRenderable
+      connectorRenderable: root.sidebarSurfaceVisible && panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      shadowEnabled: root.lacunaEnabled && root.frameShadow && (root.sidebarSurfaceVisible || panelController.flyoutRenderable)
+      menuProgress: panelController.menuProgress
+      flyoutProgress: panelController.flyoutProgress
+      contentProgress: panelController.contentProgress
+      sidebarX: panelHost.sidebarX
+      panelWidth: root.panelWidth
+      surfaceRightInset: root.surfaceRightInset
+      barHeight: root.barHeight
+      barBottomY: root.barBottomY
+      joinRadius: root.joinRadius
+      connectorOverlap: root.connectorOverlap
+      fullFrame: root.frameMode === "fullframe"
+      frameThickness: root.frameThickness
+      cornerPieces: root.effectiveCornerPieces
+      openFromRight: root.panelOnRight
+      connectorX: panelHost.connectorX
+      connectorY: panelHost.connectorY
+      connectorWidth: panelHost.effectiveConnectorWidth
+      connectorHeight: panelHost.effectiveFlyoutHeight + panelHost.effectiveConnectorWidth * 2
+      flyoutX: panelHost.flyoutX
+      flyoutY: panelHost.effectiveFlyoutY
+      flyoutWidth: panelHost.effectiveFlyoutWidth
+      flyoutHeight: panelHost.effectiveFlyoutHeight
+      panelRadius: root.lacunaJoinRadius
+      panelColor: root.panelColor
+      foreground: root.foreground
+      designTokens: designTokens
+      shadowOffsetX: root.frameShadowOffsetX
+      shadowOffsetY: root.frameShadowOffsetY
+      shadowBlurMax: root.panelShadowBlurMax
+    }
+
     MenuSurface {
       id: surface
 
@@ -1530,6 +1609,7 @@ Item {
       panelColor: root.panelColor
       foreground: root.foreground
       designTokens: designTokens
+      backgroundVisible: false
 
       MenuContent {
         visible: root.sidebarSurfaceVisible && !sidebarState.collapsed
@@ -1608,12 +1688,13 @@ Item {
 
       open: root.flyoutOpen
       renderable: root.sidebarSurfaceVisible && panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
-      progress: Math.min(panelController.menuProgress, panelController.flyoutProgress)
+      progress: panelController.flyoutProgress
       x: panelHost.connectorX
       y: panelHost.connectorY
       connectorWidth: panelHost.effectiveConnectorWidth
       contentHeight: panelHost.effectiveFlyoutHeight
       panelColor: root.panelColor
+      backgroundVisible: false
     }
 
     LacunaAttachedFlyout {
@@ -1633,6 +1714,7 @@ Item {
       panelColor: root.panelColor
       foreground: root.foreground
       designTokens: designTokens
+      backgroundVisible: false
 
       SettingsWindow {
         id: settingsPanel
