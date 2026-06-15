@@ -215,6 +215,15 @@ Column {
     quickLaunchDropIndex = -1
     viewReveal.restart()
   }
+  // Always reveal the content when the sidebar opens. Otherwise viewProgress
+  // can be left at 0 (e.g. a view reset while closed) and the grid/list stays
+  // invisible until a view change is triggered.
+  onOpenChanged: {
+    if (open) {
+      viewProgress = 0
+      viewReveal.restart()
+    }
+  }
 
   opacity: open ? viewProgress : 0
   x: open ? -6 * (1 - viewProgress) : -6
