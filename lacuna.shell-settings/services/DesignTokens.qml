@@ -12,7 +12,6 @@ QtObject {
 
   readonly property string style: normalize(designStyle)
   readonly property bool lacuna: style === "lacuna"
-  readonly property bool carbon: lacuna
   readonly property bool omarchy: style === "omarchy"
   readonly property bool material: style === "material"
 
@@ -48,7 +47,7 @@ QtObject {
 
   function normalize(value) {
     var styleName = String(value || "").toLowerCase()
-    if (styleName === "lacuna" || styleName === "carbon") return "lacuna"
+    if (styleName === "lacuna") return "lacuna"
     if (styleName === "omarchy" || styleName === "material") return styleName
     return "lacuna"
   }

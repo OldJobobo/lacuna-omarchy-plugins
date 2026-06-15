@@ -856,6 +856,23 @@ class QmlContractTests(unittest.TestCase):
             qml = read(path)
             self.assertNotIn("designTokens.carbon", qml, path)
 
+    def test_design_tokens_retire_carbon_lineage(self):
+        # Phase A of the Lacuna design language: the design-system core no
+        # longer names Carbon. The persisted-settings layer (LacunaSettings /
+        # lacuna.state) still migrates a legacy "carbon" value to "lacuna";
+        # that is covered separately and intentionally kept.
+        for path in [
+            "lacuna.menu/services/DesignTokens.qml",
+            "lacuna.shell-settings/services/DesignTokens.qml",
+        ]:
+            qml = read(path)
+            self.assertNotIn("carbon", qml, path)
+            self.assertIn('if (styleName === "lacuna") return "lacuna"', qml, path)
+
+        rail = read("lacuna.menu/menu/MenuRail.qml")
+        self.assertNotIn('"carbon"', rail)
+        self.assertIn('designStyle: "lacuna"', rail)
+
     def test_daily_launch_system_editor_uses_omarchy_editor_launcher(self):
         qml = read("lacuna.menu/menu/MenuAppModel.qml")
 
