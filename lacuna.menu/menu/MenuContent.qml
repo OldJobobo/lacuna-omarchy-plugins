@@ -259,6 +259,9 @@ Column {
   }
 
   Item {
+    // Redundant under lacuna: the header's own accent rule plus the content
+    // well's top lip already separate the header from the content.
+    visible: !root.designTokens.lacuna
     width: parent.width
     height: 1
     opacity: root.designTokens.headerTreatment === "accent-line" ? 1 : 0.55

@@ -1631,6 +1631,8 @@ Item {
         anchors.bottomMargin: designTokens.bottomInset
         color: menuTheme.wellFill
 
+        // Inset bevel: light top + left edges, dark bottom + right edges, so
+        // the well reads as recessed on any theme (not reliant on fill darkness).
         LacunaRect {
           anchors.left: parent.left
           anchors.right: parent.right
@@ -1641,9 +1643,25 @@ Item {
 
         LacunaRect {
           anchors.left: parent.left
+          anchors.top: parent.top
+          anchors.bottom: parent.bottom
+          width: 1
+          color: menuTheme.seamLight
+        }
+
+        LacunaRect {
+          anchors.left: parent.left
           anchors.right: parent.right
           anchors.bottom: parent.bottom
           height: 1
+          color: menuTheme.seamShadow
+        }
+
+        LacunaRect {
+          anchors.right: parent.right
+          anchors.top: parent.top
+          anchors.bottom: parent.bottom
+          width: 1
           color: menuTheme.seamShadow
         }
       }
