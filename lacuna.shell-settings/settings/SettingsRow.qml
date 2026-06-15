@@ -23,7 +23,7 @@ LacunaRect {
   property color accent: "#88c0d0"
   property color toneAccent: accent
   property string titleFontFamily: "Tektur"
-  property string bodyFontFamily: "JetBrains Mono"
+  property string bodyFontFamily: "Hack Nerd Font"
   property var designTokens: null
 
   function tokenBool(name, fallback) {

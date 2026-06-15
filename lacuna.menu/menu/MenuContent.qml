@@ -31,7 +31,7 @@ Column {
   property color dangerAccent: "#bf616a"
   property color navAccent: "#d8dee9"
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
-  property string bodyFontFamily: "JetBrains Mono"
+  property string bodyFontFamily: "Hack Nerd Font"
   property string itemFontFamily: itemFont.name !== "" ? itemFont.name : "Tektur"
   property int iconRailWidth: 32
   property var designTokens: fallbackDesignTokens

@@ -65,7 +65,7 @@ Column {
         anchors.verticalCenter: parent.verticalCenter
         text: modelData.label || ""
         color: itemColor
-        fontFamily: "JetBrains Mono"
+        fontFamily: "Hack Nerd Font"
         font.pixelSize: root.compact ? 10 : 11
         font.weight: active ? Font.DemiBold : Font.Medium
         elide: Text.ElideRight

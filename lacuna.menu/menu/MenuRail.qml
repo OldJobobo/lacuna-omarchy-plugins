@@ -23,7 +23,7 @@ Column {
   property color navAccent: "#d8dee9"
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
   property color panelColor: "#101315"
-  property string bodyFontFamily: "JetBrains Mono"
+  property string bodyFontFamily: "Hack Nerd Font"
   property int railWidth: 32
   property var panelWindow: null
   property var tooltipTarget: null

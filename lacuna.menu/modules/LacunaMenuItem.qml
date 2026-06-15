@@ -39,7 +39,7 @@ LacunaRect {
   property color accent: "#88c0d0"
   property color toneAccent: accent
   property color background: "#101315"
-  property string fontFamily: "JetBrains Mono"
+  property string fontFamily: "Hack Nerd Font"
   property string labelFontFamily: fontFamily
   property int iconRailWidth: 32
   property bool compact: false

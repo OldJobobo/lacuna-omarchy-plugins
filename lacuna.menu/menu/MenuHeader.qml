@@ -19,7 +19,7 @@ Item {
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
   property color accent: "#88c0d0"
   property color danger: "#bf616a"
-  property string bodyFontFamily: "JetBrains Mono"
+  property string bodyFontFamily: "Hack Nerd Font"
   property bool compact: false
   property var designTokens: fallbackDesignTokens
   readonly property bool hasSubtitle: subtitle !== ""

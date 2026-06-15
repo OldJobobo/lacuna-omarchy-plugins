@@ -126,7 +126,7 @@ Item {
     showActiveState: false
     sweepActive: root.sweepOnPlaying && root.cssClass === "playing"
     sweepColor: root.background
-    fontFamily: bar ? bar.fontFamily : "JetBrains Mono"
+    fontFamily: bar ? bar.fontFamily : "Hack Nerd Font"
     tooltipHost: root.bar
     onTriggered: root.togglePlayer()
     onSecondaryTriggered: root.nextTrack()

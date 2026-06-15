@@ -20,7 +20,7 @@ Item {
   property string optionValue: ""
   property string actionIcon: ""
   property string actionTooltip: ""
-  property string fontFamily: "JetBrains Mono"
+  property string fontFamily: "Hack Nerd Font"
   property bool compact: false
   property var designTokens: null
   property real hoverOpacity: 0.06

@@ -26,7 +26,7 @@ Item {
   property int contentHorizontalPadding: compact ? 8 : 16
   property int labelPixelSize: compact ? 13 : 14
   property int iconSize: barSize >= 32 ? 18 : compact ? 12 : 13
-  property string fontFamily: "JetBrains Mono"
+  property string fontFamily: "Hack Nerd Font"
   property int labelFontWeight: active ? Font.DemiBold : Font.Normal
   property real hoverPulseAmount: 0
   property var tooltipHost: null

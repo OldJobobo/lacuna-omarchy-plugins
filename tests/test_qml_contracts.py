@@ -931,6 +931,24 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property int quick: 150", widget)
         self.assertIn("readonly property int hoverDuration: quick", widget)
 
+    def test_typography_adopts_hack_nerd_font(self):
+        # Phase E: the Lacuna mono face is Hack Nerd Font; Tektur stays the
+        # display/title face. No JetBrains Mono literals remain in QML.
+        tokens = read("lacuna.shell-settings/components/LacunaTokens.qml")
+        self.assertIn('readonly property string monoFont: "Hack Nerd Font"', tokens)
+
+        for path in [
+            "lacuna.menu/menu/MenuWindow.qml",
+            "lacuna.menu/menu/MenuContent.qml",
+            "lacuna.shell-settings/settings/SettingsRow.qml",
+        ]:
+            qml = read(path)
+            self.assertNotIn("JetBrains Mono", qml, path)
+            self.assertIn('"Hack Nerd Font"', qml, path)
+
+        # Tektur remains the title/display face.
+        self.assertIn("Tektur", read("lacuna.menu/menu/MenuContent.qml"))
+
     def test_daily_launch_system_editor_uses_omarchy_editor_launcher(self):
         qml = read("lacuna.menu/menu/MenuAppModel.qml")
 

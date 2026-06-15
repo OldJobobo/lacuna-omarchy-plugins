@@ -36,7 +36,7 @@ Item {
   property color navAccent: menuTheme.soft
   property color muted: menuTheme.muted
   property string version: ""
-  property string bodyFontFamily: "JetBrains Mono"
+  property string bodyFontFamily: "Hack Nerd Font"
   property bool compact: compactState.compact
   property real compactProgress: compact ? 1 : 0
   property bool forceCompactRail: false
@@ -1886,7 +1886,7 @@ Item {
           anchors.verticalCenter: restartConfirmIcon.verticalCenter
           text: "Restart System?"
           color: root.safeValue(root.foreground, "#d8dee9")
-          fontFamily: root.safeValue(root.bodyFontFamily, "JetBrains Mono")
+          fontFamily: root.safeValue(root.bodyFontFamily, "Hack Nerd Font")
           font.pixelSize: root.compact ? 12 : 13
           font.weight: Font.DemiBold
         }
@@ -1900,7 +1900,7 @@ Item {
           anchors.topMargin: root.compact ? 16 : 18
           text: "This will reboot the machine now. Unsaved work in other apps may be lost."
           color: root.safeValue(root.muted, "#8b949e")
-          font.family: root.safeValue(root.bodyFontFamily, "JetBrains Mono")
+          font.family: root.safeValue(root.bodyFontFamily, "Hack Nerd Font")
           font.pixelSize: root.compact ? 10 : 11
           wrapMode: Text.WordWrap
           lineHeight: 1.16
@@ -1930,7 +1930,7 @@ Item {
               width: parent.width - 14
               text: "Cancel"
               color: root.safeValue(root.muted, "#8b949e")
-              fontFamily: root.safeValue(root.bodyFontFamily, "JetBrains Mono")
+              fontFamily: root.safeValue(root.bodyFontFamily, "Hack Nerd Font")
               font.pixelSize: root.compact ? 10 : 11
               font.weight: Font.DemiBold
               horizontalAlignment: Text.AlignHCenter
@@ -1958,7 +1958,7 @@ Item {
               width: parent.width - 14
               text: "Restart"
               color: root.safeValue(root.foreground, "#d8dee9")
-              fontFamily: root.safeValue(root.bodyFontFamily, "JetBrains Mono")
+              fontFamily: root.safeValue(root.bodyFontFamily, "Hack Nerd Font")
               font.pixelSize: root.compact ? 10 : 11
               font.weight: Font.DemiBold
               horizontalAlignment: Text.AlignHCenter

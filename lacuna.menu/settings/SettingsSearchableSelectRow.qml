@@ -19,7 +19,7 @@ Item {
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
   property color toneAccent: "#88c0d0"
   property string titleFontFamily: "Tektur"
-  property string bodyFontFamily: "JetBrains Mono"
+  property string bodyFontFamily: "Hack Nerd Font"
   property var designTokens: null
   property bool expanded: false
   property string searchText: ""
