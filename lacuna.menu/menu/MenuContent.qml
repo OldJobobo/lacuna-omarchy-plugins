@@ -258,11 +258,25 @@ Column {
     onCloseRequested: root.menuState.close()
   }
 
-  LacunaRect {
+  Item {
     width: parent.width
     height: 1
-    color: root.seam
     opacity: root.designTokens.headerTreatment === "accent-line" ? 1 : 0.55
+
+    LacunaRect {
+      anchors.left: parent.left
+      height: 1
+      width: root.designTokens.dividerGap > 0 ? (parent.width - root.designTokens.dividerGap) / 2 : parent.width
+      color: root.seam
+    }
+
+    LacunaRect {
+      visible: root.designTokens.dividerGap > 0
+      anchors.right: parent.right
+      height: 1
+      width: (parent.width - root.designTokens.dividerGap) / 2
+      color: root.seam
+    }
   }
 
   Flickable {
@@ -961,12 +975,26 @@ Column {
       }
     }
 
-    LacunaRect {
+    Item {
       anchors.left: parent.left
       anchors.right: parent.right
       anchors.top: collapseRow.bottom
       height: 1
-      color: root.seam
+
+      LacunaRect {
+        anchors.left: parent.left
+        height: 1
+        width: root.designTokens.dividerGap > 0 ? (parent.width - root.designTokens.dividerGap) / 2 : parent.width
+        color: root.seam
+      }
+
+      LacunaRect {
+        visible: root.designTokens.dividerGap > 0
+        anchors.right: parent.right
+        height: 1
+        width: (parent.width - root.designTokens.dividerGap) / 2
+        color: root.seam
+      }
     }
 
     Row {
