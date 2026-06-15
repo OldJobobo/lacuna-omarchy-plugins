@@ -29,7 +29,7 @@ Item {
   property real gapBreath: 0
 
   width: parent ? parent.width : implicitWidth
-  height: compact ? (hasSubtitle || hasVersion ? 50 : 36) : (hasSubtitle || hasVersion ? 62 : 46) + (designTokens.material ? 2 : 0)
+  height: (compact ? 30 : 36) + (designTokens.material ? 2 : 0)
 
   FontLoader {
     id: headingFont
@@ -37,40 +37,13 @@ Item {
     source: "../assets/fonts/Tektur-SemiBold.ttf"
   }
 
-  Item {
-    id: headerGlyph
-
-    anchors.left: backButton.right
-    anchors.leftMargin: root.canGoBack ? tokens.spaceSmall : 0
-    anchors.top: parent.top
-    anchors.topMargin: 2
-    width: root.controlSize
-    height: root.controlSize
-
-    Image {
-      anchors.centerIn: parent
-      width: root.compact ? 18 : 20
-      height: width
-      source: Qt.resolvedUrl("../assets/tabler/circle-dotted-letter-l.svg")
-      sourceSize.width: width
-      sourceSize.height: height
-      fillMode: Image.PreserveAspectFit
-      smooth: true
-      mipmap: true
-      layer.enabled: true
-      layer.effect: MultiEffect {
-        colorization: 1.0
-        colorizationColor: root.accent
-      }
-    }
-  }
-
   LacunaIconButton {
     id: backButton
 
     visible: root.canGoBack
     anchors.left: parent.left
-    anchors.top: headerGlyph.top
+    anchors.top: parent.top
+    anchors.topMargin: root.compact ? 2 : 3
     width: root.backButtonWidth
     icon: "arrow-left"
     foreground: root.foreground
@@ -87,44 +60,34 @@ Item {
     onTriggered: root.backRequested()
   }
 
-  Column {
-    anchors.left: headerGlyph.right
-    anchors.leftMargin: root.compact ? tokens.spaceSmall : tokens.spaceNormal
-    anchors.right: headerControls.left
-    anchors.rightMargin: tokens.spaceLarge
-    anchors.verticalCenter: headerGlyph.verticalCenter
-    spacing: root.hasSubtitle ? tokens.spaceTiny : 0
+  // Slim wordmark: the contextual title as a wide-tracked wordmark, with the
+  // version as a faint monospace tag trailing it. No glyph (the top-bar menu
+  // button already carries the mark).
+  LacunaText {
+    id: wordmark
 
-    LacunaText {
-      width: parent.width
-      text: root.title
-      color: root.foreground
-      fontFamily: headingFont.name !== "" ? headingFont.name : "Tektur"
-      font.pixelSize: root.compact ? 14 : tokens.textTitle
-      font.weight: Font.DemiBold
-      font.letterSpacing: root.compact ? 0.6 : 0.9
-    }
-
-    LacunaText {
-      visible: root.hasSubtitle
-      width: parent.width
-      text: root.subtitle
-      color: root.muted
-      fontFamily: root.bodyFontFamily
-      font.pixelSize: root.compact ? 8 : tokens.textHint
-    }
+    anchors.left: root.canGoBack ? backButton.right : parent.left
+    anchors.leftMargin: root.canGoBack ? tokens.spaceSmall : 0
+    anchors.verticalCenter: backButton.verticalCenter
+    text: root.title.toUpperCase()
+    color: root.foreground
+    fontFamily: headingFont.name !== "" ? headingFont.name : "Tektur"
+    font.pixelSize: root.compact ? 13 : tokens.textTitle
+    font.weight: Font.DemiBold
+    font.letterSpacing: root.compact ? 1.4 : 2.0
   }
 
   LacunaText {
+    id: versionTag
+
     visible: root.hasVersion
-    anchors.right: parent.right
-    anchors.rightMargin: 2
-    anchors.bottom: parent.bottom
-    anchors.bottomMargin: root.compact ? 7 : 9
+    anchors.left: wordmark.right
+    anchors.leftMargin: tokens.spaceNormal
+    anchors.baseline: wordmark.baseline
     text: root.version
     color: root.muted
     fontFamily: root.bodyFontFamily
-    font.pixelSize: root.compact ? 9 : 10
+    font.pixelSize: root.compact ? 8 : 9
     font.weight: Font.DemiBold
   }
 
@@ -158,7 +121,7 @@ Item {
   Item {
     id: headerRule
 
-    anchors.left: headerGlyph.left
+    anchors.left: parent.left
     anchors.right: parent.right
     anchors.bottom: parent.bottom
     height: 1
