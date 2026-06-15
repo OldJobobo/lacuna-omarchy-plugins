@@ -231,17 +231,7 @@ Column {
     if (open) {
       viewProgress = 0
       viewReveal.restart()
-      Qt.callLater(root.refreshItems)
     }
-  }
-
-  // Guarantee one model rebuild on the next event-loop tick after creation,
-  // once the registry/view have settled. Belt-and-suspenders against the
-  // item model being built from not-yet-ready data and staying stale.
-  Component.onCompleted: Qt.callLater(root.refreshItems)
-
-  function refreshItems() {
-    root.sectionRevision++
   }
 
   // Visibility follows `open` directly (with the fade Behavior below) so content
@@ -347,6 +337,12 @@ Column {
           property var entry: modelData
 
           width: parent.width
+          // Track the loaded delegate's height reactively. Item rows set
+          // height from designTokens (0 until it loads); without this the
+          // Loader sizes once to that stale 0 and the row stays invisible
+          // until a rebuild — section headers use a static height, which is
+          // why headers showed but items did not.
+          height: item ? item.height : 0
           sourceComponent: entry.kind === "header" ? sectionDelegate : (entry.kind === "grid" ? gridDelegate : itemDelegate)
         }
       }
