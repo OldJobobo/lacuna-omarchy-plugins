@@ -38,6 +38,7 @@ LacunaRect {
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
   property color accent: "#88c0d0"
   property color toneAccent: accent
+  property color seam: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.2)
   property color background: "#101315"
   property string fontFamily: "Hack Nerd Font"
   property string labelFontFamily: fontFamily
@@ -97,8 +98,14 @@ LacunaRect {
     anchors.top: parent.top
     anchors.bottom: parent.bottom
     width: root.featured ? 4 : root.primary ? 3 : 2
-    color: root.toneAccent
-    opacity: root.featured ? 0.7 + root.reveal * 0.3 : root.primary ? 0.42 + root.reveal * 0.42 : root.reveal * 0.95
+    // Seam-toned at rest (coordinates with the divider/frame seams), brightening
+    // to the accent only on hover/active — accent reserved for interaction.
+    color: root.hovered ? root.toneAccent : root.seam
+    opacity: (root.featured ? 0.85 : root.primary ? 0.6 : 0.4) + root.reveal * (root.featured ? 0.15 : root.primary ? 0.35 : 0.55)
+
+    Behavior on color {
+      LacunaColorAnim {}
+    }
   }
 
   LacunaRect {
