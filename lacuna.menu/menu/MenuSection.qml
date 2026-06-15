@@ -104,7 +104,15 @@ Item {
   Row {
     id: controlRow
 
-    visible: countPill.visible || optionRow.visible || actionButton.visible || chevron.visible
+    // Derive visibility from the section's own source properties, NOT from the
+    // children's `.visible`. In Qt Quick a child's `visible` reports *effective*
+    // visibility (it already factors in this Row's visibility), so referencing
+    // it here forms a feedback loop — `controlRow.visible = controlRow.visible &&
+    // (...)`, for which `false` is a stable solution. That latched the whole
+    // control cluster (count pill, grid/list toggles, action button, chevron)
+    // invisible on open until a model rebuild happened to settle it true, which
+    // is why clicking a toggle made them all suddenly appear.
+    visible: root.count > 0 || (root.options && root.options.length > 0) || root.actionIcon !== "" || root.collapsible
     anchors.right: parent.right
     anchors.rightMargin: 4
     anchors.verticalCenter: label.verticalCenter
