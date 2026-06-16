@@ -84,25 +84,6 @@ LacunaRect {
     LacunaAnim { motion: "fast" }
   }
 
-  LacunaRect {
-    visible: !root.header && root.designTokens.lacuna
-    anchors.fill: parent
-    color: root.toneAccent
-    opacity: root.featured ? 0.045 + root.reveal * 0.065 : root.primary ? 0.025 + root.reveal * 0.06 : root.reveal * 0.055
-  }
-
-  LacunaRect {
-    visible: !root.header && root.designTokens.accentStrips
-    anchors.left: parent.left
-    anchors.top: parent.top
-    anchors.bottom: parent.bottom
-    width: root.featured ? 4 : root.primary ? 3 : 2
-    // Static seam rail — accent is reserved for the bottom hover glow, mirroring
-    // the grid tile (whose frame stays seam while only the gap glows).
-    color: root.seam
-    opacity: (root.featured ? 0.85 : root.primary ? 0.6 : 0.4) + root.reveal * (root.featured ? 0.1 : root.primary ? 0.2 : 0.3)
-  }
-
   // Bottom hover treatment — mirrors the grid tile: a seam line broken by a
   // centered gap that fades in on hover, with an accent glow that breathes at
   // the gap and spreads across the bottom of the row.
@@ -110,7 +91,6 @@ LacunaRect {
     visible: !root.header && root.designTokens.lacuna
     anchors.left: parent.left
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: root.compact ? 3 : 4
     height: 1
     width: Math.max(0, (root.width - root.notch) / 2)
     color: root.seam
@@ -121,7 +101,6 @@ LacunaRect {
     visible: !root.header && root.designTokens.lacuna
     anchors.right: parent.right
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: root.compact ? 3 : 4
     height: 1
     width: Math.max(0, (root.width - root.notch) / 2)
     color: root.seam
@@ -132,7 +111,6 @@ LacunaRect {
     visible: !root.header && root.designTokens.lacuna && root.hovered
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.verticalCenter: parent.bottom
-    anchors.verticalCenterOffset: -(root.compact ? 3 : 4)
     width: Math.round(root.width * 0.6)
     height: 8
 
