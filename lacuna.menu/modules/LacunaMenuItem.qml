@@ -65,9 +65,8 @@ LacunaRect {
   readonly property int iconLeftPadding: designTokens.accentStrips ? (compact ? 5 : 6) : 0
   property int contentLeftMargin: Math.round(reveal * (featured ? 3 : 2))
   property bool reorderHandlePressed: false
-  property real lineworkProgress: 0
-  readonly property int lineworkWidth: compact ? 26 : 34
-  readonly property int lineworkHeight: 2
+  property real gapBreath: 0
+  readonly property int notch: compact ? 18 : 22
 
   width: parent ? parent.width : implicitWidth
   height: header ? (compact ? 24 : 30) : rowHeight
@@ -98,61 +97,75 @@ LacunaRect {
     anchors.top: parent.top
     anchors.bottom: parent.bottom
     width: root.featured ? 4 : root.primary ? 3 : 2
-    // Seam-toned at rest (coordinates with the divider/frame seams), brightening
-    // to the accent only on hover/active — accent reserved for interaction.
-    color: root.hovered ? root.toneAccent : root.seam
-    opacity: (root.featured ? 0.85 : root.primary ? 0.6 : 0.4) + root.reveal * (root.featured ? 0.15 : root.primary ? 0.35 : 0.55)
+    // Static seam rail — accent is reserved for the bottom hover glow, mirroring
+    // the grid tile (whose frame stays seam while only the gap glows).
+    color: root.seam
+    opacity: (root.featured ? 0.85 : root.primary ? 0.6 : 0.4) + root.reveal * (root.featured ? 0.1 : root.primary ? 0.2 : 0.3)
+  }
 
-    Behavior on color {
-      LacunaColorAnim {}
-    }
+  // Bottom hover treatment — mirrors the grid tile: a seam line broken by a
+  // centered gap that fades in on hover, with an accent glow that breathes at
+  // the gap and spreads across the bottom of the row.
+  LacunaRect {
+    visible: !root.header && root.designTokens.lacuna
+    anchors.left: parent.left
+    anchors.bottom: parent.bottom
+    height: 1
+    width: Math.max(0, (root.width - root.notch) / 2)
+    color: root.seam
+    opacity: root.reveal
   }
 
   LacunaRect {
-    id: topLinework
-
-    visible: !root.header && root.designTokens.decorativeLinework && root.reveal > 0
-    x: 9 + Math.round(Math.max(0, root.width - width - 18) * root.lineworkProgress)
-    y: 0
-    width: root.lineworkWidth
-    height: root.lineworkHeight
-    color: root.toneAccent
-    opacity: root.reveal * 0.22
+    visible: !root.header && root.designTokens.lacuna
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    height: 1
+    width: Math.max(0, (root.width - root.notch) / 2)
+    color: root.seam
+    opacity: root.reveal
   }
 
-  LacunaRect {
-    id: bottomLinework
+  Item {
+    visible: !root.header && root.designTokens.lacuna && root.hovered
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.bottom: parent.bottom
+    width: Math.round(root.width * 0.6)
+    height: 8
 
-    visible: !root.header && root.designTokens.decorativeLinework && root.reveal > 0
-    x: 8 + Math.round(Math.max(0, root.width - width - 16) * (1 - root.lineworkProgress))
-    y: root.height - height
-    width: root.lineworkWidth
-    height: root.lineworkHeight
-    color: root.toneAccent
-    opacity: root.reveal * 0.16
+    LacunaRect {
+      anchors.centerIn: parent
+      width: parent.width
+      height: 5
+      radius: 2.5
+      color: root.toneAccent
+      opacity: (0.03 + root.gapBreath * 0.17) * root.reveal
+    }
+
+    LacunaRect {
+      anchors.centerIn: parent
+      width: Math.round(parent.width * 0.45)
+      height: 3
+      radius: 1.5
+      color: root.toneAccent
+      opacity: (0.10 + root.gapBreath * 0.32) * root.reveal
+    }
+
+    LacunaRect {
+      anchors.centerIn: parent
+      width: Math.max(6, Math.round(parent.width * 0.16))
+      height: 2
+      radius: 1
+      color: root.toneAccent
+      opacity: (0.28 + root.gapBreath * 0.62) * root.reveal
+    }
   }
 
-  SequentialAnimation {
-    running: !root.header && root.designTokens.decorativeLinework && root.reveal > 0.01 && root.visible
-    loops: Animation.Infinite
-
-    NumberAnimation {
-      target: root
-      property: "lineworkProgress"
-      from: 0
-      to: 1
-      duration: root.compact ? 2800 : 3400
-      easing.type: Easing.InOutSine
-    }
-
-    NumberAnimation {
-      target: root
-      property: "lineworkProgress"
-      from: 1
-      to: 0
-      duration: root.compact ? 2800 : 3400
-      easing.type: Easing.InOutSine
-    }
+  Timer {
+    running: root.designTokens.lacuna && root.hovered && !root.header
+    interval: 50
+    repeat: true
+    onTriggered: root.gapBreath = 0.5 + 0.5 * Math.sin(Date.now() / 620)
   }
 
   Row {
