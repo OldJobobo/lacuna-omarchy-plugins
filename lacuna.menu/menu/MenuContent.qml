@@ -929,12 +929,17 @@ Column {
                 width: Math.max(0, tileBackground.width - 8)
                 text: tile.modelData.label || ""
                 color: root.foreground
-                opacity: tile.reveal
+                opacity: tile.hovered ? 1 : 0
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
                 fontFamily: root.bodyFontFamily
                 font.pixelSize: root.compact ? 8 : 9
                 font.weight: Font.DemiBold
+
+                // Slow fade for the name, decoupled from the fast hover reveal.
+                Behavior on opacity {
+                  NumberAnimation { duration: 520; easing.type: Easing.OutCubic }
+                }
               }
 
               LacunaStateLayer {
