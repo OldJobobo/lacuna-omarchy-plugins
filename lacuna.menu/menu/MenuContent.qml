@@ -936,9 +936,13 @@ Column {
                 font.pixelSize: root.compact ? 8 : 9
                 font.weight: Font.DemiBold
 
-                // Slow fade for the name, decoupled from the fast hover reveal.
+                // Name eases in after a slight delay and slowly; fades out
+                // quickly so it doesn't linger when the cursor leaves.
                 Behavior on opacity {
-                  NumberAnimation { duration: 520; easing.type: Easing.OutCubic }
+                  SequentialAnimation {
+                    PauseAnimation { duration: tile.hovered ? 220 : 0 }
+                    NumberAnimation { duration: tile.hovered ? 820 : 200; easing.type: Easing.OutCubic }
+                  }
                 }
               }
 
