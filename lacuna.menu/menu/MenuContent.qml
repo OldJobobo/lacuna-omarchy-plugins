@@ -845,41 +845,34 @@ Column {
                   color: root.seam
                 }
 
+                // Bottom edge stays a plain seam (like the header rule's faint
+                // line); only the gap centerpiece glows on hover.
                 LacunaRect {
                   visible: root.designTokens.lacuna
                   anchors.left: parent.left
                   anchors.bottom: parent.bottom
-                  height: tile.hovered ? 2 : 1
+                  height: 1
                   width: Math.max(0, (parent.width - parent.notch) / 2)
-                  color: tile.hovered ? tile.itemAccent : root.seam
-                  opacity: tile.hovered ? 0.85 : 1
-
-                  Behavior on color {
-                    LacunaColorAnim {}
-                  }
+                  color: root.seam
                 }
 
                 LacunaRect {
                   visible: root.designTokens.lacuna
                   anchors.right: parent.right
                   anchors.bottom: parent.bottom
-                  height: tile.hovered ? 2 : 1
+                  height: 1
                   width: Math.max(0, (parent.width - parent.notch) / 2)
-                  color: tile.hovered ? tile.itemAccent : root.seam
-                  opacity: tile.hovered ? 0.85 : 1
-
-                  Behavior on color {
-                    LacunaColorAnim {}
-                  }
+                  color: root.seam
                 }
 
-                // Breathing glow at the bottom gap — mirrors the header rule's
-                // pulsing gap glow; fades in on hover and breathes via a Timer.
+                // The centerpiece: an accent glow at the gap that fades in on
+                // hover, breathes (Timer-driven sine, like the header rule), and
+                // spreads out across the bottom — brightest at the gap centre.
                 Item {
                   visible: root.designTokens.lacuna && tile.hovered
                   anchors.horizontalCenter: parent.horizontalCenter
                   anchors.verticalCenter: parent.bottom
-                  width: parent.notch + 12
+                  width: Math.round(parent.width * 0.88)
                   height: 8
 
                   LacunaRect {
@@ -888,25 +881,25 @@ Column {
                     height: 5
                     radius: 2.5
                     color: tile.itemAccent
-                    opacity: (0.04 + tile.gapBreath * 0.26) * tile.reveal
+                    opacity: (0.03 + tile.gapBreath * 0.17) * tile.reveal
                   }
 
                   LacunaRect {
                     anchors.centerIn: parent
-                    width: Math.round(parent.width * 0.6)
+                    width: Math.round(parent.width * 0.45)
                     height: 3
                     radius: 1.5
                     color: tile.itemAccent
-                    opacity: (0.12 + tile.gapBreath * 0.40) * tile.reveal
+                    opacity: (0.10 + tile.gapBreath * 0.32) * tile.reveal
                   }
 
                   LacunaRect {
                     anchors.centerIn: parent
-                    width: Math.max(4, Math.round(parent.width * 0.28))
+                    width: Math.max(6, Math.round(parent.width * 0.16))
                     height: 2
                     radius: 1
                     color: tile.itemAccent
-                    opacity: (0.30 + tile.gapBreath * 0.65) * tile.reveal
+                    opacity: (0.28 + tile.gapBreath * 0.62) * tile.reveal
                   }
                 }
 
