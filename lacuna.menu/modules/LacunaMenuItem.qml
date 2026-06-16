@@ -110,6 +110,7 @@ LacunaRect {
     visible: !root.header && root.designTokens.lacuna
     anchors.left: parent.left
     anchors.bottom: parent.bottom
+    anchors.bottomMargin: root.compact ? 3 : 4
     height: 1
     width: Math.max(0, (root.width - root.notch) / 2)
     color: root.seam
@@ -120,6 +121,7 @@ LacunaRect {
     visible: !root.header && root.designTokens.lacuna
     anchors.right: parent.right
     anchors.bottom: parent.bottom
+    anchors.bottomMargin: root.compact ? 3 : 4
     height: 1
     width: Math.max(0, (root.width - root.notch) / 2)
     color: root.seam
@@ -129,7 +131,8 @@ LacunaRect {
   Item {
     visible: !root.header && root.designTokens.lacuna && root.hovered
     anchors.horizontalCenter: parent.horizontalCenter
-    anchors.bottom: parent.bottom
+    anchors.verticalCenter: parent.bottom
+    anchors.verticalCenterOffset: -(root.compact ? 3 : 4)
     width: Math.round(root.width * 0.6)
     height: 8
 
