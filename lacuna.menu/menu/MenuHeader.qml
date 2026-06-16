@@ -153,7 +153,7 @@ Item {
       visible: parent.gap > 0 && root.designTokens.decorativeLinework
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.verticalCenter: parent.verticalCenter
-      width: parent.gap + 14
+      width: Math.round(parent.width * 0.6)
       height: 8
 
       LacunaRect {
@@ -162,25 +162,25 @@ Item {
         height: 5
         radius: 2.5
         color: root.accent
-        opacity: 0.04 + root.gapBreath * 0.26
+        opacity: 0.03 + root.gapBreath * 0.2
       }
 
       LacunaRect {
         anchors.centerIn: parent
-        width: Math.round(parent.width * 0.6)
+        width: Math.round(parent.width * 0.45)
         height: 3
         radius: 1.5
         color: root.accent
-        opacity: 0.12 + root.gapBreath * 0.40
+        opacity: 0.1 + root.gapBreath * 0.34
       }
 
       LacunaRect {
         anchors.centerIn: parent
-        width: Math.max(4, Math.round(parent.width * 0.28))
+        width: Math.max(6, Math.round(parent.width * 0.16))
         height: 2
         radius: 1
         color: root.accent
-        opacity: 0.30 + root.gapBreath * 0.65
+        opacity: 0.28 + root.gapBreath * 0.62
       }
     }
   }
