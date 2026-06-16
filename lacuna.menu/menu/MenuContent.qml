@@ -787,6 +787,7 @@ Column {
               readonly property bool hasIconSource: String(modelData.iconSource || "") !== ""
               readonly property bool hovered: stateLayer.containsMouse
               readonly property real reveal: stateLayer.reveal
+              property real gapBreath: 0
 
               width: gridRoot.tileWidth
               height: gridRoot.tileHeight
@@ -810,9 +811,11 @@ Column {
                   LacunaColorAnim {}
                 }
 
-                // Seam frame (lacuna): a fine carved-cell border. The top edge
-                // brightens to the accent on hover; the bottom edge is broken
-                // by a centered gap — the lacuna notch.
+                // Seam frame (lacuna): a fine carved-cell border. The bottom
+                // edge is broken by a centered gap — the lacuna notch — and is
+                // where the hover highlight lives, mirroring the header rule's
+                // notched line with the breathing gap glow. The top edge stays a
+                // plain seam.
                 readonly property int notch: root.compact ? 10 : 14
 
                 LacunaRect {
@@ -820,7 +823,34 @@ Column {
                   anchors.left: parent.left
                   anchors.right: parent.right
                   anchors.top: parent.top
+                  height: 1
+                  color: root.seam
+                }
+
+                LacunaRect {
+                  visible: root.designTokens.lacuna
+                  anchors.left: parent.left
+                  anchors.top: parent.top
+                  anchors.bottom: parent.bottom
+                  width: 1
+                  color: root.seam
+                }
+
+                LacunaRect {
+                  visible: root.designTokens.lacuna
+                  anchors.right: parent.right
+                  anchors.top: parent.top
+                  anchors.bottom: parent.bottom
+                  width: 1
+                  color: root.seam
+                }
+
+                LacunaRect {
+                  visible: root.designTokens.lacuna
+                  anchors.left: parent.left
+                  anchors.bottom: parent.bottom
                   height: tile.hovered ? 2 : 1
+                  width: Math.max(0, (parent.width - parent.notch) / 2)
                   color: tile.hovered ? tile.itemAccent : root.seam
                   opacity: tile.hovered ? 0.85 : 1
 
@@ -831,38 +861,60 @@ Column {
 
                 LacunaRect {
                   visible: root.designTokens.lacuna
-                  anchors.left: parent.left
-                  anchors.top: parent.top
-                  anchors.bottom: parent.bottom
-                  width: 1
-                  color: root.seam
-                }
-
-                LacunaRect {
-                  visible: root.designTokens.lacuna
-                  anchors.right: parent.right
-                  anchors.top: parent.top
-                  anchors.bottom: parent.bottom
-                  width: 1
-                  color: root.seam
-                }
-
-                LacunaRect {
-                  visible: root.designTokens.lacuna
-                  anchors.left: parent.left
-                  anchors.bottom: parent.bottom
-                  height: 1
-                  width: Math.max(0, (parent.width - parent.notch) / 2)
-                  color: root.seam
-                }
-
-                LacunaRect {
-                  visible: root.designTokens.lacuna
                   anchors.right: parent.right
                   anchors.bottom: parent.bottom
-                  height: 1
+                  height: tile.hovered ? 2 : 1
                   width: Math.max(0, (parent.width - parent.notch) / 2)
-                  color: root.seam
+                  color: tile.hovered ? tile.itemAccent : root.seam
+                  opacity: tile.hovered ? 0.85 : 1
+
+                  Behavior on color {
+                    LacunaColorAnim {}
+                  }
+                }
+
+                // Breathing glow at the bottom gap — mirrors the header rule's
+                // pulsing gap glow; fades in on hover and breathes via a Timer.
+                Item {
+                  visible: root.designTokens.lacuna && tile.hovered
+                  anchors.horizontalCenter: parent.horizontalCenter
+                  anchors.verticalCenter: parent.bottom
+                  width: parent.notch + 12
+                  height: 8
+
+                  LacunaRect {
+                    anchors.centerIn: parent
+                    width: parent.width
+                    height: 5
+                    radius: 2.5
+                    color: tile.itemAccent
+                    opacity: (0.04 + tile.gapBreath * 0.26) * tile.reveal
+                  }
+
+                  LacunaRect {
+                    anchors.centerIn: parent
+                    width: Math.round(parent.width * 0.6)
+                    height: 3
+                    radius: 1.5
+                    color: tile.itemAccent
+                    opacity: (0.12 + tile.gapBreath * 0.40) * tile.reveal
+                  }
+
+                  LacunaRect {
+                    anchors.centerIn: parent
+                    width: Math.max(4, Math.round(parent.width * 0.28))
+                    height: 2
+                    radius: 1
+                    color: tile.itemAccent
+                    opacity: (0.30 + tile.gapBreath * 0.65) * tile.reveal
+                  }
+                }
+
+                Timer {
+                  running: root.designTokens.lacuna && tile.hovered
+                  interval: 50
+                  repeat: true
+                  onTriggered: tile.gapBreath = 0.5 + 0.5 * Math.sin(Date.now() / 620)
                 }
               }
 
