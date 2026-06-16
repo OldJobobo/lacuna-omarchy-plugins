@@ -718,53 +718,8 @@ Column {
         readonly property int gap: root.compact ? 7 : 8
         readonly property int tileWidth: Math.floor((width - gap * (columns - 1)) / columns)
         readonly property int tileHeight: root.compact ? 62 : 72
-        property var tooltipTarget: null
-        property string tooltipText: ""
-        property color tooltipAccent: root.accent
-        property var tooltipPendingTarget: null
-        property var tooltipPendingEntry: null
-        property color tooltipPendingAccent: root.accent
-
-        function showTileTooltip(item, entry, accentColor) {
-          if (!item || !entry || !entry.label) return
-
-          tooltipTarget = item
-          tooltipText = entry.label
-          tooltipAccent = accentColor
-        }
-
-        function scheduleTileTooltip(item, entry, accentColor) {
-          tooltipPendingTarget = item
-          tooltipPendingEntry = entry
-          tooltipPendingAccent = accentColor
-          tooltipDelayTimer.restart()
-        }
-
-        function cancelTileTooltip(item) {
-          if (item && tooltipPendingTarget === item) {
-            tooltipDelayTimer.stop()
-            tooltipPendingTarget = null
-            tooltipPendingEntry = null
-          }
-          hideTileTooltip(item)
-        }
-
-        function hideTileTooltip(item) {
-          if (item && tooltipTarget !== item) return
-          tooltipTarget = null
-          tooltipText = ""
-        }
-
         width: parent.width
         height: toolGrid.implicitHeight
-
-        Timer {
-          id: tooltipDelayTimer
-
-          interval: 1400
-          repeat: false
-          onTriggered: gridRoot.showTileTooltip(gridRoot.tooltipPendingTarget, gridRoot.tooltipPendingEntry, gridRoot.tooltipPendingAccent)
-        }
 
         Grid {
           id: toolGrid
@@ -914,7 +869,9 @@ Column {
               LacunaRect {
                 id: iconBubble
 
-                anchors.centerIn: parent
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenterOffset: -tile.reveal * (root.compact ? 7 : 9)
                 width: root.compact ? 38 : 44
                 height: width
                 scale: 1 + tile.reveal * 0.06
@@ -963,6 +920,23 @@ Column {
                 }
               }
 
+              LacunaText {
+                id: tileLabel
+
+                anchors.horizontalCenter: tileBackground.horizontalCenter
+                anchors.bottom: tileBackground.bottom
+                anchors.bottomMargin: root.compact ? 5 : 7
+                width: Math.max(0, tileBackground.width - 8)
+                text: tile.modelData.label || ""
+                color: root.foreground
+                opacity: tile.reveal
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
+                fontFamily: root.bodyFontFamily
+                font.pixelSize: root.compact ? 8 : 9
+                font.weight: Font.DemiBold
+              }
+
               LacunaStateLayer {
                 id: stateLayer
 
@@ -974,63 +948,13 @@ Column {
                 onTriggered: root.activated(tile.modelData)
                 onSecondaryClicked: function(x, y) {
                   if (tile.modelData.reorderable !== true) return
-                  gridRoot.hideTileTooltip(tile)
                   root.openQuickLaunchContext(tile.modelData.appId, tile.modelData.label, tile, x, y)
-                }
-                onContainsMouseChanged: {
-                  if (containsMouse) {
-                    gridRoot.scheduleTileTooltip(tile, tile.modelData, tile.itemAccent)
-                  } else {
-                    gridRoot.cancelTileTooltip(tile)
-                  }
                 }
               }
             }
           }
         }
 
-        LacunaRect {
-          id: gridTooltip
-
-          readonly property point targetPoint: gridRoot.tooltipTarget
-            ? gridRoot.mapFromItem(gridRoot.tooltipTarget, gridRoot.tooltipTarget.width / 2, 0)
-            : Qt.point(0, 0)
-
-          visible: gridRoot.tooltipText !== ""
-          z: 20
-          x: Math.max(0, Math.min(gridRoot.width - width, targetPoint.x - width / 2))
-          y: Math.max(0, targetPoint.y - height - 6)
-          width: Math.max(82, Math.min(142, gridRoot.tooltipText.length * 8 + 28))
-          height: 28
-          radius: root.designTokens.tooltipTreatment === "tonal" ? root.designTokens.radius : 0
-          color: root.background
-          border.width: root.designTokens.tooltipTreatment === "accent-strip" ? 1 : root.designTokens.borderWidth
-          border.color: root.designTokens.tooltipTreatment === "bordered" ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.22) : Qt.rgba(gridRoot.tooltipAccent.r, gridRoot.tooltipAccent.g, gridRoot.tooltipAccent.b, 0.24)
-
-          LacunaRect {
-            visible: root.designTokens.tooltipTreatment === "accent-strip"
-            anchors.left: parent.left
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            width: 2
-            color: gridRoot.tooltipAccent
-            opacity: 0.82
-          }
-
-          LacunaText {
-            anchors.left: parent.left
-            anchors.leftMargin: 12
-            anchors.right: parent.right
-            anchors.rightMargin: 10
-            anchors.verticalCenter: parent.verticalCenter
-            text: gridRoot.tooltipText
-            color: root.foreground
-            fontFamily: root.bodyFontFamily
-            font.pixelSize: 11
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
-          }
-        }
       }
     }
   }
