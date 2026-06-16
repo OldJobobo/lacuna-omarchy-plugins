@@ -112,38 +112,13 @@ Item {
     // control cluster (count pill, grid/list toggles, action button, chevron)
     // invisible on open until a model rebuild happened to settle it true, which
     // is why clicking a toggle made them all suddenly appear.
-    visible: root.count > 0 || (root.options && root.options.length > 0) || root.actionIcon !== "" || root.collapsible
+    visible: (root.options && root.options.length > 0) || root.actionIcon !== "" || root.collapsible
     anchors.right: parent.right
     anchors.rightMargin: 4
     anchors.verticalCenter: label.verticalCenter
     width: implicitWidth
     height: root.compact ? 18 : 20
     spacing: 6
-
-    LacunaRect {
-      id: countPill
-
-      visible: root.count > 0
-      y: (controlRow.height - height) / 2
-      width: Math.max(root.compact ? 18 : 20, countText.implicitWidth + 10)
-      height: root.compact ? 14 : 16
-      radius: root.designTokens && root.designTokens.material ? height / 2 : (root.designTokens ? root.designTokens.controlRadius : 0)
-      color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, root.collapsed ? 0.16 : 0.10)
-      border.width: 1
-      border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.24 + stateLayer.reveal * 0.14)
-
-      LacunaText {
-        id: countText
-
-        anchors.centerIn: parent
-        text: String(root.count)
-        color: stateLayer.containsMouse ? root.foreground : root.muted
-        fontFamily: root.fontFamily
-        font.pixelSize: root.compact ? 8 : 9
-        font.weight: Font.DemiBold
-        horizontalAlignment: Text.AlignHCenter
-      }
-    }
 
     Row {
       id: optionRow
