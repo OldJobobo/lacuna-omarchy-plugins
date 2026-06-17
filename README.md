@@ -34,9 +34,8 @@ that contain a `manifest.json`.
 - `shared/qml/simple-bar/`: canonical vendored helper templates for simple
   Lacuna topbar widgets.
 - `config/`: example Omarchy shell and Lacuna settings files.
-- `docs/`: current project documentation. Plan/tracker material is separated
-  under `docs/plans/`.
-- `docs/plugin-dependencies.md`: standalone and bundle classification.
+- `docs/`: project documentation, architecture references, plugin catalog,
+  design system, screenshots, and historical plans.
 
 ## Install
 
@@ -46,92 +45,16 @@ Run the Lacuna installer for a menu-driven setup:
 ./scripts/lacuna
 ```
 
-The first screen offers:
-
-- Full Lacuna install
-- Custom install
-- Uninstall Lacuna
-- Status
-
-Full install stages the safe Lacuna suite disabled, leaving native Omarchy
-bar-widget replacements opt-in. Custom install lets you pick groups or
-individual standalone plugins, then automatically includes required companions
-such as `lacuna.state` and `lacuna.shell-settings`.
-
-Scripted installs are supported too:
+Common scripted installs:
 
 ```bash
 ./scripts/lacuna install --profile full
 ./scripts/lacuna install --profile core
 ./scripts/lacuna install --profile native --activate
-./scripts/lacuna install --profile full --include-replacements
-./scripts/lacuna install --plugin lacuna.clock,lacuna.weather
 ```
 
-Preview any install without changing the system:
-
-```bash
-./scripts/lacuna install --profile full --dry-run
-```
-
-Update already-installed Lacuna plugins from this checkout:
-
-```bash
-./scripts/lacuna update --dry-run
-./scripts/lacuna update --yes
-./scripts/lacuna update --plugin lacuna.menu,lacuna.state --yes
-```
-
-Uninstall is handled by the same helper:
-
-```bash
-./scripts/lacuna uninstall --all
-./scripts/lacuna uninstall --plugin lacuna.clock,lacuna.weather
-./scripts/lacuna uninstall --all --purge-state
-```
-
-The installer uses Omarchy's public plugin commands. If you prefer to do the
-steps manually, add this repository as a trusted Omarchy plugin source:
-
-```bash
-omarchy plugin source add <repo-url> --as lacuna
-omarchy plugin available
-omarchy plugin add lacuna.clock --from lacuna --enable --yes
-```
-
-Bar widgets are placed in `bar.layout`; use `omarchy plugin bar add <id>` or
-copy `config/shell.lacuna-native-replacements.example.json` into
-`~/.config/omarchy/shell.json` as a starting point. Activating `lacuna.bar`
-through the installer applies the Lacuna-owned host layout automatically and
-removes stock `omarchy.*` bar modules from that layout. Per-widget bar options belong in `shell.json` through Omarchy
-Settings. Lacuna runtime state lives in
-`~/.config/omarchy/lacuna/settings.json`, including the global
-`colorProfile` setting, `customQuickLaunchApps`, and `preferredApps`. Use
-`semantic` for the foreground-first profile or `colorful` to let Lacuna topbar
-modules draw from the active Omarchy theme colors.
-
-`config/shell.lacuna-native-replacements.example.json` shows the current
-recommended topbar layout with Lacuna replacements for Clock, SystemUpdate,
-Weather, NotificationCenter, Indicators, Audio, Network, Bluetooth, and Power.
-
-`lacuna.bar` is a full Omarchy bar option rather than a bar widget. Activate it
-with `omarchy plugin bar use lacuna.bar` after staging the core or native
-bundle. Reset to the stock Omarchy bar with `omarchy plugin bar reset`.
-
-The Lacuna menu uses a unified color model: normal entries share the active
-theme accent, while destructive actions keep the danger/urgent color. See
-`docs/lacuna-design-system/01-color.md` for the rationale (part of the
-[Lacuna Design Language](docs/lacuna-design-system/)).
-
-`lacuna.bar` is the target owner for Lacuna frame/sidebar choreography. The
-`lacuna.menu` plugin remains a compatibility summon target and delegates to the
-bar-hosted menu when Lacuna Bar is active. Specialized widgets own their own
-interaction animation, while simple topbar widgets use vendored helper
-templates under `shared/qml/simple-bar/` to keep hover/color timing consistent
-without cross-plugin imports.
-
-The desktop clock uses ImageMagick's `magick` command for adaptive wallpaper
-contrast sampling. Without it, the clock still renders with theme colors.
+See [docs/install.md](docs/install.md) for install, update, uninstall, and
+manual Omarchy source workflows.
 
 ## Development
 
@@ -141,19 +64,20 @@ Run the full local check before publishing changes:
 ./scripts/check.sh
 ```
 
-It validates example JSON, plugin manifests, vendored-file equality, pytest,
-and runs `qmllint`/`shellcheck` when those tools are installed. Smoke test
-loaded plugins with:
+See [docs/development/testing.md](docs/development/testing.md) for validation
+and Omarchy smoke-test commands.
 
-```bash
-omarchy plugin list
-OMARCHY_PATH="$HOME/.local/share/omarchy" omarchy shell shell toggle lacuna.menu '{}'
-hyprctl layers
-```
+## Documentation
 
-Runtime actions inside Lacuna should use Omarchy commands, for example
-`omarchy restart shell`. Do not port standalone Lacuna process controls into
-plugins.
+- [docs/README.md](docs/README.md): documentation map and reading paths.
+- [docs/architecture/overview.md](docs/architecture/overview.md): current
+  architecture.
+- [docs/plugins/README.md](docs/plugins/README.md): plugin catalog and install
+  grouping.
+- [docs/configuration.md](docs/configuration.md): shell and Lacuna runtime
+  settings.
+- [docs/lacuna-design-system/](docs/lacuna-design-system/): Lacuna design
+  language.
 
 ## License
 

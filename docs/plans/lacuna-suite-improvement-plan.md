@@ -282,7 +282,7 @@ Open:
 - Investigate whether the settings UI can live only in
   `lacuna.shell-settings` and be embedded or opened by `lacuna.menu` through
   plugin-service resolution. If the Omarchy plugin loader does not permit
-  that, document the limitation in `docs/plugin-dependencies.md`.
+  that, document the limitation in `docs/plugins/README.md`.
 
 Acceptance:
 

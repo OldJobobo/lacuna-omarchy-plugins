@@ -11,6 +11,27 @@ class DocsContractTests(unittest.TestCase):
             head = "\n".join(path.read_text(encoding="utf-8").splitlines()[:8])
             self.assertIn("Status:", head, str(path.relative_to(ROOT)))
 
+    def test_first_class_docs_structure_exists(self):
+        for name in [
+            "docs/README.md",
+            "docs/install.md",
+            "docs/configuration.md",
+            "docs/architecture/overview.md",
+            "docs/architecture/plugin-contracts.md",
+            "docs/architecture/services-and-state.md",
+            "docs/architecture/omarchy-integration.md",
+            "docs/development/setup.md",
+            "docs/development/testing.md",
+            "docs/development/release.md",
+            "docs/development/troubleshooting.md",
+            "docs/plugins/README.md",
+            "docs/plugins/bar.md",
+            "docs/plugins/menu.md",
+            "docs/plugins/widgets.md",
+            "docs/plugins/overlays.md",
+        ]:
+            self.assertTrue((ROOT / name).exists(), name)
+
     def test_plan_docs_are_separated_from_reference_docs(self):
         root_plan_docs = sorted((ROOT / "docs").glob("*plan*.md"))
         self.assertEqual([], root_plan_docs)
@@ -38,7 +59,7 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("- [x] Run `./scripts/check.sh` before publishing the refactor.", plan)
 
     def test_plugin_dependency_docs_identify_reusable_candidates(self):
-        docs = (ROOT / "docs" / "plugin-dependencies.md").read_text(encoding="utf-8")
+        docs = (ROOT / "docs" / "plugins" / "README.md").read_text(encoding="utf-8")
 
         self.assertIn("## Reusable Extraction Candidates", docs)
         for plugin_id in [

@@ -1,4 +1,4 @@
-# Omarchy Provider Alignment
+# Omarchy Integration
 
 Status: reference
 

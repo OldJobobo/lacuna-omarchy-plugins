@@ -50,7 +50,7 @@ Plugins must be self-contained: never import across plugin directories or rely o
 
 ### Lacuna dependency metadata
 
-Omarchy ignores the `lacuna` block in each manifest; Lacuna's installer, tests, and docs use it (see `docs/plugin-dependencies.md`):
+Omarchy ignores the `lacuna` block in each manifest; Lacuna's installer, tests, and docs use it (see `docs/plugins/README.md`):
 
 - `lacuna.standalone` / `lacuna.bundle` (`standalone` | `core` | `theme` | `legacy`), plus `requires` / `recommends`.
 - Core menu bundle (never installed individually): `lacuna.state`, `lacuna.shell-settings`, `lacuna.menu`, `lacuna.menu-button`.
@@ -77,6 +77,6 @@ Tests are stdlib `unittest` run via pytest. `tests/test_qml_contracts.py` is sou
 - 2-space indentation for QML and JSON.
 - Plugin directories use full IDs (`lacuna.script-pill`).
 - Runtime actions inside Lacuna go through Omarchy commands (e.g. `omarchy restart shell`); do not port standalone Lacuna process controls into plugins.
-- Prefer Omarchy-native services/widgets for already-rich system surfaces (audio, network, battery, tray, …). `lacuna.script-pill` is the experiment path; promote a script-backed widget only when it proves a durable non-native workflow. See `docs/omarchy-provider-alignment.md` for the provider inventory (the `omarchy.battery`/`omarchy.media`/`omarchy.idle` services + `Color`/`Style` singletons), the `shell`-vs-`bar` injection rule, and the standing consumption policy.
+- Prefer Omarchy-native services/widgets for already-rich system surfaces (audio, network, battery, tray, …). `lacuna.script-pill` is the experiment path; promote a script-backed widget only when it proves a durable non-native workflow. See `docs/architecture/omarchy-integration.md` for the provider inventory (the `omarchy.battery`/`omarchy.media`/`omarchy.idle` services + `Color`/`Style` singletons), the `shell`-vs-`bar` injection rule, and the standing consumption policy.
 - The desktop clock shells out to ImageMagick's `magick` for wallpaper contrast sampling but must degrade gracefully without it.
 - Commits are concise and imperative (`Add script pill manifest`).

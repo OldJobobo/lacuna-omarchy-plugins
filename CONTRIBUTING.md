@@ -55,7 +55,7 @@ ruff, shellcheck, vendored-parity, and pytest before each commit.
 
 1. Create `lacuna.<name>/` at the repo root with a `manifest.json` declaring
    `kinds`, `entryPoints`, and a `lacuna` dependency block.
-2. Add it to the relevant bundle/profile in `docs/plugin-dependencies.md` and
+2. Add it to the relevant bundle/profile in `docs/plugins/README.md` and
    the installer (`scripts/lacuna`) if it belongs to a profile.
 3. Vendor any shared helpers and run `scripts/sync-vendored --check`.
 4. Add contract tests and ensure `./scripts/check.sh` is green.
