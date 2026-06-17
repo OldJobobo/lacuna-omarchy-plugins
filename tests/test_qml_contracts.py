@@ -312,6 +312,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.shell-settings/components/LacunaGeometry.qml",
             "lacuna.menu/components/LacunaGeometry.qml",
             "lacuna.bar/LacunaGeometry.qml",
+            "lacuna.claude-usage/LacunaGeometry.qml",
         }
         for path in sorted(geometry_files):
             self.assertIn("readonly property real curveKappa: " + literal, read(path), path)
@@ -325,6 +326,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.menu/settings/OmarchyShellSettingsWindow.qml",
             "lacuna.shell-settings/settings/OmarchyShellSettingsWindow.qml",
             "lacuna.bar/LacunaFrameWindow.qml",
+            "lacuna.claude-usage/BarFlyoutSurface.qml",
         ]
         for path in consumers:
             qml = read(path)

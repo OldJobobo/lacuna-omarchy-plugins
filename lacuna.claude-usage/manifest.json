@@ -14,13 +14,19 @@
   },
   "barWidget": {
     "displayName": "Lacuna Claude Usage",
-    "description": "Shows remaining Claude Code 5-hour block usage from local Claude data.",
+    "description": "Shows Claude Code 5-hour block usage left from local Claude project logs.",
     "category": "Lacuna",
     "allowMultiple": false,
     "defaults": {
-      "interval": 30000,
+      "interval": 60000,
       "maxTextLength": 32,
       "showIcon": true,
+      "showReset": true,
+      "showProgress": true,
+      "showIdle": true,
+      "showWeekly": true,
+      "cycleInterval": 6000,
+      "displayMode": "left",
       "colorProfile": "semantic"
     },
     "schema": [
@@ -31,7 +37,7 @@
         "min": 1000,
         "step": 1000,
         "description": "How often to read local Claude usage state.",
-        "defaultValue": 30000
+        "defaultValue": 60000
       },
       {
         "key": "maxTextLength",
@@ -47,6 +53,54 @@
         "type": "boolean",
         "label": "Show icon",
         "defaultValue": true
+      },
+      {
+        "key": "showReset",
+        "type": "boolean",
+        "label": "Show reset/idle text",
+        "description": "Show the active block reset time, or idle when no block is active.",
+        "defaultValue": true
+      },
+      {
+        "key": "showProgress",
+        "type": "boolean",
+        "label": "Show usage meter",
+        "description": "Draw a small used-percent meter under the widget.",
+        "defaultValue": true
+      },
+      {
+        "key": "showIdle",
+        "type": "boolean",
+        "label": "Show when idle",
+        "description": "Keep the widget visible as 100% left when no active 5-hour block exists.",
+        "defaultValue": true
+      },
+      {
+        "key": "showWeekly",
+        "type": "boolean",
+        "label": "Cycle weekly usage",
+        "description": "Rotate the bar label between the 5-hour block and the trailing 7-day window.",
+        "defaultValue": true
+      },
+      {
+        "key": "cycleInterval",
+        "type": "integer",
+        "label": "Cycle interval (ms)",
+        "min": 2000,
+        "step": 500,
+        "description": "How long each readout (5h / weekly) stays before rolling to the other.",
+        "defaultValue": 6000
+      },
+      {
+        "key": "displayMode",
+        "type": "enum",
+        "label": "Display mode",
+        "options": [
+          "left",
+          "percent"
+        ],
+        "description": "Use full text, or a compact percent-only label.",
+        "defaultValue": "left"
       },
       {
         "key": "colorProfile",

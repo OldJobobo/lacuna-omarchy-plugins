@@ -13,6 +13,7 @@ import stat
 import subprocess
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -34,27 +35,79 @@ def run(cmd, env_overrides) -> subprocess.CompletedProcess:
 class ClaudeCodeStatusTests(unittest.TestCase):
     SCRIPT = ROOT / "lacuna.claude-usage" / "scripts" / "claude-code-status.sh"
 
-    def test_hides_on_non_numeric_session_limit(self):
-        result = run([str(self.SCRIPT)], {"CLAUDE_CODE_SESSION_LIMIT": "not-a-number"})
-        self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.strip(), HIDDEN)
+    # ccusage `blocks --json` stub: one active 5h block and one earlier block
+    # within the trailing 7 days, both $20. With budgets 200/400 that renders
+    # session 10% and week (20+20)/400 = 10%.
+    BLOCKS_STUB = (
+        "#!/usr/bin/env bash\n"
+        "now=$(date -u +%s)\n"
+        'aend=$(date -u -d "@$((now+7200))" +%Y-%m-%dT%H:%M:%S.000Z)\n'
+        'pend=$(date -u -d "@$((now-86400))" +%Y-%m-%dT%H:%M:%S.000Z)\n'
+        "cat <<JSON\n"
+        '{"blocks":[\n'
+        '{"isActive":false,"isGap":false,"costUSD":20,"endTime":"$pend"},\n'
+        '{"isActive":false,"isGap":true,"costUSD":999,"endTime":"$aend"},\n'
+        '{"isActive":true,"isGap":false,"costUSD":20,"endTime":"$aend"}\n'
+        "]}\n"
+        "JSON\n"
+    )
 
-    def test_hides_on_zero_session_limit(self):
-        result = run([str(self.SCRIPT)], {"CLAUDE_CODE_SESSION_LIMIT": "0"})
-        self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.strip(), HIDDEN)
+    def _env(self, tmp: str, ccusage_bin) -> dict:
+        env = {
+            "XDG_CACHE_HOME": str(Path(tmp) / "cache"),
+            "CLAUDE_CONFIG_DIR": str(Path(tmp) / "claude-home"),
+            "CLAUDE_CODE_STATUS_CACHE_TTL": "0",
+            "CLAUDE_USAGE_SESSION_BUDGET": "200",
+            "CLAUDE_USAGE_WEEK_BUDGET": "400",
+        }
+        if ccusage_bin is not None:
+            env["CCUSAGE_BIN"] = str(ccusage_bin)
+        return env
 
-    def test_hides_when_claude_home_missing(self):
+    def _stub_ccusage(self, tmp: str, body: str) -> Path:
+        stub = Path(tmp) / "ccusage"
+        write_exec(stub, body)
+        return stub
+
+    def test_hides_when_ccusage_missing(self):
         with tempfile.TemporaryDirectory() as tmp:
-            result = run(
-                [str(self.SCRIPT)],
-                {
-                    "CLAUDE_CODE_SESSION_LIMIT": "1000",
-                    "CLAUDE_CONFIG_DIR": str(Path(tmp) / "does-not-exist"),
-                },
-            )
+            missing = Path(tmp) / "no-such-ccusage"
+            result = run([str(self.SCRIPT)], self._env(tmp, missing))
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stdout.strip(), HIDDEN)
+
+    def test_emits_calibrated_usage_from_ccusage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stub = self._stub_ccusage(tmp, self.BLOCKS_STUB)
+            result = run([str(self.SCRIPT)], self._env(tmp, stub))
+
+        self.assertEqual(result.returncode, 0)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["text"], "10% used")
+        self.assertEqual(payload["shortText"], "10%")
+        self.assertEqual(payload["usedPercent"], 10)
+        self.assertEqual(payload["leftPercent"], 90)
+        self.assertTrue(payload["active"])
+        self.assertEqual(payload["class"], "normal")
+        self.assertEqual(payload["source"], "ccusage (calibrated)")
+
+        self.assertTrue(payload["weekActive"])
+        self.assertEqual(payload["weekUsedPercent"], 10)
+        self.assertEqual(payload["weekText"], "10% wk")
+        self.assertIn("7-day", payload["tooltip"])
+
+    def test_serves_cache_when_ccusage_later_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stub = self._stub_ccusage(tmp, self.BLOCKS_STUB)
+            env = self._env(tmp, stub)
+            env["CLAUDE_CODE_STATUS_CACHE_TTL"] = "300"
+            first = run([str(self.SCRIPT)], env)
+            self.assertEqual(json.loads(first.stdout)["usedPercent"], 10)
+
+            write_exec(stub, "#!/usr/bin/env bash\nexit 1\n")
+            second = run([str(self.SCRIPT)], env)
+        self.assertEqual(second.returncode, 0)
+        self.assertEqual(json.loads(second.stdout)["usedPercent"], 10)
 
 
 class CodexWeeklyStatusTests(unittest.TestCase):
