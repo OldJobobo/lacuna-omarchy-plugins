@@ -34,6 +34,8 @@ that contain a `manifest.json`.
 - `shared/qml/simple-bar/`: canonical vendored helper templates for simple
   Lacuna topbar widgets.
 - `config/`: example Omarchy shell and Lacuna settings files.
+- `docs/`: current project documentation. Plan/tracker material is separated
+  under `docs/plans/`.
 - `docs/plugin-dependencies.md`: standalone and bundle classification.
 
 ## Install

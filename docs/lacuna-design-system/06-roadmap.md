@@ -84,7 +84,7 @@ remain; `./scripts/check.sh` passes.
 
 - Replace the "Flyout Surface Geometry" section in `AGENTS.md` with a pointer to
   [02-geometry.md](02-geometry.md).
-- Fold `docs/lacuna-menu-unified-color-model.md` into [01-color.md](01-color.md) (leave a stub
+- Fold `docs/plans/lacuna-menu-unified-color-model.md` into [01-color.md](01-color.md) (leave a stub
   link if other docs reference it).
 - Final `python3 -m pytest tests/test_qml_contracts.py tests/test_vendored_files.py` and full
   `./scripts/check.sh`.

@@ -47,7 +47,7 @@ added light. Its values come from the design-style table below (`hoverOpacity`, 
 
 ## The unified color model
 
-> Folds in and supersedes `docs/lacuna-menu-unified-color-model.md`.
+> Folds in and supersedes `docs/plans/lacuna-menu-unified-color-model.md`.
 
 The menu must read as **one designed surface, not a set of unrelated semantic color chips.**
 Therefore the rendered palette for chrome is intentionally narrow:

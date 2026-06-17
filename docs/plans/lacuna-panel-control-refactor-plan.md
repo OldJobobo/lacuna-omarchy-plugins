@@ -1,6 +1,6 @@
 # Lacuna Panel Control Refactor Plan
 
-Status: complete; superseded by `docs/lacuna-bar-refactor-plan.md`
+Status: complete; superseded by `docs/plans/lacuna-bar-refactor-plan.md`
 
 Completion note 2026-06-14: the menu-local panel controller, panel window
 wrapper, reusable attached flyout chrome, connector geometry, and host-managed

@@ -652,7 +652,7 @@ Status: complete.
 
 Validation:
 
-- `rg -n 'LACUNA_PATH|PWD|\.\./\.\.|import "/|import components|background-switcher|currentColor' lacuna.menu lacuna.*/assets/tabler docs/omarchy-shell-refactor-plan.md`
+- `rg -n 'LACUNA_PATH|PWD|\.\./\.\.|import "/|import components|background-switcher|currentColor' lacuna.menu lacuna.*/assets/tabler docs/plans/omarchy-shell-refactor-plan.md`
 - `qmllint lacuna.menu/Menu.qml lacuna.menu/menu/*.qml lacuna.menu/modules/*.qml lacuna.menu/services/*.qml lacuna.menu/components/*.qml`
 - `omarchy plugin rescan`
 - `omarchy-shell shell summon lacuna.menu '{}'`

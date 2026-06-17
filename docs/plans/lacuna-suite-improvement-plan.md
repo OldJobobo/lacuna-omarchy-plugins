@@ -333,7 +333,7 @@ Backlog:
 - Name or document magic timing constants where local context does not explain
   what the delay synchronizes with.
 - Keep the BarSizeMode live-theme rewrite contract documented in
-  `docs/lacuna-bar-size-mode-plan.md` or README as the implementation evolves.
+  `docs/plans/lacuna-bar-size-mode-plan.md` or README as the implementation evolves.
 
 ## Phase 5: Distribution, Versioning, Docs
 

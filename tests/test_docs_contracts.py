@@ -11,8 +11,18 @@ class DocsContractTests(unittest.TestCase):
             head = "\n".join(path.read_text(encoding="utf-8").splitlines()[:8])
             self.assertIn("Status:", head, str(path.relative_to(ROOT)))
 
+    def test_plan_docs_are_separated_from_reference_docs(self):
+        root_plan_docs = sorted((ROOT / "docs").glob("*plan*.md"))
+        self.assertEqual([], root_plan_docs)
+
+        plan_docs = sorted((ROOT / "docs" / "plans").glob("*.md"))
+        self.assertTrue(plan_docs, "docs/plans should contain implementation plans")
+        for path in plan_docs:
+            head = "\n".join(path.read_text(encoding="utf-8").splitlines()[:8])
+            self.assertIn("Status:", head, str(path.relative_to(ROOT)))
+
     def test_lacuna_bar_refactor_plan_tracks_current_architecture_decisions(self):
-        plan = (ROOT / "docs" / "lacuna-bar-refactor-plan.md").read_text(encoding="utf-8")
+        plan = (ROOT / "docs" / "plans" / "lacuna-bar-refactor-plan.md").read_text(encoding="utf-8")
 
         self.assertIn("Status: complete", plan)
         self.assertIn("Keep `lacuna.bar` as the Lacuna Bar plugin ID", plan)
@@ -42,9 +52,9 @@ class DocsContractTests(unittest.TestCase):
 
     def test_completed_panel_and_frame_plans_are_not_left_active(self):
         for path in [
-            ROOT / "docs" / "lacuna-panel-ui-overhaul-plan.md",
-            ROOT / "docs" / "lacuna-panel-control-refactor-plan.md",
-            ROOT / "docs" / "lacuna-fake-fullscreen-frame-plan.md",
+            ROOT / "docs" / "plans" / "lacuna-panel-ui-overhaul-plan.md",
+            ROOT / "docs" / "plans" / "lacuna-panel-control-refactor-plan.md",
+            ROOT / "docs" / "plans" / "lacuna-fake-fullscreen-frame-plan.md",
         ]:
             text = path.read_text(encoding="utf-8")
             head = "\n".join(text.splitlines()[:8])
@@ -52,7 +62,7 @@ class DocsContractTests(unittest.TestCase):
             self.assertIn("Completion note 2026-06-14", text, path.name)
 
     def test_suite_tracker_matches_current_validation_baseline(self):
-        tracker = (ROOT / "docs" / "lacuna-suite-improvement-plan.md").read_text(encoding="utf-8")
+        tracker = (ROOT / "docs" / "plans" / "lacuna-suite-improvement-plan.md").read_text(encoding="utf-8")
 
         self.assertIn("Status: active implementation tracker (updated 2026-06-14)", tracker)
         self.assertIn("Current full suite result: 86 Python tests passing.", tracker)

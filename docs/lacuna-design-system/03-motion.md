@@ -58,7 +58,7 @@ Rules that make this read correctly:
 
 1. **Animate geometry from the attachment edge**, not just a child offset. The surface should
    look like it is *growing out of the seam*, not sliding in pre-formed. (See the panel-lifecycle
-   notes in `docs/lacuna-noctalia-inspired-refactor-plan.md`.)
+   notes in `docs/plans/lacuna-noctalia-inspired-refactor-plan.md`.)
 2. **Withhold content until the `threshold`.** Content opacity stays 0 until the surface is
    "substantially open," then fades in. Never show content over a half-width container.
 3. **Cache the open direction.** Capture which way a panel is opening at the start of the gesture
