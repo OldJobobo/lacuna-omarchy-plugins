@@ -16,7 +16,7 @@ Item {
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.statusColor(kind === "disconnected" ? "warning" : "normal", "network")
   readonly property int intervalMs: Math.max(1000, Number(setting("interval", 5000)))
-  readonly property int topbarIconSize: barSize >= 32 ? 18 : 15
+  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
   readonly property string icon: {
     if (kind === "wifi") {
       var icons = ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"]

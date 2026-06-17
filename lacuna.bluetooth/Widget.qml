@@ -15,7 +15,7 @@ Item {
   readonly property var connectedDevices: connectedBluetoothDevices()
   readonly property bool enabled: adapter && adapter.enabled
   readonly property color moduleColor: colorProfile.statusColor(!adapter || !enabled ? "warning" : connectedDevices.length > 0 ? "active" : "normal", "bluetooth")
-  readonly property int topbarIconSize: barSize >= 32 ? 18 : 15
+  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
   readonly property string icon: {
     if (!adapter) return "󰂲"
     if (!adapter.enabled) return "󰂲"

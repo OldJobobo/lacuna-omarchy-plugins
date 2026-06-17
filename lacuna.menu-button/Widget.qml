@@ -14,7 +14,7 @@ Item {
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.roleColor("menu", foreground)
   readonly property string tooltipText: String(setting("tooltip", "Lacuna"))
-  readonly property int topbarIconSize: (barSize >= 32 ? 18 : 15) + 2
+  readonly property int topbarIconSize: (barSize >= 30 ? 16 : 14) + 2
   readonly property url iconSource: Qt.resolvedUrl("assets/tabler/circle-dotted-letter-l.svg")
 
   implicitWidth: button.implicitWidth
@@ -67,6 +67,13 @@ Item {
     id: button
 
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
+
+    BarHoverSeam {
+      anchors.fill: parent
+      reveal: parent.hoverReveal
+      seam: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.35)
+      accent: colorProfile.accent
+    }
 
     width: root.barSize
     height: root.barSize

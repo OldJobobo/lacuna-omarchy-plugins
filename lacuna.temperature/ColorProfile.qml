@@ -24,6 +24,10 @@ Item {
   readonly property color ink: foreground
   readonly property color urgent: bar ? bar.urgent : themeColor("color9", "#d42b5b")
   readonly property color warning: themeColor("color11", "#ebcb8b")
+  // The unified theme accent (docs/lacuna-design-system/01-color.md): active /
+  // engaged states light up in accent. Sourced from the injected bar (theme
+  // accent), falling back to the parsed palette then ink.
+  readonly property color accent: bar && bar.accent ? bar.accent : themeColor("accent", foreground)
 
   function widgetSetting(name, fallback) {
     var value = widgetSettings ? widgetSettings[name] : undefined
@@ -61,6 +65,7 @@ Item {
   function statusColor(status, roleName) {
     if (status === "critical" || status === "hot" || status === "alert" || status === "over") return urgent
     if (status === "warning" || status === "warm" || status === "low") return warning
+    if (status === "active" || status === "on") return accent
     return roleColor(roleName || role, foreground)
   }
 

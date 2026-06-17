@@ -24,7 +24,7 @@ Item {
   readonly property int pendingCount: notificationService ? notificationService.pendingModel.count : 0
   readonly property bool dnd: notificationService ? notificationService.doNotDisturb : false
   readonly property bool hasActiveIndicator: hasConfiguredActiveIndicator()
-  readonly property int topbarIconSize: barSize >= 32 ? 18 : 15
+  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
 
   implicitWidth: indicatorRow.implicitWidth
   implicitHeight: indicatorRow.implicitHeight

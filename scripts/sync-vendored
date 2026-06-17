@@ -62,6 +62,11 @@ def vendored_pairs() -> list[tuple[Path, Path]]:
         if rel(target) not in excluded:
             pairs.append((motion_source, target))
 
+    hover_seam_source = ROOT / "shared/qml/simple-bar/BarHoverSeam.qml"
+    for target in sorted(ROOT.glob("lacuna.*/BarHoverSeam.qml")):
+        if rel(target) not in excluded:
+            pairs.append((hover_seam_source, target))
+
     settings_source = ROOT / "lacuna.shell-settings/settings"
     settings_target = ROOT / "lacuna.menu/settings"
     for source in sorted(settings_source.glob("*.qml")):

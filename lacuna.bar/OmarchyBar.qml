@@ -61,6 +61,9 @@ Item {
   property bool foregroundAnimationEnabled: true
   property color background: opaqueColor(Color.bar.background)
   property color urgent: Color.bar.active
+  // Theme accent, exposed to bar widgets (e.g. lacuna.bar-seam breathing glow,
+  // active-state accents). Theme-derived; mirrors the menu's accent role.
+  property color accent: Color.accent
 
   Behavior on barForeground { enabled: root.foregroundAnimationEnabled; ColorAnimation { duration: 420; easing.type: Easing.InOutCubic } }
   Behavior on background { ColorAnimation { duration: 420; easing.type: Easing.InOutCubic } }

@@ -18,7 +18,7 @@ Item {
   readonly property color urgent: bar ? bar.urgent : "#d42b5b"
   readonly property color moduleColor: compact ? colorProfile.statusColor("active", "density") : colorProfile.roleColor("density", foreground)
   readonly property int intervalMs: Math.max(500, Number(setting("interval", 1000)))
-  readonly property int topbarIconSize: barSize >= 32 ? 18 : 15
+  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
   readonly property string scriptPath: localPath(Qt.resolvedUrl("scripts/compact-state"))
   readonly property url iconSource: compact ? Qt.resolvedUrl("assets/tabler/arrows-maximize.svg") : Qt.resolvedUrl("assets/tabler/arrows-minimize.svg")
 

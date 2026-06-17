@@ -19,7 +19,7 @@ Item {
   readonly property int intervalMs: Math.max(1000, Number(setting("interval", 5000)))
   readonly property int warmF: Math.max(1, Number(setting("warmF", 150)))
   readonly property int criticalF: Math.max(warmF + 1, Number(setting("criticalF", 185)))
-  readonly property int topbarIconSize: barSize >= 32 ? 18 : 14
+  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
   readonly property url iconSource: Qt.resolvedUrl("assets/tabler/temperature-plus-filled.svg")
   readonly property string status: temperatureF >= criticalF ? "Hot" : temperatureF >= warmF ? "Warm" : "Normal"
   readonly property color statusColor: colorProfile.statusColor(status.toLowerCase(), "temperature")
@@ -86,6 +86,13 @@ Item {
     id: button
 
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
+
+    BarHoverSeam {
+      anchors.fill: parent
+      reveal: parent.hoverReveal
+      seam: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.35)
+      accent: colorProfile.accent
+    }
     readonly property int horizontalPadding: root.vertical ? 0 : 8
 
     width: root.vertical ? root.barSize : Math.max(36, content.implicitWidth + horizontalPadding * 2)

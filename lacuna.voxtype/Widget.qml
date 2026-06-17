@@ -13,7 +13,7 @@ Item {
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.statusColor(active ? "active" : "normal", "dictation")
-  readonly property int topbarIconSize: barSize >= 32 ? 18 : 15
+  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
   readonly property bool showInactive: boolSetting("showInactive", false)
 
   visible: active || showInactive
@@ -68,6 +68,13 @@ Item {
     id: button
 
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
+
+    BarHoverSeam {
+      anchors.fill: parent
+      reveal: parent.hoverReveal
+      seam: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.35)
+      accent: colorProfile.accent
+    }
 
     width: root.barSize
     height: root.barSize

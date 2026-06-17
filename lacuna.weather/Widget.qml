@@ -17,7 +17,7 @@ Item {
   readonly property color moduleColor: colorProfile.roleColor("weather", foreground)
   readonly property int intervalMs: Math.max(10000, Number(setting("interval", 60000)))
   readonly property bool showText: setting("showText", true) === true
-  readonly property int topbarIconSize: barSize >= 32 ? 18 : 15
+  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
   readonly property string home: Quickshell.env("HOME")
   readonly property string weatherScript: home + "/.config/omarchy/bar/scripts/weather-temp"
   readonly property string weatherIcon: leadingWeatherIcon(weatherText) || "󰖐"

@@ -169,8 +169,15 @@ Item {
     property bool vertical: false
     property int barSize: 26
     property int hoverDuration: 150
-    property int topbarIconSize: barSize >= 32 ? 18 : 14
+    property int topbarIconSize: barSize >= 30 ? 16 : 14
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
+
+    BarHoverSeam {
+      anchors.fill: parent
+      reveal: parent.hoverReveal
+      seam: parent.bar ? Qt.rgba(parent.bar.foreground.r, parent.bar.foreground.g, parent.bar.foreground.b, 0.35) : "#888888"
+      accent: parent.accent
+    }
 
     width: vertical ? barSize : Math.max(36, content.implicitWidth + 12)
     height: vertical ? Math.max(barSize, content.implicitHeight + 10) : barSize

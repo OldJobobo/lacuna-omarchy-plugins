@@ -15,7 +15,7 @@ Item {
   readonly property real volume: sink && sink.audio ? sink.audio.volume : 0
   readonly property int percent: Math.round(volume * 100)
   readonly property color moduleColor: colorProfile.statusColor(muted ? "warning" : "normal", "audio")
-  readonly property int topbarIconSize: barSize >= 32 ? 18 : 15
+  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
   readonly property int wheelStep: Math.max(1, Math.min(25, Number(setting("wheelStep", 5))))
   readonly property string icon: {
     if (!sink || !sink.audio) return ""

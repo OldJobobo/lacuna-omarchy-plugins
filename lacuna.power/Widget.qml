@@ -18,7 +18,7 @@ Item {
   readonly property bool charging: hasBattery && device.state === UPowerDeviceState.Charging
   readonly property bool full: hasBattery && device.state === UPowerDeviceState.FullyCharged
   readonly property color moduleColor: colorProfile.statusColor(low ? "critical" : charging ? "active" : "normal", "power")
-  readonly property int topbarIconSize: barSize >= 32 ? 18 : 15
+  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
   readonly property string icon: batteryIcon()
 
   implicitWidth: button.implicitWidth
