@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.bar-seam",
+  "name": "Lacuna Bar Seam",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "A breathing gap-seam separator that brackets a cluster of bar widgets (the lacuna mark).",
+  "kinds": [
+    "bar-widget"
+  ],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lacuna Seam",
+    "description": "Vertical breathing gap-seam used to separate bar widget clusters by space.",
+    "category": "Lacuna",
+    "allowMultiple": true,
+    "defaults": {
+      "gapWidth": 28,
+      "seamGap": 12,
+      "breathing": true,
+      "colorProfile": "semantic"
+    },
+    "schema": [
+      {
+        "key": "gapWidth",
+        "type": "integer",
+        "label": "Gap width (px)",
+        "description": "Horizontal space the seam reserves — the separation between clusters.",
+        "min": 8,
+        "step": 2,
+        "defaultValue": 28
+      },
+      {
+        "key": "seamGap",
+        "type": "integer",
+        "label": "Seam break (px)",
+        "description": "Vertical break in the seam line (the lacuna gap mark). 0 = solid line.",
+        "min": 0,
+        "step": 2,
+        "defaultValue": 12
+      },
+      {
+        "key": "breathing",
+        "type": "boolean",
+        "label": "Breathing glow",
+        "description": "Slow accent glow that breathes in the gap.",
+        "defaultValue": true
+      },
+      {
+        "key": "colorProfile",
+        "type": "enum",
+        "label": "Color profile",
+        "options": [
+          "semantic",
+          "colorful"
+        ],
+        "description": "Override the global Lacuna color profile for this widget.",
+        "defaultValue": "semantic"
+      }
+    ]
+  },
+  "lacuna": {
+    "standalone": true,
+    "bundle": "standalone",
+    "requires": [],
+    "recommends": []
+  }
+}

@@ -19,6 +19,27 @@ def plugin_manifest_paths():
 
 
 class QmlContractTests(unittest.TestCase):
+    def test_bar_seam_widget_contract(self):
+        manifest = read_json("lacuna.bar-seam/manifest.json")
+        self.assertEqual(["bar-widget"], manifest["kinds"])
+        self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
+        schema_keys = {option["key"] for option in manifest["barWidget"]["schema"]}
+        self.assertIn("gapWidth", schema_keys)
+
+        widget = read("lacuna.bar-seam/Widget.qml")
+        # bar-widget injection contract
+        self.assertIn("property var bar", widget)
+        self.assertIn("property string moduleName", widget)
+        self.assertIn("property var settings", widget)
+        # reserves the separation gap and drives the breathing glow from a Timer
+        self.assertIn("implicitWidth: gapWidth", widget)
+        self.assertIn("gapBreath", widget)
+        self.assertIn("Timer", widget)
+        # vendored helpers travel with the plugin
+        self.assertTrue((ROOT / "lacuna.bar-seam/ColorProfile.qml").exists())
+        self.assertTrue((ROOT / "lacuna.bar-seam/MotionTokens.qml").exists())
+
+
     def test_lacuna_settings_keeps_carbon_as_legacy_lacuna_alias(self):
         qml = read("lacuna.menu/services/LacunaSettings.qml")
 
@@ -1228,6 +1249,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.audio",
             "lacuna.aurora-drift",
             "lacuna.background-vignette",
+            "lacuna.bar-seam",
             "lacuna.bar-size-pill",
             "lacuna.bluetooth",
             "lacuna.cinematic-light-overlay",

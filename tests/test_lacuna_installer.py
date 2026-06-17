@@ -317,6 +317,14 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertEqual(data["plugins"], [{"id": "lacuna.state"}])
         self.assertEqual(data["bar"]["layout"]["right"], [])
 
+    def test_lacuna_bar_layout_brackets_native_cluster_with_seams(self):
+        module = load_installer_module()
+        right = [entry["id"] for entry in module.LACUNA_BAR_LAYOUT["right"]]
+        self.assertEqual(2, right.count("lacuna.bar-seam"))
+        # a seam immediately precedes and follows the native (bt/net/audio/power) cluster
+        self.assertEqual("lacuna.bar-seam", right[right.index("lacuna.bluetooth") - 1])
+        self.assertEqual("lacuna.bar-seam", right[right.index("lacuna.power") + 1])
+
     def test_lacuna_bar_activation_replaces_omarchy_layout_with_lacuna_modules(self):
         module = load_installer_module()
 
