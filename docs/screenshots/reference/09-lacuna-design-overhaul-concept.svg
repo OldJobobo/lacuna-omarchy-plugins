@@ -1,0 +1,213 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1440" viewBox="0 0 2560 1440">
+  <defs>
+    <linearGradient id="workspaceGlow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#13151a"/>
+      <stop offset="0.55" stop-color="#1a181b"/>
+      <stop offset="1" stop-color="#101316"/>
+    </linearGradient>
+    <linearGradient id="panelFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#202229"/>
+      <stop offset="1" stop-color="#181a20"/>
+    </linearGradient>
+    <linearGradient id="barFill" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#191b22"/>
+      <stop offset="0.5" stop-color="#222029"/>
+      <stop offset="1" stop-color="#181b21"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.36"/>
+    </filter>
+    <filter id="tightShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+    <style>
+      .bgText { font: 20px monospace; fill: #8b8170; opacity: 0.32; }
+      .ui { font-family: Inter, "SF Pro Text", "Segoe UI", sans-serif; }
+      .title { font: 700 18px Inter, "SF Pro Text", sans-serif; letter-spacing: 0; fill: #d9d1c1; }
+      .label { font: 500 15px Inter, "SF Pro Text", sans-serif; letter-spacing: 0; fill: #c6c0b4; }
+      .subtle { font: 500 12px Inter, "SF Pro Text", sans-serif; letter-spacing: 0; fill: #827d76; }
+      .micro { font: 600 12px Inter, "SF Pro Text", sans-serif; letter-spacing: 0; fill: #88c6cf; }
+      .muted { fill: #77736d; }
+      .accent { fill: #7cc7d3; }
+      .gold { fill: #c7ad77; }
+      .stroke { stroke: #343842; stroke-width: 1; }
+      .hair { stroke: #3a3d45; stroke-width: 1; opacity: 0.8; }
+      .cyanStroke { stroke: #76c7d5; stroke-width: 2; }
+      .goldStroke { stroke: #c7ad77; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect width="2560" height="1440" fill="url(#workspaceGlow)"/>
+
+  <g opacity="0.85">
+    <rect x="336" y="60" width="1084" height="1320" rx="7" fill="#202025" stroke="#4b4438" stroke-width="1.5"/>
+    <rect x="1450" y="60" width="1048" height="1320" rx="7" fill="#1c1d23" stroke="#4b4438" stroke-width="1.5"/>
+    <rect x="360" y="96" width="1038" height="2" fill="#443f38"/>
+    <rect x="1476" y="96" width="998" height="2" fill="#443f38"/>
+    <g class="bgText">
+      <text x="372" y="148">• qml shell surface geometry</text>
+      <text x="372" y="214">  connectorWidth: 22  cornerKappa: 0.5522847498</text>
+      <text x="372" y="280">• state layer: hoverReveal -> seam opacity</text>
+      <text x="372" y="346">• section spacing: 8px grid / 16px icons</text>
+      <text x="372" y="412">• panel fill only; dividers own borders</text>
+      <text x="372" y="478">• attached edge remains square</text>
+      <text x="372" y="612">function surfacePath(width, height) {</text>
+      <text x="372" y="678">  return exposedCornersOnly;</text>
+      <text x="372" y="744">}</text>
+      <text x="1490" y="148">readonly property bool focused: activeSurface</text>
+      <text x="1490" y="214">readonly property color accent: theme.cyan</text>
+      <text x="1490" y="280">readonly property int iconSize: 16</text>
+      <text x="1490" y="346">readonly property int barSize: 32</text>
+      <text x="1490" y="412">readonly property int rowHeight: 48</text>
+      <text x="1490" y="478">readonly property real shadow: restrained</text>
+    </g>
+  </g>
+
+  <g class="ui">
+    <rect x="0" y="0" width="2560" height="36" fill="url(#barFill)" stroke="#31343c" stroke-width="1"/>
+    <rect x="0" y="34" width="2560" height="2" fill="#2d3038"/>
+    <rect x="18" y="6" width="54" height="24" rx="5" fill="#202936" stroke="#415160"/>
+    <circle cx="36" cy="18" r="5" fill="#80cad5"/>
+    <text x="88" y="23" class="micro">1</text>
+    <text x="126" y="23" class="subtle">2</text>
+    <text x="164" y="23" class="subtle">3</text>
+    <text x="202" y="23" class="subtle">4</text>
+    <rect x="278" y="6" width="118" height="24" rx="5" fill="#18272c" stroke="#31515a"/>
+    <text x="296" y="23" class="micro">11% left</text>
+    <rect x="430" y="6" width="90" height="24" rx="5" fill="#2a251b" stroke="#66563a"/>
+    <text x="450" y="23" class="subtle">0% left</text>
+    <text x="1192" y="23" class="label">Tue 16 9:41 AM</text>
+    <circle cx="1680" cy="18" r="5" fill="#c7ad77"/>
+    <text x="1700" y="23" class="subtle">Audio</text>
+    <circle cx="1798" cy="18" r="5" fill="#7cc7d3"/>
+    <text x="1818" y="23" class="subtle">Network</text>
+    <circle cx="1952" cy="18" r="5" fill="#b9d38a"/>
+    <text x="1972" y="23" class="subtle">Battery</text>
+    <circle cx="2120" cy="18" r="5" fill="#d9a06e"/>
+    <text x="2140" y="23" class="subtle">64°F</text>
+  </g>
+
+  <g class="ui" filter="url(#softShadow)">
+    <path d="M16 58 Q16 50 24 50 H308 Q316 50 316 58 V1384 Q316 1392 308 1392 H24 Q16 1392 16 1384 Z" fill="url(#panelFill)" stroke="#343842"/>
+    <rect x="16" y="50" width="5" height="1342" fill="#76c7d5" opacity="0.42"/>
+    <text x="36" y="86" class="title">LACUNA</text>
+    <text x="270" y="86" class="subtle">v2</text>
+    <line x1="36" y1="112" x2="296" y2="112" class="hair"/>
+    <text x="36" y="142" class="subtle">Overview</text>
+    <g transform="translate(36 160)">
+      <rect width="70" height="58" rx="4" fill="#24272f" stroke="#3a3d45"/>
+      <path d="M35 17 L47 41 H23 Z" fill="#7cc7d3"/>
+      <rect x="92" width="70" height="58" rx="4" fill="#24272f" stroke="#3a3d45"/>
+      <circle cx="127" cy="29" r="13" fill="#c7ad77"/>
+      <rect x="184" width="70" height="58" rx="4" fill="#24272f" stroke="#3a3d45"/>
+      <rect x="213" y="14" width="12" height="28" rx="2" fill="#88c6cf"/>
+    </g>
+    <line x1="36" y1="256" x2="296" y2="256" class="hair"/>
+    <g transform="translate(36 286)">
+      <rect x="0" y="0" width="260" height="42" rx="4" fill="#26313a" stroke="#49616a"/>
+      <rect x="0" y="0" width="3" height="42" fill="#7cc7d3"/>
+      <circle cx="20" cy="21" r="6" fill="#7cc7d3"/>
+      <text x="42" y="27" class="label">Apps</text>
+
+      <rect x="0" y="54" width="260" height="42" rx="4" fill="#1d2027"/>
+      <circle cx="20" cy="75" r="6" fill="none" stroke="#77736d" stroke-width="2"/>
+      <text x="42" y="81" class="label">Appearance</text>
+
+      <rect x="0" y="108" width="260" height="42" rx="4" fill="#1d2027"/>
+      <rect x="15" y="121" width="10" height="16" rx="2" fill="#77736d"/>
+      <text x="42" y="135" class="label">Layout</text>
+
+      <rect x="0" y="162" width="260" height="42" rx="4" fill="#1d2027"/>
+      <circle cx="20" cy="183" r="5" fill="#77736d"/>
+      <circle cx="28" cy="183" r="5" fill="#77736d"/>
+      <text x="42" y="189" class="label">Plugins</text>
+
+      <rect x="0" y="216" width="260" height="42" rx="4" fill="#1d2027"/>
+      <path d="M16 237 A8 8 0 1 1 27 226" fill="none" stroke="#77736d" stroke-width="2"/>
+      <text x="42" y="243" class="label">Runtime</text>
+    </g>
+  </g>
+
+  <g class="ui" filter="url(#softShadow)">
+    <path d="M316 382 C328 382 331 370 338 358 V568 C331 556 328 544 316 544 Z" fill="#1f2229" stroke="#343842"/>
+    <path d="M338 318 H828 Q838 318 838 328 V742 Q838 752 828 752 H338 Z" fill="#1f2229" stroke="#343842"/>
+    <rect x="338" y="318" width="4" height="434" fill="#76c7d5" opacity="0.36"/>
+    <text x="370" y="360" class="title">Apps</text>
+    <text x="370" y="382" class="subtle">Terminal</text>
+    <line x1="370" y1="410" x2="806" y2="410" class="hair"/>
+    <g transform="translate(370 436)">
+      <rect width="436" height="48" rx="4" fill="#24272f" stroke="#333740"/>
+      <rect x="18" y="16" width="16" height="16" rx="3" fill="#7cc7d3"/>
+      <text x="54" y="30" class="label">Terminal</text>
+      <rect x="300" y="10" width="112" height="28" rx="3" fill="#2a2d35" stroke="#3b3f48"/>
+    </g>
+    <g transform="translate(370 500)">
+      <rect width="436" height="48" rx="4" fill="#20232a" stroke="#30343c"/>
+      <circle cx="26" cy="24" r="8" fill="#c7ad77"/>
+      <text x="54" y="30" class="label">Browser</text>
+      <rect x="300" y="10" width="112" height="28" rx="3" fill="#282b33" stroke="#383c45"/>
+    </g>
+    <g transform="translate(370 564)">
+      <rect width="436" height="48" rx="4" fill="#20232a" stroke="#30343c"/>
+      <path d="M20 30 L32 18" stroke="#7cc7d3" stroke-width="3"/>
+      <text x="54" y="30" class="label">Editor</text>
+      <rect x="300" y="10" width="112" height="28" rx="3" fill="#282b33" stroke="#383c45"/>
+    </g>
+    <rect x="370" y="642" width="92" height="28" rx="4" fill="#17282d" stroke="#40636c"/>
+    <text x="390" y="661" class="micro">Overview</text>
+  </g>
+
+  <g class="ui" filter="url(#softShadow)">
+    <path d="M966 244 Q966 232 978 232 H1674 Q1686 232 1686 244 V946 Q1686 958 1674 958 H978 Q966 958 966 946 Z" fill="#1d2027" stroke="#c7ad77" stroke-width="2"/>
+    <rect x="966" y="232" width="5" height="726" fill="#c7ad77" opacity="0.54"/>
+    <text x="1000" y="278" class="title">Appearance</text>
+    <text x="1000" y="302" class="subtle">Layout</text>
+    <line x1="1000" y1="334" x2="1650" y2="334" class="hair"/>
+    <g transform="translate(1000 370)">
+      <rect width="650" height="58" rx="4" fill="#24272f" stroke="#353943"/>
+      <circle cx="30" cy="29" r="8" fill="#7cc7d3"/>
+      <text x="62" y="35" class="label">Audio</text>
+      <rect x="560" y="19" width="44" height="20" rx="10" fill="#26434a" stroke="#4c7580"/>
+      <circle cx="588" cy="29" r="7" fill="#c7ad77"/>
+
+      <rect y="76" width="650" height="58" rx="4" fill="#20232a" stroke="#30343d"/>
+      <path d="M22 105 C32 92 46 92 56 105" fill="none" stroke="#7cc7d3" stroke-width="3"/>
+      <text x="62" y="111" class="label">Network</text>
+      <rect x="560" y="95" width="44" height="20" rx="10" fill="#26434a" stroke="#4c7580"/>
+      <circle cx="588" cy="105" r="7" fill="#c7ad77"/>
+
+      <rect y="152" width="650" height="58" rx="4" fill="#20232a" stroke="#30343d"/>
+      <rect x="22" y="173" width="28" height="16" rx="3" fill="none" stroke="#c7ad77" stroke-width="2"/>
+      <rect x="51" y="178" width="4" height="6" rx="1" fill="#c7ad77"/>
+      <text x="62" y="187" class="label">Battery</text>
+      <rect x="526" y="171" width="78" height="20" rx="3" fill="#262a32" stroke="#3a3f48"/>
+      <rect x="529" y="174" width="52" height="14" rx="2" fill="#7cc7d3" opacity="0.8"/>
+    </g>
+    <line x1="1000" y1="636" x2="1650" y2="636" class="hair"/>
+    <g transform="translate(1000 672)">
+      <rect width="148" height="96" rx="5" fill="#22252d" stroke="#343944"/>
+      <rect x="18" y="18" width="24" height="24" rx="4" fill="#7cc7d3" opacity="0.8"/>
+      <text x="18" y="62" class="label">Plugins</text>
+      <text x="18" y="80" class="subtle">Runtime</text>
+      <rect x="176" width="148" height="96" rx="5" fill="#22252d" stroke="#343944"/>
+      <circle cx="202" cy="30" r="12" fill="#c7ad77" opacity="0.85"/>
+      <text x="194" y="62" class="label">Layout</text>
+      <text x="194" y="80" class="subtle">Overview</text>
+      <rect x="352" width="148" height="96" rx="5" fill="#22252d" stroke="#343944"/>
+      <path d="M376 34 L390 20 L404 34 L390 48 Z" fill="#7cc7d3"/>
+      <text x="370" y="62" class="label">Apps</text>
+      <text x="370" y="80" class="subtle">Appearance</text>
+    </g>
+  </g>
+
+  <g class="ui" filter="url(#tightShadow)">
+    <rect x="1840" y="110" width="634" height="102" rx="6" fill="#1d2027" stroke="#343842"/>
+    <rect x="1858" y="129" width="70" height="28" rx="4" fill="#17282d" stroke="#40636c"/>
+    <text x="1876" y="149" class="micro">Apps</text>
+    <text x="1948" y="149" class="label">Terminal</text>
+    <text x="2088" y="149" class="label">Browser</text>
+    <text x="2232" y="149" class="label">Editor</text>
+    <rect x="2360" y="128" width="84" height="30" rx="4" fill="#2a251b" stroke="#66563a"/>
+    <text x="2378" y="149" class="subtle">11% left</text>
+  </g>
+</svg>
