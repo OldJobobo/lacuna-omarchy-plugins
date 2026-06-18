@@ -50,7 +50,7 @@ PopupWindow {
   property color mutedColor: "#8a929c"
   property color trackColor: "#2a2f35"
   property color panelColor: "#0e1113"
-  property string fontFamily: "monospace"
+  property string fontFamily: "Hack Nerd Font Propo"
   property url iconSource: ""
 
   signal refreshRequested()
@@ -64,6 +64,9 @@ PopupWindow {
   readonly property int shadowBlurMax: 28
   readonly property int shadowMargin: shadowEnabled
     ? Math.ceil(shadowBlurMax + Math.max(Math.abs(shadowOffsetX), Math.abs(shadowOffsetY)))
+    : 0
+  readonly property int shadowBottomMargin: shadowEnabled
+    ? Math.ceil(shadowMargin + shadowBlurMax * 0.6 + Math.max(0, shadowOffsetY))
     : 0
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
@@ -204,7 +207,7 @@ PopupWindow {
   visible: open || reveal > 0.001
   color: "transparent"
   implicitWidth: surface.fullWidth + shadowMargin * 2
-  implicitHeight: surface.implicitHeight + shadowMargin
+  implicitHeight: surface.implicitHeight + shadowBottomMargin
 
   onOpenChanged: {
     if (!bar) return
@@ -264,8 +267,28 @@ PopupWindow {
       width: root.implicitWidth
       height: root.implicitHeight
 
+      Item {
+        id: shadowSource
+        x: 0
+        y: 0
+        width: root.implicitWidth
+        height: root.implicitHeight
+        visible: root.shadowEnabled
+        z: -2
+
+        BarFlyoutSurface {
+          x: root.shadowMargin
+          y: 0
+          panelWidth: root.panelWidth
+          panelHeight: Math.round(content.implicitHeight + root.contentPadding * 2)
+          joinRadius: root.joinRadius
+          cornerRadius: root.cornerRadius
+          panelColor: root.panelColor
+        }
+      }
+
       LacunaDropShadow {
-        source: surface
+        source: shadowSource
         shadowEnabled: root.shadowEnabled
         shadowColor: "black"
         shadowOpacity: 0.62
@@ -273,6 +296,7 @@ PopupWindow {
         blurMax: root.shadowBlurMax
         shadowHorizontalOffset: root.shadowOffsetX
         shadowVerticalOffset: root.shadowOffsetY
+        z: -1
       }
 
       BarFlyoutSurface {

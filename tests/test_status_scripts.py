@@ -125,10 +125,15 @@ class CodexWeeklyStatusTests(unittest.TestCase):
         helper = (
             "#!/usr/bin/env bash\n"
             "cat <<'OUT'\n"
+            "5h limit left: 88%\n"
+            "5h used: 12%\n"
+            "5h resets: 2026-06-18 02:00 PM\n"
             "Weekly limit left: 37%\n"
             "Weekly used: 63%\n"
-            "Resets: 2026-06-20 09:00 AM\n"
+            "Weekly resets: 2026-06-20 09:00 AM\n"
             "Plan: pro\n"
+            "Source event: 2026-06-18T12:34:56Z\n"
+            "Source file: /tmp/codex-session.jsonl\n"
             "OUT\n"
         )
         with tempfile.TemporaryDirectory() as tmp:
@@ -136,9 +141,22 @@ class CodexWeeklyStatusTests(unittest.TestCase):
             result = run([str(staged)], {})
         self.assertEqual(result.returncode, 0)
         payload = json.loads(result.stdout)
-        self.assertEqual(payload["text"], "37% left")
+        self.assertEqual(payload["text"], "88% 5h")
+        self.assertEqual(payload["shortText"], "88%")
         self.assertEqual(payload["class"], "normal")
-        self.assertIn("Codex Weekly Usage", payload["tooltip"])
+        self.assertEqual(payload["leftPercent"], 88)
+        self.assertEqual(payload["usedPercent"], 12)
+        self.assertIs(payload["active"], True)
+        self.assertEqual(payload["resetText"], "2026-06-18 02:00 PM")
+        self.assertIs(payload["weekActive"], True)
+        self.assertEqual(payload["weekText"], "37% wk")
+        self.assertEqual(payload["weekLeftPercent"], 37)
+        self.assertEqual(payload["weekUsedPercent"], 63)
+        self.assertEqual(payload["weekResetText"], "2026-06-20 09:00 AM")
+        self.assertEqual(payload["planText"], "Pro")
+        self.assertEqual(payload["sourceFileText"], "/tmp/codex-session.jsonl")
+        self.assertEqual(payload["source"], "local Codex token_count event")
+        self.assertIn("Codex Usage", payload["tooltip"])
 
     def test_low_balance_is_flagged_alert(self):
         helper = "#!/usr/bin/env bash\nprintf 'Weekly limit left: 5%%\\nPlan: plus\\n'\n"

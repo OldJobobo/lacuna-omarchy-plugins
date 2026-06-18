@@ -77,22 +77,33 @@ def main():
         return 1
 
     rate_limits = latest["payload"].get("rate_limits") or {}
+    primary = rate_limits.get("primary") or {}
     secondary = rate_limits.get("secondary") or {}
-    used_percent = secondary.get("used_percent")
-    reset_at = secondary.get("resets_at")
+    primary_used_percent = primary.get("used_percent")
+    primary_reset_at = primary.get("resets_at")
+    weekly_used_percent = secondary.get("used_percent")
+    weekly_reset_at = secondary.get("resets_at")
     plan_type = rate_limits.get("plan_type") or "unknown"
 
-    if used_percent is None:
-        print("Latest token_count event does not include secondary.used_percent", file=sys.stderr)
+    if weekly_used_percent is None and primary_used_percent is None:
+        print("Latest token_count event does not include primary or secondary used_percent", file=sys.stderr)
         return 1
 
-    left_percent = max(0.0, 100.0 - float(used_percent))
     source = latest["path"]
     timestamp = latest["timestamp"]
 
-    print(f"Weekly limit left: {left_percent:.1f}%")
-    print(f"Weekly used: {float(used_percent):.1f}%")
-    print(f"Resets: {format_reset_time(reset_at)}")
+    if primary_used_percent is not None:
+        primary_left_percent = max(0.0, 100.0 - float(primary_used_percent))
+        print(f"5h limit left: {primary_left_percent:.1f}%")
+        print(f"5h used: {float(primary_used_percent):.1f}%")
+        print(f"5h resets: {format_reset_time(primary_reset_at)}")
+
+    if weekly_used_percent is not None:
+        weekly_left_percent = max(0.0, 100.0 - float(weekly_used_percent))
+        print(f"Weekly limit left: {weekly_left_percent:.1f}%")
+        print(f"Weekly used: {float(weekly_used_percent):.1f}%")
+        print(f"Weekly resets: {format_reset_time(weekly_reset_at)}")
+
     print(f"Plan: {plan_type}")
     print(f"Source event: {timestamp}")
     print(f"Source file: {source}")

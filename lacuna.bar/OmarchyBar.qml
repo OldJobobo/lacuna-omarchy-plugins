@@ -16,8 +16,9 @@ Item {
   required property var barWidgetRegistry
   // Injected by the host shell every time shell.json is reloaded. Holds the
   // `bar:` subtree: position, centerAnchor, layout. The host owns file IO;
-  // the bar just renders whatever it's handed. The bar font follows the
-  // OS-level fontconfig monospace binding — it is not stored in shell.json.
+  // the bar just renders whatever it's handed. The bar exposes the shell font
+  // through its proportional Nerd Font family so shell chrome does not fall
+  // back to the mono variants used by terminals/editors.
   required property var barConfig
   // Injected by the host shell. Used for shell-wide actions such as opening
   // settings and persisting inline widget state.
@@ -47,10 +48,11 @@ Item {
   property bool centerHoverRevealSuppressed: false
   property int barConfigSerial: 0
   property string position: "top"
-  // Resolves through fontconfig at paint time (Style.font.family defaults
-  // to "monospace"), so changing the system font (via `omarchy-font-set`)
-  // updates the bar without a reload.
-  property string fontFamily: Style.font.family
+  // Resolves through fontconfig at paint time, then maps common mono family
+  // names to their proportional Nerd Font variants. Omarchy font selection
+  // still owns the base family; Lacuna only prevents shell UI from rendering
+  // with the terminal/editor mono face.
+  property string fontFamily: proportionalFontFamily(Style.font.family)
   // Bound to the central Color singleton so the bar tracks shell.toml's
   // [bar] section. Property names kept for the rest of this file's bindings.
   property color themeForeground: Color.bar.text
@@ -64,6 +66,18 @@ Item {
   // Theme accent, exposed to bar widgets (e.g. lacuna.bar-seam breathing glow,
   // active-state accents). Theme-derived; mirrors the menu's accent role.
   property color accent: Color.accent
+
+  function proportionalFontFamily(value) {
+    var text = String(value || "").replace(/^\s+|\s+$/g, "")
+    if (text.length === 0 || text === "monospace") return "Hack Nerd Font Propo"
+    if (text.indexOf(" Propo") !== -1) return text
+    if (text === "Hack Nerd Font" || text === "Hack Nerd Font Mono" || text === "Hack") return "Hack Nerd Font Propo"
+    if (text === "BlexMono Nerd Font" || text === "BlexMono Nerd Font Mono") return "BlexMono Nerd Font Propo"
+    if (text === "JetBrainsMono Nerd Font" || text === "JetBrainsMono Nerd Font Mono" || text === "JetBrains Mono") return "JetBrainsMono Nerd Font Propo"
+    if (text.indexOf(" Nerd Font Mono") !== -1) return text.replace(" Nerd Font Mono", " Nerd Font Propo")
+    if (text.indexOf(" Nerd Font") !== -1) return text + " Propo"
+    return text
+  }
 
   Behavior on barForeground { enabled: root.foregroundAnimationEnabled; ColorAnimation { duration: 420; easing.type: Easing.InOutCubic } }
   Behavior on background { ColorAnimation { duration: 420; easing.type: Easing.InOutCubic } }

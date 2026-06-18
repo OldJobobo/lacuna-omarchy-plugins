@@ -187,7 +187,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         text: root.displayText
         color: root.moduleColor
-        font.family: bar ? bar.fontFamily : "monospace"
+        font.family: bar ? bar.fontFamily : "Hack Nerd Font Propo"
         font.pixelSize: 14
         maximumLineCount: 1
         elide: Text.ElideRight

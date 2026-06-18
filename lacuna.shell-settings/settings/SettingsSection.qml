@@ -10,7 +10,7 @@ Item {
   property color foreground: "#d8dee9"
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
   property color accent: "#88c0d0"
-  property string fontFamily: "Hack Nerd Font"
+  property string fontFamily: "Hack Nerd Font Propo"
 
   height: note === "" ? (compact ? 24 : 28) : (compact ? 38 : 44)
 

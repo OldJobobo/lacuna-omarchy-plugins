@@ -11,13 +11,17 @@ Item {
   property int connectorWidth: 18
   property int contentHeight: 0
   property color panelColor: "#101315"
+  property color foreground: "#d8dee9"
   property bool backgroundVisible: true
 
   readonly property real curveKappa: lacunaGeometry.curveKappa
+  readonly property int joinLineGap: Math.min(22, Math.max(0, Math.round(contentHeight * 0.35)))
+  readonly property color joinLineColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.14)
 
   LacunaGeometry { id: lacunaGeometry }
   readonly property real clampedProgress: Math.max(0, Math.min(1, progress))
   readonly property color solidPanelColor: Qt.rgba(panelColor.r, panelColor.g, panelColor.b, 1)
+  readonly property real joinLineSegmentHeight: Math.max(0, Math.round((contentHeight - joinLineGap) / 2))
 
   width: connectorWidth
   height: contentHeight + connectorWidth * 2
@@ -83,6 +87,33 @@ Item {
         control2Y: root.connectorWidth * (1 - root.curveKappa)
       }
       PathLine { x: 0; y: 0 }
+    }
+  }
+
+  Item {
+    id: joinLine
+
+    visible: root.contentHeight > root.joinLineGap + 2
+    x: Math.round(root.connectorWidth / 2)
+    y: root.connectorWidth
+    width: 1
+    height: root.contentHeight
+    opacity: root.clampedProgress * 0.58
+
+    Rectangle {
+      anchors.horizontalCenter: parent.horizontalCenter
+      anchors.top: parent.top
+      width: 1
+      height: root.joinLineSegmentHeight
+      color: root.joinLineColor
+    }
+
+    Rectangle {
+      anchors.horizontalCenter: parent.horizontalCenter
+      anchors.bottom: parent.bottom
+      width: 1
+      height: root.joinLineSegmentHeight
+      color: root.joinLineColor
     }
   }
 }

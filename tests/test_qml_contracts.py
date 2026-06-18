@@ -144,6 +144,11 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("background: Color.background", shell_settings)
         self.assertIn("property color background: opaqueColor(Color.bar.background)", bar)
         self.assertIn("function opaqueColor(colorValue)", bar)
+        self.assertIn("property string fontFamily: proportionalFontFamily(Style.font.family)", bar)
+        self.assertIn("function proportionalFontFamily(value)", bar)
+        self.assertIn('return "Hack Nerd Font Propo"', bar)
+        self.assertIn('return "BlexMono Nerd Font Propo"', bar)
+        self.assertIn('return "JetBrainsMono Nerd Font Propo"', bar)
         self.assertIn("requestedTransparent = false", bar)
         self.assertIn("color: root.background", bar)
         self.assertNotIn('root.transparent ? "transparent" : root.background', bar)
@@ -179,6 +184,10 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property color solidPanelColor", shape_surface)
         self.assertIn("readonly property real curveKappa: lacunaGeometry.curveKappa", connector)
         self.assertIn("property bool backgroundVisible: true", connector)
+        self.assertIn("property color foreground: \"#d8dee9\"", connector)
+        self.assertIn("readonly property int joinLineGap", connector)
+        self.assertIn("id: joinLine", connector)
+        self.assertIn("opacity: root.clampedProgress * 0.58", connector)
         self.assertIn("opacity: backgroundVisible ? 1 : 0", connector)
         self.assertNotIn("surfaceAlpha", connector)
         self.assertIn("height: contentHeight + connectorWidth * 2", connector)
@@ -313,6 +322,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.menu/components/LacunaGeometry.qml",
             "lacuna.bar/LacunaGeometry.qml",
             "lacuna.claude-usage/LacunaGeometry.qml",
+            "lacuna.codex-usage/LacunaGeometry.qml",
         }
         for path in sorted(geometry_files):
             self.assertIn("readonly property real curveKappa: " + literal, read(path), path)
@@ -327,6 +337,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.shell-settings/settings/OmarchyShellSettingsWindow.qml",
             "lacuna.bar/LacunaFrameWindow.qml",
             "lacuna.claude-usage/BarFlyoutSurface.qml",
+            "lacuna.codex-usage/BarFlyoutSurface.qml",
         ]
         for path in consumers:
             qml = read(path)
@@ -955,11 +966,12 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property int quick: 150", widget)
         self.assertIn("readonly property int hoverDuration: quick", widget)
 
-    def test_typography_adopts_hack_nerd_font(self):
-        # Phase E: the Lacuna mono face is Hack Nerd Font; Tektur stays the
-        # display/title face. No JetBrains Mono literals remain in QML.
+    def test_typography_adopts_hack_nerd_font_propo(self):
+        # Phase E follow-up: shell chrome uses the proportional Nerd Font
+        # variant; Tektur stays the display/title face. No JetBrains Mono
+        # literals or quoted monospace fallbacks remain in QML.
         tokens = read("lacuna.shell-settings/components/LacunaTokens.qml")
-        self.assertIn('readonly property string monoFont: "Hack Nerd Font"', tokens)
+        self.assertIn('readonly property string monoFont: "Hack Nerd Font Propo"', tokens)
 
         for path in [
             "lacuna.menu/menu/MenuWindow.qml",
@@ -968,7 +980,14 @@ class QmlContractTests(unittest.TestCase):
         ]:
             qml = read(path)
             self.assertNotIn("JetBrains Mono", qml, path)
-            self.assertIn('"Hack Nerd Font"', qml, path)
+            self.assertNotIn('"Hack Nerd Font"', qml, path)
+            self.assertIn('"Hack Nerd Font Propo"', qml, path)
+
+        for qml_path in ROOT.glob("lacuna.*/**/*.qml"):
+            rel = qml_path.relative_to(ROOT).as_posix()
+            if rel == "lacuna.bar/OmarchyBar.qml":
+                continue
+            self.assertNotIn('"monospace"', qml_path.read_text(encoding="utf-8"), rel)
 
         # Tektur remains the title/display face.
         self.assertIn("Tektur", read("lacuna.menu/menu/MenuContent.qml"))
@@ -1454,6 +1473,59 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('readonly property bool widgetEnabled: boolSetting("enabled", true)', qml)
         self.assertIn("visible: widgetEnabled && themeTitle.length > 0", qml)
         self.assertIn('readonly property bool showIcon: boolSetting("showIcon", true)', qml)
+
+    def test_usage_widgets_place_meter_away_from_open_indicator_edge(self):
+        for plugin in ["lacuna.claude-usage", "lacuna.codex-usage"]:
+            qml = read(f"{plugin}/Widget.qml")
+            self.assertIn('readonly property bool showProgress: setting("showProgress", true) === true', qml)
+            self.assertIn('readonly property bool meterAtTop: !root.vertical && root.bar && root.bar.position === "top"', qml)
+            self.assertIn("y: button.meterAtTop ? 3 : parent.height - height - 3", qml)
+            self.assertIn("anchors.verticalCenterOffset: button.meterHeight > 0 ? (button.meterAtTop ? 1 : -1) : 0", qml)
+            self.assertIn("readonly property int activeUsedPercent: activeMode === 1 ? weekUsedPercent : usedPercent", qml)
+            self.assertIn("parent.width * root.activeUsedPercent / 100", qml)
+
+        codex_manifest = read_json("lacuna.codex-usage/manifest.json")
+        codex_schema = {entry["key"]: entry for entry in codex_manifest["barWidget"]["schema"]}
+        self.assertIs(codex_manifest["barWidget"]["defaults"]["showProgress"], True)
+        self.assertEqual("boolean", codex_schema["showProgress"]["type"])
+        self.assertIs(codex_schema["showProgress"]["defaultValue"], True)
+        self.assertIs(codex_manifest["barWidget"]["defaults"]["showWeekly"], True)
+        self.assertEqual("boolean", codex_schema["showWeekly"]["type"])
+        self.assertEqual(6000, codex_manifest["barWidget"]["defaults"]["cycleInterval"])
+        self.assertEqual("integer", codex_schema["cycleInterval"]["type"])
+        self.assertEqual("left", codex_manifest["barWidget"]["defaults"]["displayMode"])
+        self.assertEqual("enum", codex_schema["displayMode"]["type"])
+
+    def test_codex_usage_rotates_between_5h_and_weekly_windows(self):
+        qml = read("lacuna.codex-usage/Widget.qml")
+        self.assertIn("property int displayCycle: 0", qml)
+        self.assertIn("readonly property bool weeklyReady: loadedOnce && showWeekly && weekActive", qml)
+        self.assertIn("readonly property int activeMode: (weeklyReady && (displayCycle % 2 === 1)) ? 1 : 0", qml)
+        self.assertIn("readonly property string primaryText: activeMode === 1 ? weekPrimary : sessionPrimary", qml)
+        self.assertIn("running: root.weeklyReady && !root.flyoutOpen && !mouseArea.containsMouse", qml)
+        self.assertIn("BarCycleText {", qml)
+        self.assertIn("text: root.primaryText", qml)
+        self.assertIn("weekActive = payload.weekActive === true", qml)
+        self.assertIn("weekUsedPercent = boundedPercent(payload.weekUsedPercent", qml)
+
+        flyout = read("lacuna.codex-usage/CodexUsageFlyout.qml")
+        self.assertIn("property bool weekActive: false", flyout)
+        self.assertIn("property int weekUsedPercent: 0", flyout)
+        self.assertIn('text: "5h limit"', flyout)
+        self.assertIn('text: "Weekly limit"', flyout)
+
+    def test_usage_flyout_shadows_reserve_bottom_render_padding(self):
+        for path in [
+            "lacuna.claude-usage/ClaudeUsageFlyout.qml",
+            "lacuna.codex-usage/CodexUsageFlyout.qml",
+        ]:
+            qml = read(path)
+            self.assertIn("readonly property int shadowBottomMargin", qml)
+            self.assertIn("implicitHeight: surface.implicitHeight + shadowBottomMargin", qml)
+            self.assertIn("id: shadowSource", qml)
+            self.assertIn("height: root.implicitHeight", qml)
+            self.assertIn("source: shadowSource", qml)
+            self.assertNotIn("autoPaddingEnabled: true", qml)
 
     def test_wallpaper_widget_schema_exposes_real_enabled_setting(self):
         manifest = read_json("lacuna.wallpaper/manifest.json")

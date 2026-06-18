@@ -141,7 +141,7 @@ Item {
       rotation: root.vertical ? -90 : 0
       text: root.displayText
       color: root.accent
-      font.family: bar ? bar.fontFamily : "monospace"
+      font.family: bar ? bar.fontFamily : "Hack Nerd Font Propo"
       font.pixelSize: 14
       maximumLineCount: 1
       elide: Text.ElideRight

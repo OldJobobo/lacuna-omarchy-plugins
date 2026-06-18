@@ -73,6 +73,7 @@ Item {
   readonly property string activeClass: activeMode === 1 ? weekClass : cssClass
   readonly property bool actionableState: activeClass === "alert" || activeClass === "low" || activeClass === "over"
   readonly property bool hiddenState: cssClass === "hidden" || (!showIdle && cssClass === "idle" && !weeklyReady)
+  readonly property int activeUsedPercent: activeMode === 1 ? weekUsedPercent : usedPercent
   readonly property string sessionPrimary: clipped(displayMode === "percent" ? shortText : displayText)
   readonly property string weekPrimary: clipped(displayMode === "percent" ? weekShortText : weekText)
   readonly property string primaryText: activeMode === 1 ? weekPrimary : sessionPrimary
@@ -221,6 +222,7 @@ Item {
     readonly property int horizontalPadding: root.vertical ? 0 : 8
     readonly property int minimumWidth: root.vertical ? root.barSize : 44
     readonly property int meterHeight: root.showProgress && !root.vertical ? 2 : 0
+    readonly property bool meterAtTop: !root.vertical && root.bar && root.bar.position === "top"
 
     width: root.vertical ? root.barSize : Math.max(minimumWidth, content.implicitWidth + horizontalPadding * 2)
     height: root.vertical ? Math.max(root.barSize, content.implicitHeight + 10) : root.barSize
@@ -238,10 +240,9 @@ Item {
       visible: root.showProgress && !root.vertical
       anchors.left: parent.left
       anchors.right: parent.right
-      anchors.bottom: parent.bottom
       anchors.leftMargin: 7
       anchors.rightMargin: 7
-      anchors.bottomMargin: 3
+      y: button.meterAtTop ? 3 : parent.height - height - 3
       height: button.meterHeight
       radius: height / 2
       color: root.trackColor
@@ -250,7 +251,7 @@ Item {
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        width: Math.max(parent.height, Math.round(parent.width * root.usedPercent / 100))
+        width: Math.max(parent.height, Math.round(parent.width * root.activeUsedPercent / 100))
         radius: height / 2
         color: root.moduleColor
         opacity: 0.86
@@ -267,7 +268,7 @@ Item {
     Row {
       id: content
       anchors.centerIn: parent
-      anchors.verticalCenterOffset: button.meterHeight > 0 ? -1 : 0
+      anchors.verticalCenterOffset: button.meterHeight > 0 ? (button.meterAtTop ? 1 : -1) : 0
       spacing: 4
       rotation: root.vertical ? -90 : 0
 
@@ -296,7 +297,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         text: root.primaryText
         color: root.moduleColor
-        fontFamily: bar ? bar.fontFamily : "monospace"
+        fontFamily: bar ? bar.fontFamily : "Hack Nerd Font Propo"
         pixelSize: 14
         fontWeight: root.actionableState ? Font.DemiBold : Font.Normal
         colorDuration: motionTokens.colorDuration
@@ -308,7 +309,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         text: root.secondaryText
         color: root.actionableState ? root.moduleColor : root.mutedColor
-        fontFamily: bar ? bar.fontFamily : "monospace"
+        fontFamily: bar ? bar.fontFamily : "Hack Nerd Font Propo"
         pixelSize: 11
         colorDuration: motionTokens.colorDuration
       }
@@ -352,7 +353,7 @@ Item {
     foreground: root.foreground
     mutedColor: root.mutedColor
     trackColor: root.trackColor
-    fontFamily: bar ? bar.fontFamily : "monospace"
+    fontFamily: bar ? bar.fontFamily : "Hack Nerd Font Propo"
     iconSource: root.iconSource
 
     leftPercent: root.leftPercent

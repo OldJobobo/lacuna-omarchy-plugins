@@ -268,7 +268,7 @@ Item {
           text: root.indicatorIcon(indicatorButton.indicatorId)
           color: indicatorButton.indicatorColor
           opacity: indicatorButton.active || clickArea.containsMouse ? 1 : 0.72
-          font.family: root.bar ? root.bar.fontFamily : "monospace"
+          font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
           font.pixelSize: indicatorButton.indicatorId === "StayAwake" ? Math.max(9, root.topbarIconSize - 3) : root.topbarIconSize
           font.bold: indicatorButton.indicatorId === "StayAwake"
           renderType: Text.NativeRendering

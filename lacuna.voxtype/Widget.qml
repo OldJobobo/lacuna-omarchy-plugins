@@ -92,7 +92,7 @@ Item {
       text: root.dictationState === "transcribing" ? "󰔟" : "󰍬"
       color: root.moduleColor
       opacity: root.active ? 1 : 0.55
-      font.family: root.bar ? root.bar.fontFamily : "monospace"
+      font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
       font.pixelSize: root.topbarIconSize
       renderType: Text.NativeRendering
     }

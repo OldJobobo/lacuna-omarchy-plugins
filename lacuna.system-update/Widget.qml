@@ -83,7 +83,7 @@ Item {
       anchors.centerIn: parent
       text: ""
       color: root.moduleColor
-      font.family: root.bar ? root.bar.fontFamily : "monospace"
+      font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
       font.pixelSize: root.topbarIconSize
       renderType: Text.NativeRendering
     }

@@ -120,7 +120,7 @@ Column {
       anchors.verticalCenter: parent.verticalCenter
       text: "Search apps"
       color: root.muted
-      fontFamily: "Hack Nerd Font"
+      fontFamily: "Hack Nerd Font Propo"
       font.pixelSize: root.compact ? 10 : 11
     }
 
@@ -135,7 +135,7 @@ Column {
       color: root.foreground
       selectedTextColor: root.background
       selectionColor: root.accent
-      font.family: "Hack Nerd Font"
+      font.family: "Hack Nerd Font Propo"
       font.pixelSize: root.compact ? 10 : 11
       verticalAlignment: TextInput.AlignVCenter
       clip: true
@@ -181,7 +181,7 @@ Column {
         anchors.verticalCenter: parent.verticalCenter
         text: root.registry.roleMeta(root.preferredRole).systemHint
         color: root.foreground
-        fontFamily: "Hack Nerd Font"
+        fontFamily: "Hack Nerd Font Propo"
         font.pixelSize: root.compact ? 10 : 11
         font.weight: systemPickerMouse.containsMouse ? Font.DemiBold : Font.Normal
         elide: Text.ElideRight
@@ -266,7 +266,7 @@ Column {
           anchors.verticalCenter: parent.verticalCenter
           text: modelData.Name || modelData.id
           color: alreadyAdded ? root.muted : root.foreground
-          fontFamily: "Hack Nerd Font"
+          fontFamily: "Hack Nerd Font Propo"
           font.pixelSize: root.compact ? 10 : 11
           font.weight: pickerMouse.containsMouse ? Font.DemiBold : Font.Normal
           elide: Text.ElideRight

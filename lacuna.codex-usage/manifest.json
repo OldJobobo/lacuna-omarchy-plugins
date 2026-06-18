@@ -21,6 +21,10 @@
       "interval": 300000,
       "maxTextLength": 32,
       "showIcon": true,
+      "showProgress": true,
+      "showWeekly": true,
+      "cycleInterval": 6000,
+      "displayMode": "left",
       "colorProfile": "semantic"
     },
     "schema": [
@@ -47,6 +51,40 @@
         "type": "boolean",
         "label": "Show icon",
         "defaultValue": true
+      },
+      {
+        "key": "showProgress",
+        "type": "boolean",
+        "label": "Show usage meter",
+        "description": "Draw a small used-percent meter inside the widget, opposite the flyout-open indicator.",
+        "defaultValue": true
+      },
+      {
+        "key": "showWeekly",
+        "type": "boolean",
+        "label": "Cycle weekly usage",
+        "description": "Rotate the bar label between the 5-hour window and the weekly window.",
+        "defaultValue": true
+      },
+      {
+        "key": "cycleInterval",
+        "type": "integer",
+        "label": "Cycle interval (ms)",
+        "min": 2000,
+        "step": 500,
+        "description": "How long each readout (5h / weekly) stays before rolling to the other.",
+        "defaultValue": 6000
+      },
+      {
+        "key": "displayMode",
+        "type": "enum",
+        "label": "Display mode",
+        "options": [
+          "left",
+          "percent"
+        ],
+        "description": "Use full text, or a compact percent-only label.",
+        "defaultValue": "left"
       },
       {
         "key": "colorProfile",

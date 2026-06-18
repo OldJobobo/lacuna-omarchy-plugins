@@ -34,7 +34,7 @@ Column {
   // Visible "seam" hairline (docs/lacuna-design-system/02-geometry.md). Stronger
   // under the lacuna style so structural joins are shown, not hidden.
   readonly property color seam: Qt.rgba(foreground.r, foreground.g, foreground.b, designTokens.lacuna ? 0.16 : 0.08)
-  property string bodyFontFamily: "Hack Nerd Font"
+  property string bodyFontFamily: "Hack Nerd Font Propo"
   property string itemFontFamily: itemFont.name !== "" ? itemFont.name : "Tektur"
   property int iconRailWidth: 32
   property var designTokens: fallbackDesignTokens

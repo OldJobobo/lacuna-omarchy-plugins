@@ -24,7 +24,7 @@ Column {
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
   readonly property color seam: Qt.rgba(foreground.r, foreground.g, foreground.b, designTokens.lacuna ? 0.16 : 0.08)
   property color panelColor: "#101315"
-  property string bodyFontFamily: "Hack Nerd Font"
+  property string bodyFontFamily: "Hack Nerd Font Propo"
   property int railWidth: 32
   property var panelWindow: null
   property var tooltipTarget: null

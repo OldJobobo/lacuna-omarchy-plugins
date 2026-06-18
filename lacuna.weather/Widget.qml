@@ -119,7 +119,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         text: root.weatherIcon
         color: root.moduleColor
-        font.family: root.bar ? root.bar.fontFamily : "monospace"
+        font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
         font.pixelSize: root.topbarIconSize
         renderType: Text.NativeRendering
       }
@@ -129,7 +129,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         text: root.displayText
         color: root.moduleColor
-        font.family: root.bar ? root.bar.fontFamily : "monospace"
+        font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
         font.pixelSize: 14
         maximumLineCount: 1
         renderType: Text.NativeRendering

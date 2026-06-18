@@ -15,7 +15,7 @@ import QtQuick
 QtObject {
   id: root
 
-  readonly property string monoFont: "Hack Nerd Font"
+  readonly property string monoFont: "Hack Nerd Font Propo"
 
   // Motion durations live in MotionTokens (the named reveal scale,
   // 03-motion.md), not here.

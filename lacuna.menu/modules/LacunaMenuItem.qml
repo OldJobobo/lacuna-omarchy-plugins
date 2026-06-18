@@ -40,7 +40,7 @@ LacunaRect {
   property color toneAccent: accent
   property color seam: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.2)
   property color background: "#101315"
-  property string fontFamily: "Hack Nerd Font"
+  property string fontFamily: "Hack Nerd Font Propo"
   property string labelFontFamily: fontFamily
   property int iconRailWidth: 32
   property bool compact: false

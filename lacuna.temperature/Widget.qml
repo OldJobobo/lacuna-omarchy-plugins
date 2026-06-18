@@ -132,7 +132,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         text: root.temperatureF + " F"
         color: root.statusColor
-        font.family: bar ? bar.fontFamily : "monospace"
+        font.family: bar ? bar.fontFamily : "Hack Nerd Font Propo"
         font.pixelSize: 14
         font.weight: root.status === "Hot" ? Font.DemiBold : Font.Normal
         maximumLineCount: 1

@@ -121,6 +121,7 @@ Item {
       connectorWidth: root.connectorWidth
       contentHeight: Math.max(0, root.connectorHeight - root.connectorWidth * 2)
       panelColor: root.panelColor
+      foreground: root.foreground
       backgroundVisible: true
     }
 

@@ -4,7 +4,7 @@ import QtQuick
 // dissolves out, the value is exchanged at the empty midpoint, then the new
 // value dissolves in. Opacity only: calm, no roll, no bounce (OutCubic on the
 // `reveal` scale; docs/lacuna-design-system/03-motion.md). Used to cycle the
-// Claude widget between its 5h-block and 7-day readouts. Self-contained.
+// Codex widget between its 5h-block and weekly readouts. Self-contained.
 Item {
   id: root
 

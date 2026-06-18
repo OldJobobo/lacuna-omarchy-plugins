@@ -217,7 +217,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         text: content.parent.label
         color: content.parent.accent
-        font.family: content.parent.bar ? content.parent.bar.fontFamily : "monospace"
+        font.family: content.parent.bar ? content.parent.bar.fontFamily : "Hack Nerd Font Propo"
         font.pixelSize: 14
         maximumLineCount: 1
       }
