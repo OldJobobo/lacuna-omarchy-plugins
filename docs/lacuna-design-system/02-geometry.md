@@ -20,8 +20,7 @@ readonly property real curveKappa: 0.5522847498   // = 4/3 * (sqrt(2) - 1)
 ```
 
 `curveKappa` is the cubic-Bézier control-point multiplier that makes a quarter turn approximate a
-circular arc. **It must stay defined in exactly one place** and be referenced everywhere. A second
-copy is a bug: it is how two surfaces drift out of optical agreement.
+circular arc. **It must stay defined in exactly one place** and be referenced everywhere. A second copy is a bug: it is how two surfaces drift out of optical agreement.
 
 Control points for a quarter arc of radius `r` are placed at `r * (1 - curveKappa)` from the
 corner. This is the canonical pattern used by `MenuSurface.qml`'s join shapes; reuse it.
