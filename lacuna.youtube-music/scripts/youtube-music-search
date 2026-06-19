@@ -74,21 +74,7 @@ def normalize_ytmusic(entry):
 
 
 def ytmusic_results(query, limit):
-    try:
-        from ytmusicapi import YTMusic
-    except Exception:
-        return None
-
-    try:
-        client = YTMusic()
-        rows = []
-        for item in client.search(query, filter="songs", limit=limit):
-            normalized = normalize_ytmusic(item)
-            if normalized["url"]:
-                rows.append(normalized)
-        return rows
-    except Exception:
-        return None
+    return None
 
 
 def parse_duration(text):
@@ -113,6 +99,9 @@ def music_score(item):
     for term in ["official audio", "official music video", "music video", "lyrics", "lyric video", "audio", "song", "provided to youtube by"]:
         if term in haystack:
             score += 4
+    for term in ["full album", "album", "mix", "mixtape", "dj set", "live set", "live stream", "livestream", "concert", "playlist", "boiler room", "tiny desk", "session"]:
+        if term in haystack:
+            score += 5
     if " - topic" in uploader or uploader.endswith("topic"):
         score += 8
     if " - " in title:
@@ -124,7 +113,9 @@ def music_score(item):
     if duration is not None:
         if 45 <= duration <= 600:
             score += 2
-        elif duration < 30 or duration > 900:
+        elif 900 < duration <= 14400:
+            score += 2
+        elif duration < 30:
             score -= 10
     return score
 
@@ -134,9 +125,6 @@ def disqualified(item):
     uploader = str(item.get("uploader") or "").lower()
     description = str(item.get("description") or "").lower()
     haystack = f"{title} {uploader} {description}"
-    duration = parse_duration(item.get("durationText"))
-    if duration is not None and duration > 1800:
-        return True
     return any(term in haystack for term in ["reaction", "review", "tutorial", "podcast", "interview", "explained", "documentary", "lesson", "how to"])
 
 
@@ -152,8 +140,8 @@ def filtered_music_rows(rows, limit):
 
 
 def ytdlp_results(ytdlp, query, limit):
-    search_limit = max(24, min(40, limit * 4))
-    music_query = f"{query} music official audio song"
+    search_limit = max(40, min(80, limit * 3))
+    music_query = f"{query} music"
     cmd = [
         ytdlp,
         "--flat-playlist",
@@ -163,7 +151,7 @@ def ytdlp_results(ytdlp, query, limit):
         f"ytsearch{search_limit}:{music_query}",
     ]
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15, check=False)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=20, check=False)
     except subprocess.TimeoutExpired:
         return [], "Search timed out"
 
@@ -203,7 +191,7 @@ def main(argv=None) -> int:
         print(json.dumps({"results": [], "error": "yt-dlp is not installed"}))
         return 0
 
-    limit = max(1, min(20, args.limit))
+    limit = max(1, min(80, args.limit))
     query = args.query.strip()
     if not query:
         print(json.dumps({"results": [], "error": ""}))

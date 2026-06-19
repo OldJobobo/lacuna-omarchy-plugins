@@ -75,6 +75,9 @@ Item {
     if (icon === "chevron-right") return "M9 6l6 6l-6 6"
     if (icon === "player-play") return "M7 4v16l13 -8z"
     if (icon === "player-pause") return "M6 5h4v14h-4z M14 5h4v14h-4z"
+    if (icon === "player-stop") return "M6 6h12v12h-12z"
+    if (icon === "player-skip-back") return "M20 5v14l-12 -7z M4 5v14"
+    if (icon === "player-skip-forward") return "M4 5v14l12 -7z M20 5v14"
     return ""
   }
 

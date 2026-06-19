@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.youtube-music-video",
+  "name": "Lacuna YouTube Music Video",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Wallpaper-layer video companion for Lacuna YouTube Music.",
+  "kinds": [
+    "overlay"
+  ],
+  "activation": "persistent",
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "Overlay.qml"
+  },
+  "defaults": {
+    "targetOutput": "DP-1"
+  },
+  "schema": [],
+  "lacuna": {
+    "standalone": true,
+    "bundle": "standalone",
+    "stability": "experimental",
+    "requires": [],
+    "recommends": [
+      "lacuna.youtube-music"
+    ]
+  }
+}

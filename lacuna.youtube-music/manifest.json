@@ -14,7 +14,7 @@
     "service": "Service.qml"
   },
   "defaults": {
-    "maxResults": 8,
+    "maxResults": 60,
     "audioOnly": true,
     "volume": 70
   },
@@ -23,10 +23,10 @@
       "key": "maxResults",
       "type": "integer",
       "label": "Search result limit",
-      "min": 3,
-      "max": 20,
+      "min": 12,
+      "max": 80,
       "step": 1,
-      "defaultValue": 8
+      "defaultValue": 60
     },
     {
       "key": "audioOnly",
@@ -52,7 +52,8 @@
     "requires": [],
     "recommends": [
       "lacuna.menu",
-      "lacuna.audio"
+      "lacuna.audio",
+      "lacuna.youtube-music-video"
     ]
   }
 }

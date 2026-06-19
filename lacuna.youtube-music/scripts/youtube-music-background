@@ -22,18 +22,18 @@ def main(argv=None):
         "--no-playlist",
         "--get-url",
         "-f",
-        "160/worstvideo[ext=mp4][vcodec!=none]/worst[ext=mp4][vcodec!=none]/91/worstvideo",
+        "bestvideo[height<=1440][vcodec!=none]/bestvideo[vcodec!=none]/best[height<=1440]/best",
         argv[0],
     ]
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=12, check=False)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=18, check=False)
     except subprocess.TimeoutExpired:
-        print(json.dumps({"url": "", "error": "preview timed out"}))
+        print(json.dumps({"url": "", "error": "background stream timed out"}))
         return 1
 
     if result.returncode != 0:
-        message = (result.stderr or result.stdout or "preview failed").strip().splitlines()
-        print(json.dumps({"url": "", "error": message[-1] if message else "preview failed"}))
+        message = (result.stderr or result.stdout or "background stream failed").strip().splitlines()
+        print(json.dumps({"url": "", "error": message[-1] if message else "background stream failed"}))
         return 1
 
     for line in result.stdout.splitlines():
@@ -42,7 +42,7 @@ def main(argv=None):
             print(json.dumps({"url": url, "error": ""}))
             return 0
 
-    print(json.dumps({"url": "", "error": "no preview stream"}))
+    print(json.dumps({"url": "", "error": "no background stream"}))
     return 1
 
 

@@ -2,11 +2,10 @@ import QtQuick
 import Quickshell.Widgets
 import "../components"
 import "../services"
+import "../settings"
 
 Column {
   id: root
-
-  signal closeRequested()
 
   property var service: null
   property bool compact: false
@@ -19,17 +18,35 @@ Column {
   property var designTokens: fallbackDesignTokens
   property string bodyFontFamily: "Hack Nerd Font Propo"
   property string query: ""
+  property string activeTab: "search"
+  readonly property int resultRowHeight: compact ? 46 : 54
+  readonly property int resultPageSize: Math.max(8, Math.ceil(resultScroll.height / (resultRowHeight + resultScroll.spacing)))
+  readonly property int initialResultWindow: resultPageSize * 2
+  readonly property int queueLength: service && service.queue ? service.queue.length : 0
+
+  signal closeRequested()
 
   function forceSearchFocus() {
+    activeTab = "search"
     searchInput.forceActiveFocus()
   }
 
   function search() {
-    if (service) service.search(searchInput.text)
+    activeTab = "search"
+    if (service)
+      service.search(searchInput.text)
   }
 
   function durationText(track) {
     return track && track.duration ? String(track.duration) : ""
+  }
+
+  function maybeLoadMoreResults() {
+    if (!service || !service.canLoadMore || service.searching)
+      return
+
+    if (resultScroll.contentY + resultScroll.height >= resultScroll.contentHeight - resultRowHeight * 2)
+      service.loadMore(resultPageSize)
   }
 
   visible: contentVisible
@@ -37,10 +54,6 @@ Column {
   opacity: open ? 1 : 0
   anchors.margins: compact ? 10 : 12
   spacing: compact ? 8 : 10
-
-  Behavior on opacity {
-    LacunaAnim { motion: "fast" }
-  }
 
   Row {
     width: parent.width
@@ -59,6 +72,7 @@ Column {
 
     LacunaIconButton {
       id: closeButton
+
       icon: "x"
       foreground: root.foreground
       muted: root.muted
@@ -71,215 +85,228 @@ Column {
       iconSize: root.compact ? 13 : 15
       onTriggered: root.closeRequested()
     }
+
   }
 
-  LacunaRect {
-    width: parent.width
-    height: root.compact ? 28 : 32
-    radius: root.designTokens.material ? height / 2 : root.designTokens.controlRadius
-    color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.07)
-    border.width: 1
-    border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.14)
+  Item {
+    id: body
 
-    LacunaText {
-      visible: searchInput.text === ""
-      anchors.left: parent.left
-      anchors.leftMargin: 10
-      anchors.verticalCenter: parent.verticalCenter
-      text: "Search YouTube"
-      color: root.muted
-      fontFamily: root.bodyFontFamily
-      font.pixelSize: root.compact ? 10 : 11
-    }
-
-    TextInput {
-      id: searchInput
-      anchors.fill: parent
-      anchors.leftMargin: 10
-      anchors.rightMargin: searchButton.width + 12
-      color: root.foreground
-      selectedTextColor: root.background
-      selectionColor: root.accent
-      font.family: root.bodyFontFamily
-      font.pixelSize: root.compact ? 10 : 11
-      verticalAlignment: TextInput.AlignVCenter
-      clip: true
-      onTextChanged: root.query = text
-      Keys.onReturnPressed: root.search()
-      Keys.onEnterPressed: root.search()
-    }
-
-    LacunaIconButton {
-      id: searchButton
-      anchors.right: parent.right
-      anchors.rightMargin: 4
-      anchors.verticalCenter: parent.verticalCenter
-      icon: "search"
-      foreground: root.foreground
-      muted: root.muted
-      accent: root.accent
-      hoverAccent: root.accent
-      buttonSize: root.compact ? 22 : 24
-      buttonRadius: root.designTokens.controlRadius
-      hoverOpacity: root.designTokens.hoverOpacity
-      pressOpacity: root.designTokens.activeOpacity
-      iconSize: root.compact ? 12 : 13
-      onTriggered: root.search()
-    }
-  }
-
-  Row {
-    width: parent.width
-    height: root.compact ? 32 : 38
-    spacing: 6
-
-    LacunaIconButton {
-      icon: root.service && root.service.playing && !root.service.paused ? "player-pause" : "player-play"
-      foreground: root.foreground
-      muted: root.muted
-      accent: root.accent
-      hoverAccent: root.accent
-      buttonSize: root.compact ? 28 : 32
-      buttonRadius: root.designTokens.controlRadius
-      hoverOpacity: root.designTokens.hoverOpacity
-      pressOpacity: root.designTokens.activeOpacity
-      iconSize: root.compact ? 14 : 16
-      onTriggered: if (root.service) root.service.togglePause()
-    }
-
-    LacunaIconButton {
-      icon: "arrow-left"
-      foreground: root.foreground
-      muted: root.muted
-      accent: root.accent
-      hoverAccent: root.accent
-      buttonSize: root.compact ? 28 : 32
-      buttonRadius: root.designTokens.controlRadius
-      hoverOpacity: root.designTokens.hoverOpacity
-      pressOpacity: root.designTokens.activeOpacity
-      iconSize: root.compact ? 14 : 16
-      onTriggered: if (root.service) root.service.previousOrRestart()
-    }
-
-    LacunaIconButton {
-      icon: "chevron-right"
-      foreground: root.foreground
-      muted: root.muted
-      accent: root.accent
-      hoverAccent: root.accent
-      buttonSize: root.compact ? 28 : 32
-      buttonRadius: root.designTokens.controlRadius
-      hoverOpacity: root.designTokens.hoverOpacity
-      pressOpacity: root.designTokens.activeOpacity
-      iconSize: root.compact ? 14 : 16
-      onTriggered: if (root.service) root.service.next()
-    }
-
-    LacunaText {
-      anchors.verticalCenter: parent.verticalCenter
-      width: parent.width - 108
-      text: root.service && root.service.displayTitle ? root.service.displayTitle : (root.service ? root.service.statusText() : "Service disabled")
-      color: root.foreground
-      fontFamily: root.bodyFontFamily
-      font.pixelSize: root.compact ? 10 : 11
-      maximumLineCount: 1
-      elide: Text.ElideRight
-    }
-  }
-
-  LacunaText {
-    visible: root.service && root.service.errorText !== ""
-    width: parent.width
-    text: root.service ? root.service.errorText : ""
-    color: root.muted
-    fontFamily: root.bodyFontFamily
-    font.pixelSize: root.compact ? 9 : 10
-    maximumLineCount: 2
-    wrapMode: Text.WordWrap
-  }
-
-  LacunaScrollView {
-    id: resultScroll
     width: parent.width
     height: Math.max(0, parent.height - y)
-    spacing: root.compact ? 4 : 5
-    showEdgeMasks: true
-    edgeMaskColor: root.background
 
-    Repeater {
-      model: root.service && root.service.results ? root.service.results : []
+    Row {
+      anchors.fill: parent
+      spacing: root.compact ? 8 : 10
 
-      LacunaRect {
-        required property var modelData
-        readonly property color rowAccent: root.accent
-        width: parent.width
-        height: root.compact ? 46 : 54
-        radius: root.designTokens.radius
-        color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, rowMouse.reveal * 0.08)
-        border.width: root.designTokens.lacuna ? 0 : 1
-        border.color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, 0.22)
-        clip: true
+      SettingsRail {
+        id: tabRail
 
-        Image {
-          id: thumb
-          anchors.left: parent.left
-          anchors.leftMargin: 6
-          anchors.verticalCenter: parent.verticalCenter
-          width: root.compact ? 34 : 40
-          height: width
-          source: modelData.thumbnail || ""
-          fillMode: Image.PreserveAspectCrop
-          asynchronous: true
-          visible: source !== "" && status !== Image.Error
+        sections: [{
+          id: "search",
+          icon: "search",
+          label: "Search"
+        }, {
+          id: "queue",
+          icon: "list",
+          label: "Queue"
+        }]
+        currentSection: root.activeTab
+        compact: root.compact
+        foreground: root.foreground
+        muted: root.muted
+        accent: root.accent
+        background: root.background
+        designTokens: root.designTokens
+        showLabels: false
+        onSectionSelected: function(sectionId) {
+          root.activeTab = sectionId
+          if (sectionId === "search")
+            searchInput.forceActiveFocus()
         }
+      }
 
-        LacunaTablerIcon {
-          anchors.centerIn: thumb
-          visible: thumb.source === "" || thumb.status === Image.Error
-          name: "music"
-          color: root.accent
-          iconSize: root.compact ? 16 : 18
-        }
+      Column {
+        id: contentColumn
 
-        Column {
-          anchors.left: thumb.right
-          anchors.leftMargin: 8
-          anchors.right: actionRow.left
-          anchors.rightMargin: 6
-          anchors.verticalCenter: parent.verticalCenter
-          spacing: 2
+        width: Math.max(0, parent.width - tabRail.width - parent.spacing)
+        height: parent.height
+        spacing: root.spacing
+
+        LacunaRect {
+          visible: root.activeTab === "search"
+          height: visible ? (root.compact ? 28 : 32) : 0
+          width: parent.width
+          radius: root.designTokens.material ? height / 2 : root.designTokens.controlRadius
+          color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.07)
+          border.width: 1
+          border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.14)
 
           LacunaText {
-            width: parent.width
-            text: modelData.title || "Untitled video"
-            color: root.foreground
-            fontFamily: root.bodyFontFamily
-            font.pixelSize: root.compact ? 9 : 10
-            font.weight: Font.DemiBold
-            maximumLineCount: 1
-            elide: Text.ElideRight
-          }
-
-          LacunaText {
-            width: parent.width
-            text: [modelData.uploader || "", modelData.duration || ""].filter(function(v) { return String(v).length > 0 }).join(" / ")
+            visible: searchInput.text === ""
+            anchors.left: parent.left
+            anchors.leftMargin: 10
+            anchors.verticalCenter: parent.verticalCenter
+            text: "Search YouTube"
             color: root.muted
             fontFamily: root.bodyFontFamily
-            font.pixelSize: root.compact ? 8 : 9
-            maximumLineCount: 1
-            elide: Text.ElideRight
+            font.pixelSize: root.compact ? 10 : 11
           }
+
+          TextInput {
+            id: searchInput
+
+            anchors.fill: parent
+            anchors.leftMargin: 10
+            anchors.rightMargin: searchButton.width + 12
+            color: root.foreground
+            selectedTextColor: root.background
+            selectionColor: root.accent
+            font.family: root.bodyFontFamily
+            font.pixelSize: root.compact ? 10 : 11
+            verticalAlignment: TextInput.AlignVCenter
+            clip: true
+            onTextChanged: root.query = text
+            Keys.onReturnPressed: root.search()
+            Keys.onEnterPressed: root.search()
+          }
+
+          LacunaIconButton {
+            id: searchButton
+
+            anchors.right: parent.right
+            anchors.rightMargin: 4
+            anchors.verticalCenter: parent.verticalCenter
+            icon: "search"
+            foreground: root.foreground
+            muted: root.muted
+            accent: root.accent
+            hoverAccent: root.accent
+            buttonSize: root.compact ? 22 : 24
+            buttonRadius: root.designTokens.controlRadius
+            hoverOpacity: root.designTokens.hoverOpacity
+            pressOpacity: root.designTokens.activeOpacity
+            iconSize: root.compact ? 12 : 13
+            onTriggered: root.search()
+          }
+
         }
 
         Row {
-          id: actionRow
-          anchors.right: parent.right
-          anchors.rightMargin: 5
-          anchors.verticalCenter: parent.verticalCenter
-          spacing: 2
+          width: parent.width
+          height: root.compact ? 32 : 38
+          spacing: 6
 
           LacunaIconButton {
-            icon: "player-play"
+            icon: root.service && root.service.playing && !root.service.paused ? "player-pause" : "player-play"
+            foreground: root.foreground
+            muted: root.muted
+            accent: root.accent
+            hoverAccent: root.accent
+            buttonSize: root.compact ? 28 : 32
+            buttonRadius: root.designTokens.controlRadius
+            hoverOpacity: root.designTokens.hoverOpacity
+            pressOpacity: root.designTokens.activeOpacity
+            iconSize: root.compact ? 14 : 16
+            iconHoverScale: 1.28
+            onTriggered: {
+              if (root.service) {
+                root.service.togglePause();
+              }
+            }
+          }
+
+          LacunaIconButton {
+            icon: "player-skip-back"
+            foreground: root.foreground
+            muted: root.muted
+            accent: root.accent
+            hoverAccent: root.accent
+            buttonSize: root.compact ? 28 : 32
+            buttonRadius: root.designTokens.controlRadius
+            hoverOpacity: root.designTokens.hoverOpacity
+            pressOpacity: root.designTokens.activeOpacity
+            iconSize: root.compact ? 14 : 16
+            iconHoverScale: 1.28
+            onTriggered: {
+              if (root.service) {
+                root.service.previousOrRestart();
+              }
+            }
+          }
+
+          LacunaIconButton {
+            icon: "player-stop"
+            foreground: root.foreground
+            muted: root.muted
+            accent: root.accent
+            hoverAccent: root.accent
+            buttonSize: root.compact ? 28 : 32
+            buttonRadius: root.designTokens.controlRadius
+            hoverOpacity: root.designTokens.hoverOpacity
+            pressOpacity: root.designTokens.activeOpacity
+            iconSize: root.compact ? 14 : 16
+            iconHoverScale: 1.28
+            onTriggered: {
+              if (root.service) {
+                root.service.stop();
+              }
+            }
+          }
+
+          LacunaIconButton {
+            icon: "player-skip-forward"
+            foreground: root.foreground
+            muted: root.muted
+            accent: root.accent
+            hoverAccent: root.accent
+            buttonSize: root.compact ? 28 : 32
+            buttonRadius: root.designTokens.controlRadius
+            hoverOpacity: root.designTokens.hoverOpacity
+            pressOpacity: root.designTokens.activeOpacity
+            iconSize: root.compact ? 14 : 16
+            iconHoverScale: 1.28
+            onTriggered: {
+              if (root.service) {
+                root.service.next();
+              }
+            }
+          }
+
+          LacunaText {
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.max(0, parent.width - (root.compact ? 4 * 28 : 4 * 32) - parent.spacing * 4)
+            text: root.service && root.service.displayTitle ? root.service.displayTitle : (root.service ? root.service.statusText() : "Service disabled")
+            color: root.foreground
+            fontFamily: root.bodyFontFamily
+            font.pixelSize: root.compact ? 10 : 11
+            maximumLineCount: 1
+            elide: Text.ElideRight
+          }
+
+        }
+
+        Row {
+          visible: root.activeTab === "queue"
+          width: parent.width
+          height: visible ? (root.compact ? 26 : 30) : 0
+          spacing: 6
+
+          LacunaText {
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - clearQueueButton.width - parent.spacing
+            text: root.queueLength > 0 ? root.queueLength + " queued" : "Queue is empty"
+            color: root.muted
+            fontFamily: root.bodyFontFamily
+            font.pixelSize: root.compact ? 9 : 10
+            maximumLineCount: 1
+            elide: Text.ElideRight
+          }
+
+          LacunaIconButton {
+            id: clearQueueButton
+
+            visible: root.queueLength > 0
+            icon: "x"
             foreground: root.foreground
             muted: root.muted
             accent: root.accent
@@ -289,47 +316,435 @@ Column {
             hoverOpacity: root.designTokens.hoverOpacity
             pressOpacity: root.designTokens.activeOpacity
             iconSize: root.compact ? 12 : 13
-            onTriggered: if (root.service) root.service.playNow(modelData)
+            onTriggered: {
+              if (root.service) {
+                root.service.clearQueue();
+              }
+            }
           }
 
-          LacunaIconButton {
-            icon: "plus"
-            foreground: root.foreground
-            muted: root.muted
-            accent: root.accent
-            hoverAccent: root.accent
-            buttonSize: root.compact ? 24 : 26
-            buttonRadius: root.designTokens.controlRadius
-            hoverOpacity: root.designTokens.hoverOpacity
-            pressOpacity: root.designTokens.activeOpacity
-            iconSize: root.compact ? 12 : 13
-            onTriggered: if (root.service) root.service.addToQueue(modelData)
-          }
         }
 
-        LacunaStateLayer {
-          id: rowMouse
-          anchors.left: parent.left
-          anchors.top: parent.top
-          anchors.bottom: parent.bottom
-          anchors.right: actionRow.left
-          stateColor: root.accent
-          hoverOpacity: root.designTokens.hoverOpacity
-          pressOpacity: root.designTokens.activeOpacity
-          acceptWheel: true
-          showFill: false
-          onTriggered: if (root.service) root.service.playNow(modelData)
-          onScrolled: function(delta) { resultScroll.scrollBy(delta) }
+        LacunaText {
+          visible: root.service && root.service.errorText !== ""
+          width: parent.width
+          text: root.service ? root.service.errorText : ""
+          color: root.muted
+          fontFamily: root.bodyFontFamily
+          font.pixelSize: root.compact ? 9 : 10
+          maximumLineCount: 2
+          wrapMode: Text.WordWrap
         }
+
+        LacunaScrollView {
+          id: resultScroll
+
+          visible: root.activeTab === "search"
+          width: parent.width
+          height: visible ? Math.max(0, parent.height - y) : 0
+          spacing: root.compact ? 4 : 5
+          showEdgeMasks: true
+          edgeMaskColor: root.background
+          onContentYChanged: root.maybeLoadMoreResults()
+          onHeightChanged: {
+            if (root.service) {
+              root.service.setVisibleLimit(root.initialResultWindow);
+            }
+          }
+
+          Connections {
+            function onAllResultsChanged() {
+              if (root.service)
+                root.service.setVisibleLimit(root.initialResultWindow);
+
+            }
+
+            target: root.service
+          }
+
+          Repeater {
+            model: root.service && root.service.results ? root.service.results : []
+
+            LacunaRect {
+              required property var modelData
+              readonly property color rowAccent: root.accent
+
+              width: parent.width
+              height: root.compact ? 46 : 54
+              radius: root.designTokens.radius
+              color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, rowMouse.reveal * 0.08)
+              border.width: root.designTokens.lacuna ? 0 : 1
+              border.color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, 0.22)
+              clip: true
+
+              Image {
+                id: thumb
+
+                anchors.left: parent.left
+                anchors.leftMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                width: root.compact ? 34 : 40
+                height: width
+                source: modelData.thumbnail || ""
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                visible: source !== "" && status !== Image.Error
+              }
+
+              LacunaTablerIcon {
+                anchors.centerIn: thumb
+                visible: thumb.source === "" || thumb.status === Image.Error
+                name: "music"
+                color: root.accent
+                iconSize: root.compact ? 16 : 18
+              }
+
+              Column {
+                anchors.left: thumb.right
+                anchors.leftMargin: 8
+                anchors.right: actionRow.left
+                anchors.rightMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 2
+
+                LacunaText {
+                  width: parent.width
+                  text: modelData.title || "Untitled video"
+                  color: root.foreground
+                  fontFamily: root.bodyFontFamily
+                  font.pixelSize: root.compact ? 9 : 10
+                  font.weight: Font.DemiBold
+                  maximumLineCount: 1
+                  elide: Text.ElideRight
+                }
+
+                LacunaText {
+                  width: parent.width
+                  text: [modelData.uploader || "", modelData.duration || ""].filter(function(v) {
+                    return String(v).length > 0;
+                  }).join(" / ")
+                  color: root.muted
+                  fontFamily: root.bodyFontFamily
+                  font.pixelSize: root.compact ? 8 : 9
+                  maximumLineCount: 1
+                  elide: Text.ElideRight
+                }
+
+              }
+
+              Row {
+                id: actionRow
+
+                z: 2
+                anchors.right: parent.right
+                anchors.rightMargin: 5
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 2
+
+                LacunaIconButton {
+                  icon: "player-play"
+                  foreground: root.foreground
+                  muted: root.muted
+                  accent: root.accent
+                  hoverAccent: root.accent
+                  buttonSize: root.compact ? 24 : 26
+                  buttonRadius: root.designTokens.controlRadius
+                  hoverOpacity: root.designTokens.hoverOpacity
+                  pressOpacity: root.designTokens.activeOpacity
+                  iconSize: root.compact ? 12 : 13
+                  onTriggered: {
+                    if (root.service) {
+                      root.service.playNow(modelData);
+                    }
+                  }
+                }
+
+                LacunaIconButton {
+                  icon: "plus"
+                  foreground: root.foreground
+                  muted: root.muted
+                  accent: root.accent
+                  hoverAccent: root.accent
+                  buttonSize: root.compact ? 24 : 26
+                  buttonRadius: root.designTokens.controlRadius
+                  hoverOpacity: root.designTokens.hoverOpacity
+                  pressOpacity: root.designTokens.activeOpacity
+                  iconSize: root.compact ? 12 : 13
+                  onTriggered: {
+                    if (root.service) {
+                      root.service.addToQueue(modelData);
+                    }
+                  }
+                }
+
+              }
+
+              LacunaStateLayer {
+                id: rowMouse
+
+                z: 1
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: actionRow.left
+                stateColor: root.accent
+                hoverOpacity: root.designTokens.hoverOpacity
+                pressOpacity: root.designTokens.activeOpacity
+                acceptWheel: true
+                showFill: false
+                onTriggered: {
+                  if (root.service) {
+                    root.service.playNow(modelData);
+                  }
+                }
+                onScrolled: function(delta) {
+                  resultScroll.scrollBy(delta);
+                }
+              }
+
+            }
+
+          }
+
+          LacunaText {
+            visible: root.service && root.service.canLoadMore
+            width: parent.width
+            text: "More results below"
+            color: root.muted
+            fontFamily: root.bodyFontFamily
+            font.pixelSize: root.compact ? 8 : 9
+            horizontalAlignment: Text.AlignHCenter
+          }
+
+        }
+
+        LacunaScrollView {
+          id: queueScroll
+
+          visible: root.activeTab === "queue"
+          width: parent.width
+          height: visible ? Math.max(0, parent.height - y) : 0
+          spacing: root.compact ? 4 : 5
+          showEdgeMasks: true
+          edgeMaskColor: root.background
+
+          Repeater {
+            model: root.service && root.service.queue ? root.service.queue : []
+
+            LacunaRect {
+              required property var modelData
+              required property int index
+              readonly property color rowAccent: root.accent
+
+              width: parent.width
+              height: root.compact ? 50 : 58
+              radius: root.designTokens.radius
+              color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, queueMouse.reveal * 0.08)
+              border.width: root.designTokens.lacuna ? 0 : 1
+              border.color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, 0.22)
+              clip: true
+
+              Image {
+                id: queueThumb
+
+                anchors.left: parent.left
+                anchors.leftMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                width: root.compact ? 36 : 42
+                height: width
+                source: modelData.thumbnail || ""
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                visible: source !== "" && status !== Image.Error
+              }
+
+              LacunaTablerIcon {
+                anchors.centerIn: queueThumb
+                visible: queueThumb.source === "" || queueThumb.status === Image.Error
+                name: "music"
+                color: root.accent
+                iconSize: root.compact ? 16 : 18
+              }
+
+              Column {
+                anchors.left: queueThumb.right
+                anchors.leftMargin: 8
+                anchors.right: queueActions.left
+                anchors.rightMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 2
+
+                LacunaText {
+                  width: parent.width
+                  text: (index + 1) + ". " + (modelData.title || "Untitled video")
+                  color: root.foreground
+                  fontFamily: root.bodyFontFamily
+                  font.pixelSize: root.compact ? 9 : 10
+                  font.weight: Font.DemiBold
+                  maximumLineCount: 1
+                  elide: Text.ElideRight
+                }
+
+                LacunaText {
+                  width: parent.width
+                  text: [modelData.uploader || "", modelData.duration || ""].filter(function(v) {
+                    return String(v).length > 0;
+                  }).join(" / ")
+                  color: root.muted
+                  fontFamily: root.bodyFontFamily
+                  font.pixelSize: root.compact ? 8 : 9
+                  maximumLineCount: 1
+                  elide: Text.ElideRight
+                }
+
+              }
+
+              Row {
+                id: queueActions
+
+                z: 2
+                anchors.right: parent.right
+                anchors.rightMargin: 5
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 1
+
+                LacunaIconButton {
+                  icon: "player-play"
+                  foreground: root.foreground
+                  muted: root.muted
+                  accent: root.accent
+                  hoverAccent: root.accent
+                  buttonSize: root.compact ? 22 : 24
+                  buttonRadius: root.designTokens.controlRadius
+                  hoverOpacity: root.designTokens.hoverOpacity
+                  pressOpacity: root.designTokens.activeOpacity
+                  iconSize: root.compact ? 11 : 12
+                  onTriggered: {
+                    if (root.service) {
+                      root.service.playQueued(index);
+                    }
+                  }
+                }
+
+                LacunaIconButton {
+                  icon: "arrow-up"
+                  enabled: index > 0
+                  opacity: enabled ? 1 : 0.36
+                  foreground: root.foreground
+                  muted: root.muted
+                  accent: root.accent
+                  hoverAccent: root.accent
+                  buttonSize: root.compact ? 22 : 24
+                  buttonRadius: root.designTokens.controlRadius
+                  hoverOpacity: root.designTokens.hoverOpacity
+                  pressOpacity: root.designTokens.activeOpacity
+                  iconSize: root.compact ? 11 : 12
+                  onTriggered: {
+                    if (root.service) {
+                      root.service.moveQueued(index, -1);
+                    }
+                  }
+                }
+
+                LacunaIconButton {
+                  icon: "arrow-down"
+                  enabled: root.service && index < root.service.queue.length - 1
+                  opacity: enabled ? 1 : 0.36
+                  foreground: root.foreground
+                  muted: root.muted
+                  accent: root.accent
+                  hoverAccent: root.accent
+                  buttonSize: root.compact ? 22 : 24
+                  buttonRadius: root.designTokens.controlRadius
+                  hoverOpacity: root.designTokens.hoverOpacity
+                  pressOpacity: root.designTokens.activeOpacity
+                  iconSize: root.compact ? 11 : 12
+                  onTriggered: {
+                    if (root.service) {
+                      root.service.moveQueued(index, 1);
+                    }
+                  }
+                }
+
+                LacunaIconButton {
+                  icon: "x"
+                  foreground: root.foreground
+                  muted: root.muted
+                  accent: root.accent
+                  hoverAccent: root.accent
+                  buttonSize: root.compact ? 22 : 24
+                  buttonRadius: root.designTokens.controlRadius
+                  hoverOpacity: root.designTokens.hoverOpacity
+                  pressOpacity: root.designTokens.activeOpacity
+                  iconSize: root.compact ? 11 : 12
+                  onTriggered: {
+                    if (root.service) {
+                      root.service.removeQueued(index);
+                    }
+                  }
+                }
+
+              }
+
+              LacunaStateLayer {
+                id: queueMouse
+
+                z: 1
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: queueActions.left
+                stateColor: root.accent
+                hoverOpacity: root.designTokens.hoverOpacity
+                pressOpacity: root.designTokens.activeOpacity
+                acceptWheel: true
+                showFill: false
+                onTriggered: {
+                  if (root.service) {
+                    root.service.playQueued(index);
+                  }
+                }
+                onScrolled: function(delta) {
+                  queueScroll.scrollBy(delta);
+                }
+              }
+
+            }
+
+          }
+
+          LacunaText {
+            visible: root.queueLength === 0
+            width: parent.width
+            text: "Add tracks from Search"
+            color: root.muted
+            fontFamily: root.bodyFontFamily
+            font.pixelSize: root.compact ? 9 : 10
+            horizontalAlignment: Text.AlignHCenter
+          }
+
+        }
+
       }
+
     }
+
   }
 
   DesignTokens {
     id: fallbackDesignTokens
+
     compact: root.compact
     foreground: root.foreground
     background: root.background
     accent: root.accent
   }
+
+  Behavior on opacity {
+    LacunaAnim {
+      motion: "fast"
+    }
+
+  }
+
 }

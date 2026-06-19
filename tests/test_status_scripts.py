@@ -281,7 +281,7 @@ class YoutubeMusicScriptTests(unittest.TestCase):
         self.assertEqual(payload["error"], "")
         self.assertEqual(len(payload["results"]), 1)
         self.assertIn("--flat-playlist", argv)
-        self.assertIn("ytsearch24:demo query music official audio song", argv)
+        self.assertIn("ytsearch40:demo query music", argv)
         item = payload["results"][0]
         self.assertEqual(item["id"], "abc123")
         self.assertEqual(item["title"], "Demo Track")
@@ -339,6 +339,53 @@ class YoutubeMusicScriptTests(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual([item["id"] for item in payload["results"]], ["song1", "song2"])
 
+    def test_search_keeps_album_mix_and_live_results(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            write_exec(
+                bin_dir / "yt-dlp",
+                "#!/usr/bin/env python3\n"
+                "import json\n"
+                "rows = [\n"
+                "  {'id': 'album1', 'title': 'Small Artist - Full Album', 'uploader': 'Small Artist', 'duration': 3180},\n"
+                "  {'id': 'mix1', 'title': 'Small Artist live set mix', 'uploader': 'Small Artist', 'duration': 5420},\n"
+                "  {'id': 'stream1', 'title': 'Small Artist livestream playlist', 'uploader': 'Small Artist', 'duration': 14400},\n"
+                "  {'id': 'review1', 'title': 'Small Artist album review', 'uploader': 'Talk Channel', 'duration': 920},\n"
+                "]\n"
+                "for row in rows: print(json.dumps(row))\n",
+            )
+            result = run(
+                [sys.executable, str(self.SEARCH_SCRIPT), "--limit", "4", "small artist"],
+                {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual([item["id"] for item in payload["results"]], ["album1", "mix1", "stream1"])
+
+    def test_search_uses_large_candidate_pool_for_scroll_reveal(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            write_exec(
+                bin_dir / "yt-dlp",
+                "#!/usr/bin/env python3\n"
+                "import json, pathlib, sys\n"
+                f"pathlib.Path({str(tmp / 'argv.json')!r}).write_text(json.dumps(sys.argv))\n"
+                "for idx in range(3): print(json.dumps({'id': f'id{idx}', 'title': f'Mix {idx}', 'duration': 3600}))\n",
+            )
+            result = run(
+                [sys.executable, str(self.SEARCH_SCRIPT), "--limit", "80", "ambient mix"],
+                {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+            )
+            argv = json.loads((tmp / "argv.json").read_text())
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("ytsearch80:ambient mix music", argv)
+
     def test_search_handles_missing_ytdlp(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             result = run([sys.executable, str(self.SEARCH_SCRIPT), "demo"], {"PATH": tmpdir})
@@ -367,7 +414,7 @@ class YoutubeMusicScriptTests(unittest.TestCase):
             argv = json.loads((tmp / "argv.json").read_text())
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("18/worst[ext=mp4][acodec!=none][vcodec!=none]", " ".join(argv))
+        self.assertIn("160/worstvideo[ext=mp4][vcodec!=none]", " ".join(argv))
         payload = json.loads(result.stdout)
         self.assertEqual(payload["url"], "https://video.example/preview.mp4")
         self.assertEqual(payload["error"], "")
@@ -395,11 +442,13 @@ class YoutubeMusicScriptTests(unittest.TestCase):
 
     def test_control_start_uses_audio_cache_flags(self):
         text = self.CONTROL_SCRIPT.read_text(encoding="utf-8")
-        self.assertIn("--ytdl-format=bestaudio[ext=m4a]/bestaudio/best", text)
+        self.assertIn("--ytdl-format=18/best[height<=360][ext=mp4]/bestaudio[ext=m4a]/best", text)
         self.assertIn("--cache=yes", text)
         self.assertIn("--cache-pause-initial=yes", text)
-        self.assertIn("--demuxer-readahead-secs=90", text)
-        self.assertIn("--demuxer-max-bytes=256MiB", text)
+        self.assertIn("--cache-pause-wait=10", text)
+        self.assertIn("--cache-secs=300", text)
+        self.assertIn("--demuxer-readahead-secs=180", text)
+        self.assertIn("--demuxer-max-bytes=512MiB", text)
         self.assertIn("--audio-buffer=1", text)
         self.assertIn("--volume={args.volume}", text)
         self.assertIn("mpv.pid", text)
