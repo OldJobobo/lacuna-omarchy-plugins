@@ -13,6 +13,7 @@ Item {
   property var lastLoadedData: defaultData()
   property var pendingSave: null
   property bool pendingSaveTouchedQuickLaunch: false
+  property bool pendingSaveTouchedSidebar: false
   property string queuedSavePayload: ""
   property string lastWrittenPayload: ""
   property bool writeInFlight: false
@@ -407,10 +408,12 @@ Item {
     loaded()
     if (pendingSave) {
       var queuedTouchedQuickLaunch = pendingSaveTouchedQuickLaunch
-      var queued = mergePendingSave(lastLoadedData, pendingSave, queuedTouchedQuickLaunch)
+      var queuedTouchedSidebar = pendingSaveTouchedSidebar
+      var queued = mergePendingSave(lastLoadedData, pendingSave, queuedTouchedQuickLaunch, queuedTouchedSidebar)
       pendingSave = null
       pendingSaveTouchedQuickLaunch = false
-      save(queued, queuedTouchedQuickLaunch)
+      pendingSaveTouchedSidebar = false
+      save(queued, queuedTouchedQuickLaunch, queuedTouchedSidebar)
     }
   }
 
@@ -435,10 +438,11 @@ Item {
     }
   }
 
-  function save(next, touchedQuickLaunch) {
+  function save(next, touchedQuickLaunch, touchedSidebar) {
     if (!hasLoaded) {
       pendingSave = normalize(next)
       pendingSaveTouchedQuickLaunch = pendingSaveTouchedQuickLaunch || touchedQuickLaunch === true
+      pendingSaveTouchedSidebar = pendingSaveTouchedSidebar || touchedSidebar === true
       load()
       return
     }
@@ -448,7 +452,7 @@ Item {
     writePayload(json)
   }
 
-  function mergePendingSave(base, queued, queuedTouchedQuickLaunch) {
+  function mergePendingSave(base, queued, queuedTouchedQuickLaunch, queuedTouchedSidebar) {
     var merged = normalize(queued)
     var loadedBase = normalize(base)
 
@@ -457,6 +461,12 @@ Item {
         && loadedBase.customQuickLaunchApps && loadedBase.customQuickLaunchApps.length > 0) {
       merged.customQuickLaunchApps = loadedBase.customQuickLaunchApps
       merged.customQuickLaunchNames = loadedBase.customQuickLaunchNames || {}
+    }
+
+    if (queuedTouchedSidebar !== true
+        && JSON.stringify(merged.sidebar) === JSON.stringify(defaultData().sidebar)
+        && JSON.stringify(loadedBase.sidebar) !== JSON.stringify(defaultData().sidebar)) {
+      merged.sidebar = loadedBase.sidebar
     }
 
     return merged

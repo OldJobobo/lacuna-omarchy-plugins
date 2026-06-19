@@ -79,7 +79,7 @@ Item {
       exclusive: exclusive,
       cornerPieces: cornerPieces
     }
-    settingsService.save(next)
+    settingsService.save(next, false, true)
   }
 
   function applySettings() {
@@ -95,7 +95,9 @@ Item {
     cornerPieces = !(sidebar && sidebar.cornerPieces === false)
   }
 
-  Component.onCompleted: applySettings()
+  Component.onCompleted: {
+    if (!settingsService || settingsService.hasLoaded !== false) applySettings()
+  }
 
   Connections {
     target: root.settingsService

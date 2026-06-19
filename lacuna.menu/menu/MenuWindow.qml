@@ -195,6 +195,8 @@ Item {
     if (!lacunaEnabled) {
       pendingFlyoutFocus = ""
       panelController.closeMenu()
+    } else {
+      applyInitialSidebarDefault()
     }
   }
 
@@ -244,9 +246,24 @@ Item {
 
   function applyInitialSidebarDefault() {
     if (root.initialSidebarDefaultApplied) return
-    if (lacunaSettings && lacunaSettings.hasLoaded === false) return
+    if (!lacunaSettings || lacunaSettings.hasLoaded === false) {
+      initialSidebarDefaultRetry.restart()
+      return
+    }
+    Qt.callLater(root.applyInitialSidebarDefaultNow)
+  }
+
+  function applyInitialSidebarDefaultNow() {
+    if (root.initialSidebarDefaultApplied) return
+    if (!lacunaSettings || lacunaSettings.hasLoaded === false) {
+      initialSidebarDefaultRetry.restart()
+      return
+    }
+    if (!applySidebarDefaultState()) {
+      initialSidebarDefaultRetry.restart()
+      return
+    }
     root.initialSidebarDefaultApplied = true
-    Qt.callLater(root.applySidebarDefaultState)
   }
 
   function shellIpcCommand(target, method, args) {
@@ -423,10 +440,17 @@ Item {
     repeat: false
   }
 
-  function applySidebarDefaultState() {
-    if (!lacunaEnabled) return
+  Timer {
+    id: initialSidebarDefaultRetry
+    interval: 80
+    repeat: false
+    onTriggered: root.applyInitialSidebarDefaultNow()
+  }
 
-    var mode = sidebarState.defaultMode || "off"
+  function applySidebarDefaultState() {
+    if (!lacunaEnabled) return false
+
+    var mode = sidebarDefaultMode()
     pendingFlyoutFocus = ""
     panelController.closeActiveFlyout()
     if (menuState) {
@@ -437,17 +461,26 @@ Item {
     if (mode === "rail") {
       sidebarState.setDisplay("rail")
       panelController.openMenu()
-      return
+      return true
     }
 
     if (mode === "full") {
       sidebarState.setDisplay("full")
       panelController.openMenu()
-      return
+      return true
     }
 
     sidebarState.setDisplay("full")
     panelController.closeMenu()
+    return true
+  }
+
+  function sidebarDefaultMode() {
+    var sidebar = lacunaSettings && lacunaSettings.data && lacunaSettings.data.sidebar
+      ? lacunaSettings.data.sidebar : null
+    var mode = sidebar && sidebar.defaultMode !== undefined ? String(sidebar.defaultMode).toLowerCase() : String(sidebarState.defaultMode || "off").toLowerCase()
+    if (mode === "rail" || mode === "full") return mode
+    return "off"
   }
 
   function viewToneAccent() {
