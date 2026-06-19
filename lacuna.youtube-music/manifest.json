@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.youtube-music",
+  "name": "Lacuna YouTube Music",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Experimental Lacuna service for YouTube search, queue, and mpv playback.",
+  "kinds": [
+    "service"
+  ],
+  "activation": "persistent",
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml"
+  },
+  "defaults": {
+    "maxResults": 8,
+    "audioOnly": true,
+    "volume": 70
+  },
+  "schema": [
+    {
+      "key": "maxResults",
+      "type": "integer",
+      "label": "Search result limit",
+      "min": 3,
+      "max": 20,
+      "step": 1,
+      "defaultValue": 8
+    },
+    {
+      "key": "audioOnly",
+      "type": "boolean",
+      "label": "Audio-only playback",
+      "description": "Keep mpv from opening a separate video window. The sidebar preview uses thumbnails.",
+      "defaultValue": true
+    },
+    {
+      "key": "volume",
+      "type": "integer",
+      "label": "Stream volume",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "defaultValue": 70
+    }
+  ],
+  "lacuna": {
+    "standalone": true,
+    "bundle": "standalone",
+    "stability": "experimental",
+    "requires": [],
+    "recommends": [
+      "lacuna.menu",
+      "lacuna.audio"
+    ]
+  }
+}

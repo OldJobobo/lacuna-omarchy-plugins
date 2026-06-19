@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import shutil
+import subprocess
+import sys
+
+
+def duration_text(value):
+    try:
+        seconds = int(float(value))
+    except (TypeError, ValueError):
+        return ""
+    minutes, second = divmod(seconds, 60)
+    hours, minute = divmod(minutes, 60)
+    if hours:
+        return f"{hours}:{minute:02d}:{second:02d}"
+    return f"{minute}:{second:02d}"
+
+
+def thumbnail(entry):
+    thumbs = entry.get("thumbnails")
+    if isinstance(thumbs, list) and thumbs:
+        for item in reversed(thumbs):
+            url = item.get("url") if isinstance(item, dict) else ""
+            if url:
+                return url
+    return entry.get("thumbnail") or ""
+
+
+def normalize(entry):
+    video_id = str(entry.get("id") or entry.get("videoId") or "")
+    webpage_url = entry.get("webpage_url") or entry.get("url") or ""
+    if webpage_url and webpage_url.startswith("http"):
+        url = webpage_url
+    elif video_id:
+        url = f"https://www.youtube.com/watch?v={video_id}"
+    else:
+        url = ""
+
+    return {
+        "id": video_id,
+        "title": entry.get("title") or "Untitled video",
+        "uploader": entry.get("uploader") or entry.get("channel") or "",
+        "description": entry.get("description") or "",
+        "durationText": duration_text(entry.get("duration")),
+        "thumbnail": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg" if video_id else thumbnail(entry),
+        "url": url,
+    }
+
+
+def normalize_ytmusic(entry):
+    artists = entry.get("artists") if isinstance(entry, dict) else []
+    artist_text = ""
+    if isinstance(artists, list):
+        artist_text = ", ".join(str(item.get("name") or "") for item in artists if isinstance(item, dict) and item.get("name"))
+    thumbnails = entry.get("thumbnails")
+    thumb = ""
+    if isinstance(thumbnails, list) and thumbnails:
+        for item in reversed(thumbnails):
+            if isinstance(item, dict) and item.get("url"):
+                thumb = item["url"]
+                break
+    video_id = str(entry.get("videoId") or "")
+    return {
+        "id": video_id,
+        "title": entry.get("title") or "Untitled song",
+        "uploader": artist_text,
+        "durationText": entry.get("duration") or "",
+        "thumbnail": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg" if video_id else thumb,
+        "url": f"https://www.youtube.com/watch?v={video_id}" if video_id else "",
+        "source": "YouTube Music",
+    }
+
+
+def ytmusic_results(query, limit):
+    try:
+        from ytmusicapi import YTMusic
+    except Exception:
+        return None
+
+    try:
+        client = YTMusic()
+        rows = []
+        for item in client.search(query, filter="songs", limit=limit):
+            normalized = normalize_ytmusic(item)
+            if normalized["url"]:
+                rows.append(normalized)
+        return rows
+    except Exception:
+        return None
+
+
+def parse_duration(text):
+    if not text:
+        return None
+    parts = str(text).split(":")
+    try:
+        total = 0
+        for part in parts:
+            total = total * 60 + int(part)
+        return total
+    except ValueError:
+        return None
+
+
+def music_score(item):
+    title = str(item.get("title") or "").lower()
+    uploader = str(item.get("uploader") or "").lower()
+    description = str(item.get("description") or "").lower()
+    haystack = f"{title} {uploader} {description}"
+    score = 0
+    for term in ["official audio", "official music video", "music video", "lyrics", "lyric video", "audio", "song", "provided to youtube by"]:
+        if term in haystack:
+            score += 4
+    if " - topic" in uploader or uploader.endswith("topic"):
+        score += 8
+    if " - " in title:
+        score += 2
+    for term in ["reaction", "review", "tutorial", "podcast", "interview", "explained", "documentary", "lesson", "how to", "covering ", "ranking"]:
+        if term in haystack:
+            score -= 14
+    duration = parse_duration(item.get("durationText"))
+    if duration is not None:
+        if 45 <= duration <= 600:
+            score += 2
+        elif duration < 30 or duration > 900:
+            score -= 10
+    return score
+
+
+def disqualified(item):
+    title = str(item.get("title") or "").lower()
+    uploader = str(item.get("uploader") or "").lower()
+    description = str(item.get("description") or "").lower()
+    haystack = f"{title} {uploader} {description}"
+    duration = parse_duration(item.get("durationText"))
+    if duration is not None and duration > 1800:
+        return True
+    return any(term in haystack for term in ["reaction", "review", "tutorial", "podcast", "interview", "explained", "documentary", "lesson", "how to"])
+
+
+def filtered_music_rows(rows, limit):
+    preferred = [item for item in rows if music_score(item) >= 4]
+    fallback = [item for item in rows if item not in preferred and not disqualified(item)]
+    usable = preferred + fallback
+    if not usable:
+        usable = rows
+    for item in usable:
+        item.pop("description", None)
+    return usable[:limit]
+
+
+def ytdlp_results(ytdlp, query, limit):
+    search_limit = max(24, min(40, limit * 4))
+    music_query = f"{query} music official audio song"
+    cmd = [
+        ytdlp,
+        "--flat-playlist",
+        "--dump-json",
+        "--skip-download",
+        "--no-warnings",
+        f"ytsearch{search_limit}:{music_query}",
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15, check=False)
+    except subprocess.TimeoutExpired:
+        return [], "Search timed out"
+
+    if result.returncode != 0:
+        message = (result.stderr or result.stdout or "Search failed").strip().splitlines()
+        return [], message[-1] if message else "Search failed"
+
+    rows = []
+    for index, line in enumerate(result.stdout.splitlines()):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        item = normalize(entry)
+        if item["url"]:
+            item["_index"] = index
+            item["source"] = "YouTube"
+            rows.append(item)
+
+    rows.sort(key=lambda item: (-music_score(item), item.get("_index", 0)))
+    for item in rows:
+        item.pop("_index", None)
+    return filtered_music_rows(rows, limit), ""
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--limit", type=int, default=8)
+    parser.add_argument("query")
+    args = parser.parse_args(argv)
+
+    ytdlp = shutil.which("yt-dlp")
+    if not ytdlp:
+        print(json.dumps({"results": [], "error": "yt-dlp is not installed"}))
+        return 0
+
+    limit = max(1, min(20, args.limit))
+    query = args.query.strip()
+    if not query:
+        print(json.dumps({"results": [], "error": ""}))
+        return 0
+
+    rows = ytmusic_results(query, limit)
+    if rows is not None:
+        print(json.dumps({"results": rows[:limit], "error": ""}))
+        return 0
+
+    rows, error = ytdlp_results(ytdlp, query, limit)
+    print(json.dumps({"results": rows, "error": error}))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

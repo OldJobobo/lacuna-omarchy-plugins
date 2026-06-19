@@ -10,6 +10,7 @@ Column {
   signal expandRequested()
   signal settingsRequested()
   signal shellSettingsRequested()
+  signal youtubeMusicRequested()
 
   required property var menuState
   required property var registry
@@ -27,6 +28,7 @@ Column {
   property string bodyFontFamily: "Hack Nerd Font Propo"
   property int railWidth: 32
   property var panelWindow: null
+  property var youtubeMusicService: null
   property var tooltipTarget: null
   property string tooltipText: ""
   property color tooltipAccent: accent
@@ -120,7 +122,25 @@ Column {
 
   Item {
     width: root.railWidth
-    height: Math.max(0, root.height - y - expandButton.height - settingsDivider.height - shellSettingsButton.height - settingsButton.height - root.spacing * 4)
+    height: Math.max(0, root.height - y - (youtubeMusicButton.visible ? youtubeMusicButton.height + root.spacing : 0) - expandButton.height - settingsDivider.height - shellSettingsButton.height - settingsButton.height - root.spacing * 4)
+  }
+
+  MenuRailButton {
+    id: youtubeMusicButton
+
+    visible: root.youtubeMusicService !== null
+    height: visible ? implicitHeight : 0
+    shape: root.youtubeMusicService && root.youtubeMusicService.playing && !root.youtubeMusicService.paused ? "player-pause" : "music"
+    muted: root.muted
+    hoverAccent: root.accent
+    buttonSize: root.railWidth
+    buttonRadius: root.designTokens.controlRadius
+    hoverOpacity: root.designTokens.hoverOpacity
+    pressOpacity: root.designTokens.activeOpacity
+    iconSize: root.compact ? 16 : 18
+    onHoveredChanged: if (hovered) root.showTooltipText(this, root.youtubeMusicService && root.youtubeMusicService.displayTitle ? root.youtubeMusicService.displayTitle : "YouTube Music", root.accent)
+                    else root.hideTooltip(this)
+    onTriggered: root.youtubeMusicRequested()
   }
 
   MenuRailButton {

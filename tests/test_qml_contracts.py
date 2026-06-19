@@ -1300,6 +1300,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.wallpaper",
             "lacuna.weather",
             "lacuna.workspaces",
+            "lacuna.youtube-music",
         }
         bundle_only = set(manifests) - standalone
 

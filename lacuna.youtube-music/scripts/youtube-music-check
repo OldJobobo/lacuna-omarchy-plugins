@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+import json
+import shutil
+
+
+def main() -> int:
+    mpv = shutil.which("mpv") is not None
+    ytdlp = shutil.which("yt-dlp") is not None
+    missing = []
+    if not mpv:
+        missing.append("mpv")
+    if not ytdlp:
+        missing.append("yt-dlp")
+
+    print(json.dumps({
+        "mpv": mpv,
+        "ytdlp": ytdlp,
+        "message": "" if not missing else "Missing " + ", ".join(missing),
+    }))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

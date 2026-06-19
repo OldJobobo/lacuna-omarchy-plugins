@@ -89,13 +89,16 @@ Item {
   property int shellSettingsPanelWidth: Math.round(sizeMix(520, 440))
   readonly property bool appPickerOpen: panelController.isFlyoutOpen("appPicker")
   readonly property bool appPickerVisible: panelController.isFlyoutVisible("appPicker")
+  readonly property bool youtubeMusicOpen: panelController.isFlyoutOpen("youtubeMusic")
+  readonly property bool youtubeMusicVisible: panelController.isFlyoutVisible("youtubeMusic")
   readonly property bool flyoutOpen: panelController.flyoutOpen
   readonly property bool flyoutInteractive: panelController.flyoutInteractive
   property string appPickerMode: "customQuickLaunchApp"
   property string preferredAppPickerRole: ""
   property string shellSettingsSection: "apps"
   property int appPickerWidth: Math.round(sizeMix(300, 260))
-  readonly property int maxFlyoutLaneWidth: Math.max(settingsPanelWidth, shellSettingsPanelWidth, appPickerWidth)
+  property int youtubeMusicWidth: Math.round(sizeMix(420, 360))
+  readonly property int maxFlyoutLaneWidth: Math.max(settingsPanelWidth, shellSettingsPanelWidth, appPickerWidth, youtubeMusicWidth)
   readonly property int panelShadowBlurMax: 28
   readonly property int panelShadowOutset: frameShadow ? Math.ceil(panelShadowBlurMax + Math.abs(frameShadowOffsetX)) : 0
   readonly property string visibleFlyout: panelController.visibleFlyout
@@ -103,12 +106,14 @@ Item {
   readonly property bool activeFlyoutSettings: visibleFlyout === "settings"
   readonly property bool activeFlyoutShellSettings: visibleFlyout === "shellSettings"
   readonly property bool activeFlyoutAppPicker: visibleFlyout === "appPicker"
+  readonly property bool activeFlyoutYoutubeMusic: visibleFlyout === "youtubeMusic"
   readonly property bool renderSettingsContent: settingsPanelVisible || outgoingFlyout === "settings"
   readonly property bool renderShellSettingsContent: shellSettingsPanelVisible || outgoingFlyout === "shellSettings"
   readonly property bool renderAppPickerContent: appPickerVisible || outgoingFlyout === "appPicker"
-  readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutShellSettings ? shellSettingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : 0
-  readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutShellSettings ? shellSettingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : 0
-  readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutShellSettings ? shellSettingsFlyoutY(shellSettingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : 0
+  readonly property bool renderYoutubeMusicContent: youtubeMusicVisible || outgoingFlyout === "youtubeMusic"
+  readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutShellSettings ? shellSettingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : activeFlyoutYoutubeMusic ? youtubeMusicWidth : 0
+  readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutShellSettings ? shellSettingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : activeFlyoutYoutubeMusic ? youtubeMusicFlyoutHeight() : 0
+  readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutShellSettings ? shellSettingsFlyoutY(shellSettingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : activeFlyoutYoutubeMusic ? youtubeMusicFlyoutY(youtubeMusicFlyoutHeight()) : 0
   readonly property int frameOverlayWidth: !lacunaEnabled || barOwnsLacunaFrame || frameMode === "off" ? 0 : ((sidebarScreen ? sidebarScreen.width : 0) + 100)
   readonly property bool frameReserveActive: !barOwnsLacunaFrame && lacunaEnabled && sidebarState.exclusive && (panelController.menuRenderable || frameMode === "fullframe") && frameMode !== "off"
   readonly property bool sidebarReserveActive: lacunaEnabled && sidebarState.exclusive && panelController.menuRenderable && sidebarSurfaceVisible
@@ -156,6 +161,7 @@ Item {
   readonly property var shellSettingsSettings: lacunaSettings.data && lacunaSettings.data.shellSettings ? lacunaSettings.data.shellSettings : ({})
   readonly property string shellSettingsSurface: validShellSettingsSurface(shellSettingsSettings.surface)
   readonly property var shellSettingsService: resolveShellSettingsService()
+  readonly property var youtubeMusicService: resolveYoutubeMusicService()
   readonly property var shellHyprState: shellSettingsService && shellSettingsService.state && shellSettingsService.state.hypr ? shellSettingsService.state.hypr : ({})
   readonly property bool hyprWindowGapsDisabled: shellHyprState.windowGapsEnabled === false || (hyprGapValue(shellHyprState.gapsIn) === 0 && hyprGapValue(shellHyprState.gapsOut) === 0)
   readonly property bool reduceMotionEnabled: lacunaSettings.data && lacunaSettings.data.reduceMotion === true
@@ -222,6 +228,18 @@ Item {
       if (service) return service
     }
     return localShellSettingsService
+  }
+
+  function resolveYoutubeMusicService() {
+    if (root.shell && typeof root.shell.ensureService === "function") {
+      var ensured = root.shell.ensureService("lacuna.youtube-music")
+      if (ensured) return ensured
+    }
+    if (root.shell && typeof root.shell.serviceFor === "function") {
+      var service = root.shell.serviceFor("lacuna.youtube-music")
+      if (service) return service
+    }
+    return null
   }
 
   function applyInitialSidebarDefault() {
@@ -312,6 +330,15 @@ Item {
     return Math.min(menuWindow.height - y - designTokens.bottomInset, root.compact ? 430 : 520)
   }
 
+  function youtubeMusicFlyoutHeight() {
+    var availableHeight = menuWindow.height - barBottomY - designTokens.topInset - designTokens.bottomInset
+    return Math.max(360, Math.min(availableHeight, compact ? 520 : 600))
+  }
+
+  function youtubeMusicFlyoutY(panelHeight) {
+    return settingsFlyoutY(panelHeight)
+  }
+
   function shellSettingsFlyoutHeight() {
     var availableHeight = menuWindow.height - barBottomY - designTokens.topInset - designTokens.bottomInset
     return Math.max(360, Math.min(availableHeight, compact ? 560 : 660))
@@ -364,6 +391,11 @@ Item {
 
     if (flyout === "appPicker") {
       openCustomQuickLaunchPicker()
+      return
+    }
+
+    if (flyout === "youtubeMusic") {
+      openYoutubeMusicPanel()
     }
   }
 
@@ -573,6 +605,13 @@ Item {
     requestFlyoutFocus("appPicker")
   }
 
+  function openYoutubeMusicPanel() {
+    if (!lacunaEnabled || !youtubeMusicService) return
+    panelController.openFlyout("youtubeMusic")
+    if (sidebarState.collapsed) sidebarState.expand()
+    requestFlyoutFocus("youtubeMusic")
+  }
+
   function toggleSettingsPanel() {
     if (!lacunaEnabled) return
     panelController.toggleFlyout("settings")
@@ -646,6 +685,9 @@ Item {
     if (pendingFlyoutFocus === "" || !panelController.flyoutInteractive) return
     if (pendingFlyoutFocus === "appPicker" && appPickerOpen) {
       appPickerContent.forceSearchFocus()
+      pendingFlyoutFocus = ""
+    } else if (pendingFlyoutFocus === "youtubeMusic" && youtubeMusicOpen) {
+      youtubeMusicContent.forceSearchFocus()
       pendingFlyoutFocus = ""
     } else if (pendingFlyoutFocus === "settings" && settingsPanelOpen) {
       settingsPanel.forceActiveFocus()
@@ -1642,6 +1684,7 @@ Item {
         navAccent: root.navAccent
         muted: root.muted
         iconRailWidth: root.barControlSize
+        youtubeMusicService: root.youtubeMusicService
         onActivated: function(entry) {
           root.activate(entry)
         }
@@ -1656,6 +1699,7 @@ Item {
         }
         onSettingsRequested: root.toggleSettingsPanel()
         onShellSettingsRequested: root.toggleShellSettingsPanel()
+        onYoutubeMusicRequested: root.openYoutubeMusicPanel()
         onCollapseRequested: sidebarState.toggleCollapsed()
       }
 
@@ -1682,12 +1726,14 @@ Item {
         navAccent: root.navAccent
         muted: root.muted
         railWidth: root.railButtonWidth
+        youtubeMusicService: root.youtubeMusicService
         onExpandRequested: sidebarState.toggleCollapsed()
         onActivated: function(entry) {
           root.activate(entry)
         }
         onSettingsRequested: root.toggleSettingsPanel()
         onShellSettingsRequested: root.toggleShellSettingsPanel()
+        onYoutubeMusicRequested: root.openYoutubeMusicPanel()
       }
     }
 
@@ -1817,6 +1863,23 @@ Item {
           if (root.appPickerMode === "preferredApp") root.setPreferredApp(root.preferredAppPickerRole, appId)
           else root.addCustomQuickLaunchApp(appId)
         }
+      }
+
+      FlyoutYoutubeMusicContent {
+        id: youtubeMusicContent
+
+        anchors.fill: parent
+        service: root.youtubeMusicService
+        compact: root.compact
+        open: root.youtubeMusicOpen
+        contentVisible: root.renderYoutubeMusicContent
+        designTokens: designTokens
+        foreground: root.foreground
+        background: root.background
+        accent: root.accent
+        muted: root.muted
+        bodyFontFamily: root.bodyFontFamily
+        onCloseRequested: panelController.closeFlyout("youtubeMusic")
       }
     }
 

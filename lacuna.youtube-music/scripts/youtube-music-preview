@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+import json
+import shutil
+import subprocess
+import sys
+
+
+def main(argv=None):
+    argv = argv or sys.argv[1:]
+    if not argv:
+        print(json.dumps({"url": "", "error": "missing url"}))
+        return 1
+
+    ytdlp = shutil.which("yt-dlp")
+    if not ytdlp:
+        print(json.dumps({"url": "", "error": "yt-dlp is not installed"}))
+        return 1
+
+    cmd = [
+        ytdlp,
+        "--no-warnings",
+        "--no-playlist",
+        "--get-url",
+        "-f",
+        "18/worst[ext=mp4][acodec!=none][vcodec!=none]/worst[ext=mp4][vcodec!=none]/91/worstvideo[ext=mp4]/worstvideo",
+        argv[0],
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=12, check=False)
+    except subprocess.TimeoutExpired:
+        print(json.dumps({"url": "", "error": "preview timed out"}))
+        return 1
+
+    if result.returncode != 0:
+        message = (result.stderr or result.stdout or "preview failed").strip().splitlines()
+        print(json.dumps({"url": "", "error": message[-1] if message else "preview failed"}))
+        return 1
+
+    for line in result.stdout.splitlines():
+        url = line.strip()
+        if url.startswith("http"):
+            print(json.dumps({"url": url, "error": ""}))
+            return 0
+
+    print(json.dumps({"url": "", "error": "no preview stream"}))
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -14,6 +14,7 @@ Column {
   signal quickLaunchRemoveRequested(string appId)
   signal settingsRequested()
   signal shellSettingsRequested()
+  signal youtubeMusicRequested()
 
   required property var menuState
   required property var registry
@@ -38,6 +39,8 @@ Column {
   property string itemFontFamily: itemFont.name !== "" ? itemFont.name : "Tektur"
   property int iconRailWidth: 32
   property var designTokens: fallbackDesignTokens
+  property var youtubeMusicService: null
+  readonly property int youtubeMusicReserveHeight: youtubeMusicSlot.visible ? youtubeMusicSlot.height + root.spacing : 0
   property var collapsedSections: ({})
   property bool quickLaunchOrderingUnlocked: false
   property bool quickLaunchContextOpen: false
@@ -318,7 +321,7 @@ Column {
     id: itemFlick
 
     width: parent.width
-    height: Math.max(0, root.height - y - settingsFooter.height - root.spacing)
+    height: Math.max(0, root.height - y - root.youtubeMusicReserveHeight - settingsFooter.height - root.spacing)
     contentWidth: width
     contentHeight: itemList.implicitHeight
     clip: true
@@ -966,6 +969,23 @@ Column {
 
       }
     }
+  }
+
+  YoutubeMusicTile {
+    id: youtubeMusicSlot
+
+    width: parent.width
+    height: visible ? tileHeight : 0
+    visible: root.youtubeMusicService !== null
+    service: root.youtubeMusicService
+    compact: root.compact
+    designTokens: root.designTokens
+    foreground: root.foreground
+    background: root.background
+    accent: root.accent
+    muted: root.muted
+    bodyFontFamily: root.bodyFontFamily
+    onOpenRequested: root.youtubeMusicRequested()
   }
 
   Item {
