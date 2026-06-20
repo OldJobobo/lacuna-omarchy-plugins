@@ -8,6 +8,8 @@ jobs:
   check:
     runs-on: ubuntu-latest
     container: archlinux:latest
+    env:
+      OMARCHY_PATH: ${{ github.workspace }}/.ci/omarchy
     steps:
       - name: Install tools
         run: |
@@ -18,5 +20,12 @@ jobs:
             qt6-declarative \
             shellcheck
       - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: basecamp/omarchy
+          ref: 3d4bb9ab813d9dc469dd6311216425c7aff18199
+          path: .ci/omarchy
+      - name: Configure Qt tools
+        run: echo "/usr/lib/qt6/bin" >> "$GITHUB_PATH"
       - name: Run checks
         run: ./scripts/check.sh
