@@ -944,7 +944,22 @@ def resolve_install_selection(args: argparse.Namespace, plugins: dict[str, Plugi
     return selected
 
 
+def is_default_full_install(args: argparse.Namespace) -> bool:
+    return args.profile == "full" and not args.plugins
+
+
+def apply_full_install_defaults(args: argparse.Namespace) -> None:
+    if not is_default_full_install(args):
+        return
+    args.include_replacements = True
+    if args.activate is None:
+        args.activate = True
+    if args.apply_layout is None:
+        args.apply_layout = True
+
+
 def install(args: argparse.Namespace) -> int:
+    apply_full_install_defaults(args)
     plugins = load_plugins()
     selected = resolve_install_selection(args, plugins)
     ids = ordered(selected, plugins)
@@ -1195,11 +1210,11 @@ def menu(args: argparse.Namespace) -> int:
         args.profile = "full"
         args.plugins = []
         args.include_recommended = False
-        args.include_replacements = False
-        args.activate = False
-        args.apply_layout = False
-        print("\nFull install will stage the safe Lacuna suite disabled.")
-        print("Native Omarchy replacement widgets are opt-in: ./scripts/lacuna install --profile native --activate")
+        args.include_replacements = True
+        args.activate = True
+        args.apply_layout = True
+        print("\nFull install will stage and activate the Lacuna Bar setup.")
+        print("It will select lacuna.bar, apply the Lacuna bar layout, and restart Omarchy shell once.")
         return install(args)
     if action == "Custom install":
         args.command = "install"

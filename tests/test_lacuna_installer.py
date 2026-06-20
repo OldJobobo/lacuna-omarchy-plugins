@@ -77,20 +77,31 @@ class LacunaInstallerTests(unittest.TestCase):
 
         self.assertEqual(before, after)
 
-    def test_full_profile_excludes_legacy_and_native_replacements_by_default(self):
+    def test_full_profile_installs_and_activates_lacuna_bar_by_default(self):
         result = run_lacuna(["install", "--profile", "full", "--dry-run", "--yes"])
 
         self.assertIn("lacuna.menu-button", result.stdout)
         self.assertIn("lacuna.theme-preloader", result.stdout)
-        self.assertNotIn("lacuna.indicators", result.stdout)
-        self.assertNotIn("lacuna.audio", result.stdout)
+        self.assertIn("stage lacuna.bar ->", result.stdout)
+        self.assertIn("lacuna.clock", result.stdout)
+        self.assertIn("lacuna.audio", result.stdout)
+        self.assertIn("lacuna.tray", result.stdout)
+        self.assertIn("Activation", result.stdout)
+        self.assertIn("apply Lacuna bar host layout in shell.json", result.stdout)
+        self.assertIn("apply Lacuna bar layout in shell.json", result.stdout)
+        self.assertEqual(result.stdout.count("omarchy restart shell"), 1)
+        self.assertEqual(result.stdout.count("omarchy plugin rescan"), 0)
         self.assertNotIn("lacuna.compact-pill", result.stdout)
 
-    def test_full_profile_can_include_native_replacements(self):
-        result = run_lacuna(["install", "--profile", "full", "--include-replacements", "--dry-run", "--yes"])
+    def test_full_profile_can_stage_without_activation_or_layout(self):
+        result = run_lacuna(["install", "--profile", "full", "--no-activate", "--keep-layout", "--dry-run", "--yes"])
 
-        self.assertIn("lacuna.indicators", result.stdout)
+        self.assertIn("stage lacuna.bar ->", result.stdout)
         self.assertIn("lacuna.audio", result.stdout)
+        self.assertNotIn("Activation", result.stdout)
+        self.assertNotIn("apply Lacuna bar host layout in shell.json", result.stdout)
+        self.assertNotIn("omarchy restart shell", result.stdout)
+        self.assertIn("omarchy plugin rescan", result.stdout)
         self.assertNotIn("lacuna.compact-pill", result.stdout)
 
     def test_custom_plugin_selection_adds_required_dependencies(self):
@@ -222,7 +233,7 @@ class LacunaInstallerTests(unittest.TestCase):
 
         self.assertEqual(result, 0)
 
-    def test_menu_full_install_stages_without_activation_or_layout(self):
+    def test_menu_full_install_activates_lacuna_bar_layout(self):
         module = load_installer_module()
         args = module.normalize_args(module.parser().parse_args([]))
 
@@ -233,9 +244,9 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertEqual(result, 0)
         install_args = install.call_args.args[0]
         self.assertEqual(install_args.profile, "full")
-        self.assertIs(install_args.include_replacements, False)
-        self.assertIs(install_args.activate, False)
-        self.assertIs(install_args.apply_layout, False)
+        self.assertIs(install_args.include_replacements, True)
+        self.assertIs(install_args.activate, True)
+        self.assertIs(install_args.apply_layout, True)
 
     def test_activation_mutates_shell_config_once(self):
         module = load_installer_module()

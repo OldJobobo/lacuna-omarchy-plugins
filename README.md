@@ -53,6 +53,10 @@ Common scripted installs:
 ./scripts/lacuna install --profile native --activate
 ```
 
+The full profile is the new-machine setup path: it stages Lacuna plugins,
+selects `lacuna.bar`, applies the Lacuna bar layout, and restarts Omarchy shell
+once. Use `--no-activate --keep-layout` to stage without enabling.
+
 See [docs/install.md](docs/install.md) for install, update, uninstall, and
 manual Omarchy source workflows.
 

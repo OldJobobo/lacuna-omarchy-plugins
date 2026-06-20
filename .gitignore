@@ -8,6 +8,9 @@ htmlcov/
 .venv/
 venv/
 
+# Local tool versions
+mise.toml
+
 # Editor / OS noise
 *.swp
 *~

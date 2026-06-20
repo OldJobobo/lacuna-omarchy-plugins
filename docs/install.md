@@ -21,10 +21,10 @@ The first screen offers:
 - Uninstall Lacuna
 - Status
 
-Full install stages the safe Lacuna suite disabled, leaving native Omarchy
-bar-widget replacements opt-in. Custom install lets you pick groups or
-individual standalone plugins, then automatically includes required companions
-such as `lacuna.state` and `lacuna.shell-settings`.
+Full install stages and activates the Lacuna Bar setup, including the native
+Lacuna bar-widget replacements used by the Lacuna layout. Custom install lets
+you pick groups or individual standalone plugins, then automatically includes
+required companions such as `lacuna.state` and `lacuna.shell-settings`.
 
 ## Scripted Installs
 
@@ -32,7 +32,6 @@ such as `lacuna.state` and `lacuna.shell-settings`.
 ./scripts/lacuna install --profile full
 ./scripts/lacuna install --profile core
 ./scripts/lacuna install --profile native --activate
-./scripts/lacuna install --profile full --include-replacements
 ./scripts/lacuna install --plugin lacuna.clock,lacuna.weather
 ```
 
@@ -40,6 +39,12 @@ Preview any install without changing the system:
 
 ```bash
 ./scripts/lacuna install --profile full --dry-run
+```
+
+Stage a full install without enabling it:
+
+```bash
+./scripts/lacuna install --profile full --no-activate --keep-layout
 ```
 
 ## Update
