@@ -11,7 +11,15 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    container: archlinux:latest
     steps:
+      - name: Install tools
+        run: |
+          pacman -Syu --noconfirm --needed \
+            git \
+            python \
+            python-pytest
+
       - uses: actions/checkout@v7
 
       - name: Verify tag matches VERSION
@@ -23,14 +31,8 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.x"
-
       - name: Validate manifest/VERSION parity
-        run: |
-          python3 -m pip install pytest
-          python3 -m pytest tests/test_manifest_contracts.py -q
+        run: python3 -m pytest tests/test_manifest_contracts.py -q
 
       - name: Build archive and checksums
         run: |

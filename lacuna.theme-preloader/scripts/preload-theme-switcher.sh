@@ -35,11 +35,7 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   exit 0
 fi
 
-# shellcheck disable=SC2329
-cleanup() {
-  rmdir "$LOCK_DIR" 2>/dev/null || true
-}
-trap cleanup EXIT
+trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT
 
 json_escape() {
   local value="$1"
