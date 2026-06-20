@@ -11,6 +11,7 @@ from bar widgets and menu surfaces.
 - `lacuna.background-vignette`
 - `lacuna.cinematic-light-overlay`
 - `lacuna.crt-overlay`
+- `lacuna.god-rays-overlay`
 - `lacuna.rainfall-overlay`
 - `lacuna.vhs-overlay`
 - `lacuna.desktop-clock`

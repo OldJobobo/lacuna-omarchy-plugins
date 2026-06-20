@@ -43,6 +43,9 @@
       "cinematicLight": {
         "enabled": true
       },
+      "godRays": {
+        "enabled": true
+      },
       "crt": {
         "enabled": true
       }

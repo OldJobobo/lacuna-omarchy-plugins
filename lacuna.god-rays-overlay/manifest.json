@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.god-rays-overlay",
+  "name": "Lacuna God Rays Overlay",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Soft bottom-layer volumetric light rays for animated wallpaper ambience.",
+  "kinds": [
+    "overlay"
+  ],
+  "activation": "persistent",
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "Overlay.qml"
+  },
+  "defaults": {
+    "effectEnabled": true,
+    "intensity": 0.82,
+    "speed": 0.85,
+    "rayCount": 7,
+    "raySpread": 0.72,
+    "blurSoftness": 0.88,
+    "accentBlend": 0.58,
+    "shimmer": true,
+    "vignette": true,
+    "origin": "top-left"
+  },
+  "schema": [
+    {
+      "key": "effectEnabled",
+      "type": "boolean",
+      "label": "Effect enabled",
+      "defaultValue": true
+    },
+    {
+      "key": "intensity",
+      "type": "number",
+      "label": "Intensity",
+      "defaultValue": 0.82
+    },
+    {
+      "key": "speed",
+      "type": "number",
+      "label": "Speed",
+      "defaultValue": 0.85
+    },
+    {
+      "key": "rayCount",
+      "type": "number",
+      "label": "Ray count",
+      "defaultValue": 7
+    },
+    {
+      "key": "raySpread",
+      "type": "number",
+      "label": "Ray spread",
+      "defaultValue": 0.72
+    },
+    {
+      "key": "blurSoftness",
+      "type": "number",
+      "label": "Ray softness",
+      "defaultValue": 0.88
+    },
+    {
+      "key": "accentBlend",
+      "type": "number",
+      "label": "Accent blend",
+      "defaultValue": 0.58
+    },
+    {
+      "key": "shimmer",
+      "type": "boolean",
+      "label": "Shimmer",
+      "defaultValue": true
+    },
+    {
+      "key": "vignette",
+      "type": "boolean",
+      "label": "Vignette",
+      "defaultValue": true
+    },
+    {
+      "key": "origin",
+      "type": "string",
+      "label": "Origin",
+      "defaultValue": "top-left"
+    }
+  ],
+  "lacuna": {
+    "standalone": true,
+    "bundle": "standalone",
+    "requires": [],
+    "recommends": []
+  }
+}

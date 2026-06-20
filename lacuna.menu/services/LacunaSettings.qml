@@ -74,6 +74,9 @@ Item {
           cinematicLight: {
             enabled: true
           },
+          godRays: {
+            enabled: true
+          },
           crt: {
             enabled: true
           }
@@ -212,14 +215,15 @@ Item {
     if (!next.effects.auroraDrift) next.effects.auroraDrift = { enabled: true }
     if (!next.effects.rainfall) next.effects.rainfall = { enabled: true }
     if (!next.effects.cinematicLight) next.effects.cinematicLight = { enabled: true }
+    if (!next.effects.godRays) next.effects.godRays = { enabled: true }
     if (!next.effects.crt) next.effects.crt = { enabled: true }
     return next
   }
 
   function normalizeBackgroundEffectId(value, fallback) {
     var id = String(value || "").trim()
-    if (id === "trackingLines" || id === "auroraDrift" || id === "rainfall" || id === "cinematicLight" || id === "crt") return id
-    if (fallback === "auroraDrift" || fallback === "rainfall" || fallback === "cinematicLight" || fallback === "crt") return fallback
+    if (id === "trackingLines" || id === "auroraDrift" || id === "rainfall" || id === "cinematicLight" || id === "godRays" || id === "crt") return id
+    if (fallback === "auroraDrift" || fallback === "rainfall" || fallback === "cinematicLight" || fallback === "godRays" || fallback === "crt") return fallback
     return "trackingLines"
   }
 

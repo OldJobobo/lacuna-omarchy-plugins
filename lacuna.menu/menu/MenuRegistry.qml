@@ -204,13 +204,14 @@ Item {
       { value: "crt", label: "CRT" },
       { value: "auroraDrift", label: "Aurora" },
       { value: "rainfall", label: "Rain" },
-      { value: "cinematicLight", label: "Cinematic Light" }
+      { value: "cinematicLight", label: "Cinematic Light" },
+      { value: "godRays", label: "God Rays" }
     ]
   }
 
   function activeBackgroundEffect() {
     var effectId = root.backgroundEffects && root.backgroundEffects.activeEffect ? String(root.backgroundEffects.activeEffect) : "trackingLines"
-    if (effectId === "auroraDrift" || effectId === "rainfall" || effectId === "cinematicLight" || effectId === "crt") return effectId
+    if (effectId === "auroraDrift" || effectId === "rainfall" || effectId === "cinematicLight" || effectId === "godRays" || effectId === "crt") return effectId
     return "trackingLines"
   }
 
@@ -227,6 +228,7 @@ Item {
     if (effectId === "auroraDrift") return "Aurora Drift"
     if (effectId === "rainfall") return "Rainfall"
     if (effectId === "cinematicLight") return "Cinematic Light"
+    if (effectId === "godRays") return "God Rays"
     return "Background Effect"
   }
 
@@ -246,6 +248,9 @@ Item {
     if (effectId === "cinematicLight") {
       return activeBackgroundEffect() === effectId ? "Selected cinematic light animation" : "Cinematic light animation is available"
     }
+    if (effectId === "godRays") {
+      return activeBackgroundEffect() === effectId ? "Selected god rays animation" : "God rays animation is available"
+    }
     return backgroundEffectEnabled(effectId) ? "Effect is visible" : "Effect is hidden"
   }
 
@@ -264,6 +269,7 @@ Item {
   function backgroundEffectPluginId(effectId) {
     if (effectId === "trackingLines") return "lacuna.vhs-overlay"
     if (effectId === "crt") return "lacuna.crt-overlay"
+    if (effectId === "godRays") return "lacuna.god-rays-overlay"
     return ""
   }
 

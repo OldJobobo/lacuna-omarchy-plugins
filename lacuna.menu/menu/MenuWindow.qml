@@ -874,6 +874,7 @@ Item {
     next.backgroundEffects.effects.auroraDrift = { enabled: true }
     next.backgroundEffects.effects.rainfall = { enabled: true }
     next.backgroundEffects.effects.cinematicLight = { enabled: true }
+    next.backgroundEffects.effects.godRays = { enabled: true }
     next.backgroundEffects.effects.crt = { enabled: true }
     lacunaSettings.save(next)
 

@@ -52,6 +52,7 @@
     { "id": "lacuna.aurora-drift" },
     { "id": "lacuna.rainfall-overlay" },
     { "id": "lacuna.cinematic-light-overlay" },
+    { "id": "lacuna.god-rays-overlay" },
     { "id": "lacuna.background-vignette" },
     { "id": "lacuna.settings-persistence" },
     { "id": "lacuna.state" },

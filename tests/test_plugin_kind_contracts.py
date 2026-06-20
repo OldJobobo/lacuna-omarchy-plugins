@@ -25,6 +25,7 @@ OVERLAY_PLUGINS = [
     "lacuna.vhs-overlay",
     "lacuna.rainfall-overlay",
     "lacuna.cinematic-light-overlay",
+    "lacuna.god-rays-overlay",
     "lacuna.background-vignette",
 ]
 

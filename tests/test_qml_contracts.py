@@ -795,11 +795,13 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('auroraDrift: {', settings)
         self.assertIn('rainfall: {', settings)
         self.assertIn('cinematicLight: {', settings)
+        self.assertIn('godRays: {', settings)
         self.assertIn('crt: {', settings)
         self.assertIn('activeEffect: "trackingLines"', state_service)
         self.assertIn('auroraDrift: {', state_service)
         self.assertIn('rainfall: {', state_service)
         self.assertIn('cinematicLight: {', state_service)
+        self.assertIn('godRays: {', state_service)
         self.assertIn('crt: {', state_service)
         self.assertIn("function activeBackgroundEffect", registry)
         self.assertIn("function backgroundEffectOptions", registry)
@@ -820,6 +822,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('if (effectId === "auroraDrift") return "Aurora Drift"', registry)
         self.assertIn('if (effectId === "rainfall") return "Rainfall"', registry)
         self.assertIn('if (effectId === "cinematicLight") return "Cinematic Light"', registry)
+        self.assertIn('if (effectId === "godRays") return "God Rays"', registry)
         self.assertIn('if (effectId === "crt") return "CRT"', registry)
         self.assertIn('"toggle-background-effects"', settings_window)
         self.assertIn('"toggle-background-vignette"', settings_window)
@@ -849,6 +852,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("lacuna.aurora-drift", [entry["id"] for entry in example["plugins"]])
         self.assertIn("lacuna.rainfall-overlay", [entry["id"] for entry in example["plugins"]])
         self.assertIn("lacuna.cinematic-light-overlay", [entry["id"] for entry in example["plugins"]])
+        self.assertIn("lacuna.god-rays-overlay", [entry["id"] for entry in example["plugins"]])
         self.assertIn("lacuna.crt-overlay", [entry["id"] for entry in example["plugins"]])
         self.assertIn("lacuna.background-vignette", [entry["id"] for entry in example["plugins"]])
 
@@ -1489,6 +1493,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.codex-usage",
             "lacuna.crt-overlay",
             "lacuna.desktop-clock",
+            "lacuna.god-rays-overlay",
             "lacuna.idle-inhibitor",
             "lacuna.indicators",
             "lacuna.mpris",
