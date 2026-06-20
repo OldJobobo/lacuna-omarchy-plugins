@@ -112,8 +112,13 @@ for theme_dir in "$USER_THEMES_PATH" "$OMARCHY_THEMES_PATH"; do
 done
 
 cache_stale=false
-if [[ ! -f $FAST_SIGNATURE_FILE ]] || ! cmp -s "$FAST_SIGNATURE_FILE" <(printf '%s' "$fast_signature"); then
+if [[ ! -f $FAST_SIGNATURE_FILE ]]; then
   cache_stale=true
+else
+  previous_fast_signature=$(<"$FAST_SIGNATURE_FILE")
+  if [[ ${previous_fast_signature}$'\n' != "$fast_signature" ]]; then
+    cache_stale=true
+  fi
 fi
 
 theme_signature=""
