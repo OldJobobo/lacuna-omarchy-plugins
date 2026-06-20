@@ -31,11 +31,14 @@ Item {
   property var allResults: []
   property var queue: []
   property var history: []
+  property var favorites: []
+  property int favoritesRevision: 0
   property var currentTrack: null
   property string previewStreamUrl: ""
   property string previewRequestUrl: ""
   property string backgroundStreamUrl: ""
   property string backgroundRequestUrl: ""
+  property int backgroundRequestRevision: 0
 
   readonly property bool available: mpvAvailable && ytdlpAvailable
   readonly property string sourceDir: manifest && manifest.__sourceDir ? manifest.__sourceDir : localPath(Qt.resolvedUrl("."))
@@ -59,6 +62,8 @@ Item {
   readonly property string currentTrackUrl: trackUrl(currentTrack)
   readonly property string videoId: currentTrack && currentTrack.id ? String(currentTrack.id) : videoIdFromUrl(currentTrack && currentTrack.url ? String(currentTrack.url) : "")
   readonly property bool hasTrack: currentTrack !== null
+  readonly property int favoritesLength: favoritesRevision >= 0 ? favorites.length : 0
+  readonly property bool currentFavorite: favoritesRevision >= 0 && isFavorite(currentTrack)
 
   function localPath(url) {
     var value = String(url || "")
@@ -140,12 +145,26 @@ Item {
     return next
   }
 
+  function normalizeUniqueTrackList(rows, maximum) {
+    var source = normalizeTrackList(rows, maximum)
+    var seen = ({})
+    var next = []
+    for (var i = 0; i < source.length && next.length < maximum; i++) {
+      var url = trackUrl(source[i])
+      if (url === "" || seen[url] === true) continue
+      seen[url] = true
+      next.push(source[i])
+    }
+    return next
+  }
+
   function normalizeState(value) {
     var source = value && typeof value === "object" ? value : ({})
     return {
-      version: 1,
+      version: 2,
       queue: normalizeTrackList(source.queue, 200),
       history: normalizeTrackList(source.history, 50),
+      favorites: normalizeUniqueTrackList(source.favorites, 500),
       volume: boundedInt(source.volume, boundedInt(setting("volume", 70), 70, 0, 100), 0, 100),
       lastQuery: String(source.lastQuery || "")
     }
@@ -155,6 +174,7 @@ Item {
     return JSON.stringify(normalizeState({
       queue: queue,
       history: history,
+      favorites: favorites,
       volume: volume,
       lastQuery: lastQuery
     }), null, 2) + "\n"
@@ -172,6 +192,7 @@ Item {
     loadingState = true
     queue = restored.queue
     history = restored.history
+    favorites = restored.favorites
     volume = restored.volume
     lastQuery = restored.lastQuery
     backgroundVideoEnabled = false
@@ -192,6 +213,38 @@ Item {
 
   function sameTrack(a, b) {
     return trackUrl(a) !== "" && trackUrl(a) === trackUrl(b)
+  }
+
+  function favoriteIndex(track) {
+    var url = trackUrl(track)
+    if (url === "") return -1
+    for (var i = 0; i < favorites.length; i++) {
+      if (trackUrl(favorites[i]) === url) return i
+    }
+    return -1
+  }
+
+  function isFavorite(track) {
+    return favoriteIndex(track) >= 0
+  }
+
+  function favoriteTrack(track) {
+    var normalized = normalizeTrack(track)
+    if (!normalized || isFavorite(normalized)) return
+    var next = favorites.slice()
+    next.unshift(normalized)
+    favorites = normalizeUniqueTrackList(next, 500)
+  }
+
+  function unfavoriteTrack(track) {
+    var idx = favoriteIndex(track)
+    if (idx < 0) return
+    removeFavorite(idx)
+  }
+
+  function toggleFavorite(track) {
+    if (isFavorite(track)) unfavoriteTrack(track)
+    else favoriteTrack(track)
   }
 
   function playNormalized(normalized, rememberPrevious) {
@@ -272,6 +325,7 @@ Item {
     backgroundRequestUrl = url
     backgroundStreamUrl = ""
     resolvingBackground = true
+    backgroundRequestRevision += 1
     backgroundStartTimer.restart()
   }
 
@@ -320,6 +374,24 @@ Item {
 
   function clearQueue() {
     queue = []
+  }
+
+  function removeFavorite(index) {
+    var idx = Math.round(Number(index))
+    if (!isFinite(idx) || idx < 0 || idx >= favorites.length) return
+    var next = favorites.slice()
+    next.splice(idx, 1)
+    favorites = next
+  }
+
+  function playFavorite(index) {
+    var idx = Math.round(Number(index))
+    if (!isFinite(idx) || idx < 0 || idx >= favorites.length) return
+    playNow(favorites[idx])
+  }
+
+  function clearFavorites() {
+    favorites = []
   }
 
   function cleanupPlayback() {
@@ -372,8 +444,11 @@ Item {
 
   function setBackgroundVideoEnabled(enabled) {
     if (enabled === true) {
-      if (backgroundVideoEnabled) return
-      if (backgroundStreamUrl === "" && hasTrack) resolveBackground(currentTrack)
+      if (hasTrack && (backgroundVideoEnabled || backgroundStreamUrl === "")) resolveBackground(currentTrack)
+      if (backgroundVideoEnabled) {
+        if (playing && !paused) updatePlaybackPosition()
+        return
+      }
       if (playing && !paused) {
         pendingBackgroundEnable = true
         if (!updatePlaybackPosition()) backgroundEnableFallback.restart()
@@ -455,6 +530,10 @@ Item {
 
   onQueueChanged: scheduleStateSave()
   onHistoryChanged: scheduleStateSave()
+  onFavoritesChanged: {
+    favoritesRevision += 1
+    scheduleStateSave()
+  }
   onVolumeChanged: scheduleStateSave()
   onLastQueryChanged: scheduleStateSave()
   onBackgroundVideoEnabledChanged: if (backgroundVideoEnabled) updatePlaybackPosition()
@@ -726,7 +805,10 @@ Item {
         backgroundReady: root.backgroundStreamUrl !== "",
         backgroundResolving: root.resolvingBackground,
         backgroundUrl: root.backgroundStreamUrl,
-        queueLength: root.queue.length
+        backgroundRequestRevision: root.backgroundRequestRevision,
+        queueLength: root.queue.length,
+        favoritesLength: root.favoritesLength,
+        currentFavorite: root.currentFavorite
       })
     }
 
@@ -747,6 +829,16 @@ Item {
 
     function playNext(): string {
       root.next()
+      return status()
+    }
+
+    function toggleFavoriteCurrent(): string {
+      root.toggleFavorite(root.currentTrack)
+      return status()
+    }
+
+    function clearFavorites(): string {
+      root.clearFavorites()
       return status()
     }
   }

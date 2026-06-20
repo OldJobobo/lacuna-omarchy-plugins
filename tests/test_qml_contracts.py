@@ -34,6 +34,14 @@ class QmlContractTests(unittest.TestCase):
         # reserves the separation gap and drives the breathing glow from a Timer
         self.assertIn("implicitWidth: gapWidth", widget)
         self.assertIn("gapBreath", widget)
+        self.assertIn("readonly property int glowHeight", widget)
+        self.assertIn("seamGap + Math.round(gapBreath * barSize * 0.58)", widget)
+        self.assertIn("height: root.glowHeight", widget)
+        self.assertNotIn("readonly property color seam", widget)
+        self.assertNotIn("color: root.seam", widget)
+        self.assertIn("width: 5", widget)
+        self.assertIn("width: 3", widget)
+        self.assertIn("width: 1", widget)
         self.assertIn("Timer", widget)
         # vendored helpers travel with the plugin
         self.assertTrue((ROOT / "lacuna.bar-seam/ColorProfile.qml").exists())
@@ -725,6 +733,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("backgroundVignetteSettings()", vignette)
         self.assertIn("WlrLayer.Background", vignette)
         self.assertIn("WlrLayer.Bottom", vignette)
+
         self.assertIn("stylePreset", [entry["key"] for entry in cinematic_manifest["schema"]])
         self.assertIn("slowDrift", [entry["key"] for entry in cinematic_manifest["schema"]])
         self.assertIn("occasionalSweeps", [entry["key"] for entry in cinematic_manifest["schema"]])
@@ -842,6 +851,40 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("lacuna.cinematic-light-overlay", [entry["id"] for entry in example["plugins"]])
         self.assertIn("lacuna.crt-overlay", [entry["id"] for entry in example["plugins"]])
         self.assertIn("lacuna.background-vignette", [entry["id"] for entry in example["plugins"]])
+
+    def test_youtube_music_video_waits_for_high_res_background_stream(self):
+        overlay = read("lacuna.youtube-music-video/Overlay.qml")
+
+        self.assertIn("readonly property string highResVideoSource", overlay)
+        self.assertIn("readonly property bool waitingForHighRes", overlay)
+        self.assertIn("readonly property int backgroundRequestRevision", overlay)
+        self.assertIn("property bool fadeCoverVisible: false", overlay)
+        self.assertIn("property real fadeCoverOpacity: 0", overlay)
+        self.assertIn("property double fadeCoverStartedAt: 0", overlay)
+        self.assertIn("property int fadeRevealDelay: 0", overlay)
+        self.assertIn("property bool fadeCoverRising: false", overlay)
+        self.assertIn("property int wallpaperFadeGateDelay: 0", overlay)
+        self.assertIn("readonly property int fadeInDuration: 7000", overlay)
+        self.assertIn("readonly property int fadeOutDuration: 7000", overlay)
+        self.assertIn('WlrLayershell.namespace: "lacuna-youtube-music-video-fade"', overlay)
+        self.assertIn("WlrLayershell.layer: WlrLayer.Bottom", overlay)
+        self.assertIn("if (waitingForHighRes) holdFadeCover()", overlay)
+        self.assertIn("onBackgroundRequestRevisionChanged", overlay)
+        self.assertIn("if (fadeCoverOpacity > 0.01) releaseFadeCoverSoon()", overlay)
+        self.assertIn("fadeCoverStartedAt = Date.now()", overlay)
+        self.assertIn("fadeCoverRising = true", overlay)
+        self.assertIn("function fadeInRemaining()", overlay)
+        self.assertIn("var remainingFadeIn = fadeInRemaining()", overlay)
+        self.assertIn("wallpaperFadeGateTimer.restart()", overlay)
+        self.assertIn("fadeRevealDelay = Math.max(500, fadeInDuration - elapsed)", overlay)
+        self.assertIn("visible: true", overlay)
+        self.assertIn("interval: root.fadeRevealDelay", overlay)
+        self.assertIn("id: wallpaperFadeGateTimer", overlay)
+        self.assertIn("hwdec=auto panscan=1 start=", overlay)
+        self.assertIn("duration: root.fadeCoverOpacity > 0 ? root.fadeInDuration : root.fadeOutDuration", overlay)
+        self.assertIn("source: root.videoSource", overlay)
+        self.assertNotIn("preferredVideoSource", overlay)
+        self.assertNotIn("previewVideoSource", overlay)
 
     def test_workspace_lacuna_selected_state_has_no_fill_or_underline(self):
         qml = read("lacuna.workspaces/components/LacunaWorkspaceButton.qml")
@@ -1273,6 +1316,75 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("function drainFailures", qml, path)
             self.assertIn("onExited: root.drainFailures()", qml, path)
 
+    def test_youtube_music_favorites_are_persisted_and_exposed(self):
+        service = read("lacuna.youtube-music/Service.qml")
+
+        for snippet in [
+            "property var favorites: []",
+            "property int favoritesRevision: 0",
+            "readonly property int favoritesLength: favoritesRevision >= 0 ? favorites.length : 0",
+            "readonly property bool currentFavorite: favoritesRevision >= 0 && isFavorite(currentTrack)",
+            "version: 2",
+            "favorites: normalizeUniqueTrackList(source.favorites, 500)",
+            "favorites: favorites",
+            "favorites = restored.favorites",
+            "function normalizeUniqueTrackList",
+            "function favoriteIndex(track)",
+            "function isFavorite(track)",
+            "function favoriteTrack(track)",
+            "function unfavoriteTrack(track)",
+            "function toggleFavorite(track)",
+            "function removeFavorite(index)",
+            "function playFavorite(index)",
+            "function clearFavorites()",
+            "property int backgroundRequestRevision: 0",
+            "backgroundRequestRevision += 1",
+            "if (hasTrack && (backgroundVideoEnabled || backgroundStreamUrl === \"\")) resolveBackground(currentTrack)",
+            "backgroundRequestRevision: root.backgroundRequestRevision",
+            "onFavoritesChanged: {",
+            "favoritesRevision += 1",
+            "favoritesLength: root.favoritesLength",
+            "currentFavorite: root.currentFavorite",
+            "function toggleFavoriteCurrent(): string",
+        ]:
+            self.assertIn(snippet, service)
+
+    def test_youtube_music_favorites_are_available_in_menu_ui(self):
+        flyout = read("lacuna.menu/menu/FlyoutYoutubeMusicContent.qml")
+        tile = read("lacuna.menu/menu/YoutubeMusicTile.qml")
+        icons = read("lacuna.menu/components/LacunaTablerIcon.qml")
+
+        for snippet in [
+            'id: "favorites"',
+            'icon: "heart"',
+            'label: "Favorites"',
+            "readonly property int favoritesLength",
+            "readonly property int favoritesRevision",
+            "function isFavorite(track)",
+            "var revision = favoritesRevision",
+            "root.service.clearFavorites()",
+            "root.service.toggleFavorite(modelData)",
+            "root.service.playFavorite(index)",
+            "root.service.removeFavorite(index)",
+            "Favorite tracks from Search or Queue",
+            "id: favoritesScroll",
+            "id: headerFavoriteButton",
+            "showLabels: false",
+            "model: root.favoritesRevision >= 0 && root.service && root.service.favorites ? root.service.favorites : []",
+        ]:
+            self.assertIn(snippet, flyout)
+
+        self.assertIn('icon: root.service && root.service.currentFavorite ? "heart-filled" : "heart"', flyout)
+        self.assertIn('icon: root.currentFavorite ? "heart-filled" : "heart"', tile)
+        self.assertIn("readonly property int favoritesRevision", tile)
+        self.assertIn("id: tileFavoriteButton", tile)
+        self.assertIn("anchors.right: parent.right", tile)
+        self.assertIn("anchors.rightMargin: root.tileInset + tileFavoriteButton.width", tile)
+        self.assertIn("root.service.toggleFavorite(root.service.currentTrack)", tile)
+        self.assertIn("root.service.setBackgroundVideoEnabled(true)", tile)
+        self.assertIn('name === "heart-filled"', icons)
+        self.assertIn('if (icon === "heart" || icon === "heart-filled")', icons)
+
     def test_lacuna_manifest_metadata_describes_install_groups(self):
         manifests = {
             path.parent.name: json.loads(path.read_text(encoding="utf-8"))
@@ -1313,6 +1425,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.weather",
             "lacuna.workspaces",
             "lacuna.youtube-music",
+            "lacuna.youtube-music-video",
         }
         bundle_only = set(manifests) - standalone
 

@@ -4,7 +4,7 @@
   "name": "Lacuna Bar Seam",
   "version": "0.1.0",
   "author": "Lacuna",
-  "description": "A breathing gap-seam separator that brackets a cluster of bar widgets (the lacuna mark).",
+  "description": "A breathing pulse separator that brackets a cluster of bar widgets (the lacuna mark).",
   "kinds": [
     "bar-widget"
   ],
@@ -14,7 +14,7 @@
   },
   "barWidget": {
     "displayName": "Lacuna Seam",
-    "description": "Vertical breathing gap-seam used to separate bar widget clusters by space.",
+    "description": "Vertical breathing pulse used to separate bar widget clusters by space.",
     "category": "Lacuna",
     "allowMultiple": true,
     "defaults": {
@@ -37,7 +37,7 @@
         "key": "seamGap",
         "type": "integer",
         "label": "Seam break (px)",
-        "description": "Vertical break in the seam line (the lacuna gap mark). 0 = solid line.",
+        "description": "Height reference for the centered pulse mark.",
         "min": 0,
         "step": 2,
         "defaultValue": 12

@@ -23,6 +23,8 @@ Column {
   readonly property int resultPageSize: Math.max(8, Math.ceil(resultScroll.height / (resultRowHeight + resultScroll.spacing)))
   readonly property int initialResultWindow: resultPageSize * 2
   readonly property int queueLength: service && service.queue ? service.queue.length : 0
+  readonly property int favoritesRevision: service && service.favoritesRevision !== undefined ? Number(service.favoritesRevision) : 0
+  readonly property int favoritesLength: service && service.favoritesLength !== undefined ? Number(service.favoritesLength) : 0
 
   signal closeRequested()
 
@@ -39,6 +41,11 @@ Column {
 
   function durationText(track) {
     return track && track.duration ? String(track.duration) : ""
+  }
+
+  function isFavorite(track) {
+    var revision = favoritesRevision
+    return service && revision >= 0 && service.isFavorite(track)
   }
 
   function maybeLoadMoreResults() {
@@ -61,13 +68,35 @@ Column {
     spacing: 8
 
     LacunaText {
-      width: parent.width - closeButton.width - parent.spacing
+      width: parent.width - headerFavoriteButton.width - closeButton.width - parent.spacing * 2
       anchors.verticalCenter: parent.verticalCenter
       text: "YouTube Music"
       color: root.foreground
       fontFamily: "Tektur"
       font.pixelSize: root.compact ? 13 : 15
       font.weight: Font.DemiBold
+    }
+
+    LacunaIconButton {
+      id: headerFavoriteButton
+
+      icon: root.service && root.service.currentFavorite ? "heart-filled" : "heart"
+      disabled: !root.service || !root.service.hasTrack
+      opacity: disabled ? 0.42 : 1
+      foreground: root.foreground
+      muted: root.service && root.service.currentFavorite ? root.accent : root.muted
+      accent: root.accent
+      hoverAccent: root.accent
+      buttonSize: root.compact ? 24 : 28
+      buttonRadius: root.designTokens.controlRadius
+      hoverOpacity: root.designTokens.hoverOpacity
+      pressOpacity: root.designTokens.activeOpacity
+      iconSize: root.compact ? 13 : 15
+      onTriggered: {
+        if (root.service) {
+          root.service.toggleFavorite(root.service.currentTrack);
+        }
+      }
     }
 
     LacunaIconButton {
@@ -109,6 +138,10 @@ Column {
           id: "queue",
           icon: "list",
           label: "Queue"
+        }, {
+          id: "favorites",
+          icon: "heart",
+          label: "Favorites"
         }]
         currentSection: root.activeTab
         compact: root.compact
@@ -272,9 +305,30 @@ Column {
             }
           }
 
+          LacunaIconButton {
+            icon: root.service && root.service.currentFavorite ? "heart-filled" : "heart"
+            disabled: !root.service || !root.service.hasTrack
+            opacity: disabled ? 0.36 : 1
+            foreground: root.foreground
+            muted: root.service && root.service.currentFavorite ? root.accent : root.muted
+            accent: root.accent
+            hoverAccent: root.accent
+            buttonSize: root.compact ? 28 : 32
+            buttonRadius: root.designTokens.controlRadius
+            hoverOpacity: root.designTokens.hoverOpacity
+            pressOpacity: root.designTokens.activeOpacity
+            iconSize: root.compact ? 14 : 16
+            iconHoverScale: 1.28
+            onTriggered: {
+              if (root.service) {
+                root.service.toggleFavorite(root.service.currentTrack);
+              }
+            }
+          }
+
           LacunaText {
             anchors.verticalCenter: parent.verticalCenter
-            width: Math.max(0, parent.width - (root.compact ? 4 * 28 : 4 * 32) - parent.spacing * 4)
+            width: Math.max(0, parent.width - (root.compact ? 5 * 28 : 5 * 32) - parent.spacing * 5)
             text: root.service && root.service.displayTitle ? root.service.displayTitle : (root.service ? root.service.statusText() : "Service disabled")
             color: root.foreground
             fontFamily: root.bodyFontFamily
@@ -286,15 +340,17 @@ Column {
         }
 
         Row {
-          visible: root.activeTab === "queue"
+          visible: root.activeTab === "queue" || root.activeTab === "favorites"
           width: parent.width
           height: visible ? (root.compact ? 26 : 30) : 0
           spacing: 6
 
           LacunaText {
             anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - clearQueueButton.width - parent.spacing
-            text: root.queueLength > 0 ? root.queueLength + " queued" : "Queue is empty"
+            width: parent.width - clearListButton.width - parent.spacing
+            text: root.activeTab === "favorites"
+              ? (root.favoritesLength > 0 ? root.favoritesLength + " favorites" : "Favorites are empty")
+              : (root.queueLength > 0 ? root.queueLength + " queued" : "Queue is empty")
             color: root.muted
             fontFamily: root.bodyFontFamily
             font.pixelSize: root.compact ? 9 : 10
@@ -303,9 +359,9 @@ Column {
           }
 
           LacunaIconButton {
-            id: clearQueueButton
+            id: clearListButton
 
-            visible: root.queueLength > 0
+            visible: root.activeTab === "favorites" ? root.favoritesLength > 0 : root.queueLength > 0
             icon: "x"
             foreground: root.foreground
             muted: root.muted
@@ -317,7 +373,9 @@ Column {
             pressOpacity: root.designTokens.activeOpacity
             iconSize: root.compact ? 12 : 13
             onTriggered: {
-              if (root.service) {
+              if (root.service && root.activeTab === "favorites") {
+                root.service.clearFavorites();
+              } else if (root.service) {
                 root.service.clearQueue();
               }
             }
@@ -366,7 +424,10 @@ Column {
             model: root.service && root.service.results ? root.service.results : []
 
             LacunaRect {
+              id: resultRow
+
               required property var modelData
+              readonly property bool favorite: root.isFavorite(modelData)
               readonly property color rowAccent: root.accent
 
               width: parent.width
@@ -440,6 +501,24 @@ Column {
                 anchors.rightMargin: 5
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 2
+
+                LacunaIconButton {
+                  icon: resultRow.favorite ? "heart-filled" : "heart"
+                  foreground: root.foreground
+                  muted: resultRow.favorite ? root.accent : root.muted
+                  accent: root.accent
+                  hoverAccent: root.accent
+                  buttonSize: root.compact ? 24 : 26
+                  buttonRadius: root.designTokens.controlRadius
+                  hoverOpacity: root.designTokens.hoverOpacity
+                  pressOpacity: root.designTokens.activeOpacity
+                  iconSize: root.compact ? 12 : 13
+                  onTriggered: {
+                    if (root.service) {
+                      root.service.toggleFavorite(modelData);
+                    }
+                  }
+                }
 
                 LacunaIconButton {
                   icon: "player-play"
@@ -532,8 +611,11 @@ Column {
             model: root.service && root.service.queue ? root.service.queue : []
 
             LacunaRect {
+              id: queueRow
+
               required property var modelData
               required property int index
+              readonly property bool favorite: root.isFavorite(modelData)
               readonly property color rowAccent: root.accent
 
               width: parent.width
@@ -607,6 +689,24 @@ Column {
                 anchors.rightMargin: 5
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 1
+
+                LacunaIconButton {
+                  icon: queueRow.favorite ? "heart-filled" : "heart"
+                  foreground: root.foreground
+                  muted: queueRow.favorite ? root.accent : root.muted
+                  accent: root.accent
+                  hoverAccent: root.accent
+                  buttonSize: root.compact ? 22 : 24
+                  buttonRadius: root.designTokens.controlRadius
+                  hoverOpacity: root.designTokens.hoverOpacity
+                  pressOpacity: root.designTokens.activeOpacity
+                  iconSize: root.compact ? 11 : 12
+                  onTriggered: {
+                    if (root.service) {
+                      root.service.toggleFavorite(modelData);
+                    }
+                  }
+                }
 
                 LacunaIconButton {
                   icon: "player-play"
@@ -717,6 +817,191 @@ Column {
             visible: root.queueLength === 0
             width: parent.width
             text: "Add tracks from Search"
+            color: root.muted
+            fontFamily: root.bodyFontFamily
+            font.pixelSize: root.compact ? 9 : 10
+            horizontalAlignment: Text.AlignHCenter
+          }
+
+        }
+
+        LacunaScrollView {
+          id: favoritesScroll
+
+          visible: root.activeTab === "favorites"
+          width: parent.width
+          height: visible ? Math.max(0, parent.height - y) : 0
+          spacing: root.compact ? 4 : 5
+          showEdgeMasks: true
+          edgeMaskColor: root.background
+
+          Repeater {
+            model: root.favoritesRevision >= 0 && root.service && root.service.favorites ? root.service.favorites : []
+
+            LacunaRect {
+              required property var modelData
+              required property int index
+              readonly property color rowAccent: root.accent
+
+              width: parent.width
+              height: root.compact ? 50 : 58
+              radius: root.designTokens.radius
+              color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, favoriteMouse.reveal * 0.08)
+              border.width: root.designTokens.lacuna ? 0 : 1
+              border.color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, 0.22)
+              clip: true
+
+              Image {
+                id: favoriteThumb
+
+                anchors.left: parent.left
+                anchors.leftMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                width: root.compact ? 36 : 42
+                height: width
+                source: modelData.thumbnail || ""
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                visible: source !== "" && status !== Image.Error
+              }
+
+              LacunaTablerIcon {
+                anchors.centerIn: favoriteThumb
+                visible: favoriteThumb.source === "" || favoriteThumb.status === Image.Error
+                name: "heart-filled"
+                color: root.accent
+                iconSize: root.compact ? 16 : 18
+              }
+
+              Column {
+                anchors.left: favoriteThumb.right
+                anchors.leftMargin: 8
+                anchors.right: favoriteActions.left
+                anchors.rightMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 2
+
+                LacunaText {
+                  width: parent.width
+                  text: modelData.title || "Untitled video"
+                  color: root.foreground
+                  fontFamily: root.bodyFontFamily
+                  font.pixelSize: root.compact ? 9 : 10
+                  font.weight: Font.DemiBold
+                  maximumLineCount: 1
+                  elide: Text.ElideRight
+                }
+
+                LacunaText {
+                  width: parent.width
+                  text: [modelData.uploader || "", modelData.duration || ""].filter(function(v) {
+                    return String(v).length > 0;
+                  }).join(" / ")
+                  color: root.muted
+                  fontFamily: root.bodyFontFamily
+                  font.pixelSize: root.compact ? 8 : 9
+                  maximumLineCount: 1
+                  elide: Text.ElideRight
+                }
+
+              }
+
+              Row {
+                id: favoriteActions
+
+                z: 2
+                anchors.right: parent.right
+                anchors.rightMargin: 5
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 1
+
+                LacunaIconButton {
+                  icon: "player-play"
+                  foreground: root.foreground
+                  muted: root.muted
+                  accent: root.accent
+                  hoverAccent: root.accent
+                  buttonSize: root.compact ? 22 : 24
+                  buttonRadius: root.designTokens.controlRadius
+                  hoverOpacity: root.designTokens.hoverOpacity
+                  pressOpacity: root.designTokens.activeOpacity
+                  iconSize: root.compact ? 11 : 12
+                  onTriggered: {
+                    if (root.service) {
+                      root.service.playFavorite(index);
+                    }
+                  }
+                }
+
+                LacunaIconButton {
+                  icon: "plus"
+                  foreground: root.foreground
+                  muted: root.muted
+                  accent: root.accent
+                  hoverAccent: root.accent
+                  buttonSize: root.compact ? 22 : 24
+                  buttonRadius: root.designTokens.controlRadius
+                  hoverOpacity: root.designTokens.hoverOpacity
+                  pressOpacity: root.designTokens.activeOpacity
+                  iconSize: root.compact ? 11 : 12
+                  onTriggered: {
+                    if (root.service) {
+                      root.service.addToQueue(modelData);
+                    }
+                  }
+                }
+
+                LacunaIconButton {
+                  icon: "x"
+                  foreground: root.foreground
+                  muted: root.muted
+                  accent: root.accent
+                  hoverAccent: root.accent
+                  buttonSize: root.compact ? 22 : 24
+                  buttonRadius: root.designTokens.controlRadius
+                  hoverOpacity: root.designTokens.hoverOpacity
+                  pressOpacity: root.designTokens.activeOpacity
+                  iconSize: root.compact ? 11 : 12
+                  onTriggered: {
+                    if (root.service) {
+                      root.service.removeFavorite(index);
+                    }
+                  }
+                }
+
+              }
+
+              LacunaStateLayer {
+                id: favoriteMouse
+
+                z: 1
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: favoriteActions.left
+                stateColor: root.accent
+                hoverOpacity: root.designTokens.hoverOpacity
+                pressOpacity: root.designTokens.activeOpacity
+                acceptWheel: true
+                showFill: false
+                onTriggered: {
+                  if (root.service) {
+                    root.service.playFavorite(index);
+                  }
+                }
+                onScrolled: function(delta) {
+                  favoritesScroll.scrollBy(delta);
+                }
+              }
+
+            }
+
+          }
+
+          LacunaText {
+            visible: root.favoritesLength === 0
+            width: parent.width
+            text: "Favorite tracks from Search or Queue"
             color: root.muted
             fontFamily: root.bodyFontFamily
             font.pixelSize: root.compact ? 9 : 10

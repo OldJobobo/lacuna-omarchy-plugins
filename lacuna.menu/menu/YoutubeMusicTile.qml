@@ -32,6 +32,8 @@ Item {
   readonly property string thumbnail: service && service.thumbnail ? String(service.thumbnail) : ""
   readonly property string previewUrl: service && service.previewStreamUrl ? String(service.previewStreamUrl) : ""
   readonly property bool previewActive: previewUrl !== ""
+  readonly property int favoritesRevision: service && service.favoritesRevision !== undefined ? Number(service.favoritesRevision) : 0
+  readonly property bool currentFavorite: favoritesRevision >= 0 && service && service.currentFavorite === true
   readonly property int streamVolume: service && service.volume !== undefined ? Number(service.volume) : 70
   readonly property int tileInset: compact ? 8 : 10
   readonly property int previewWidth: Math.max(120, width - (tileInset * 2))
@@ -110,6 +112,30 @@ Item {
       onTriggered: root.openRequested()
     }
 
+    LacunaIconButton {
+      id: tileFavoriteButton
+
+      z: 4
+      anchors.top: parent.top
+      anchors.topMargin: root.tileInset
+      anchors.right: parent.right
+      anchors.rightMargin: root.tileInset
+      icon: root.currentFavorite ? "heart-filled" : "heart"
+      disabled: !root.hasTrack
+      opacity: disabled ? 0.42 : 1
+      foreground: root.foreground
+      muted: root.currentFavorite ? root.accent : root.muted
+      accent: root.accent
+      hoverAccent: root.accent
+      buttonSize: root.compact ? 24 : 26
+      buttonRadius: root.designTokens.controlRadius
+      hoverOpacity: root.designTokens.hoverOpacity
+      pressOpacity: root.designTokens.activeOpacity
+      iconSize: root.compact ? 13 : 14
+      iconHoverScale: 1.28
+      onTriggered: if (root.service) root.service.toggleFavorite(root.service.currentTrack)
+    }
+
     Rectangle {
       id: previewFrame
       anchors.top: parent.top
@@ -177,6 +203,7 @@ Item {
           id: infoColumn
           anchors.left: parent.left
           anchors.right: parent.right
+          anchors.rightMargin: root.tileInset + tileFavoriteButton.width
           anchors.top: parent.top
           spacing: root.compact ? 1 : 2
 
@@ -280,7 +307,7 @@ Item {
             pressOpacity: root.designTokens.activeOpacity
             iconSize: root.compact ? 13 : 14
             iconHoverScale: 1.28
-            onTriggered: if (root.service) root.service.toggleBackgroundVideo()
+            onTriggered: if (root.service) root.service.setBackgroundVideoEnabled(true)
           }
 
           LacunaIconButton {

@@ -1,9 +1,8 @@
 import QtQuick
 
-// A vertical gap-seam that brackets a cluster of bar widgets. Separation is
-// done by space (gapWidth reserves the room); the seam is a thin theme-derived
-// line broken by a centered gap (the lacuna mark), with a slow breathing accent
-// glow in the break — mirroring the menu header's gap glow (MenuHeader.qml).
+// A vertical pulse marker that brackets a cluster of bar widgets. Separation is
+// done by space (gapWidth reserves the room); only the slow breathing accent
+// glow is painted, mirroring the menu header's gap glow (MenuHeader.qml).
 Item {
   id: root
 
@@ -14,13 +13,13 @@ Item {
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color accent: bar && bar.accent ? bar.accent : foreground
-  // Seam role: ink @ 0.18 (docs/lacuna-design-system/01-color.md).
-  readonly property color seam: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.18)
-
   // Reserved horizontal space — this is the "island" gap separating clusters.
   readonly property int gapWidth: Math.max(8, Number(setting("gapWidth", 28)))
-  // Vertical break in the seam line — the lacuna gap mark.
+  // Height reference for the pulse mark.
   readonly property int seamGap: Math.max(0, Number(setting("seamGap", 12)))
+  // Keep the physical line break compact while letting the vertical glow
+  // breathe farther along the divider.
+  readonly property int glowHeight: Math.min(barSize, Math.max(10, seamGap + Math.round(gapBreath * barSize * 0.58)))
   readonly property bool breathing: setting("breathing", true) !== false
                                     && String(setting("breathing", "true")) !== "false"
 
@@ -45,39 +44,13 @@ Item {
     id: motionTokens
   }
 
-  // The seam line: a vertical hairline broken by a centered gap.
-  Item {
-    anchors.centerIn: parent
-    width: 1
-    height: root.barSize
-
-    readonly property int gap: root.seamGap
-
-    Rectangle {
-      anchors.top: parent.top
-      anchors.horizontalCenter: parent.horizontalCenter
-      width: 1
-      height: parent.gap > 0 ? (parent.height - parent.gap) / 2 : parent.height
-      color: root.seam
-    }
-
-    Rectangle {
-      visible: parent.gap > 0
-      anchors.bottom: parent.bottom
-      anchors.horizontalCenter: parent.horizontalCenter
-      width: 1
-      height: (parent.height - parent.gap) / 2
-      color: root.seam
-    }
-  }
-
-  // The breathing glow, centered in the gap — a layered vertical streak that
+  // The breathing glow — a layered vertical streak that
   // fades in/out, matching the menu's signature gap motion.
   Item {
     visible: root.seamGap > 0
     anchors.centerIn: parent
     width: 6
-    height: Math.max(6, root.seamGap)
+    height: root.glowHeight
 
     Rectangle {
       anchors.centerIn: parent
@@ -99,9 +72,9 @@ Item {
 
     Rectangle {
       anchors.centerIn: parent
-      width: 2
+      width: 1
       height: Math.max(4, Math.round(parent.height * 0.3))
-      radius: 1
+      radius: 0.5
       color: root.accent
       opacity: 0.28 + root.gapBreath * 0.62
     }

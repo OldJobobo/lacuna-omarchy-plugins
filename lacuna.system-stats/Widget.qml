@@ -49,7 +49,8 @@ Item {
   }
 
   function parseCpu(raw) {
-    var fields = String(raw || "").trim().split(/\s+/)
+    var firstLine = String(raw || "").split("\n")[0]
+    var fields = firstLine.trim().split(/\s+/)
     if (fields.length < 8 || fields[0] !== "cpu") return
     var idle = Number(fields[4] || 0) + Number(fields[5] || 0)
     var total = 0

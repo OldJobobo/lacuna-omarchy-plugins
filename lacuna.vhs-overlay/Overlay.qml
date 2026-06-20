@@ -25,7 +25,7 @@ Item {
   readonly property real effectiveIntensity: runtimeIntensity >= 0 ? clamp(runtimeIntensity, 0, 1) : configuredIntensity
   readonly property real speed: clamp(numberSetting("speed", 1), 0.15, 4)
   readonly property int lineSpacing: Math.max(2, Math.min(12, Math.round(numberSetting("lineSpacing", 4))))
-  readonly property int trackingBands: Math.max(0, Math.min(7, Math.round(numberSetting("trackingBands", 4))))
+  readonly property int trackingBands: Math.max(0, Math.min(7, Math.round(numberSetting("trackingBands", 2))))
   readonly property real noiseAmount: clamp(numberSetting("noiseAmount", 0.42), 0, 1)
   readonly property real glitchAmount: clamp(numberSetting("glitchAmount", 0.34), 0, 1)
   readonly property bool chromaBleed: boolSetting("chromaBleed", true)
@@ -235,14 +235,14 @@ Item {
             y: -bandHeight
             width: vhsWindow.width
             height: bandHeight
-            opacity: 0.72
+            opacity: 0.18
 
             SequentialAnimation on y {
               loops: Animation.Infinite
               running: root.effectVisible
 
               PauseAnimation {
-                duration: 1200 + index * 1750
+                duration: 7200 + index * 5200
               }
 
               NumberAnimation {
@@ -256,7 +256,7 @@ Item {
             Rectangle {
               anchors.fill: parent
               color: "transparent"
-              opacity: 0.8
+              opacity: 0.24
               gradient: Gradient {
                 orientation: Gradient.Vertical
                 GradientStop {
@@ -265,15 +265,15 @@ Item {
                 }
                 GradientStop {
                   position: 0.26
-                  color: "#24ffffff"
+                  color: "#08ffffff"
                 }
                 GradientStop {
                   position: 0.5
-                  color: "#58ffffff"
+                  color: "#10ffffff"
                 }
                 GradientStop {
                   position: 0.74
-                  color: "#28000000"
+                  color: "#08000000"
                 }
                 GradientStop {
                   position: 1
@@ -288,7 +288,7 @@ Item {
               width: parent.width + 48
               height: 2
               color: "#ffffff"
-              opacity: 0.62
+              opacity: 0.12
             }
 
             Rectangle {
@@ -297,7 +297,7 @@ Item {
               width: parent.width - 36
               height: 1
               color: "#06080b"
-              opacity: 0.58
+              opacity: 0.1
             }
 
             Rectangle {
@@ -307,7 +307,7 @@ Item {
               width: parent.width + 10
               height: 1
               color: "#48f1ff"
-              opacity: 0.52
+              opacity: 0.09
             }
 
             Rectangle {
@@ -317,7 +317,7 @@ Item {
               width: parent.width - 12
               height: 1
               color: "#ff4568"
-              opacity: 0.42
+              opacity: 0.08
             }
           }
         }

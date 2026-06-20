@@ -18,8 +18,11 @@ LacunaRect {
   property int buttonRadius: 0
   property real hoverOpacity: 0.06
   property real pressOpacity: 0.11
+  property real iconHoverScale: 1
   property string fontFamily: tokens.monoFont
   readonly property bool hovered: stateLayer.containsMouse
+  readonly property real visualScale: 1 + stateLayer.reveal * Math.max(0, iconHoverScale - 1)
+  readonly property bool growsOnHover: iconHoverScale > 1
 
   implicitWidth: buttonSize
   implicitHeight: buttonSize
@@ -27,6 +30,20 @@ LacunaRect {
   height: implicitHeight
   radius: buttonRadius
   clip: true
+  color: growsOnHover ? Qt.rgba(hoverAccent.r, hoverAccent.g, hoverAccent.b, stateLayer.reveal * 0.16) : "transparent"
+  border.width: growsOnHover && stateLayer.reveal > 0 ? 1 : 0
+  border.color: Qt.rgba(hoverAccent.r, hoverAccent.g, hoverAccent.b, 0.34)
+  y: growsOnHover ? -stateLayer.reveal * 2 : 0
+  scale: visualScale
+  transformOrigin: Item.Center
+
+  Behavior on y {
+    LacunaAnim { motion: "fast" }
+  }
+
+  Behavior on scale {
+    LacunaAnim { motion: "fast" }
+  }
 
   Image {
     id: iconImage
