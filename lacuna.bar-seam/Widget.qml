@@ -11,10 +11,11 @@ Item {
   property var settings: ({})
 
   readonly property int barSize: bar ? bar.barSize : 26
+  readonly property bool compact: bar && !bar.vertical && barSize <= 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color accent: bar && bar.accent ? bar.accent : foreground
   // Reserved horizontal space — this is the "island" gap separating clusters.
-  readonly property int gapWidth: Math.max(8, Number(setting("gapWidth", 28)))
+  readonly property int gapWidth: Math.max(compact ? 4 : 8, Number(setting("gapWidth", compact ? 10 : 28)))
   // Height reference for the pulse mark.
   readonly property int seamGap: Math.max(0, Number(setting("seamGap", 12)))
   // Keep the physical line break compact while letting the vertical glow

@@ -16,8 +16,9 @@ Item {
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.roleColor("weather", foreground)
   readonly property int intervalMs: Math.max(10000, Number(setting("interval", 60000)))
-  readonly property bool showText: setting("showText", true) === true
-  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
+  readonly property bool compact: !vertical && barSize <= 26
+  readonly property bool showText: setting("showText", compact ? false : true) === true
+  readonly property int topbarIconSize: compact ? 13 : barSize >= 30 ? 16 : 14
   readonly property string home: Quickshell.env("HOME")
   readonly property string weatherScript: home + "/.config/omarchy/bar/scripts/weather-temp"
   readonly property string weatherIcon: leadingWeatherIcon(weatherText) || "󰖐"
@@ -96,7 +97,7 @@ Item {
     id: button
 
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
-    readonly property int horizontalPadding: root.vertical ? 0 : 8
+    readonly property int horizontalPadding: root.vertical ? 0 : (root.compact ? 5 : 8)
 
     width: root.vertical ? root.barSize : Math.max(root.barSize, content.implicitWidth + horizontalPadding * 2)
     height: root.vertical ? Math.max(root.barSize, content.implicitHeight + 10) : root.barSize
@@ -130,7 +131,7 @@ Item {
         text: root.displayText
         color: root.moduleColor
         font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
-        font.pixelSize: 14
+        font.pixelSize: root.compact ? 12 : 14
         maximumLineCount: 1
         renderType: Text.NativeRendering
       }

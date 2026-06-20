@@ -14,9 +14,10 @@ Item {
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.roleColor("clock", foreground)
+  readonly property bool compact: !vertical && barSize <= 26
   readonly property string activeFormat: alt
     ? setting("formatAlt", "dd MMMM 'W'ww yyyy")
-    : (vertical ? setting("verticalFormat", "HH\n—\nmm") : setting("format", "ddd d h:mm AP"))
+    : (vertical ? setting("verticalFormat", "HH\n—\nmm") : (compact ? setting("compactFormat", "h:mm AP") : setting("format", "ddd d h:mm AP")))
   readonly property string displayText: formatted(displayDate)
 
   implicitWidth: button.implicitWidth
@@ -66,7 +67,7 @@ Item {
     id: button
 
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
-    readonly property int horizontalPadding: root.vertical ? 0 : 8
+    readonly property int horizontalPadding: root.vertical ? 0 : (root.compact ? 5 : 8)
 
     width: root.vertical ? root.barSize : Math.max(root.barSize, label.implicitWidth + horizontalPadding * 2)
     height: root.vertical ? Math.max(root.barSize, label.implicitHeight + 10) : root.barSize
@@ -86,7 +87,7 @@ Item {
       text: root.displayText
       color: root.moduleColor
       font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
-      font.pixelSize: 14
+      font.pixelSize: root.compact ? 13 : 14
       maximumLineCount: 1
       renderType: Text.NativeRendering
     }

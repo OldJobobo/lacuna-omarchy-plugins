@@ -22,9 +22,10 @@ Item {
   property bool vertical: false
   property string designStyle: "lacuna"
   property int barSize: 26
-  property int minButtonWidth: Math.max(24, barSize)
-  property int contentHorizontalPadding: barSize <= 26 ? 8 : 16
-  property int labelPixelSize: barSize <= 26 ? 13 : 14
+  property bool compact: !vertical && barSize <= 26
+  property int minButtonWidth: Math.max(compact ? 20 : 24, compact ? barSize - 2 : barSize)
+  property int contentHorizontalPadding: compact ? 5 : 16
+  property int labelPixelSize: compact ? 12 : 14
   property string fontFamily: "BlexMono Nerd Font Propo"
   property int labelFontWeight: active ? Font.DemiBold : Font.Normal
   property real hoverPulseAmount: 0
@@ -44,8 +45,8 @@ Item {
   readonly property real hoverGlowOpacity: omarchyStyle || materialStyle ? 0 : hoverRevealAmount * (0.34 + hoverPulseAmount * 0.22)
   readonly property real hoverHighlightOpacity: omarchyStyle ? 0 : hoverRevealAmount * (materialStyle ? 1 : 0.035)
   readonly property real labelOpacity: omarchyStyle && !active && !occupied ? 0.5 : materialStyle && !active && !occupied ? 0.88 : 1
-  readonly property int materialCollapsedWidth: Math.max(24, barSize - 2)
-  readonly property int materialExpandedWidth: Math.max(34, barSize + 8)
+  readonly property int materialCollapsedWidth: Math.max(compact ? 20 : 24, barSize - (compact ? 4 : 2))
+  readonly property int materialExpandedWidth: Math.max(compact ? 28 : 34, barSize + (compact ? 2 : 8))
   readonly property int materialShapeWidth: activeExpanded || hovered ? materialExpandedWidth : materialCollapsedWidth
   readonly property int effectiveWidth: omarchyStyle && !vertical ? 22 : materialStyle && !vertical ? materialExpandedWidth : vertical ? barSize : Math.max(minButtonWidth, label.implicitWidth + contentHorizontalPadding)
   readonly property int materialInset: Math.max(5, Math.round(barSize * 0.28))

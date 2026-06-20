@@ -20,7 +20,9 @@ Item {
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color urgent: bar ? bar.urgent : "#d42b5b"
   readonly property int intervalMs: Math.max(1000, Number(setting("interval", 5000)))
-  readonly property int buttonSpacing: 2
+  readonly property bool compact: !vertical && barSize <= 26
+  readonly property int buttonSpacing: compact ? 0 : 2
+  readonly property bool showLabels: setting("showLabels", compact ? false : true) === true
 
   visible: true
   implicitWidth: content.implicitWidth
@@ -134,6 +136,7 @@ Item {
       vertical: root.vertical
       barSize: root.barSize
       hoverDuration: motionTokens.hoverDuration
+      showLabel: root.showLabels
     }
 
     StatButton {
@@ -146,6 +149,7 @@ Item {
       vertical: root.vertical
       barSize: root.barSize
       hoverDuration: motionTokens.hoverDuration
+      showLabel: root.showLabels
     }
 
     StatButton {
@@ -158,6 +162,7 @@ Item {
       vertical: root.vertical
       barSize: root.barSize
       hoverDuration: motionTokens.hoverDuration
+      showLabel: root.showLabels
     }
   }
 
@@ -170,7 +175,9 @@ Item {
     property bool vertical: false
     property int barSize: 26
     property int hoverDuration: 150
-    property int topbarIconSize: barSize >= 30 ? 16 : 14
+    property bool showLabel: true
+    property bool compact: !vertical && barSize <= 26
+    property int topbarIconSize: compact ? 12 : barSize >= 30 ? 16 : 14
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
 
     BarHoverSeam {
@@ -180,7 +187,7 @@ Item {
       accent: parent.accent
     }
 
-    width: vertical ? barSize : Math.max(36, content.implicitWidth + 12)
+    width: vertical ? barSize : Math.max(compact ? barSize : 36, content.implicitWidth + (compact ? 8 : 12))
     height: vertical ? Math.max(barSize, content.implicitHeight + 10) : barSize
     implicitWidth: width
     implicitHeight: height
@@ -196,7 +203,7 @@ Item {
       id: content
       anchors.centerIn: parent
       rotation: parent.vertical ? -90 : 0
-      spacing: 4
+      spacing: content.parent.showLabel ? (content.parent.compact ? 3 : 4) : 0
 
       Image {
         anchors.verticalCenter: parent.verticalCenter
@@ -215,6 +222,7 @@ Item {
       }
 
       Text {
+        visible: content.parent.showLabel
         anchors.verticalCenter: parent.verticalCenter
         text: content.parent.label
         color: content.parent.accent

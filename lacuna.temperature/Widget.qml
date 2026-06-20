@@ -19,7 +19,9 @@ Item {
   readonly property int intervalMs: Math.max(1000, Number(setting("interval", 5000)))
   readonly property int warmF: Math.max(1, Number(setting("warmF", 150)))
   readonly property int criticalF: Math.max(warmF + 1, Number(setting("criticalF", 185)))
-  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
+  readonly property bool compact: !vertical && barSize <= 26
+  readonly property bool showText: setting("showText", compact ? false : true) === true
+  readonly property int topbarIconSize: compact ? 12 : barSize >= 30 ? 16 : 14
   readonly property url iconSource: Qt.resolvedUrl("assets/tabler/temperature-plus-filled.svg")
   readonly property string status: temperatureF >= criticalF ? "Hot" : temperatureF >= warmF ? "Warm" : "Normal"
   readonly property color statusColor: colorProfile.statusColor(status.toLowerCase(), "temperature")
@@ -93,9 +95,9 @@ Item {
       seam: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.35)
       accent: colorProfile.accent
     }
-    readonly property int horizontalPadding: root.vertical ? 0 : 8
+    readonly property int horizontalPadding: root.vertical ? 0 : (root.compact ? 5 : 8)
 
-    width: root.vertical ? root.barSize : Math.max(36, content.implicitWidth + horizontalPadding * 2)
+    width: root.vertical ? root.barSize : Math.max(root.compact ? root.barSize : 36, content.implicitWidth + horizontalPadding * 2)
     height: root.vertical ? Math.max(root.barSize, content.implicitHeight + 10) : root.barSize
     implicitWidth: width
     implicitHeight: height
@@ -110,7 +112,7 @@ Item {
       id: content
       anchors.centerIn: parent
       rotation: root.vertical ? -90 : 0
-      spacing: 4
+      spacing: root.showText ? (root.compact ? 3 : 4) : 0
 
       Image {
         anchors.verticalCenter: parent.verticalCenter
@@ -129,11 +131,12 @@ Item {
       }
 
       Text {
+        visible: root.showText
         anchors.verticalCenter: parent.verticalCenter
         text: root.temperatureF + " F"
         color: root.statusColor
         font.family: bar ? bar.fontFamily : "Hack Nerd Font Propo"
-        font.pixelSize: 14
+        font.pixelSize: root.compact ? 12 : 14
         font.weight: root.status === "Hot" ? Font.DemiBold : Font.Normal
         maximumLineCount: 1
       }

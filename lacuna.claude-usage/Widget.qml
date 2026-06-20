@@ -54,7 +54,8 @@ Item {
   readonly property color mutedColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.58)
   readonly property color trackColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.16)
   readonly property int intervalMs: Math.max(5000, Number(setting("interval", 30000)))
-  readonly property int maxTextLength: Math.max(4, Number(setting("maxTextLength", 32)))
+  readonly property bool compact: !vertical && barSize <= 26
+  readonly property int maxTextLength: Math.max(4, Number(setting("maxTextLength", compact ? 10 : 32)))
   readonly property bool showIcon: setting("showIcon", true) === true
   readonly property bool showReset: setting("showReset", true) === true
   readonly property bool showProgress: setting("showProgress", true) === true
@@ -62,7 +63,7 @@ Item {
   readonly property bool showWeekly: setting("showWeekly", true) === true
   readonly property int cycleMs: Math.max(2000, Number(setting("cycleInterval", 6000)))
   readonly property string displayMode: String(setting("displayMode", "left"))
-  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
+  readonly property int topbarIconSize: compact ? 12 : barSize >= 30 ? 16 : 14
   readonly property string scriptPath: localPath(Qt.resolvedUrl("scripts/claude-code-status.sh"))
   readonly property url iconSource: Qt.resolvedUrl("assets/claude-ai.svg")
 
@@ -74,8 +75,8 @@ Item {
   readonly property bool actionableState: activeClass === "alert" || activeClass === "low" || activeClass === "over"
   readonly property bool hiddenState: cssClass === "hidden" || (!showIdle && cssClass === "idle" && !weeklyReady)
   readonly property int activeUsedPercent: activeMode === 1 ? weekUsedPercent : usedPercent
-  readonly property string sessionPrimary: clipped(displayMode === "percent" ? shortText : displayText)
-  readonly property string weekPrimary: clipped(displayMode === "percent" ? weekShortText : weekText)
+  readonly property string sessionPrimary: clipped((compact || displayMode === "percent") ? shortText : displayText)
+  readonly property string weekPrimary: clipped((compact || displayMode === "percent") ? weekShortText : weekText)
   readonly property string primaryText: activeMode === 1 ? weekPrimary : sessionPrimary
   readonly property string secondaryText: {
     if (!showReset) return ""
@@ -219,8 +220,8 @@ Item {
     id: button
 
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
-    readonly property int horizontalPadding: root.vertical ? 0 : 8
-    readonly property int minimumWidth: root.vertical ? root.barSize : 44
+    readonly property int horizontalPadding: root.vertical ? 0 : (root.compact ? 5 : 8)
+    readonly property int minimumWidth: root.vertical ? root.barSize : (root.compact ? 34 : 44)
     readonly property int meterHeight: root.showProgress && !root.vertical ? 2 : 0
     readonly property bool meterAtTop: !root.vertical && root.bar && root.bar.position === "top"
 
@@ -269,7 +270,7 @@ Item {
       id: content
       anchors.centerIn: parent
       anchors.verticalCenterOffset: button.meterHeight > 0 ? (button.meterAtTop ? 1 : -1) : 0
-      spacing: 4
+      spacing: root.compact ? 3 : 4
       rotation: root.vertical ? -90 : 0
 
       Image {
@@ -298,14 +299,14 @@ Item {
         text: root.primaryText
         color: root.moduleColor
         fontFamily: bar ? bar.fontFamily : "Hack Nerd Font Propo"
-        pixelSize: 14
+        pixelSize: root.compact ? 12 : 14
         fontWeight: root.actionableState ? Font.DemiBold : Font.Normal
         colorDuration: motionTokens.colorDuration
       }
 
       BarCycleText {
         id: resetLabel
-        visible: !root.vertical && root.secondaryText.length > 0
+        visible: !root.vertical && !root.compact && root.secondaryText.length > 0
         anchors.verticalCenter: parent.verticalCenter
         text: root.secondaryText
         color: root.actionableState ? root.moduleColor : root.mutedColor

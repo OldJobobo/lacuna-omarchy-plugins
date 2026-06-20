@@ -14,10 +14,10 @@ Item {
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color background: bar ? bar.background : "#101315"
   readonly property color moduleColor: colorProfile.roleColor(cssClass === "playing" ? "playing" : cssClass === "paused" ? "paused" : "mpris", colorProfile.soft)
-  readonly property int maxTextLength: Math.max(8, Number(setting("maxTextLength", 34)))
+  readonly property bool compact: barSize <= 26
+  readonly property int maxTextLength: Math.max(8, Number(setting("maxTextLength", compact ? 18 : 34)))
   readonly property bool sweepOnPlaying: setting("sweepOnPlaying", true) === true
   readonly property bool hideWhenVertical: setting("hideWhenVertical", true) === true
-  readonly property bool compact: barSize <= 26
   readonly property var players: Mpris.players ? Mpris.players.values : []
   readonly property var player: selectPlayer()
   readonly property bool hasMedia: player !== null && (player.trackTitle || player.trackArtist || player.isPlaying)

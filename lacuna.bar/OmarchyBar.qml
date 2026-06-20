@@ -256,6 +256,9 @@ Item {
 
   readonly property bool vertical: position === "left" || position === "right"
   readonly property int barSize: vertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
+  readonly property bool compactBar: !vertical && barSize <= 26
+  readonly property int outerMargin: compactBar ? 2 : Style.space(8)
+  readonly property int sectionGap: compactBar ? 6 : Style.space(4)
 
   function normalizePosition(value) {
     return BarModel.normalizePosition(value)
@@ -375,6 +378,31 @@ Item {
 
   function canonicalWidgetId(name) {
     return Util.canonicalWidgetId(name)
+  }
+
+  function compactPriority(name, region) {
+    var id = canonicalWidgetId(name)
+    if (id === "lacuna.bar-size-pill") return 1000
+    if (id === "lacuna.menu-button") return 980
+    if (id === "lacuna.clock" || id === "omarchy.clock") return 960
+    if (id === "lacuna.workspaces" || id === "omarchy.workspaces") return 940
+    if (id === "lacuna.power" || id === "omarchy.power") return 920
+    if (id === "lacuna.audio" || id === "omarchy.audio") return 900
+    if (id === "lacuna.network" || id === "omarchy.network") return 880
+    if (id === "lacuna.codex-usage" || id === "lacuna.claude-usage") return 840
+    if (id === "lacuna.tray" || id === "omarchy.tray") return 820
+    if (id === "lacuna.weather") return 760
+    if (id === "lacuna.notifications" || id === "omarchy.notifications") return 740
+    if (id === "lacuna.system-update") return 720
+    if (id === "lacuna.bluetooth" || id === "omarchy.bluetooth") return 700
+    if (id === "lacuna.temperature") return 620
+    if (id === "lacuna.system-stats") return 600
+    if (id === "lacuna.mpris" || id === "omarchy.mpris") return 560
+    if (id === "lacuna.theme" || id === "lacuna.wallpaper") return 440
+    if (id === "lacuna.nightlight" || id === "lacuna.idle-inhibitor" || id === "lacuna.screen-recording") return 420
+    if (id === "lacuna.voxtype") return 400
+    if (id === "lacuna.bar-seam") return 80
+    return region === "center" ? 300 : 500
   }
 
   function expandPath(path) {
@@ -873,20 +901,26 @@ Item {
       id: horizontalBar
 
       Item {
+        id: horizontalRoot
         anchors.fill: parent
+
+        readonly property int centerReserve: root.compactBar ? Math.max(104, Math.round(width * 0.11)) : Math.max(180, Math.round(width * 0.16))
+        readonly property int sideBudget: Math.max(root.barSize, Math.floor((width - root.outerMargin * 2 - centerReserve - root.sectionGap * 2) / 2))
 
         CenterModules { anchors.fill: parent }
 
         LeftModules {
           anchors.left: parent.left
-          anchors.leftMargin: Style.space(8)
+          anchors.leftMargin: root.outerMargin
           anchors.verticalCenter: parent.verticalCenter
+          availableLength: horizontalRoot.sideBudget
         }
 
         RightModules {
           anchors.right: parent.right
-          anchors.rightMargin: Style.space(8)
+          anchors.rightMargin: root.outerMargin
           anchors.verticalCenter: parent.verticalCenter
+          availableLength: horizontalRoot.sideBudget
         }
       }
     }
@@ -901,13 +935,13 @@ Item {
 
         LeftModules {
           anchors.top: parent.top
-          anchors.topMargin: Style.space(8)
+          anchors.topMargin: root.outerMargin
           anchors.horizontalCenter: parent.horizontalCenter
         }
 
         RightModules {
           anchors.bottom: parent.bottom
-          anchors.bottomMargin: Style.space(8)
+          anchors.bottomMargin: root.outerMargin
           anchors.horizontalCenter: parent.horizontalCenter
         }
       }
@@ -1017,10 +1051,11 @@ Item {
           entries: centerRoot.entries
           region: "center"
           anchors.centerIn: parent
+          availableLength: root.compactBar ? Math.max(root.barSize, Math.round(parent.width * 0.18)) : 0
         }
 
         ModuleList {
-          visible: centerRoot.hasAnchor
+          visible: centerRoot.hasAnchor && !root.compactBar
           entries: root.entriesBefore(centerRoot.entries, root.centerAnchor)
           region: "center"
           anchors.right: centerConfigControl.visible ? centerConfigControl.left : centerAnchorModule.left
@@ -1046,7 +1081,7 @@ Item {
         }
 
         ModuleList {
-          visible: centerRoot.hasAnchor
+          visible: centerRoot.hasAnchor && !root.compactBar
           entries: root.entriesAfter(centerRoot.entries, root.centerAnchor)
           region: "center"
           anchors.left: centerAnchorModule.right
@@ -1072,6 +1107,7 @@ Item {
           entries: centerRoot.entries
           region: "center"
           anchors.centerIn: parent
+          availableLength: 0
         }
 
         ModuleList {
@@ -1204,25 +1240,94 @@ Item {
 
     property var entries: []
     property string region: ""
+    property real availableLength: 0
+    property int overflowSerial: 0
 
     visible: entries.length > 0
     sourceComponent: root.vertical ? verticalModuleList : horizontalModuleList
     width: item ? item.implicitWidth : 0
     height: item ? item.implicitHeight : 0
 
+    onEntriesChanged: scheduleOverflowUpdate()
+    onAvailableLengthChanged: scheduleOverflowUpdate()
+    onItemChanged: scheduleOverflowUpdate()
+
+    function scheduleOverflowUpdate() {
+      overflowSerial++
+      Qt.callLater(updateOverflow)
+    }
+
+    function updateOverflow() {
+      var serial = overflowSerial
+      var repeater = item && item.slotRepeater ? item.slotRepeater : null
+      if (!repeater) return
+
+      var slots = []
+      var total = 0
+      for (var i = 0; i < repeater.count; i++) {
+        var slot = repeater.itemAt(i)
+        if (!slot) continue
+
+        var natural = root.vertical ? Math.ceil(slot.naturalHeight) : Math.ceil(slot.naturalWidth)
+        if (!slot.contentVisible || natural <= 0) {
+          slot.overflowVisible = false
+          continue
+        }
+
+        total += natural
+        slots.push({
+          slot: slot,
+          width: natural,
+          priority: root.compactPriority(slot.moduleName, moduleListRoot.region),
+          index: i
+        })
+      }
+
+      var limit = Math.floor(Number(availableLength || 0))
+      if (root.vertical || !root.compactBar || limit <= 0 || total <= limit) {
+        for (var showIndex = 0; showIndex < slots.length; showIndex++) slots[showIndex].slot.overflowVisible = true
+        return
+      }
+
+      slots.sort(function(left, right) {
+        if (right.priority !== left.priority) return right.priority - left.priority
+        return left.index - right.index
+      })
+
+      var used = 0
+      var keep = {}
+      for (var keepIndex = 0; keepIndex < slots.length; keepIndex++) {
+        var candidate = slots[keepIndex]
+        if (used + candidate.width <= limit || used === 0) {
+          keep[candidate.index] = true
+          used += candidate.width
+        }
+      }
+
+      if (serial !== overflowSerial) return
+      for (var slotIndex = 0; slotIndex < slots.length; slotIndex++) {
+        slots[slotIndex].slot.overflowVisible = keep[slots[slotIndex].index] === true
+      }
+    }
+
     Component {
       id: horizontalModuleList
 
       Row {
+        property alias slotRepeater: moduleRepeater
         spacing: 0
 
         Repeater {
+          id: moduleRepeater
           model: moduleListRoot.entries
+          onItemAdded: moduleListRoot.scheduleOverflowUpdate()
+          onItemRemoved: moduleListRoot.scheduleOverflowUpdate()
 
           ModuleSlot {
             required property var modelData
             entry: modelData
             region: moduleListRoot.region
+            moduleList: moduleListRoot
           }
         }
       }
@@ -1232,15 +1337,20 @@ Item {
       id: verticalModuleList
 
       Column {
+        property alias slotRepeater: moduleRepeater
         spacing: 0
 
         Repeater {
+          id: moduleRepeater
           model: moduleListRoot.entries
+          onItemAdded: moduleListRoot.scheduleOverflowUpdate()
+          onItemRemoved: moduleListRoot.scheduleOverflowUpdate()
 
           ModuleSlot {
             required property var modelData
             entry: modelData
             region: moduleListRoot.region
+            moduleList: moduleListRoot
           }
         }
       }
@@ -1252,6 +1362,8 @@ Item {
 
     required property var entry
     property string region: ""
+    property var moduleList: null
+    property bool overflowVisible: true
     readonly property string moduleName: root.entryId(entry)
     readonly property var moduleSettings: root.entrySettings(entry)
     readonly property string customType: root.customModuleType(entry)
@@ -1282,11 +1394,20 @@ Item {
       return isFinite(offset) ? offset : 0
     }
 
-    implicitWidth: activeItem && activeItem.visible ? (root.vertical ? root.barSize : activeItem.implicitWidth) : 0
-    implicitHeight: activeItem && activeItem.visible ? activeItem.implicitHeight : 0
+    readonly property bool contentVisible: activeItem && activeItem.visible
+    readonly property real naturalWidth: contentVisible ? (root.vertical ? root.barSize : activeItem.implicitWidth) : 0
+    readonly property real naturalHeight: contentVisible ? activeItem.implicitHeight : 0
+
+    visible: overflowVisible && contentVisible
+    implicitWidth: contentVisible ? (root.vertical ? root.barSize : naturalWidth) : 0
+    implicitHeight: contentVisible ? naturalHeight : 0
     width: implicitWidth
     height: implicitHeight
     z: modulePointer.dragging ? 100 : 0
+
+    onNaturalWidthChanged: if (moduleList) moduleList.scheduleOverflowUpdate()
+    onNaturalHeightChanged: if (moduleList) moduleList.scheduleOverflowUpdate()
+    onContentVisibleChanged: if (moduleList) moduleList.scheduleOverflowUpdate()
 
     Component.onCompleted: root.registerDebugModuleSlot(slot)
     Component.onDestruction: {
