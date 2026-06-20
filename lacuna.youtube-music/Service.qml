@@ -18,6 +18,7 @@ Item {
   property bool stateLoaded: false
   property bool loadingState: false
   property bool pendingBackgroundEnable: false
+  property bool pendingDefaultSuggestions: false
   property bool backgroundOwnsAudio: false
   property int suppressStateReloads: 0
   property int playbackProbeFailures: 0
@@ -57,6 +58,7 @@ Item {
   readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy/lacuna"
   readonly property string stateFile: configDir + "/youtube-music.json"
   readonly property int maxResults: boundedInt(setting("maxResults", 60), 60, 12, 80)
+  readonly property string defaultSuggestionsQuery: String(setting("defaultSuggestionsQuery", "official music videos"))
   property int visibleLimit: 18
   readonly property bool canLoadMore: results.length < allResults.length
   readonly property bool audioOnly: setting("audioOnly", true) !== false
@@ -316,6 +318,16 @@ Item {
     searchProc.output = ""
     searchProc.command = [searchScript, "--limit", String(maxResults), trimmed]
     searchProc.running = true
+  }
+
+  function loadDefaultSuggestions() {
+    if (searching || allResults.length > 0) return
+    if (!ytdlpAvailable) {
+      pendingDefaultSuggestions = true
+      return
+    }
+    pendingDefaultSuggestions = false
+    search(defaultSuggestionsQuery)
   }
 
   function visibleSlice(rows) {
@@ -753,6 +765,7 @@ Item {
         root.errorText = "Dependency check failed"
       }
       root.status = root.available ? "ready" : "unavailable"
+      if (root.pendingDefaultSuggestions && root.ytdlpAvailable) root.loadDefaultSuggestions()
     }
   }
 

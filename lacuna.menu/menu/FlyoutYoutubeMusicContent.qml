@@ -41,7 +41,15 @@ Column {
       return
 
     if (inputIsYoutubeUrl) service.playUrl(searchInput.text)
+    else if (String(searchInput.text || "").trim() === "") service.loadDefaultSuggestions()
     else service.search(searchInput.text)
+  }
+
+  function ensureDefaultSuggestions() {
+    if (open && activeTab === "search" && service && String(searchInput.text || "").trim() === "") {
+      service.loadDefaultSuggestions()
+      defaultSuggestionsTimer.restart()
+    }
   }
 
   function durationText(track) {
@@ -66,6 +74,19 @@ Column {
   opacity: open ? 1 : 0
   anchors.margins: compact ? 10 : 12
   spacing: compact ? 8 : 10
+  onOpenChanged: ensureDefaultSuggestions()
+  onActiveTabChanged: ensureDefaultSuggestions()
+  onServiceChanged: ensureDefaultSuggestions()
+
+  Timer {
+    id: defaultSuggestionsTimer
+    interval: 900
+    repeat: false
+    onTriggered: {
+      if (root.open && root.activeTab === "search" && root.service && String(searchInput.text || "").trim() === "")
+        root.service.loadDefaultSuggestions()
+    }
+  }
 
   Row {
     width: parent.width
@@ -230,8 +251,11 @@ Column {
         }
 
         Row {
+          id: transportControls
+
+          visible: root.activeTab !== "search"
           width: parent.width
-          height: root.compact ? 32 : 38
+          height: visible ? (root.compact ? 32 : 38) : 0
           spacing: 6
 
           LacunaIconButton {
@@ -474,6 +498,29 @@ Column {
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 visible: source !== "" && status !== Image.Error
+              }
+
+              LacunaRect {
+                visible: String(modelData.duration || "") !== ""
+                anchors.right: thumb.right
+                anchors.rightMargin: 2
+                anchors.bottom: thumb.bottom
+                anchors.bottomMargin: 2
+                width: durationBadgeText.width + 8
+                height: root.compact ? 13 : 14
+                radius: root.designTokens.controlRadius
+                color: Qt.rgba(0, 0, 0, 0.72)
+
+                LacunaText {
+                  id: durationBadgeText
+
+                  anchors.centerIn: parent
+                  text: modelData.duration || ""
+                  color: root.foreground
+                  fontFamily: root.bodyFontFamily
+                  font.pixelSize: root.compact ? 7 : 8
+                  maximumLineCount: 1
+                }
               }
 
               LacunaTablerIcon {

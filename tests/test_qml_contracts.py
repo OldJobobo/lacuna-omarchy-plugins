@@ -896,6 +896,11 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("root.service.adoptBackgroundPlayback(root.backgroundSocket)", overlay)
         self.assertIn("root.releaseFadeCoverSoon()", overlay)
         self.assertIn("backgroundReadyProbeAttempts < 20", overlay)
+        self.assertIn("root.service.backgroundOwnsAudio !== true", overlay)
+        self.assertIn("function restartBackgroundPlayback()", overlay)
+        self.assertIn("root.restartBackgroundPlayback()", overlay)
+        self.assertIn("service.backgroundOwnsAudio = false", overlay)
+        self.assertIn("cleanupWallpaperProcess()", overlay)
         self.assertIn("input-ipc-server=", overlay)
         self.assertIn("function syncBackgroundPlaybackPosition()", overlay)
         self.assertIn("id: backgroundSocketCleanupProcess", overlay)
@@ -1360,6 +1365,11 @@ class QmlContractTests(unittest.TestCase):
             "function isYoutubeUrl(value)",
             "function normalizeYoutubeUrl(value)",
             "function playUrl(url)",
+            "readonly property string defaultSuggestionsQuery",
+            "property bool pendingDefaultSuggestions: false",
+            "function loadDefaultSuggestions()",
+            "pendingDefaultSuggestions = true",
+            "if (root.pendingDefaultSuggestions && root.ytdlpAvailable) root.loadDefaultSuggestions()",
             "videoIdFromUrl(normalizedUrl)",
             "Paste a YouTube URL",
             "function favoriteIndex(track)",
@@ -1410,8 +1420,18 @@ class QmlContractTests(unittest.TestCase):
             "readonly property int favoritesRevision",
             "readonly property bool inputIsYoutubeUrl",
             "service.playUrl(searchInput.text)",
+            "service.loadDefaultSuggestions()",
+            "function ensureDefaultSuggestions()",
+            "id: defaultSuggestionsTimer",
+            "defaultSuggestionsTimer.restart()",
+            "onOpenChanged: ensureDefaultSuggestions()",
+            "onActiveTabChanged: ensureDefaultSuggestions()",
             'text: "Search or paste URL"',
             'icon: root.inputIsYoutubeUrl ? "player-play" : "search"',
+            "id: transportControls",
+            'visible: root.activeTab !== "search"',
+            "id: durationBadgeText",
+            "text: modelData.duration || \"\"",
             "function isFavorite(track)",
             "var revision = favoritesRevision",
             "root.service.clearFavorites()",

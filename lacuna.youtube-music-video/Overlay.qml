@@ -195,6 +195,27 @@ Item {
     backgroundPositionProcess.running = true
   }
 
+  function restartBackgroundPlayback() {
+    if (!wallpaperDesired || activeSource === "") return
+    if (restartAttempts >= 3) {
+      if (service) {
+        service.backgroundOwnsAudio = false
+        service.backgroundPlaybackSocket = ""
+      }
+      return
+    }
+    restartAttempts += 1
+    if (service) {
+      service.backgroundOwnsAudio = false
+      service.backgroundPlaybackSocket = ""
+    }
+    holdFadeCover()
+    restartPending = true
+    wallpaperProcess.running = false
+    cleanupWallpaperProcess()
+    restartTimer.restart()
+  }
+
   function tryAdoptBackgroundPlayback() {
     if (!service || !wallpaperProcess.running || !backgroundPlaying || backgroundSocket === "" || !service.controlScript) return
     if (backgroundOwnsAudioProbeProcess.running || service.backgroundOwnsAudio === true) return
@@ -401,16 +422,29 @@ Item {
     }
 
     onExited: function(exitCode) {
-      if (exitCode !== 0 || !root.backgroundPlaying) return
+      if (!root.backgroundPlaying) return
+      if (exitCode !== 0) {
+        root.restartBackgroundPlayback()
+        return
+      }
       try {
         var payload = JSON.parse(backgroundPositionProcess.output || "{}")
         var current = Number(payload.value)
         var target = root.startPosition
+        if (!isFinite(current)) {
+          root.restartBackgroundPlayback()
+          return
+        }
         if (isFinite(current) && isFinite(target) && Math.abs(current - target) > 0.45) {
           backgroundSeekProcess.command = [root.service.controlScript, "command", "--socket", root.backgroundSocket, "--payload", JSON.stringify({ command: ["seek", target, "absolute"] })]
           backgroundSeekProcess.running = true
         }
+        if (isFinite(current) && current >= 0 && root.service && root.service.backgroundOwnsAudio !== true && typeof root.service.adoptBackgroundPlayback === "function") {
+          root.service.adoptBackgroundPlayback(root.backgroundSocket)
+          if (root.fadeCoverOpacity > 0.01) root.releaseFadeCoverSoon()
+        }
       } catch (error) {
+        root.restartBackgroundPlayback()
       }
     }
   }
