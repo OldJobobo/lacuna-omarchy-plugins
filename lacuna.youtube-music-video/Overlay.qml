@@ -12,6 +12,8 @@ Item {
   property var service: null
 
   readonly property string targetOutput: String(manifest && manifest.defaults && manifest.defaults.targetOutput ? manifest.defaults.targetOutput : "DP-1")
+  readonly property string safeOutputId: targetOutput.replace(/[^A-Za-z0-9_.-]/g, "_")
+  readonly property string backgroundSocket: service && service.runtimeDir ? String(service.runtimeDir) + "/mpvpaper-" + safeOutputId + ".sock" : ""
   readonly property string cleanupPattern: "^/usr/bin/mpvpaper --layer background .* (" + regexEscape(targetOutput) + "|ALL) "
   readonly property bool backgroundVisible: service
     && service.backgroundVideoEnabled === true
@@ -22,7 +24,7 @@ Item {
   readonly property bool usingHighRes: highResVideoSource !== "" && videoSource === highResVideoSource
   readonly property string videoSource: backgroundVisible ? highResVideoSource : ""
   readonly property real startPosition: service && service.playbackPosition !== undefined ? Math.max(0, Number(service.playbackPosition) || 0) : 0
-  readonly property bool wallpaperDesired: backgroundPlaying && videoSource !== ""
+  readonly property bool wallpaperDesired: backgroundVisible && videoSource !== ""
   readonly property bool waitingForHighRes: service
     && service.backgroundVideoEnabled === true
     && service.playing === true
@@ -42,6 +44,9 @@ Item {
   property int fadeRevealDelay: 0
   property bool fadeCoverRising: false
   property int wallpaperFadeGateDelay: 0
+  property bool wallpaperPositionRefreshPending: false
+  property string wallpaperPositionRefreshKey: ""
+  property int backgroundReadyProbeAttempts: 0
 
   function wallpaperCommand(source, position) {
     return [
@@ -49,7 +54,7 @@ Item {
       "--layer",
       "background",
       "--mpv-options",
-      "no-audio loop no-terminal hwdec=auto panscan=1 start=" + Math.max(0, Math.floor(position)),
+      "no-terminal hwdec=auto panscan=1 input-ipc-server=" + backgroundSocket + " start=" + Math.max(0, Math.floor(position)) + " volume=" + Math.max(0, Math.min(100, service && service.volume !== undefined ? Number(service.volume) || 0 : 70)),
       targetOutput,
       source
     ]
@@ -120,6 +125,10 @@ Item {
   }
 
   function cleanupWallpaperProcess() {
+    if (service && service.controlScript && backgroundSocket !== "" && !backgroundSocketCleanupProcess.running) {
+      backgroundSocketCleanupProcess.command = [service.controlScript, "cleanup", "--socket", backgroundSocket]
+      backgroundSocketCleanupProcess.running = true
+    }
     if (!cleanupProcess.running) cleanupProcess.running = true
   }
 
@@ -131,6 +140,10 @@ Item {
       activeCommand = []
       activeStartPosition = 0
       restartAttempts = 0
+      wallpaperPositionRefreshPending = false
+      wallpaperPositionRefreshKey = ""
+      backgroundReadyProbeAttempts = 0
+      if (service && typeof service.releaseBackgroundPlayback === "function") service.releaseBackgroundPlayback()
       wallpaperProcess.running = false
       if (hadActiveWallpaper) cleanupWallpaperProcess()
       restartTimer.stop()
@@ -154,6 +167,14 @@ Item {
       return
     }
 
+    var refreshKey = videoSource + "#" + backgroundRequestRevision
+    if (wallpaperPositionRefreshKey !== refreshKey && !wallpaperPositionRefreshPending && service && typeof service.updatePlaybackPosition === "function") {
+      wallpaperPositionRefreshPending = true
+      service.updatePlaybackPosition()
+      wallpaperPositionRefreshTimer.restart()
+      return
+    }
+
     activeSource = videoSource
     activeStartPosition = Math.max(0, Math.floor(startPosition))
     activeCommand = wallpaperCommand(activeSource, activeStartPosition)
@@ -161,7 +182,25 @@ Item {
     restartAttempts = 0
     wallpaperProcess.command = activeCommand
     wallpaperProcess.running = true
-    if (fadeCoverOpacity > 0.01) releaseFadeCoverSoon()
+    backgroundReadyProbeAttempts = 0
+    backgroundAdoptTimer.restart()
+    backgroundSyncDelayTimer.restart()
+  }
+
+  function syncBackgroundPlaybackPosition() {
+    if (!service || !wallpaperProcess.running || !backgroundPlaying || backgroundSocket === "" || !service.controlScript) return
+    if (backgroundPositionProcess.running || backgroundSeekProcess.running) return
+    backgroundPositionProcess.output = ""
+    backgroundPositionProcess.command = [service.controlScript, "get-property", "--socket", backgroundSocket, "--name", "time-pos"]
+    backgroundPositionProcess.running = true
+  }
+
+  function tryAdoptBackgroundPlayback() {
+    if (!service || !wallpaperProcess.running || !backgroundPlaying || backgroundSocket === "" || !service.controlScript) return
+    if (backgroundOwnsAudioProbeProcess.running || service.backgroundOwnsAudio === true) return
+    backgroundOwnsAudioProbeProcess.output = ""
+    backgroundOwnsAudioProbeProcess.command = [service.controlScript, "get-property", "--socket", backgroundSocket, "--name", "vo-configured"]
+    backgroundOwnsAudioProbeProcess.running = true
   }
 
   Component.onDestruction: {
@@ -211,6 +250,38 @@ Item {
     interval: root.wallpaperFadeGateDelay
     repeat: false
     onTriggered: root.syncWallpaper()
+  }
+
+  Timer {
+    id: wallpaperPositionRefreshTimer
+    interval: 300
+    repeat: false
+    onTriggered: {
+      root.wallpaperPositionRefreshKey = root.videoSource + "#" + root.backgroundRequestRevision
+      root.wallpaperPositionRefreshPending = false
+      root.syncWallpaper()
+    }
+  }
+
+  Timer {
+    id: backgroundSyncDelayTimer
+    interval: 1200
+    repeat: false
+    onTriggered: root.syncBackgroundPlaybackPosition()
+  }
+
+  Timer {
+    id: backgroundAdoptTimer
+    interval: 500
+    repeat: false
+    onTriggered: root.tryAdoptBackgroundPlayback()
+  }
+
+  Timer {
+    interval: 1000
+    repeat: true
+    running: root.wallpaperProcess.running && root.backgroundPlaying
+    onTriggered: root.syncBackgroundPlaybackPosition()
   }
 
   Variants {
@@ -264,6 +335,11 @@ Item {
       if (root.restartPending || (root.wallpaperDesired && root.activeSource !== root.videoSource)) {
         root.restartPending = false
         restartTimer.restart()
+      } else if (root.wallpaperDesired && root.activeSource === root.videoSource && exitCode === 0 && root.service && root.service.backgroundOwnsAudio === true) {
+        root.activeSource = ""
+        root.service.backgroundOwnsAudio = false
+        root.service.backgroundPlaybackSocket = ""
+        if (typeof root.service.handlePlaybackEnded === "function") root.service.handlePlaybackEnded()
       } else if (root.wallpaperDesired && root.activeSource === root.videoSource && root.restartAttempts < 3) {
         root.restartAttempts += 1
         root.activeSource = ""
@@ -277,6 +353,70 @@ Item {
 
     command: ["pkill", "-f", root.cleanupPattern]
     running: false
+  }
+
+  Process {
+    id: backgroundSocketCleanupProcess
+  }
+
+  Process {
+    id: backgroundOwnsAudioProbeProcess
+    property string output: ""
+
+    stdout: SplitParser {
+      onRead: function(data) { backgroundOwnsAudioProbeProcess.output += data }
+    }
+
+    onExited: function(exitCode) {
+      if (!root.backgroundPlaying || !root.service) return
+      if (exitCode !== 0) {
+        if (root.wallpaperProcess.running && root.backgroundReadyProbeAttempts < 20) {
+          root.backgroundReadyProbeAttempts += 1
+          backgroundAdoptTimer.restart()
+        }
+        return
+      }
+      try {
+        var payload = JSON.parse(backgroundOwnsAudioProbeProcess.output || "{}")
+        if (payload.value === true && typeof root.service.adoptBackgroundPlayback === "function") {
+          root.service.adoptBackgroundPlayback(root.backgroundSocket)
+          if (root.fadeCoverOpacity > 0.01) root.releaseFadeCoverSoon()
+          return
+        }
+      } catch (error) {
+      }
+      if (root.wallpaperProcess.running && root.backgroundReadyProbeAttempts < 20) {
+        root.backgroundReadyProbeAttempts += 1
+        backgroundAdoptTimer.restart()
+      }
+    }
+  }
+
+  Process {
+    id: backgroundPositionProcess
+    property string output: ""
+
+    stdout: SplitParser {
+      onRead: function(data) { backgroundPositionProcess.output += data }
+    }
+
+    onExited: function(exitCode) {
+      if (exitCode !== 0 || !root.backgroundPlaying) return
+      try {
+        var payload = JSON.parse(backgroundPositionProcess.output || "{}")
+        var current = Number(payload.value)
+        var target = root.startPosition
+        if (isFinite(current) && isFinite(target) && Math.abs(current - target) > 0.45) {
+          backgroundSeekProcess.command = [root.service.controlScript, "command", "--socket", root.backgroundSocket, "--payload", JSON.stringify({ command: ["seek", target, "absolute"] })]
+          backgroundSeekProcess.running = true
+        }
+      } catch (error) {
+      }
+    }
+  }
+
+  Process {
+    id: backgroundSeekProcess
   }
 
   Connections {
@@ -313,6 +453,10 @@ Item {
         fadeCoverOpacity: root.fadeCoverOpacity,
         fadeRevealDelay: root.fadeRevealDelay,
         wallpaperFadeGateDelay: root.wallpaperFadeGateDelay,
+        wallpaperPositionRefreshPending: root.wallpaperPositionRefreshPending,
+        wallpaperPositionRefreshKey: root.wallpaperPositionRefreshKey,
+        backgroundReadyProbeAttempts: root.backgroundReadyProbeAttempts,
+        backgroundSocket: root.backgroundSocket,
         usingHighRes: root.usingHighRes,
         source: root.videoSource,
         activeSource: root.activeSource,

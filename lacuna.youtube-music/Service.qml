@@ -18,7 +18,9 @@ Item {
   property bool stateLoaded: false
   property bool loadingState: false
   property bool pendingBackgroundEnable: false
+  property bool backgroundOwnsAudio: false
   property int suppressStateReloads: 0
+  property int playbackProbeFailures: 0
   property bool backgroundVideoEnabled: false
   property bool playing: false
   property bool paused: false
@@ -27,6 +29,7 @@ Item {
   property string status: "checking"
   property string errorText: ""
   property string lastQuery: ""
+  property string repeatMode: "none"
   property var results: []
   property var allResults: []
   property var queue: []
@@ -38,6 +41,7 @@ Item {
   property string previewRequestUrl: ""
   property string backgroundStreamUrl: ""
   property string backgroundRequestUrl: ""
+  property string backgroundPlaybackSocket: ""
   property int backgroundRequestRevision: 0
 
   readonly property bool available: mpvAvailable && ytdlpAvailable
@@ -113,7 +117,22 @@ Item {
     if (match && match[1]) return decodeURIComponent(match[1])
     match = value.match(/youtube\.com\/embed\/([^?&#/]+)/)
     if (match && match[1]) return decodeURIComponent(match[1])
+    match = value.match(/youtube\.com\/shorts\/([^?&#/]+)/)
+    if (match && match[1]) return decodeURIComponent(match[1])
     return ""
+  }
+
+  function isYoutubeUrl(value) {
+    var text = String(value || "").trim()
+    return /^https?:\/\/(www\.)?(youtube\.com|music\.youtube\.com|youtu\.be)\//i.test(text)
+  }
+
+  function normalizeYoutubeUrl(value) {
+    var text = String(value || "").trim()
+    if (!isYoutubeUrl(text)) return ""
+    var id = videoIdFromUrl(text)
+    if (id !== "") return "https://www.youtube.com/watch?v=" + id
+    return text
   }
 
   function trackThumbnail(track) {
@@ -158,14 +177,20 @@ Item {
     return next
   }
 
+  function normalizeRepeatMode(value) {
+    var mode = String(value || "none")
+    return mode === "one" || mode === "all" ? mode : "none"
+  }
+
   function normalizeState(value) {
     var source = value && typeof value === "object" ? value : ({})
     return {
-      version: 2,
+      version: 3,
       queue: normalizeTrackList(source.queue, 200),
       history: normalizeTrackList(source.history, 50),
       favorites: normalizeUniqueTrackList(source.favorites, 500),
       volume: boundedInt(source.volume, boundedInt(setting("volume", 70), 70, 0, 100), 0, 100),
+      repeatMode: normalizeRepeatMode(source.repeatMode),
       lastQuery: String(source.lastQuery || "")
     }
   }
@@ -176,6 +201,7 @@ Item {
       history: history,
       favorites: favorites,
       volume: volume,
+      repeatMode: repeatMode,
       lastQuery: lastQuery
     }), null, 2) + "\n"
   }
@@ -194,6 +220,7 @@ Item {
     history = restored.history
     favorites = restored.favorites
     volume = restored.volume
+    repeatMode = restored.repeatMode
     lastQuery = restored.lastQuery
     backgroundVideoEnabled = false
     loadingState = false
@@ -310,6 +337,24 @@ Item {
     playNormalized(normalized, true)
   }
 
+  function playUrl(url) {
+    var normalizedUrl = normalizeYoutubeUrl(url)
+    if (normalizedUrl === "") {
+      errorText = "Paste a YouTube URL"
+      status = "error"
+      return
+    }
+    var id = videoIdFromUrl(normalizedUrl)
+    playNow({
+      id: id,
+      title: id !== "" ? "YouTube video " + id : "YouTube video",
+      uploader: "",
+      duration: "",
+      thumbnail: id !== "" ? "https://i.ytimg.com/vi/" + id + "/hqdefault.jpg" : "",
+      url: normalizedUrl
+    })
+  }
+
   function resolvePreview(track) {
     var url = trackUrl(track)
     if (url === "") return
@@ -394,24 +439,66 @@ Item {
     favorites = []
   }
 
+  function setRepeatMode(mode) {
+    repeatMode = normalizeRepeatMode(mode)
+  }
+
+  function cycleRepeatMode() {
+    if (repeatMode === "none") repeatMode = "one"
+    else if (repeatMode === "one") repeatMode = "all"
+    else repeatMode = "none"
+  }
+
   function cleanupPlayback() {
     cleanupProc.command = [controlScript, "cleanup", "--socket", mpvSocket]
     cleanupProc.running = true
     playing = false
     paused = false
+    backgroundOwnsAudio = false
+    backgroundPlaybackSocket = ""
     playbackPosition = 0
+    playbackProbeFailures = 0
     status = statusText()
   }
 
+  function playNextFromQueue(rememberPrevious, recycleCurrent) {
+    if (queue.length <= 0) return false
+    var nextQueue = queue.slice()
+    var track = nextQueue.shift()
+    if (recycleCurrent && currentTrack) nextQueue.push(currentTrack)
+    queue = nextQueue
+    playNormalized(track, rememberPrevious)
+    return true
+  }
+
   function next() {
+    if (playNextFromQueue(true, false)) return
+    if (repeatMode === "all" && currentTrack) {
+      playNormalized(currentTrack, false)
+      return
+    }
     if (queue.length <= 0) {
       stop()
       return
     }
-    var nextQueue = queue.slice()
-    var track = nextQueue.shift()
-    queue = nextQueue
-    playNow(track)
+  }
+
+  function handlePlaybackEnded() {
+    playbackProbeFailures = 0
+
+    if (repeatMode === "one" && currentTrack) {
+      playNormalized(currentTrack, false)
+      return
+    }
+
+    if (playNextFromQueue(true, repeatMode === "all")) return
+
+    if (repeatMode === "all" && currentTrack) {
+      playNormalized(currentTrack, false)
+      return
+    }
+
+    stop()
   }
 
   function previousOrRestart() {
@@ -460,10 +547,44 @@ Item {
     pendingBackgroundEnable = false
     backgroundEnableFallback.stop()
     backgroundVideoEnabled = false
+    resolvingBackground = false
+    backgroundStreamUrl = ""
+    backgroundRequestUrl = ""
+    if (hasTrack && previewStreamUrl === "" && !resolvingPreview) resolvePreview(currentTrack)
   }
 
   function toggleBackgroundVideo() {
     setBackgroundVideoEnabled(!backgroundVideoEnabled)
+  }
+
+  function playbackSocket() {
+    return backgroundOwnsAudio && backgroundPlaybackSocket !== "" ? backgroundPlaybackSocket : mpvSocket
+  }
+
+  function cleanupAudioOnlyPlayback() {
+    if (!mpvAvailable || backgroundAudioCleanupProc.running) return
+    backgroundAudioCleanupProc.command = [controlScript, "cleanup", "--socket", mpvSocket]
+    backgroundAudioCleanupProc.running = true
+  }
+
+  function adoptBackgroundPlayback(socketPath) {
+    var socket = String(socketPath || "")
+    if (socket === "") return
+    backgroundPlaybackSocket = socket
+    backgroundOwnsAudio = true
+    cleanupAudioOnlyPlayback()
+    playbackProbeFailures = 0
+    updatePlaybackPosition()
+  }
+
+  function releaseBackgroundPlayback() {
+    if (!backgroundOwnsAudio) {
+      backgroundPlaybackSocket = ""
+      return
+    }
+    backgroundOwnsAudio = false
+    backgroundPlaybackSocket = ""
+    if (playing && !paused && hasTrack) startMpv(currentTrack, playbackPosition)
   }
 
   function seek(seconds) {
@@ -485,6 +606,8 @@ Item {
     pendingBackgroundEnable = false
     backgroundEnableFallback.stop()
     backgroundVideoEnabled = false
+    backgroundOwnsAudio = false
+    backgroundPlaybackSocket = ""
     backgroundStreamUrl = ""
     backgroundRequestUrl = ""
     playing = false
@@ -494,7 +617,7 @@ Item {
     status = statusText()
   }
 
-  function startMpv(track) {
+  function startMpv(track, startAt) {
     if (!mpvAvailable) {
       errorText = "mpv is required for playback"
       status = "unavailable"
@@ -504,19 +627,20 @@ Item {
     if (url === "") return
 
     commandProc.output = ""
-    commandProc.command = [controlScript, "start", "--socket", mpvSocket, "--runtime-dir", runtimeDir, "--url", url, "--volume", String(volume), audioOnly ? "--audio-only" : "--video"]
+    commandProc.command = [controlScript, "start", "--socket", mpvSocket, "--runtime-dir", runtimeDir, "--url", url, "--volume", String(volume), "--start", String(Math.max(0, Number(startAt) || 0)), audioOnly ? "--audio-only" : "--video"]
     commandProc.running = true
     commandRunning = true
     playing = true
     paused = false
-    playbackPosition = 0
+    playbackPosition = Math.max(0, Number(startAt) || 0)
+    playbackProbeFailures = 0
     status = "playing"
   }
 
   function sendCommand(command) {
     if (!command || command.length <= 0) return
     commandProc.output = ""
-    commandProc.command = [controlScript, "command", "--socket", mpvSocket, "--payload", JSON.stringify({ command: command })]
+    commandProc.command = [controlScript, "command", "--socket", playbackSocket(), "--payload", JSON.stringify({ command: command })]
     commandProc.running = true
     commandRunning = true
   }
@@ -535,13 +659,14 @@ Item {
     scheduleStateSave()
   }
   onVolumeChanged: scheduleStateSave()
+  onRepeatModeChanged: scheduleStateSave()
   onLastQueryChanged: scheduleStateSave()
   onBackgroundVideoEnabledChanged: if (backgroundVideoEnabled) updatePlaybackPosition()
 
   function updatePlaybackPosition() {
     if (!playing || paused || positionProc.running) return false
     positionProc.output = ""
-    positionProc.command = [controlScript, "get-property", "--socket", mpvSocket, "--name", "time-pos"]
+    positionProc.command = [controlScript, "get-property", "--socket", playbackSocket(), "--name", "time-pos"]
     positionProc.running = true
     return true
   }
@@ -734,8 +859,13 @@ Item {
     onExited: function(exitCode) {
       if (exitCode !== 0) {
         if (root.pendingBackgroundEnable) backgroundEnableFallback.restart()
+        else if (root.playing && !root.paused && !root.commandRunning) {
+          root.playbackProbeFailures += 1
+          if (root.playbackProbeFailures >= 2) root.handlePlaybackEnded()
+        }
         return
       }
+      root.playbackProbeFailures = 0
       try {
         var payload = JSON.parse(positionProc.output || "{}")
         var value = Number(payload.value)
@@ -752,6 +882,10 @@ Item {
 
   Process {
     id: cleanupProc
+  }
+
+  Process {
+    id: backgroundAudioCleanupProc
   }
 
   Process {
@@ -805,10 +939,13 @@ Item {
         backgroundReady: root.backgroundStreamUrl !== "",
         backgroundResolving: root.resolvingBackground,
         backgroundUrl: root.backgroundStreamUrl,
+        backgroundOwnsAudio: root.backgroundOwnsAudio,
+        backgroundPlaybackSocket: root.backgroundPlaybackSocket,
         backgroundRequestRevision: root.backgroundRequestRevision,
         queueLength: root.queue.length,
         favoritesLength: root.favoritesLength,
-        currentFavorite: root.currentFavorite
+        currentFavorite: root.currentFavorite,
+        repeatMode: root.repeatMode
       })
     }
 
@@ -839,6 +976,11 @@ Item {
 
     function clearFavorites(): string {
       root.clearFavorites()
+      return status()
+    }
+
+    function cycleRepeatMode(): string {
+      root.cycleRepeatMode()
       return status()
     }
   }

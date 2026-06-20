@@ -79,6 +79,8 @@ Item {
     if (icon === "player-stop") return "M6 6h12v12h-12z"
     if (icon === "player-skip-back") return "M20 5v14l-12 -7z M4 5v14"
     if (icon === "player-skip-forward") return "M4 5v14l12 -7z M20 5v14"
+    if (icon === "repeat") return "M17 2l4 4l-4 4 M3 11v-1a4 4 0 0 1 4 -4h14 M7 22l-4 -4l4 -4 M21 13v1a4 4 0 0 1 -4 4h-14"
+    if (icon === "repeat-once") return "M17 2l4 4l-4 4 M3 11v-1a4 4 0 0 1 4 -4h14 M7 22l-4 -4l4 -4 M21 13v1a4 4 0 0 1 -4 4h-14 M11 10l2 -2v8"
     return ""
   }
 

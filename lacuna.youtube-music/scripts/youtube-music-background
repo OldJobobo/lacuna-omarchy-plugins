@@ -22,7 +22,7 @@ def main(argv=None):
         "--no-playlist",
         "--get-url",
         "-f",
-        "bestvideo[height<=1440][vcodec!=none]/bestvideo[vcodec!=none]/best[height<=1440]/best",
+        "22/18/best[height<=720][ext=mp4][vcodec!=none][acodec!=none]/best[ext=mp4][vcodec!=none][acodec!=none]",
         argv[0],
     ]
     try:

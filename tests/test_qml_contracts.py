@@ -864,23 +864,47 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("property int fadeRevealDelay: 0", overlay)
         self.assertIn("property bool fadeCoverRising: false", overlay)
         self.assertIn("property int wallpaperFadeGateDelay: 0", overlay)
+        self.assertIn("property bool wallpaperPositionRefreshPending: false", overlay)
+        self.assertIn('property string wallpaperPositionRefreshKey: ""', overlay)
         self.assertIn("readonly property int fadeInDuration: 7000", overlay)
         self.assertIn("readonly property int fadeOutDuration: 7000", overlay)
+        self.assertIn("readonly property string backgroundSocket", overlay)
         self.assertIn('WlrLayershell.namespace: "lacuna-youtube-music-video-fade"', overlay)
         self.assertIn("WlrLayershell.layer: WlrLayer.Bottom", overlay)
         self.assertIn("if (waitingForHighRes) holdFadeCover()", overlay)
         self.assertIn("onBackgroundRequestRevisionChanged", overlay)
-        self.assertIn("if (fadeCoverOpacity > 0.01) releaseFadeCoverSoon()", overlay)
+        self.assertNotIn("if (fadeCoverOpacity > 0.01) releaseFadeCoverSoon()", overlay)
         self.assertIn("fadeCoverStartedAt = Date.now()", overlay)
         self.assertIn("fadeCoverRising = true", overlay)
         self.assertIn("function fadeInRemaining()", overlay)
         self.assertIn("var remainingFadeIn = fadeInRemaining()", overlay)
         self.assertIn("wallpaperFadeGateTimer.restart()", overlay)
+        self.assertIn("service.updatePlaybackPosition()", overlay)
+        self.assertIn("id: wallpaperPositionRefreshTimer", overlay)
+        self.assertIn("wallpaperPositionRefreshKey !== refreshKey", overlay)
+        self.assertIn("root.wallpaperPositionRefreshKey = root.videoSource + \"#\" + root.backgroundRequestRevision", overlay)
         self.assertIn("fadeRevealDelay = Math.max(500, fadeInDuration - elapsed)", overlay)
         self.assertIn("visible: true", overlay)
         self.assertIn("interval: root.fadeRevealDelay", overlay)
         self.assertIn("id: wallpaperFadeGateTimer", overlay)
-        self.assertIn("hwdec=auto panscan=1 start=", overlay)
+        self.assertIn("hwdec=auto panscan=1 input-ipc-server=", overlay)
+        self.assertIn("id: backgroundAdoptTimer", overlay)
+        self.assertIn("interval: 500", overlay)
+        self.assertIn("function tryAdoptBackgroundPlayback()", overlay)
+        self.assertIn("id: backgroundOwnsAudioProbeProcess", overlay)
+        self.assertIn('"get-property", "--socket", backgroundSocket, "--name", "vo-configured"', overlay)
+        self.assertIn("root.service.adoptBackgroundPlayback(root.backgroundSocket)", overlay)
+        self.assertIn("root.releaseFadeCoverSoon()", overlay)
+        self.assertIn("backgroundReadyProbeAttempts < 20", overlay)
+        self.assertIn("input-ipc-server=", overlay)
+        self.assertIn("function syncBackgroundPlaybackPosition()", overlay)
+        self.assertIn("id: backgroundSocketCleanupProcess", overlay)
+        self.assertIn('"cleanup", "--socket", backgroundSocket', overlay)
+        self.assertIn("id: backgroundPositionProcess", overlay)
+        self.assertIn('"get-property", "--socket", backgroundSocket, "--name", "time-pos"', overlay)
+        self.assertIn('"seek", target, "absolute"', overlay)
+        self.assertIn("Math.abs(current - target) > 0.45", overlay)
+        self.assertIn("interval: 1000", overlay)
         self.assertIn("duration: root.fadeCoverOpacity > 0 ? root.fadeInDuration : root.fadeOutDuration", overlay)
         self.assertIn("source: root.videoSource", overlay)
         self.assertNotIn("preferredVideoSource", overlay)
@@ -1324,11 +1348,20 @@ class QmlContractTests(unittest.TestCase):
             "property int favoritesRevision: 0",
             "readonly property int favoritesLength: favoritesRevision >= 0 ? favorites.length : 0",
             "readonly property bool currentFavorite: favoritesRevision >= 0 && isFavorite(currentTrack)",
-            "version: 2",
+            "version: 3",
             "favorites: normalizeUniqueTrackList(source.favorites, 500)",
+            "repeatMode: normalizeRepeatMode(source.repeatMode)",
             "favorites: favorites",
+            "repeatMode: repeatMode",
             "favorites = restored.favorites",
+            "repeatMode = restored.repeatMode",
             "function normalizeUniqueTrackList",
+            "function normalizeRepeatMode",
+            "function isYoutubeUrl(value)",
+            "function normalizeYoutubeUrl(value)",
+            "function playUrl(url)",
+            "videoIdFromUrl(normalizedUrl)",
+            "Paste a YouTube URL",
             "function favoriteIndex(track)",
             "function isFavorite(track)",
             "function favoriteTrack(track)",
@@ -1337,15 +1370,29 @@ class QmlContractTests(unittest.TestCase):
             "function removeFavorite(index)",
             "function playFavorite(index)",
             "function clearFavorites()",
+            "function setRepeatMode(mode)",
+            "function cycleRepeatMode()",
+            "function handlePlaybackEnded()",
+            "if (repeatMode === \"one\" && currentTrack)",
+            "playNextFromQueue(true, repeatMode === \"all\")",
+            "stop()",
+            "onRepeatModeChanged: scheduleStateSave()",
+            "playbackProbeFailures >= 2",
             "property int backgroundRequestRevision: 0",
             "backgroundRequestRevision += 1",
             "if (hasTrack && (backgroundVideoEnabled || backgroundStreamUrl === \"\")) resolveBackground(currentTrack)",
+            "resolvingBackground = false",
+            "backgroundStreamUrl = \"\"",
+            "backgroundRequestUrl = \"\"",
+            "if (hasTrack && previewStreamUrl === \"\" && !resolvingPreview) resolvePreview(currentTrack)",
             "backgroundRequestRevision: root.backgroundRequestRevision",
+            "repeatMode: root.repeatMode",
             "onFavoritesChanged: {",
             "favoritesRevision += 1",
             "favoritesLength: root.favoritesLength",
             "currentFavorite: root.currentFavorite",
             "function toggleFavoriteCurrent(): string",
+            "function cycleRepeatMode(): string",
         ]:
             self.assertIn(snippet, service)
 
@@ -1358,8 +1405,13 @@ class QmlContractTests(unittest.TestCase):
             'id: "favorites"',
             'icon: "heart"',
             'label: "Favorites"',
+            "readonly property string repeatMode",
             "readonly property int favoritesLength",
             "readonly property int favoritesRevision",
+            "readonly property bool inputIsYoutubeUrl",
+            "service.playUrl(searchInput.text)",
+            'text: "Search or paste URL"',
+            'icon: root.inputIsYoutubeUrl ? "player-play" : "search"',
             "function isFavorite(track)",
             "var revision = favoritesRevision",
             "root.service.clearFavorites()",
@@ -1370,6 +1422,8 @@ class QmlContractTests(unittest.TestCase):
             "id: favoritesScroll",
             "id: headerFavoriteButton",
             "showLabels: false",
+            "root.service.cycleRepeatMode()",
+            'icon: root.repeatMode === "one" ? "repeat-once" : "repeat"',
             "model: root.favoritesRevision >= 0 && root.service && root.service.favorites ? root.service.favorites : []",
         ]:
             self.assertIn(snippet, flyout)
@@ -1381,9 +1435,21 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("anchors.right: parent.right", tile)
         self.assertIn("anchors.rightMargin: root.tileInset + tileFavoriteButton.width", tile)
         self.assertIn("root.service.toggleFavorite(root.service.currentTrack)", tile)
-        self.assertIn("root.service.setBackgroundVideoEnabled(true)", tile)
+        self.assertIn("root.service.toggleBackgroundVideo()", tile)
+        self.assertNotIn("root.service.setBackgroundVideoEnabled(true)", tile)
+        self.assertIn("root.service.cycleRepeatMode()", tile)
+        self.assertIn('icon: root.repeatMode === "one" ? "repeat-once" : "repeat"', tile)
+        self.assertIn("readonly property real playbackPosition", tile)
+        self.assertIn("readonly property bool localPreviewVisible: hasTrack && !sentToBackground", tile)
+        self.assertIn("function syncPreviewPosition(force)", tile)
+        self.assertIn("if (!localPreviewVisible) {", tile)
+        self.assertIn("previewPlayer.pause()", tile)
+        self.assertIn("previewPlayer.setPosition(target)", tile)
+        self.assertIn("onPlaybackPositionChanged: syncPreviewPosition(false)", tile)
         self.assertIn('name === "heart-filled"', icons)
         self.assertIn('if (icon === "heart" || icon === "heart-filled")', icons)
+        self.assertIn('if (icon === "repeat")', icons)
+        self.assertIn('if (icon === "repeat-once")', icons)
 
     def test_lacuna_manifest_metadata_describes_install_groups(self):
         manifests = {

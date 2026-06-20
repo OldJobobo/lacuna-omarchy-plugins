@@ -25,6 +25,8 @@ Column {
   readonly property int queueLength: service && service.queue ? service.queue.length : 0
   readonly property int favoritesRevision: service && service.favoritesRevision !== undefined ? Number(service.favoritesRevision) : 0
   readonly property int favoritesLength: service && service.favoritesLength !== undefined ? Number(service.favoritesLength) : 0
+  readonly property string repeatMode: service && service.repeatMode ? String(service.repeatMode) : "none"
+  readonly property bool inputIsYoutubeUrl: service && typeof service.isYoutubeUrl === "function" && service.isYoutubeUrl(searchInput.text)
 
   signal closeRequested()
 
@@ -35,8 +37,11 @@ Column {
 
   function search() {
     activeTab = "search"
-    if (service)
-      service.search(searchInput.text)
+    if (!service)
+      return
+
+    if (inputIsYoutubeUrl) service.playUrl(searchInput.text)
+    else service.search(searchInput.text)
   }
 
   function durationText(track) {
@@ -179,7 +184,7 @@ Column {
             anchors.left: parent.left
             anchors.leftMargin: 10
             anchors.verticalCenter: parent.verticalCenter
-            text: "Search YouTube"
+            text: "Search or paste URL"
             color: root.muted
             fontFamily: root.bodyFontFamily
             font.pixelSize: root.compact ? 10 : 11
@@ -209,7 +214,7 @@ Column {
             anchors.right: parent.right
             anchors.rightMargin: 4
             anchors.verticalCenter: parent.verticalCenter
-            icon: "search"
+            icon: root.inputIsYoutubeUrl ? "player-play" : "search"
             foreground: root.foreground
             muted: root.muted
             accent: root.accent
@@ -301,6 +306,25 @@ Column {
             onTriggered: {
               if (root.service) {
                 root.service.next();
+              }
+            }
+          }
+
+          LacunaIconButton {
+            icon: root.repeatMode === "one" ? "repeat-once" : "repeat"
+            foreground: root.foreground
+            muted: root.repeatMode === "none" ? root.muted : root.accent
+            accent: root.accent
+            hoverAccent: root.accent
+            buttonSize: root.compact ? 28 : 32
+            buttonRadius: root.designTokens.controlRadius
+            hoverOpacity: root.designTokens.hoverOpacity
+            pressOpacity: root.designTokens.activeOpacity
+            iconSize: root.compact ? 14 : 16
+            iconHoverScale: 1.28
+            onTriggered: {
+              if (root.service) {
+                root.service.cycleRepeatMode();
               }
             }
           }

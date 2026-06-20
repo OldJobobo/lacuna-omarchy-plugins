@@ -25,15 +25,17 @@ Item {
   readonly property bool hasTrack: service && service.hasTrack === true
   readonly property bool playbackLoaded: service && service.playing === true
   readonly property bool sentToBackground: service && service.backgroundVideoEnabled === true
-  readonly property bool localPreviewVisible: playbackLoaded && !sentToBackground
+  readonly property bool localPreviewVisible: hasTrack && !sentToBackground
   readonly property bool playing: service && service.playing === true && service.paused !== true
   readonly property string title: hasTrack ? service.displayTitle : (available ? "YouTube Music" : "YouTube Music unavailable")
   readonly property string subtitle: service ? service.statusText() : "Service disabled"
   readonly property string thumbnail: service && service.thumbnail ? String(service.thumbnail) : ""
   readonly property string previewUrl: service && service.previewStreamUrl ? String(service.previewStreamUrl) : ""
   readonly property bool previewActive: previewUrl !== ""
+  readonly property real playbackPosition: service && service.playbackPosition !== undefined ? Math.max(0, Number(service.playbackPosition) || 0) : 0
   readonly property int favoritesRevision: service && service.favoritesRevision !== undefined ? Number(service.favoritesRevision) : 0
   readonly property bool currentFavorite: favoritesRevision >= 0 && service && service.currentFavorite === true
+  readonly property string repeatMode: service && service.repeatMode ? String(service.repeatMode) : "none"
   readonly property int streamVolume: service && service.volume !== undefined ? Number(service.volume) : 70
   readonly property int tileInset: compact ? 8 : 10
   readonly property int previewWidth: Math.max(120, width - (tileInset * 2))
@@ -70,17 +72,31 @@ Item {
   }
 
   function syncPreviewPlayback() {
-    if (!previewActive || !localPreviewVisible) {
+    if (!previewActive) {
       previewPlayer.stop()
       return
     }
+    if (!localPreviewVisible) {
+      previewPlayer.pause()
+      return
+    }
+    syncPreviewPosition(true)
     if (playing) previewPlayer.play()
     else previewPlayer.pause()
+  }
+
+  function syncPreviewPosition(force) {
+    if (!previewActive) return
+    var target = Math.max(0, Math.round(playbackPosition * 1000))
+    if (force || Math.abs(previewPlayer.position - target) > 900) {
+      previewPlayer.setPosition(target)
+    }
   }
 
   onPlayingChanged: syncPreviewPlayback()
   onPreviewActiveChanged: syncPreviewPlayback()
   onLocalPreviewVisibleChanged: syncPreviewPlayback()
+  onPlaybackPositionChanged: syncPreviewPosition(false)
 
   width: parent ? parent.width : 260
   height: tileHeight
@@ -159,6 +175,7 @@ Item {
         }
         loops: MediaPlayer.Infinite
         onSourceChanged: root.syncPreviewPlayback()
+        onPlaybackStateChanged: root.syncPreviewPosition(true)
       }
 
       VideoOutput {
@@ -296,6 +313,21 @@ Item {
           }
 
           LacunaIconButton {
+            icon: root.repeatMode === "one" ? "repeat-once" : "repeat"
+            foreground: root.foreground
+            muted: root.repeatMode === "none" ? root.muted : root.accent
+            accent: root.accent
+            hoverAccent: root.accent
+            buttonSize: root.compact ? 24 : 26
+            buttonRadius: root.designTokens.controlRadius
+            hoverOpacity: root.designTokens.hoverOpacity
+            pressOpacity: root.designTokens.activeOpacity
+            iconSize: root.compact ? 13 : 14
+            iconHoverScale: 1.28
+            onTriggered: if (root.service) root.service.cycleRepeatMode()
+          }
+
+          LacunaIconButton {
             icon: "background"
             foreground: root.service && root.service.backgroundVideoEnabled ? root.accent : root.foreground
             muted: root.service && root.service.backgroundVideoEnabled ? root.accent : root.muted
@@ -307,7 +339,7 @@ Item {
             pressOpacity: root.designTokens.activeOpacity
             iconSize: root.compact ? 13 : 14
             iconHoverScale: 1.28
-            onTriggered: if (root.service) root.service.setBackgroundVideoEnabled(true)
+            onTriggered: if (root.service) root.service.toggleBackgroundVideo()
           }
 
           LacunaIconButton {
@@ -464,6 +496,13 @@ Item {
       interval: 2600
       repeat: false
       onTriggered: root.volumeOpen = false
+    }
+
+    Timer {
+      interval: 1500
+      repeat: true
+      running: root.previewActive && root.localPreviewVisible && root.playing
+      onTriggered: root.syncPreviewPosition(false)
     }
   }
 

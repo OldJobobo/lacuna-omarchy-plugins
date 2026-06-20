@@ -75,6 +75,7 @@ def start(args):
         "--audio-buffer=1",
         "--network-timeout=30",
         f"--volume={args.volume}",
+        f"--start={max(0, args.start)}",
         f"--log-file={log_path}",
         "--msg-level=all=warn",
         "--term-playing-msg=",
@@ -121,6 +122,7 @@ def main(argv=None):
     start_parser.add_argument("--runtime-dir", required=True)
     start_parser.add_argument("--url", required=True)
     start_parser.add_argument("--volume", type=int, default=70)
+    start_parser.add_argument("--start", type=float, default=0)
     mode = start_parser.add_mutually_exclusive_group()
     mode.add_argument("--audio-only", action="store_true")
     mode.add_argument("--video", action="store_true")
