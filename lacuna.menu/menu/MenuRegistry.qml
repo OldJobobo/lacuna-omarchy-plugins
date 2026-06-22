@@ -266,6 +266,20 @@ Item {
     return backgroundVignetteEnabled() ? "Wallpaper edge darkening is visible" : "Wallpaper edge darkening is hidden"
   }
 
+  function backgroundVignetteIntensity() {
+    var value = Number(root.backgroundVignette && root.backgroundVignette.intensity !== undefined ? root.backgroundVignette.intensity : 0.85)
+    if (isNaN(value)) value = 0.85
+    return Math.max(0, Math.min(1, value))
+  }
+
+  function backgroundVignetteIntensityName() {
+    return Math.round(backgroundVignetteIntensity() * 100) + "%"
+  }
+
+  function backgroundVignetteIntensityHint() {
+    return "Edge darkening opacity " + backgroundVignetteIntensityName()
+  }
+
   function backgroundEffectPluginId(effectId) {
     if (effectId === "trackingLines") return "lacuna.vhs-overlay"
     if (effectId === "crt") return "lacuna.crt-overlay"

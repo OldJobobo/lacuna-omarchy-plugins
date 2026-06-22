@@ -48,6 +48,24 @@ LacunaRect {
   readonly property bool hovered: stateLayer.containsMouse
   readonly property bool pressed: stateLayer.pressed
   readonly property real reveal: stateLayer.reveal
+  // Keyboard focus mirrors hover: a row is "highlighted" when the pointer is
+  // over it or the keyboard cursor rests on it. focusReveal animates the
+  // keyboard half so it eases in like the mouse reveal does.
+  property bool focused: false
+  property real focusReveal: focused ? 1 : 0
+  readonly property bool highlighted: hovered || focused
+  readonly property real highlightReveal: Math.max(reveal, focusReveal)
+  // The label gets its own slower, symmetric ease (InOutCubic below) so the
+  // colour glide is unhurried, decoupled from the snappy structural reveal that
+  // the seam/glow/margin ride. labelMix animates via its Behavior.
+  property real labelMix: highlighted ? 1 : 0
+  // Label drifts from foreground toward the row's tone accent as it highlights,
+  // matching the icon's existing muted -> accent shift.
+  readonly property color labelColor: Qt.rgba(
+    foreground.r + (toneAccent.r - foreground.r) * labelMix,
+    foreground.g + (toneAccent.g - foreground.g) * labelMix,
+    foreground.b + (toneAccent.b - foreground.b) * labelMix,
+    1)
   readonly property bool header: kind === "header"
   readonly property bool featured: layout === "featured"
   readonly property bool optionControl: layout === "design-style-control"
@@ -63,7 +81,7 @@ LacunaRect {
   readonly property int trailingTooltipWidth: trailingTooltipVisible ? Math.max(88, Math.min(150, trailingTooltip.length * (compact ? 7 : 8) + 18)) : 0
   readonly property int rowHeight: optionControl ? (compact ? 38 : 42) : featured ? designTokens.featuredItemHeight : primary ? designTokens.primaryItemHeight : compactRow ? designTokens.compactItemHeight : designTokens.itemHeight
   readonly property int iconLeftPadding: designTokens.accentStrips ? (compact ? 5 : 6) : 0
-  property int contentLeftMargin: Math.round(reveal * (featured ? 3 : 2))
+  property int contentLeftMargin: Math.round(highlightReveal * (featured ? 3 : 2))
   property bool reorderHandlePressed: false
   property real gapBreath: 0
   readonly property int notch: compact ? 18 : 22
@@ -71,8 +89,8 @@ LacunaRect {
   width: parent ? parent.width : implicitWidth
   height: header ? (compact ? 24 : 30) : rowHeight
   radius: header ? 0 : designTokens.radius
-  border.width: !header && designTokens.omarchy && (hovered || primary) ? designTokens.borderWidth : 0
-  border.color: Qt.rgba(foreground.r, foreground.g, foreground.b, hovered ? 0.18 : 0.10)
+  border.width: !header && designTokens.omarchy && (highlighted || primary) ? designTokens.borderWidth : 0
+  border.color: Qt.rgba(foreground.r, foreground.g, foreground.b, highlighted ? 0.18 : 0.10)
   clip: true
   opacity: reorderActive ? 0.76 : 1
 
@@ -82,6 +100,14 @@ LacunaRect {
 
   Behavior on opacity {
     LacunaAnim { motion: "fast" }
+  }
+
+  Behavior on focusReveal {
+    LacunaAnim { motion: "fast" }
+  }
+
+  Behavior on labelMix {
+    NumberAnimation { duration: 300; easing.type: Easing.InOutCubic }
   }
 
   // Bottom hover treatment — mirrors the grid tile: a seam line broken by a
@@ -94,7 +120,7 @@ LacunaRect {
     height: 1
     width: Math.max(0, (root.width - root.notch) / 2)
     color: root.seam
-    opacity: root.reveal
+    opacity: root.highlightReveal
   }
 
   LacunaRect {
@@ -104,11 +130,11 @@ LacunaRect {
     height: 1
     width: Math.max(0, (root.width - root.notch) / 2)
     color: root.seam
-    opacity: root.reveal
+    opacity: root.highlightReveal
   }
 
   Item {
-    visible: !root.header && root.designTokens.lacuna && root.hovered
+    visible: !root.header && root.designTokens.lacuna && root.highlighted
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.verticalCenter: parent.bottom
     width: Math.round(root.width * 0.6)
@@ -120,7 +146,7 @@ LacunaRect {
       height: 5
       radius: 2.5
       color: root.toneAccent
-      opacity: (0.03 + root.gapBreath * 0.17) * root.reveal
+      opacity: (0.03 + root.gapBreath * 0.17) * root.highlightReveal
     }
 
     LacunaRect {
@@ -129,7 +155,7 @@ LacunaRect {
       height: 3
       radius: 1.5
       color: root.toneAccent
-      opacity: (0.10 + root.gapBreath * 0.32) * root.reveal
+      opacity: (0.10 + root.gapBreath * 0.32) * root.highlightReveal
     }
 
     LacunaRect {
@@ -138,12 +164,12 @@ LacunaRect {
       height: 2
       radius: 1
       color: root.toneAccent
-      opacity: (0.28 + root.gapBreath * 0.62) * root.reveal
+      opacity: (0.28 + root.gapBreath * 0.62) * root.highlightReveal
     }
   }
 
   Timer {
-    running: root.designTokens.lacuna && root.hovered && !root.header
+    running: root.designTokens.lacuna && root.highlighted && !root.header
     interval: 50
     repeat: true
     onTriggered: root.gapBreath = 0.5 + 0.5 * Math.sin(Date.now() / 620)
@@ -210,7 +236,7 @@ LacunaRect {
         anchors.centerIn: parent
         visible: root.iconSource === "" && valid
         name: root.icon
-        color: root.tone === "nav" && !root.hovered ? root.muted : root.toneAccent
+        color: root.tone === "nav" && !root.highlighted ? root.muted : root.toneAccent
         iconSize: root.compact ? (root.featured ? 17 : root.primary ? 15 : 13) : (root.featured ? 20 : root.primary ? 17 : 15)
       }
 
@@ -219,7 +245,7 @@ LacunaRect {
         width: parent.width
         visible: (root.iconSource === "" && !iconShape.valid) || (root.iconSource !== "" && iconImage.status === Image.Error)
         text: root.icon
-        color: root.tone === "nav" && !root.hovered ? root.muted : root.toneAccent
+        color: root.tone === "nav" && !root.highlighted ? root.muted : root.toneAccent
         fontFamily: root.fontFamily
         font.pixelSize: root.compact ? (root.featured ? 15 : root.primary ? 13 : 12) : (root.featured ? 17 : root.primary ? 15 : 13)
         horizontalAlignment: Text.AlignHCenter
@@ -234,10 +260,10 @@ LacunaRect {
       LacunaText {
         width: parent.width
         text: root.label
-        color: root.foreground
+        color: root.labelColor
         fontFamily: root.labelFontFamily
         font.pixelSize: root.compact ? (root.featured ? 13 : root.primary ? 12 : 11) : (root.featured ? 15 : root.primary ? 14 : 13)
-        font.weight: root.hovered || root.primary || root.featured ? Font.DemiBold : Font.Normal
+        font.weight: root.highlighted || root.primary || root.featured ? Font.DemiBold : Font.Normal
         font.letterSpacing: root.compact ? 0.6 : 0.9
       }
     }
@@ -313,7 +339,7 @@ LacunaRect {
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
         name: "chevron-right"
-        color: root.hovered ? root.toneAccent : root.muted
+        color: root.highlighted ? root.toneAccent : root.muted
         iconSize: root.compact ? 12 : 14
       }
     }

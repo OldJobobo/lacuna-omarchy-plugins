@@ -246,7 +246,7 @@ Item {
 
   function applyInitialSidebarDefault() {
     if (root.initialSidebarDefaultApplied) return
-    if (!lacunaSettings || lacunaSettings.hasLoaded === false) {
+    if (!sidebarSettingsLoaded()) {
       initialSidebarDefaultRetry.restart()
       return
     }
@@ -255,7 +255,7 @@ Item {
 
   function applyInitialSidebarDefaultNow() {
     if (root.initialSidebarDefaultApplied) return
-    if (!lacunaSettings || lacunaSettings.hasLoaded === false) {
+    if (!sidebarSettingsLoaded()) {
       initialSidebarDefaultRetry.restart()
       return
     }
@@ -447,8 +447,13 @@ Item {
     onTriggered: root.applyInitialSidebarDefaultNow()
   }
 
+  function sidebarSettingsLoaded() {
+    return lacunaSettings && lacunaSettings.hasLoaded === true
+  }
+
   function applySidebarDefaultState() {
     if (!lacunaEnabled) return false
+    if (!sidebarSettingsLoaded()) return false
 
     var mode = sidebarDefaultMode()
     pendingFlyoutFocus = ""
@@ -481,6 +486,12 @@ Item {
     var mode = sidebar && sidebar.defaultMode !== undefined ? String(sidebar.defaultMode).toLowerCase() : String(sidebarState.defaultMode || "off").toLowerCase()
     if (mode === "rail" || mode === "full") return mode
     return "off"
+  }
+
+  function sidebarDefaultKeepsMenuOpen() {
+    if (!sidebarSettingsLoaded()) return true
+    var mode = sidebarDefaultMode()
+    return mode === "rail" || mode === "full"
   }
 
   function viewToneAccent() {
@@ -857,6 +868,19 @@ Item {
     }
   }
 
+  function setBackgroundVignetteIntensity(value) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    if (!next.backgroundVignette || typeof next.backgroundVignette !== "object") next.backgroundVignette = lacunaSettings.normalizeBackgroundVignette({})
+    var intensity = Number(value)
+    next.backgroundVignette.enabled = true
+    next.backgroundVignette.intensity = isNaN(intensity) ? 0.85 : Math.max(0, Math.min(1, intensity))
+    lacunaSettings.save(next)
+
+    if (!shellPluginEnabled("lacuna.background-vignette")) {
+      setShellPluginEnabled("lacuna.background-vignette", true)
+    }
+  }
+
   function desiredChecked(entry, fallback) {
     return valueHelpers.desiredChecked(entry, fallback)
   }
@@ -1172,6 +1196,11 @@ Item {
 
     if (entry.action === "toggle-background-vignette") {
       setBackgroundVignetteEnabled(desiredChecked(entry, !registry.backgroundVignetteEnabled()))
+      return true
+    }
+
+    if (entry.action.indexOf("set-background-vignette-intensity-") === 0) {
+      setBackgroundVignetteIntensity(entry.action.substring("set-background-vignette-intensity-".length))
       return true
     }
 
@@ -1527,6 +1556,14 @@ Item {
     onFlyoutInteractiveChanged: root.applyPendingFlyoutFocus()
     onActiveFlyoutChanged: root.applyPendingFlyoutFocus()
     onHostHideRequested: {
+      if (!root.sidebarSettingsLoaded()) {
+        initialSidebarDefaultRetry.restart()
+        return
+      }
+      if (root.sidebarDefaultKeepsMenuOpen()) {
+        root.applySidebarDefaultState()
+        return
+      }
       if (root.hostManaged) return
       if (root.frameMode === "fullframe") return
       if (root.shell && root.shell.hide) root.shell.hide(root.pluginId)
@@ -1735,6 +1772,7 @@ Item {
         onShellSettingsRequested: root.toggleShellSettingsPanel()
         onYoutubeMusicRequested: root.openYoutubeMusicPanel()
         onCollapseRequested: sidebarState.toggleCollapsed()
+        onCloseRequested: root.close()
       }
 
       MenuRail {

@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import QtMultimedia
 import QtQuick
 
 Item {
@@ -12,13 +13,11 @@ Item {
   property var service: null
 
   readonly property string targetOutput: String(manifest && manifest.defaults && manifest.defaults.targetOutput ? manifest.defaults.targetOutput : "DP-1")
-  readonly property string safeOutputId: targetOutput.replace(/[^A-Za-z0-9_.-]/g, "_")
-  readonly property string backgroundSocket: service && service.runtimeDir ? String(service.runtimeDir) + "/mpvpaper-" + safeOutputId + ".sock" : ""
-  readonly property string cleanupPattern: "^/usr/bin/mpvpaper --layer background .* (" + regexEscape(targetOutput) + "|ALL) "
+  readonly property bool allOutputs: targetOutput === "" || targetOutput === "ALL" || targetOutput === "*"
   readonly property bool backgroundVisible: service
     && service.backgroundVideoEnabled === true
     && String(highResVideoSource) !== ""
-  readonly property bool backgroundPlaying: backgroundVisible && service.paused !== true
+  readonly property bool backgroundPlaying: backgroundVisible && service.playing === true && service.paused !== true
   readonly property string highResVideoSource: service ? String(service.backgroundStreamUrl || "") : ""
   readonly property int backgroundRequestRevision: service && service.backgroundRequestRevision !== undefined ? Number(service.backgroundRequestRevision) || 0 : 0
   readonly property bool usingHighRes: highResVideoSource !== "" && videoSource === highResVideoSource
@@ -32,36 +31,46 @@ Item {
     && highResVideoSource === ""
   readonly property int fadeInDuration: 7000
   readonly property int fadeOutDuration: 7000
+  readonly property int exitFadeToBlackDuration: 900
+  readonly property int exitFadeFromBlackDuration: 1200
   property string activeSource: ""
-  property var activeCommand: []
   property int activeStartPosition: 0
   property int lastExitCode: 0
   property int restartAttempts: 0
-  property bool restartPending: false
   property bool fadeCoverVisible: false
   property real fadeCoverOpacity: 0
   property double fadeCoverStartedAt: 0
   property int fadeRevealDelay: 0
   property bool fadeCoverRising: false
+  property int fadeCoverDuration: fadeInDuration
+  property bool exitTransitionActive: false
+  property bool clearingWallpaperAfterExit: false
   property int wallpaperFadeGateDelay: 0
   property bool wallpaperPositionRefreshPending: false
   property string wallpaperPositionRefreshKey: ""
   property int backgroundReadyProbeAttempts: 0
+  readonly property bool wallpaperLayerVisible: wallpaperDesired || activeSource !== "" || exitTransitionActive
 
-  function wallpaperCommand(source, position) {
-    return [
-      "mpvpaper",
-      "--layer",
-      "background",
-      "--mpv-options",
-      "no-terminal hwdec=auto panscan=1 input-ipc-server=" + backgroundSocket + " start=" + Math.max(0, Math.floor(position)) + " volume=" + Math.max(0, Math.min(100, service && service.volume !== undefined ? Number(service.volume) || 0 : 70)),
-      targetOutput,
-      source
-    ]
+  function outputMatches(screen) {
+    if (allOutputs) return true
+    var name = screen && screen.name !== undefined ? String(screen.name) : ""
+    return name === targetOutput
   }
 
-  function regexEscape(value) {
-    return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  function resolveFrameRect(screen) {
+    if (root.shell && root.shell.bar && typeof root.shell.bar.lacunaFrameContentRect === "function") {
+      var rect = root.shell.bar.lacunaFrameContentRect(screen)
+      if (rect && rect.width > 0 && rect.height > 0) return rect
+    }
+    return {
+      x: 0,
+      y: 0,
+      width: screen && screen.width !== undefined ? Math.max(1, Number(screen.width) || 1) : 1,
+      height: screen && screen.height !== undefined ? Math.max(1, Number(screen.height) || 1) : 1,
+      radius: 0,
+      bleed: 0,
+      framed: false
+    }
   }
 
   function resolveService() {
@@ -85,7 +94,7 @@ Item {
 
   Component.onCompleted: {
     resolveService()
-    startupCleanupTimer.restart()
+    syncWallpaper()
   }
   onShellChanged: resolveService()
   onWaitingForHighResChanged: {
@@ -96,13 +105,19 @@ Item {
   }
   onWallpaperDesiredChanged: syncWallpaper()
   onVideoSourceChanged: syncWallpaper()
+  onBackgroundPlayingChanged: syncWallpaper()
+  onStartPositionChanged: syncVideoPosition(false)
 
   function holdFadeCover() {
+    exitTransitionActive = false
+    clearingWallpaperAfterExit = false
+    exitClearTimer.stop()
     fadeRevealTimer.stop()
     fadeHideTimer.stop()
     fadeCoverVisible = true
     fadeCoverStartedAt = Date.now()
     fadeCoverRising = true
+    fadeCoverDuration = fadeInDuration
     fadeCoverOpacity = 1
   }
 
@@ -120,43 +135,31 @@ Item {
   function releaseFadeCoverNow() {
     fadeRevealTimer.stop()
     fadeCoverRising = false
+    fadeCoverDuration = clearingWallpaperAfterExit ? exitFadeFromBlackDuration : fadeOutDuration
     fadeCoverOpacity = 0
     fadeHideTimer.restart()
   }
 
-  function cleanupWallpaperProcess() {
-    if (service && service.controlScript && backgroundSocket !== "" && !backgroundSocketCleanupProcess.running) {
-      backgroundSocketCleanupProcess.command = [service.controlScript, "cleanup", "--socket", backgroundSocket]
-      backgroundSocketCleanupProcess.running = true
-    }
-    if (!cleanupProcess.running) cleanupProcess.running = true
-  }
-
   function syncWallpaper() {
     if (!wallpaperDesired) {
-      var hadActiveWallpaper = wallpaperProcess.running || activeSource !== ""
-      restartPending = false
-      activeSource = ""
-      activeCommand = []
-      activeStartPosition = 0
-      restartAttempts = 0
-      wallpaperPositionRefreshPending = false
-      wallpaperPositionRefreshKey = ""
-      backgroundReadyProbeAttempts = 0
-      if (service && typeof service.releaseBackgroundPlayback === "function") service.releaseBackgroundPlayback()
-      wallpaperProcess.running = false
-      if (hadActiveWallpaper) cleanupWallpaperProcess()
-      restartTimer.stop()
-      wallpaperFadeGateTimer.stop()
-      if (!waitingForHighRes) releaseFadeCoverNow()
+      if (activeSource !== "" && !exitTransitionActive && !clearingWallpaperAfterExit) {
+        beginWallpaperExit()
+        return
+      }
+      if (!exitTransitionActive && !clearingWallpaperAfterExit) clearWallpaperNow()
       return
     }
 
-    if (wallpaperProcess.running && activeSource === videoSource) return
+    if (exitTransitionActive || clearingWallpaperAfterExit) {
+      exitTransitionActive = false
+      clearingWallpaperAfterExit = false
+      exitClearTimer.stop()
+    }
 
-    if (wallpaperProcess.running) {
-      restartPending = true
-      wallpaperProcess.running = false
+    if (activeSource !== videoSource && !fadeCoverRising && fadeCoverOpacity <= 0.001) {
+      holdFadeCover()
+      wallpaperFadeGateDelay = fadeInDuration
+      wallpaperFadeGateTimer.restart()
       return
     }
 
@@ -177,56 +180,46 @@ Item {
 
     activeSource = videoSource
     activeStartPosition = Math.max(0, Math.floor(startPosition))
-    activeCommand = wallpaperCommand(activeSource, activeStartPosition)
-    restartPending = false
+    syncVideoPosition(true)
+    if (backgroundPlaying && fadeCoverOpacity > 0.01) releaseFadeCoverSoon()
+  }
+
+  function beginWallpaperExit() {
+    wallpaperFadeGateTimer.stop()
+    fadeRevealTimer.stop()
+    fadeHideTimer.stop()
+    exitTransitionActive = true
+    clearingWallpaperAfterExit = false
+    fadeCoverVisible = true
+    fadeCoverRising = true
+    fadeCoverStartedAt = Date.now()
+    fadeCoverDuration = exitFadeToBlackDuration
+    fadeCoverOpacity = 1
+    exitClearTimer.restart()
+  }
+
+  function clearWallpaperNow() {
+    activeSource = ""
+    activeStartPosition = 0
     restartAttempts = 0
-    wallpaperProcess.command = activeCommand
-    wallpaperProcess.running = true
+    wallpaperPositionRefreshPending = false
+    wallpaperPositionRefreshKey = ""
     backgroundReadyProbeAttempts = 0
-    backgroundAdoptTimer.restart()
-    backgroundSyncDelayTimer.restart()
+    wallpaperFadeGateTimer.stop()
+    if (!waitingForHighRes) releaseFadeCoverNow()
   }
 
-  function syncBackgroundPlaybackPosition() {
-    if (!service || !wallpaperProcess.running || !backgroundPlaying || backgroundSocket === "" || !service.controlScript) return
-    if (backgroundPositionProcess.running || backgroundSeekProcess.running) return
-    backgroundPositionProcess.output = ""
-    backgroundPositionProcess.command = [service.controlScript, "get-property", "--socket", backgroundSocket, "--name", "time-pos"]
-    backgroundPositionProcess.running = true
-  }
-
-  function restartBackgroundPlayback() {
-    if (!wallpaperDesired || activeSource === "") return
-    if (restartAttempts >= 3) {
-      if (service) {
-        service.backgroundOwnsAudio = false
-        service.backgroundPlaybackSocket = ""
-      }
-      return
+  function syncVideoPosition(force) {
+    for (var i = 0; i < videoPlayers.length; i++) {
+      var player = videoPlayers[i]
+      if (!player || player.source === "") continue
+      var target = Math.max(0, Math.round(startPosition * 1000))
+      if (force || Math.abs(player.position - target) > 900) player.setPosition(target)
     }
-    restartAttempts += 1
-    if (service) {
-      service.backgroundOwnsAudio = false
-      service.backgroundPlaybackSocket = ""
-    }
-    holdFadeCover()
-    restartPending = true
-    wallpaperProcess.running = false
-    cleanupWallpaperProcess()
-    restartTimer.restart()
-  }
-
-  function tryAdoptBackgroundPlayback() {
-    if (!service || !wallpaperProcess.running || !backgroundPlaying || backgroundSocket === "" || !service.controlScript) return
-    if (backgroundOwnsAudioProbeProcess.running || service.backgroundOwnsAudio === true) return
-    backgroundOwnsAudioProbeProcess.output = ""
-    backgroundOwnsAudioProbeProcess.command = [service.controlScript, "get-property", "--socket", backgroundSocket, "--name", "vo-configured"]
-    backgroundOwnsAudioProbeProcess.running = true
   }
 
   Component.onDestruction: {
-    wallpaperProcess.running = false
-    cleanupWallpaperProcess()
+    activeSource = ""
   }
 
   Timer {
@@ -234,22 +227,6 @@ Item {
     repeat: true
     running: root.service === null
     onTriggered: root.resolveService()
-  }
-
-  Timer {
-    id: restartTimer
-    interval: 120
-    repeat: false
-    onTriggered: root.syncWallpaper()
-  }
-
-  Timer {
-    id: startupCleanupTimer
-    interval: 900
-    repeat: false
-    onTriggered: {
-      if (!root.wallpaperDesired && !wallpaperProcess.running) root.cleanupWallpaperProcess()
-    }
   }
 
   Timer {
@@ -261,9 +238,26 @@ Item {
 
   Timer {
     id: fadeHideTimer
-    interval: root.fadeOutDuration + 400
+    interval: root.fadeCoverDuration + 400
     repeat: false
-    onTriggered: if (root.fadeCoverOpacity <= 0.001) root.fadeCoverVisible = false
+    onTriggered: {
+      if (root.fadeCoverOpacity <= 0.001) {
+        root.fadeCoverVisible = false
+        root.clearingWallpaperAfterExit = false
+      }
+    }
+  }
+
+  Timer {
+    id: exitClearTimer
+    interval: root.exitFadeToBlackDuration + 80
+    repeat: false
+    onTriggered: {
+      if (!root.exitTransitionActive || root.wallpaperDesired) return
+      root.exitTransitionActive = false
+      root.clearingWallpaperAfterExit = true
+      root.clearWallpaperNow()
+    }
   }
 
   Timer {
@@ -285,41 +279,32 @@ Item {
   }
 
   Timer {
-    id: backgroundSyncDelayTimer
-    interval: 1200
-    repeat: false
-    onTriggered: root.syncBackgroundPlaybackPosition()
-  }
-
-  Timer {
-    id: backgroundAdoptTimer
-    interval: 500
-    repeat: false
-    onTriggered: root.tryAdoptBackgroundPlayback()
-  }
-
-  Timer {
     interval: 1000
     repeat: true
-    running: root.wallpaperProcess.running && root.backgroundPlaying
-    onTriggered: root.syncBackgroundPlaybackPosition()
+    running: root.backgroundPlaying
+    onTriggered: root.syncVideoPosition(false)
   }
+
+  property var videoPlayers: []
 
   Variants {
     model: Quickshell.screens
 
     PanelWindow {
-      id: fadeWindow
+      id: videoWindow
 
       required property var modelData
+      readonly property bool targetMatched: root.outputMatches(modelData)
+      readonly property var frameRect: root.resolveFrameRect(modelData)
+      readonly property bool renderable: targetMatched && root.wallpaperLayerVisible
 
       screen: modelData
-      visible: true
+      visible: renderable
       color: "transparent"
       implicitWidth: 0
       implicitHeight: 0
-      WlrLayershell.namespace: "lacuna-youtube-music-video-fade"
-      WlrLayershell.layer: WlrLayer.Bottom
+      WlrLayershell.namespace: "lacuna-youtube-music-video"
+      WlrLayershell.layer: WlrLayer.Background
       WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
       exclusionMode: ExclusionMode.Ignore
       mask: Region {}
@@ -332,125 +317,114 @@ Item {
       }
 
       Rectangle {
-        anchors.fill: parent
-        color: "#000000"
-        opacity: root.fadeCoverOpacity
+        id: videoFrame
 
-        Behavior on opacity {
-          NumberAnimation {
-            duration: root.fadeCoverOpacity > 0 ? root.fadeInDuration : root.fadeOutDuration
-            easing.type: Easing.InOutQuad
+        x: Math.round(videoWindow.frameRect.x)
+        y: Math.round(videoWindow.frameRect.y)
+        width: Math.round(videoWindow.frameRect.width)
+        height: Math.round(videoWindow.frameRect.height)
+        radius: Math.max(0, Number(videoWindow.frameRect.radius || 0))
+        color: "transparent"
+        clip: true
+        visible: videoWindow.renderable
+
+        MediaPlayer {
+          id: backgroundPlayer
+          source: videoWindow.renderable ? root.activeSource : ""
+          videoOutput: backgroundOutput
+          audioOutput: AudioOutput {
+            muted: true
+            volume: 0
+          }
+          loops: MediaPlayer.Infinite
+          onSourceChanged: {
+            root.syncVideoPosition(true)
+            if (root.backgroundPlaying) play()
+          }
+          onPlaybackStateChanged: {
+            if (playbackState !== MediaPlayer.StoppedState && root.fadeCoverOpacity > 0.01) root.releaseFadeCoverSoon()
+          }
+          Component.onCompleted: root.videoPlayers.push(backgroundPlayer)
+          Component.onDestruction: {
+            var index = root.videoPlayers.indexOf(backgroundPlayer)
+            if (index >= 0) root.videoPlayers.splice(index, 1)
+          }
+        }
+
+        VideoOutput {
+          id: backgroundOutput
+          anchors.fill: parent
+          visible: videoWindow.renderable
+          fillMode: VideoOutput.PreserveAspectCrop
+        }
+
+        Connections {
+          target: root
+          function onActiveSourceChanged() {
+            if (root.activeSource === "") backgroundPlayer.stop()
+            else if (root.backgroundPlaying && videoWindow.renderable) backgroundPlayer.play()
+          }
+          function onBackgroundPlayingChanged() {
+            if (root.backgroundPlaying && videoWindow.renderable) {
+              root.syncVideoPosition(false)
+              backgroundPlayer.play()
+            } else {
+              backgroundPlayer.pause()
+            }
+          }
+          function onWallpaperDesiredChanged() {
+            if (root.wallpaperDesired && root.backgroundPlaying && videoWindow.renderable) backgroundPlayer.play()
           }
         }
       }
     }
   }
 
-  Process {
-    id: wallpaperProcess
+  Variants {
+    model: Quickshell.screens
 
-    command: root.activeCommand
-    running: false
-    onExited: function(exitCode) {
-      root.lastExitCode = exitCode
-      if (root.restartPending || (root.wallpaperDesired && root.activeSource !== root.videoSource)) {
-        root.restartPending = false
-        restartTimer.restart()
-      } else if (root.wallpaperDesired && root.activeSource === root.videoSource && exitCode === 0 && root.service && root.service.backgroundOwnsAudio === true) {
-        root.activeSource = ""
-        root.service.backgroundOwnsAudio = false
-        root.service.backgroundPlaybackSocket = ""
-        if (typeof root.service.handlePlaybackEnded === "function") root.service.handlePlaybackEnded()
-      } else if (root.wallpaperDesired && root.activeSource === root.videoSource && root.restartAttempts < 3) {
-        root.restartAttempts += 1
-        root.activeSource = ""
-        restartTimer.restart()
+    PanelWindow {
+      id: fadeWindow
+
+      required property var modelData
+      readonly property bool targetMatched: root.outputMatches(modelData)
+      readonly property var frameRect: root.resolveFrameRect(modelData)
+
+      screen: modelData
+      visible: targetMatched && root.fadeCoverVisible
+      color: "transparent"
+      implicitWidth: 0
+      implicitHeight: 0
+      WlrLayershell.namespace: "lacuna-youtube-music-video-fade"
+      WlrLayershell.layer: WlrLayer.Background
+      WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+      exclusionMode: ExclusionMode.Ignore
+      mask: Region {}
+
+      anchors {
+        top: true
+        bottom: true
+        left: true
+        right: true
+      }
+
+      Rectangle {
+        x: Math.round(fadeWindow.frameRect.x)
+        y: Math.round(fadeWindow.frameRect.y)
+        width: Math.round(fadeWindow.frameRect.width)
+        height: Math.round(fadeWindow.frameRect.height)
+        radius: Math.max(0, Number(fadeWindow.frameRect.radius || 0))
+        color: "#000000"
+        opacity: root.fadeCoverOpacity
+
+        Behavior on opacity {
+          NumberAnimation {
+            duration: root.fadeCoverDuration
+            easing.type: Easing.InOutQuad
+          }
+        }
       }
     }
-  }
-
-  Process {
-    id: cleanupProcess
-
-    command: ["pkill", "-f", root.cleanupPattern]
-    running: false
-  }
-
-  Process {
-    id: backgroundSocketCleanupProcess
-  }
-
-  Process {
-    id: backgroundOwnsAudioProbeProcess
-    property string output: ""
-
-    stdout: SplitParser {
-      onRead: function(data) { backgroundOwnsAudioProbeProcess.output += data }
-    }
-
-    onExited: function(exitCode) {
-      if (!root.backgroundPlaying || !root.service) return
-      if (exitCode !== 0) {
-        if (root.wallpaperProcess.running && root.backgroundReadyProbeAttempts < 20) {
-          root.backgroundReadyProbeAttempts += 1
-          backgroundAdoptTimer.restart()
-        }
-        return
-      }
-      try {
-        var payload = JSON.parse(backgroundOwnsAudioProbeProcess.output || "{}")
-        if (payload.value === true && typeof root.service.adoptBackgroundPlayback === "function") {
-          root.service.adoptBackgroundPlayback(root.backgroundSocket)
-          if (root.fadeCoverOpacity > 0.01) root.releaseFadeCoverSoon()
-          return
-        }
-      } catch (error) {
-      }
-      if (root.wallpaperProcess.running && root.backgroundReadyProbeAttempts < 20) {
-        root.backgroundReadyProbeAttempts += 1
-        backgroundAdoptTimer.restart()
-      }
-    }
-  }
-
-  Process {
-    id: backgroundPositionProcess
-    property string output: ""
-
-    stdout: SplitParser {
-      onRead: function(data) { backgroundPositionProcess.output += data }
-    }
-
-    onExited: function(exitCode) {
-      if (!root.backgroundPlaying) return
-      if (exitCode !== 0) {
-        root.restartBackgroundPlayback()
-        return
-      }
-      try {
-        var payload = JSON.parse(backgroundPositionProcess.output || "{}")
-        var current = Number(payload.value)
-        var target = root.startPosition
-        if (!isFinite(current)) {
-          root.restartBackgroundPlayback()
-          return
-        }
-        if (isFinite(current) && isFinite(target) && Math.abs(current - target) > 0.45) {
-          backgroundSeekProcess.command = [root.service.controlScript, "command", "--socket", root.backgroundSocket, "--payload", JSON.stringify({ command: ["seek", target, "absolute"] })]
-          backgroundSeekProcess.running = true
-        }
-        if (isFinite(current) && current >= 0 && root.service && root.service.backgroundOwnsAudio !== true && typeof root.service.adoptBackgroundPlayback === "function") {
-          root.service.adoptBackgroundPlayback(root.backgroundSocket)
-          if (root.fadeCoverOpacity > 0.01) root.releaseFadeCoverSoon()
-        }
-      } catch (error) {
-        root.restartBackgroundPlayback()
-      }
-    }
-  }
-
-  Process {
-    id: backgroundSeekProcess
   }
 
   Connections {
@@ -461,6 +435,7 @@ Item {
     function onPlayingChanged() { root.syncWallpaper() }
     function onPreviewStreamUrlChanged() { root.syncWallpaper() }
     function onBackgroundStreamUrlChanged() { root.syncWallpaper() }
+    function onPlaybackPositionChanged() { root.syncVideoPosition(false) }
   }
 
   IpcHandler {
@@ -473,7 +448,7 @@ Item {
         backgroundVisible: root.backgroundVisible,
         backgroundPlaying: root.backgroundPlaying,
         wallpaperDesired: root.wallpaperDesired,
-        wallpaperRunning: wallpaperProcess.running,
+        wallpaperRunning: root.activeSource !== "",
         backgroundVideoEnabled: root.service && root.service.backgroundVideoEnabled === true,
         playing: root.service && root.service.playing === true,
         paused: root.service && root.service.paused === true,
@@ -485,12 +460,15 @@ Item {
         waitingForHighRes: root.waitingForHighRes,
         fadeCoverVisible: root.fadeCoverVisible,
         fadeCoverOpacity: root.fadeCoverOpacity,
+        fadeCoverDuration: root.fadeCoverDuration,
         fadeRevealDelay: root.fadeRevealDelay,
+        wallpaperLayerVisible: root.wallpaperLayerVisible,
         wallpaperFadeGateDelay: root.wallpaperFadeGateDelay,
         wallpaperPositionRefreshPending: root.wallpaperPositionRefreshPending,
         wallpaperPositionRefreshKey: root.wallpaperPositionRefreshKey,
+        exitTransitionActive: root.exitTransitionActive,
+        clearingWallpaperAfterExit: root.clearingWallpaperAfterExit,
         backgroundReadyProbeAttempts: root.backgroundReadyProbeAttempts,
-        backgroundSocket: root.backgroundSocket,
         usingHighRes: root.usingHighRes,
         source: root.videoSource,
         activeSource: root.activeSource,
@@ -498,7 +476,7 @@ Item {
         targetOutput: root.targetOutput,
         lastExitCode: root.lastExitCode,
         restartAttempts: root.restartAttempts,
-        backend: "mpvpaper"
+        backend: "qml-framed-video"
       })
     }
   }

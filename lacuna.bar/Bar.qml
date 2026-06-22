@@ -41,6 +41,18 @@ Item {
   readonly property real hostedSidebarFrameOcclusionWidth: hostedSidebarVisible
     ? Math.max(0, Number(hostedMenu.panelWidth || 0))
     : 0
+  readonly property string lacunaFrameGeometryKey: [
+    frameMode,
+    frameThickness,
+    frameRadius,
+    cornerPieces,
+    position,
+    barSize,
+    hostedSidebarVisible,
+    hostedSidebarFrameOcclusionWidth,
+    hostedMenu.panelOnRight,
+    hostedMenu.sidebarScreen ? String(hostedMenu.sidebarScreen.name || "") : ""
+  ].join("|")
   readonly property string lacunaBarSourceDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : ""
   readonly property string lacunaRepoDir: lacunaBarSourceDir.replace(/\/lacuna\.bar\/?$/, "")
   readonly property string lacunaMenuSourceDir: lacunaRepoDir ? lacunaRepoDir + "/lacuna.menu" : ""
@@ -86,6 +98,50 @@ Item {
   function hostedSidebarOccupiesEdge(edge, screen) {
     if (!hostedSidebarVisible || hostedMenu.sidebarScreen !== screen) return false
     return (edge === "left" && hostedSidebarOnLeft) || (edge === "right" && hostedSidebarOnRight)
+  }
+
+  function lacunaFrameContentRect(screen) {
+    var screenWidth = screen && screen.width !== undefined ? Number(screen.width) : 0
+    var screenHeight = screen && screen.height !== undefined ? Number(screen.height) : 0
+    var t = Math.max(1, root.frameThickness)
+    var topInset = root.position === "top" ? Math.max(0, root.barSize) : t
+    var bottomInset = root.position === "bottom" ? Math.max(0, root.barSize) : t
+    var leftInset = root.position === "left" ? Math.max(0, root.barSize) : t
+    var rightInset = root.position === "right" ? Math.max(0, root.barSize) : t
+    var sidebarOnThisScreen = root.hostedSidebarVisible && hostedMenu.sidebarScreen === screen
+    var leftOcclusion = sidebarOnThisScreen && !hostedMenu.panelOnRight ? root.hostedSidebarFrameOcclusionWidth : 0
+    var rightOcclusion = sidebarOnThisScreen && hostedMenu.panelOnRight ? root.hostedSidebarFrameOcclusionWidth : 0
+    var x = Math.max(0, leftOcclusion > 0 ? leftOcclusion : leftInset)
+    var y = Math.max(0, topInset)
+    var right = Math.max(x + 1, screenWidth - (rightOcclusion > 0 ? rightOcclusion : rightInset))
+    var bottom = Math.max(y + 1, screenHeight - bottomInset)
+    var bleed = root.frameEnabled ? Math.max(t + 2, Math.ceil(root.frameRadius * 0.5)) : 0
+
+    if (!root.frameEnabled || screenWidth <= 0 || screenHeight <= 0) {
+      return {
+        x: 0,
+        y: 0,
+        width: Math.max(1, screenWidth),
+        height: Math.max(1, screenHeight),
+        radius: 0,
+        bleed: 0,
+        framed: false
+      }
+    }
+
+    return {
+      x: Math.max(0, x - bleed),
+      y: Math.max(0, y - bleed),
+      width: Math.max(1, Math.min(screenWidth, right + bleed) - Math.max(0, x - bleed)),
+      height: Math.max(1, Math.min(screenHeight, bottom + bleed) - Math.max(0, y - bleed)),
+      radius: root.cornerPieces ? Math.max(t, root.frameRadius) : 0,
+      bleed: bleed,
+      framed: true,
+      innerX: x,
+      innerY: y,
+      innerWidth: Math.max(1, right - x),
+      innerHeight: Math.max(1, bottom - y)
+    }
   }
 
   function debugBarGeometry() {

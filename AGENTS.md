@@ -12,6 +12,10 @@ This repository is the Omarchy plugin target for Lacuna, with the standalone Lac
 
 Keep plugin code self-contained under its plugin directory. Do not depend on the repository root as a runtime import path.
 
+## Repository Exploration
+
+This repo has a checked-in Graphify knowledge graph under `graphify-out/`. For architecture questions, file-relationship tracing, or "where does this behavior live?" investigations, query Graphify first before broad `rg`/grep-style exploration. Use `graphify query "<question>"` from the repository root, then follow up with targeted `rg`, `sed`, or file reads to verify exact implementation details before editing.
+
 ## Build, Test, and Development Commands
 
 Use the repository check script for local validation:
@@ -41,6 +45,16 @@ Read it before touching any attached flyout. The load-bearing invariants:
 - Use the single `curveKappa` (`0.5522847498`) from `lacuna.menu/components/LacunaGeometry.qml` for every curve; never copy the constant.
 - Round only **exposed** corners with a custom `Shape`; never use `Rectangle.radius` on an attached surface (it rounds all four corners and breaks the connector edge).
 - Flyout shells are **fill-only** (`strokeWidth: 0`); reserve borders for internal controls, dividers, or explicit selected states.
+
+## Background Video Transitions
+
+`lacuna.youtube-music-video/Overlay.qml` owns the YouTube Music background video layer and its black fade cover. Keep startup and shutdown as two-phase transitions:
+
+- When a new background video becomes available, raise the black cover first and delay assigning `activeSource` until the cover has finished fading to black. This prevents the video from appearing abruptly behind the sidebar.
+- When background video is disabled or playback stops, keep the last `activeSource` alive while the black cover fades in, clear the source only after the cover is opaque, then fade the cover back out to reveal the sidebar/frame.
+- Do not call `backgroundPlayer.stop()` directly from `wallpaperDesired` changes. Stop the player only after `activeSource` has been cleared so teardown is hidden behind the cover.
+- Use `fadeCoverDuration`, `fadeInDuration`, `fadeOutDuration`, `exitFadeToBlackDuration`, and `exitFadeFromBlackDuration` for cover timing. Do not replace this flow with an immediate visibility or source toggle.
+- Update `tests/test_qml_contracts.py` when changing this lifecycle; it intentionally asserts the transition primitives.
 
 ## Testing Guidelines
 

@@ -15,6 +15,7 @@ Column {
   signal settingsRequested()
   signal shellSettingsRequested()
   signal youtubeMusicRequested()
+  signal closeRequested()
 
   required property var menuState
   required property var registry
@@ -57,6 +58,10 @@ Column {
   property int quickLaunchDropIndex: -1
   property real quickLaunchDropY: 0
   property int sectionRevision: 0
+  // Keyboard cursor into the flat row list (-1 = nothing focused). Mouse hover
+  // and this index are independent; a row highlights when either points at it.
+  property int focusedIndex: -1
+  readonly property var rows: visibleItems()
   property MotionTokens motionTokens: defaultMotionTokens
 
   MotionTokens {
@@ -66,6 +71,51 @@ Column {
   function toneAccent(tone) {
     if (tone === "danger") return root.dangerAccent
     return root.accent
+  }
+
+  // --- Keyboard navigation over the flat row list -------------------------
+  // Headers and the app grid are not row-focusable; everything else is.
+  function isFocusable(entry) {
+    return entry && entry.kind !== "header" && entry.kind !== "grid"
+  }
+
+  function firstFocusable(from, step) {
+    var list = root.rows
+    for (var i = from; i >= 0 && i < list.length; i += step) {
+      if (isFocusable(list[i])) return i
+    }
+    return -1
+  }
+
+  function moveFocus(step) {
+    var list = root.rows
+    if (!list || list.length === 0) return
+    var start = root.focusedIndex < 0 ? (step > 0 ? 0 : list.length - 1) : root.focusedIndex + step
+    var next = firstFocusable(start, step)
+    if (next >= 0) {
+      root.focusedIndex = next
+      ensureFocusVisible()
+    }
+  }
+
+  function activateFocused() {
+    var list = root.rows
+    if (root.focusedIndex < 0 || root.focusedIndex >= list.length) return
+    var entry = list[root.focusedIndex]
+    if (isFocusable(entry)) root.activated(entry)
+  }
+
+  function ensureFocusVisible() {
+    var loader = itemRepeater.itemAt(root.focusedIndex)
+    if (!loader) return
+    var top = loader.y
+    var bottom = top + loader.height
+    if (top < itemFlick.contentY) {
+      itemFlick.contentY = Math.max(0, top - 8)
+    } else if (bottom > itemFlick.contentY + itemFlick.height) {
+      var maxY = Math.max(0, itemFlick.contentHeight - itemFlick.height)
+      itemFlick.contentY = Math.min(maxY, bottom - itemFlick.height + 8)
+    }
   }
 
   function openSettings() {
@@ -219,8 +269,33 @@ Column {
   }
 
   spacing: designTokens.sectionSpacing
+  focus: true
+  Keys.onPressed: function(event) {
+    if (event.key === Qt.Key_Down) {
+      moveFocus(1)
+      event.accepted = true
+    } else if (event.key === Qt.Key_Up) {
+      moveFocus(-1)
+      event.accepted = true
+    } else if (event.key === Qt.Key_Home) {
+      focusedIndex = firstFocusable(0, 1)
+      ensureFocusVisible()
+      event.accepted = true
+    } else if (event.key === Qt.Key_End) {
+      focusedIndex = firstFocusable(rows.length - 1, -1)
+      ensureFocusVisible()
+      event.accepted = true
+    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+      activateFocused()
+      event.accepted = true
+    } else if (event.key === Qt.Key_Escape) {
+      root.closeRequested()
+      event.accepted = true
+    }
+  }
   onCurrentViewChanged: {
     viewProgress = 0
+    focusedIndex = -1
     quickLaunchContextOpen = false
     quickLaunchRenameOpen = false
     draggingQuickLaunchAppId = ""
@@ -234,6 +309,9 @@ Column {
     if (open) {
       viewProgress = 0
       viewReveal.restart()
+      forceActiveFocus()
+    } else {
+      focusedIndex = -1
     }
   }
 
@@ -334,10 +412,12 @@ Column {
       spacing: root.designTokens.itemSpacing
 
       Repeater {
-        model: root.visibleItems()
+        id: itemRepeater
+        model: root.rows
 
         Loader {
           property var entry: modelData
+          property int flatIndex: index
 
           width: parent.width
           // Track the loaded delegate's height reactively. Item rows set
@@ -637,6 +717,8 @@ Column {
 
       LacunaMenuItem {
         width: parent.width
+        focused: root.focusedIndex === parent.flatIndex
+        onHoveredChanged: if (hovered && root.focusedIndex !== parent.flatIndex) root.focusedIndex = -1
         kind: parent.entry.kind
         icon: parent.entry.icon
         iconSource: parent.entry.iconSource || ""

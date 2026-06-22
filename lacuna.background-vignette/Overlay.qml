@@ -18,6 +18,7 @@ Item {
   readonly property real vignetteIntensity: clamp(numberValue(vignetteSettings.intensity, 0.85), 0, 1)
   readonly property bool ignoreBackgroundAnimationLayer: boolValue(vignetteSettings.ignoreBackgroundAnimationLayer, false)
   readonly property bool effectVisible: vignetteEnabled && vignetteIntensity > 0.001
+  readonly property string frameGeometryKey: resolveFrameGeometryKey()
 
   function clamp(value, minimum, maximum) {
     var numeric = Number(value)
@@ -54,6 +55,29 @@ Item {
     return vignette && typeof vignette === "object" ? vignette : ({})
   }
 
+  function resolveFrameGeometryKey() {
+    if (root.shell && root.shell.bar && root.shell.bar.lacunaFrameGeometryKey !== undefined) {
+      return String(root.shell.bar.lacunaFrameGeometryKey || "")
+    }
+    return ""
+  }
+
+  function resolveFrameRect(screen) {
+    if (root.shell && root.shell.bar && typeof root.shell.bar.lacunaFrameContentRect === "function") {
+      var rect = root.shell.bar.lacunaFrameContentRect(screen)
+      if (rect && rect.width > 0 && rect.height > 0) return rect
+    }
+    return {
+      x: 0,
+      y: 0,
+      width: screen && screen.width !== undefined ? Math.max(1, Number(screen.width) || 1) : 1,
+      height: screen && screen.height !== undefined ? Math.max(1, Number(screen.height) || 1) : 1,
+      radius: 0,
+      bleed: 0,
+      framed: false
+    }
+  }
+
   function loadLacunaSettings(raw) {
     try {
       lacunaSettings = JSON.parse(raw || "{}")
@@ -80,6 +104,12 @@ Item {
       id: vignetteWindow
 
       required property var modelData
+      readonly property var frameRect: {
+        root.frameGeometryKey
+        modelData.width
+        modelData.height
+        return root.resolveFrameRect(modelData)
+      }
 
       screen: modelData
       visible: root.effectVisible
@@ -99,81 +129,26 @@ Item {
         right: true
       }
 
-      Item {
-        anchors.fill: parent
+      Rectangle {
+        x: Math.round(vignetteWindow.frameRect.x)
+        y: Math.round(vignetteWindow.frameRect.y)
+        width: Math.round(vignetteWindow.frameRect.width)
+        height: Math.round(vignetteWindow.frameRect.height)
+        radius: Math.max(0, Number(vignetteWindow.frameRect.radius || 0))
+        color: "transparent"
         enabled: false
         opacity: root.vignetteIntensity
+        clip: true
 
-        Rectangle {
-          x: 0
-          y: 0
-          width: parent.width
-          height: Math.round(parent.height * 0.24)
-          gradient: Gradient {
-            orientation: Gradient.Vertical
-            GradientStop {
-              position: 0
-              color: "#70000000"
-            }
-            GradientStop {
-              position: 1
-              color: "#00000000"
-            }
-          }
-        }
-
-        Rectangle {
-          x: 0
-          y: parent.height - height
-          width: parent.width
-          height: Math.round(parent.height * 0.28)
-          gradient: Gradient {
-            orientation: Gradient.Vertical
-            GradientStop {
-              position: 0
-              color: "#00000000"
-            }
-            GradientStop {
-              position: 1
-              color: "#84000000"
-            }
-          }
-        }
-
-        Rectangle {
-          x: 0
-          y: 0
-          width: Math.round(parent.width * 0.15)
-          height: parent.height
-          gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop {
-              position: 0
-              color: "#76000000"
-            }
-            GradientStop {
-              position: 1
-              color: "#00000000"
-            }
-          }
-        }
-
-        Rectangle {
-          x: parent.width - width
-          y: 0
-          width: Math.round(parent.width * 0.15)
-          height: parent.height
-          gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop {
-              position: 0
-              color: "#00000000"
-            }
-            GradientStop {
-              position: 1
-              color: "#76000000"
-            }
-          }
+        Image {
+          anchors.fill: parent
+          source: Qt.resolvedUrl("assets/vignette.svg")
+          sourceSize.width: width
+          sourceSize.height: height
+          fillMode: Image.Stretch
+          smooth: true
+          asynchronous: true
+          cache: true
         }
       }
     }

@@ -113,6 +113,7 @@ class ClaudeCodeStatusTests(unittest.TestCase):
 
 class CodexWeeklyStatusTests(unittest.TestCase):
     SCRIPT = ROOT / "lacuna.codex-usage" / "scripts" / "codex-weekly-status.sh"
+    LEFT_SCRIPT = ROOT / "lacuna.codex-usage" / "scripts" / "codex-weekly-left"
 
     def _staged(self, tmp: str, helper_body: str) -> Path:
         scripts = Path(tmp) / "scripts"
@@ -142,15 +143,15 @@ class CodexWeeklyStatusTests(unittest.TestCase):
             result = run([str(staged)], {})
         self.assertEqual(result.returncode, 0)
         payload = json.loads(result.stdout)
-        self.assertEqual(payload["text"], "88% 5h")
-        self.assertEqual(payload["shortText"], "88%")
+        self.assertEqual(payload["text"], "12% used")
+        self.assertEqual(payload["shortText"], "12%")
         self.assertEqual(payload["class"], "normal")
         self.assertEqual(payload["leftPercent"], 88)
         self.assertEqual(payload["usedPercent"], 12)
         self.assertIs(payload["active"], True)
         self.assertEqual(payload["resetText"], "2026-06-18 02:00 PM")
         self.assertIs(payload["weekActive"], True)
-        self.assertEqual(payload["weekText"], "37% wk")
+        self.assertEqual(payload["weekText"], "63% wk")
         self.assertEqual(payload["weekLeftPercent"], 37)
         self.assertEqual(payload["weekUsedPercent"], 63)
         self.assertEqual(payload["weekResetText"], "2026-06-20 09:00 AM")
@@ -165,7 +166,7 @@ class CodexWeeklyStatusTests(unittest.TestCase):
             staged = self._staged(tmp, helper)
             result = run([str(staged)], {})
         payload = json.loads(result.stdout)
-        self.assertEqual(payload["text"], "5% left")
+        self.assertEqual(payload["text"], "95% used")
         self.assertEqual(payload["class"], "alert")
 
     def test_hides_when_helper_emits_no_weekly_line(self):
@@ -175,6 +176,49 @@ class CodexWeeklyStatusTests(unittest.TestCase):
             result = run([str(staged)], {})
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stdout.strip(), HIDDEN)
+
+    def test_weekly_left_prefers_canonical_codex_limit_over_newer_variant(self):
+        def token_event(timestamp, limit_id, weekly_used, weekly_reset):
+            return {
+                "timestamp": timestamp,
+                "type": "event_msg",
+                "payload": {
+                    "type": "token_count",
+                    "rate_limits": {
+                        "limit_id": limit_id,
+                        "plan_type": "prolite",
+                        "primary": {"used_percent": 0.0, "resets_at": 1782047254},
+                        "secondary": {
+                            "used_percent": weekly_used,
+                            "resets_at": weekly_reset,
+                            "window_minutes": 10080,
+                        },
+                    },
+                },
+            }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            sessions = home / ".codex" / "sessions" / "2026" / "06" / "21"
+            sessions.mkdir(parents=True)
+            session_file = sessions / "session.jsonl"
+            session_file.write_text(
+                "\n".join(
+                    [
+                        json.dumps(token_event("2026-06-21T08:09:59.582Z", "codex", 62.0, 1782337249)),
+                        json.dumps(token_event("2026-06-21T16:02:44.298Z", "codex_bengalfox", 0.0, 1782662543)),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            result = run([str(self.LEFT_SCRIPT)], {"HOME": str(home)})
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Weekly limit left: 38.0%", result.stdout)
+        self.assertIn("Weekly used: 62.0%", result.stdout)
+        self.assertIn("2026-06-24", result.stdout)
 
 
 class PreloadThemeSwitcherTests(unittest.TestCase):

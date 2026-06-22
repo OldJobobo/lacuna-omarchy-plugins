@@ -113,9 +113,9 @@ klass, left_color = class_for(active_left)
 week_class, week_left_color = class_for(week_left) if week_left is not None else ("hidden", "#8cbfb8")
 
 if session_active:
-    text = f"{left_text} 5h"
+    text = f"{used_text} used"
 else:
-    text = f"{left_text} left"
+    text = f"{used_text} used"
 
 if week_left is not None:
     week_left_text = f"{week_left:g}%"
@@ -153,7 +153,7 @@ if event_text:
 
 payload = {
     "text": text,
-    "shortText": left_text,
+    "shortText": used_text,
     "tooltip": "<br/>".join(tooltip_lines),
     "class": klass,
     "leftPercent": round(active_left),
@@ -168,8 +168,8 @@ payload = {
     "weekLeftPercent": round(week_left) if week_left is not None else 100,
     "weekUsedPercent": round(week_used) if week_used is not None else 0,
     "weekClass": week_class,
-    "weekText": f"{week_left_text} wk" if week_left_text else "",
-    "weekShortText": week_left_text,
+    "weekText": f"{week_used_text} wk" if week_used_text else "",
+    "weekShortText": week_used_text,
     "weekResetText": week_reset_text,
 }
 

@@ -22,9 +22,22 @@ def iter_session_files():
     return [path for _, path in sorted(paths, reverse=True)]
 
 
+def is_canonical_codex_limit(payload):
+    rate_limits = payload.get("rate_limits") or {}
+    return rate_limits.get("limit_id") == "codex"
+
+
+def candidate_rank(candidate):
+    return (
+        1 if is_canonical_codex_limit(candidate["payload"]) else 0,
+        candidate["timestamp"],
+    )
+
+
 def parse_latest_token_count():
+    best = None
+
     for path in iter_session_files():
-        latest = None
         try:
             with path.open("r", encoding="utf-8") as handle:
                 for raw_line in handle:
@@ -48,19 +61,17 @@ def parse_latest_token_count():
                     if not timestamp:
                         continue
 
-                    if latest is None or timestamp > latest["timestamp"]:
-                        latest = {
-                            "timestamp": timestamp,
-                            "path": path,
-                            "payload": payload,
-                        }
+                    candidate = {
+                        "timestamp": timestamp,
+                        "path": path,
+                        "payload": payload,
+                    }
+                    if best is None or candidate_rank(candidate) > candidate_rank(best):
+                        best = candidate
         except OSError:
             continue
 
-        if latest is not None:
-            return latest
-
-    return None
+    return best
 
 
 def format_reset_time(epoch_seconds):

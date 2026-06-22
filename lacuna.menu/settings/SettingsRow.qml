@@ -6,6 +6,7 @@ LacunaRect {
 
   signal triggered()
   signal optionSelected(string value)
+  signal sliderChanged(string value)
 
   property string icon: ""
   property string label: ""
@@ -16,6 +17,10 @@ LacunaRect {
   property bool checked: false
   property var options: []
   property string optionValue: ""
+  property real sliderValue: 0
+  property real sliderMinimum: 0
+  property real sliderMaximum: 1
+  property real sliderStep: 0.05
   property bool compact: false
   property color foreground: "#d8dee9"
   property color background: "#101315"
@@ -40,7 +45,8 @@ LacunaRect {
   readonly property bool hasHint: hint !== ""
   readonly property bool hasValue: value !== ""
   readonly property int rowHeight: compact ? 44 : 50
-  readonly property int trailingWidth: control === "segments" ? Math.min(170, Math.max(92, options.length * (compact ? 48 : 56))) : control === "toggle" ? 38 : control === "button" ? 68 : hasValue ? 86 : 18
+  readonly property int trailingWidth: control === "slider" ? (compact ? 124 : 150) : control === "segments" ? Math.min(170, Math.max(92, options.length * (compact ? 48 : 56))) : control === "toggle" ? 38 : control === "button" ? 68 : hasValue ? 86 : 18
+  readonly property real normalizedSliderValue: sliderMaximum <= sliderMinimum ? 0 : Math.max(0, Math.min(1, (sliderValue - sliderMinimum) / (sliderMaximum - sliderMinimum)))
 
   width: parent ? parent.width : implicitWidth
   height: rowHeight
@@ -53,7 +59,7 @@ LacunaRect {
   LacunaStateLayer {
     id: stateLayer
 
-    disabled: root.control === "value" || root.control === "segments"
+    disabled: root.control === "value" || root.control === "segments" || root.control === "slider"
     stateColor: root.toneAccent
     hoverOpacity: root.tokenNumber("hoverOpacity", 0.06)
     pressOpacity: root.tokenNumber("activeOpacity", 0.11)
@@ -233,6 +239,130 @@ LacunaRect {
               onTriggered: root.optionSelected(String(modelData.value))
             }
           }
+        }
+      }
+
+      Item {
+        visible: root.control === "slider"
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        width: parent.width
+        height: root.compact ? 24 : 26
+        clip: false
+
+        readonly property bool sliderEngaged: sliderMouse.containsMouse || sliderMouse.pressed
+        readonly property int valueWidth: root.compact ? 34 : 40
+        property real dragNormalizedValue: root.normalizedSliderValue
+        readonly property real visualNormalizedValue: sliderMouse.pressed ? dragNormalizedValue : root.normalizedSliderValue
+
+        function ratioAt(mouseX) {
+          var usable = Math.max(1, sliderTrack.width)
+          return Math.max(0, Math.min(1, (mouseX - sliderTrack.x) / usable))
+        }
+
+        function valueForRatio(ratio) {
+          var raw = root.sliderMinimum + ratio * (root.sliderMaximum - root.sliderMinimum)
+          return Math.max(root.sliderMinimum, Math.min(root.sliderMaximum, raw))
+        }
+
+        function roundedValue(value) {
+          return Math.round(value * 100) / 100
+        }
+
+        function displayValue() {
+          return String(roundedValue(valueForRatio(visualNormalizedValue)))
+        }
+
+        function emitValue(mouseX) {
+          dragNormalizedValue = ratioAt(mouseX)
+          root.sliderChanged(String(roundedValue(valueForRatio(dragNormalizedValue))))
+        }
+
+        LacunaRect {
+          id: sliderValuePill
+
+          anchors.right: parent.right
+          anchors.verticalCenter: parent.verticalCenter
+          width: parent.valueWidth
+          height: root.compact ? 18 : 20
+          radius: root.tokenNumber("controlRadius", 0)
+          color: parent.sliderEngaged ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.13) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.045)
+          border.width: parent.sliderEngaged || !root.tokenBool("lacuna", false) ? 1 : 0
+          border.color: parent.sliderEngaged ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.34) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.11)
+
+          LacunaText {
+            anchors.centerIn: parent
+            width: parent.width - 8
+            text: sliderMouse.pressed ? sliderValuePill.parent.displayValue() : root.value
+            color: sliderMouse.containsMouse || sliderMouse.pressed ? root.toneAccent : root.muted
+            fontFamily: root.bodyFontFamily
+            font.pixelSize: root.compact ? 8 : 9
+            horizontalAlignment: Text.AlignHCenter
+          }
+        }
+
+        LacunaRect {
+          id: sliderTrack
+
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.rightMargin: parent.valueWidth + (root.compact ? 8 : 10)
+          anchors.verticalCenter: parent.verticalCenter
+          height: parent.sliderEngaged ? 6 : 4
+          radius: height / 2
+          color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, parent.sliderEngaged ? 0.18 : 0.12)
+
+          Behavior on height {
+            LacunaAnim { motion: "fast" }
+          }
+
+          LacunaRect {
+            id: sliderFill
+
+            width: parent.width * sliderTrack.parent.visualNormalizedValue
+            height: parent.height
+            radius: parent.radius
+            color: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, sliderMouse.pressed ? 0.96 : 0.78)
+
+            Behavior on width {
+              enabled: !sliderMouse.pressed
+              LacunaAnim { motion: "fast" }
+            }
+          }
+
+          LacunaRect {
+            id: sliderThumb
+
+            width: root.compact ? 11 : 13
+            height: width
+            radius: height / 2
+            x: Math.max(0, Math.min(parent.width - width, parent.width * sliderTrack.parent.visualNormalizedValue - width / 2))
+            anchors.verticalCenter: parent.verticalCenter
+            color: root.toneAccent
+            border.width: 1
+            border.color: Qt.rgba(root.background.r, root.background.g, root.background.b, 0.75)
+            scale: sliderMouse.pressed ? 1.22 : sliderMouse.containsMouse ? 1.10 : 1.0
+
+            Behavior on x {
+              enabled: !sliderMouse.pressed
+              LacunaAnim { motion: "fast" }
+            }
+
+            Behavior on scale {
+              LacunaAnim { motion: "fast" }
+            }
+          }
+        }
+
+        MouseArea {
+          id: sliderMouse
+
+          anchors.fill: parent
+          hoverEnabled: true
+          preventStealing: true
+          cursorShape: Qt.PointingHandCursor
+          onPressed: parent.emitValue(mouse.x)
+          onPositionChanged: if (pressed) parent.emitValue(mouse.x)
         }
       }
     }

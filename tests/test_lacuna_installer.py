@@ -333,8 +333,9 @@ class LacunaInstallerTests(unittest.TestCase):
         right = [entry["id"] for entry in module.LACUNA_BAR_LAYOUT["right"]]
         self.assertEqual(2, right.count("lacuna.bar-seam"))
         # a seam immediately precedes and follows the native (bt/net/audio/power) cluster
-        self.assertEqual("lacuna.bar-seam", right[right.index("lacuna.bluetooth") - 1])
-        self.assertEqual("lacuna.bar-seam", right[right.index("lacuna.power") + 1])
+        self.assertEqual("lacuna.bar-seam", right[right.index("omarchy.bluetooth") - 1])
+        self.assertEqual("lacuna.bar-seam", right[right.index("omarchy.power") + 1])
+        self.assertEqual("lacuna.bar-size-pill", right[-1])
 
     def test_lacuna_bar_activation_replaces_omarchy_layout_with_lacuna_modules(self):
         module = load_installer_module()
@@ -358,7 +359,9 @@ class LacunaInstallerTests(unittest.TestCase):
       ],
       "right": [
         { "id": "omarchy.tray" },
-        { "id": "lacuna.temperature", "mode": "compact" }
+        { "id": "lacuna.temperature", "mode": "compact" },
+        { "id": "lacuna.bar-size-pill" },
+        { "id": "omarchy.power", "showPercent": true }
       ]
     }
   },
@@ -390,11 +393,16 @@ class LacunaInstallerTests(unittest.TestCase):
 
         self.assertEqual(result, 0)
         self.assertEqual(data["bar"]["id"], "lacuna.bar")
-        self.assertFalse([plugin_id for plugin_id in layout_ids if plugin_id.startswith("omarchy.")])
+        self.assertEqual(
+            ["omarchy.bluetooth", "omarchy.network", "omarchy.audio", "omarchy.power"],
+            [plugin_id for plugin_id in layout_ids if plugin_id.startswith("omarchy.")],
+        )
         self.assertEqual(data["bar"]["layout"]["left"][0]["id"], "lacuna.menu-button")
         self.assertEqual(data["bar"]["layout"]["center"][0]["id"], "lacuna.voxtype")
         self.assertEqual(data["bar"]["layout"]["right"][0]["id"], "lacuna.tray")
         self.assertIn({"id": "lacuna.temperature", "mode": "compact"}, data["bar"]["layout"]["right"])
+        self.assertIn({"id": "omarchy.power", "showPercent": True}, data["bar"]["layout"]["right"])
+        self.assertEqual("lacuna.bar-size-pill", data["bar"]["layout"]["right"][-1]["id"])
 
     def test_lacuna_bar_layout_uses_available_modules_and_preserves_entry_settings(self):
         module = load_installer_module()
@@ -445,6 +453,25 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertIn("formatAlt", layout["center"][0])
         self.assertIn("verticalFormat", layout["center"][0])
         self.assertIn({"id": "lacuna.temperature", "warmF": 140}, layout["right"])
+
+    def test_bar_size_toggle_is_pinned_after_laptop_power_entries(self):
+        module = load_installer_module()
+        entries = [
+            {"id": "lacuna.tray"},
+            {"id": "lacuna.bar-size-pill"},
+            {"id": "omarchy.power", "showPercent": True},
+        ]
+
+        module.pin_bar_size_toggle_last(entries)
+
+        self.assertEqual(
+            [
+                {"id": "lacuna.tray"},
+                {"id": "omarchy.power", "showPercent": True},
+                {"id": "lacuna.bar-size-pill"},
+            ],
+            entries,
+        )
 
     def test_status_reports_staged_vs_enabled_plugins(self):
         with tempfile.TemporaryDirectory() as tmp:

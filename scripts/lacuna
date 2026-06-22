@@ -65,10 +65,10 @@ LACUNA_BAR_LAYOUT = {
         {"id": "lacuna.theme"},
         {"id": "lacuna.wallpaper"},
         {"id": "lacuna.bar-seam"},
-        {"id": "lacuna.bluetooth"},
-        {"id": "lacuna.network"},
-        {"id": "lacuna.audio"},
-        {"id": "lacuna.power"},
+        {"id": "omarchy.bluetooth"},
+        {"id": "omarchy.network"},
+        {"id": "omarchy.audio"},
+        {"id": "omarchy.power"},
         {"id": "lacuna.bar-seam"},
         {"id": "lacuna.system-stats"},
         {"id": "lacuna.temperature"},
@@ -662,14 +662,27 @@ def apply_lacuna_bar_layout_to_config(config: dict, available: set[str]) -> None
 
     for section, index, template_entry in layout_template_entries():
         plugin_id = template_entry["id"]
-        if plugin_id not in available:
+        if plugin_id.startswith("lacuna.") and plugin_id not in available:
             continue
+        if plugin_id.startswith("omarchy."):
+            lacuna_equivalent = "lacuna." + plugin_id.removeprefix("omarchy.")
+            if plugin_id not in available and lacuna_equivalent not in available:
+                continue
         entry = removed_by_id.get(plugin_id, dict(template_entry))
         for key, value in template_entry.items():
             entry.setdefault(key, value)
         target = config["bar"]["layout"][section]
         target.insert(min(index, len(target)), entry)
+    pin_bar_size_toggle_last(layout["right"])
     config["bar"]["centerAnchor"] = "lacuna.clock"
+
+
+def pin_bar_size_toggle_last(entries: list[dict]) -> None:
+    toggles = [entry for entry in entries if entry_id(entry) == "lacuna.bar-size-pill"]
+    if not toggles:
+        return
+    entries[:] = [entry for entry in entries if entry_id(entry) != "lacuna.bar-size-pill"]
+    entries.extend(toggles)
 
 
 def activation_reload_command(selected: set[str]) -> list[str]:

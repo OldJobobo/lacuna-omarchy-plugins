@@ -8,6 +8,16 @@ The Omarchy plugin integration path for Lacuna: a set of standalone plugin direc
 
 Plugin directories live flat at the repo root as `lacuna.*` — this layout is required because Omarchy's repo-source installer scans only top-level folders containing a `manifest.json`. Also see `AGENTS.md` for detailed flyout-geometry and style rules.
 
+## Repository exploration
+
+This checkout includes a Graphify knowledge graph in `graphify-out/`. For architecture questions, file-relationship tracing, or locating where a behavior lives, query Graphify before broad grep/ripgrep exploration:
+
+```bash
+graphify query "<question>"
+```
+
+Use the graph answer to narrow the search, then verify exact code with targeted `rg`, `sed`, and file reads before making changes.
+
 ## Commands
 
 ```bash
@@ -67,6 +77,16 @@ Omarchy ignores the `lacuna` block in each manifest; Lacuna's installer, tests, 
 The largest plugin and the heart of the core bundle: `menu/` (surfaces, flyouts, panel windows), `services/` (`LacunaSettings.qml`, `Theme.qml`, `PanelController.qml`, `SidebarState.qml`, …), `components/` (Lacuna design primitives), `settings/` (settings panels). It owns Lacuna panel motion and sidebar choreography; specialized widgets own only their own interaction animation. The menu uses a unified color model: normal entries share the active theme accent, destructive actions use the danger color (`docs/lacuna-design-system/01-color.md`). The full Lacuna Design Language lives in `docs/lacuna-design-system/` (philosophy, color, geometry, motion, typography, components, roadmap).
 
 Flyout panels attached to the sidebar follow strict geometry rules (square attachment edge, Omarchy-style molding connectors using the `curveKappa` constant from `lacuna.menu/menu/MenuSurface.qml`, fill-only background shapes, no `Rectangle.radius` on attached edges) — see "Flyout Surface Geometry" in `AGENTS.md` before touching them.
+
+### lacuna.youtube-music-video
+
+`lacuna.youtube-music-video/Overlay.qml` renders the YouTube Music background video and the black fade cover. Treat startup and shutdown as two-phase transitions:
+
+- Startup: raise the black cover first, wait for the fade gate, then assign `activeSource` so the video appears behind black and fades in with the cover reveal.
+- Shutdown: keep the last `activeSource` alive while the cover fades to black, clear the source only after the cover is opaque, then fade the cover out to reveal the sidebar/frame.
+- Do not stop `backgroundPlayer` directly from `wallpaperDesired` changes; stop it when `activeSource` clears so video teardown stays hidden.
+- Use the existing timing properties (`fadeCoverDuration`, `fadeInDuration`, `fadeOutDuration`, `exitFadeToBlackDuration`, `exitFadeFromBlackDuration`) rather than immediate source/visibility toggles.
+- `tests/test_qml_contracts.py` intentionally asserts this lifecycle, including the startup fade gate and delayed exit clear.
 
 ### Tests
 

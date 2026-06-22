@@ -71,7 +71,7 @@ Item {
     }
   }
 
-  function row(icon, label, hint, value, tone, action, control, checked, options, optionValue, actionPrefix, sectionId) {
+  function row(icon, label, hint, value, tone, action, control, checked, options, optionValue, actionPrefix, sectionId, sliderValue, sliderMinimum, sliderMaximum, sliderStep) {
     return {
       kind: "row",
       icon: icon,
@@ -86,6 +86,10 @@ Item {
       optionValue: optionValue || "",
       optionActionPrefix: actionPrefix || "",
       settingsSection: sectionId || "",
+      sliderValue: sliderValue === undefined ? 0 : Number(sliderValue),
+      sliderMinimum: sliderMinimum === undefined ? 0 : Number(sliderMinimum),
+      sliderMaximum: sliderMaximum === undefined ? 1 : Number(sliderMaximum),
+      sliderStep: sliderStep === undefined ? 0.05 : Number(sliderStep),
       view: "",
       command: ""
     }
@@ -102,6 +106,7 @@ Item {
     if (entry.control === "toggle") return "toggle:" + String(entry.action || entry.label || "")
     if (entry.control === "segments" || entry.control === "select" || entry.control === "search-select")
       return "value:" + String(entry.optionActionPrefix || entry.action || entry.label || "")
+    if (entry.control === "slider") return "value:" + String(entry.optionActionPrefix || entry.action || entry.label || "")
     return ""
   }
 
@@ -156,6 +161,7 @@ Item {
     var rows = [
       section("Background Effects", "Wallpaper-layer animation effects controlled by Lacuna.", "lacuna"),
       row("photo", "Background Vignette", root.registry.backgroundVignetteHint(), root.registry.backgroundVignetteEnabled() ? "On" : "Off", "lacuna", "toggle-background-vignette", "toggle", root.registry.backgroundVignetteEnabled()),
+      row("sliders", "Vignette Intensity", root.registry.backgroundVignetteIntensityHint(), root.registry.backgroundVignetteIntensityName(), "lacuna", "", "slider", false, [], String(root.registry.backgroundVignetteIntensity()), "set-background-vignette-intensity-", "", root.registry.backgroundVignetteIntensity(), 0, 1, 0.01),
       row("background", "Background Animations", root.registry.backgroundEffectsHint(), root.registry.backgroundEffectsEnabled() ? "On" : "Off", "lacuna", "toggle-background-effects", "toggle", root.registry.backgroundEffectsEnabled()),
       selectRow("background", "Animation", "Choose one wallpaper-layer animation", root.registry.activeBackgroundEffect(), root.registry.backgroundEffectOptions(), "set-background-effect-", "lacuna", "Animation")
     ]
@@ -382,7 +388,7 @@ Item {
       handleEntry(entry, desired)
       return
     }
-    if (entry.control === "segments" || entry.control === "select" || entry.control === "search-select") {
+    if (entry.control === "segments" || entry.control === "select" || entry.control === "search-select" || entry.control === "slider") {
       setControlOverride(entry, value)
       handleOptionSelected(entry, value)
       return
@@ -557,6 +563,10 @@ Item {
             checked: root.currentControlChecked(parent.entry)
             options: parent.entry.options
             optionValue: root.currentControlValue(parent.entry)
+            sliderValue: Number(root.currentControlValue(parent.entry))
+            sliderMinimum: parent.entry.sliderMinimum
+            sliderMaximum: parent.entry.sliderMaximum
+            sliderStep: parent.entry.sliderStep
             compact: root.compact
             foreground: root.foreground
             background: root.background
@@ -568,6 +578,7 @@ Item {
             designTokens: root.designTokens
             onTriggered: root.activateControl(parent.entry)
             onOptionSelected: function(value) { root.activateControl(parent.entry, value) }
+            onSliderChanged: function(value) { root.activateControl(parent.entry, value) }
           }
         }
 
