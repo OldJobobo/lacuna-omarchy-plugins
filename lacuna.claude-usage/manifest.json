@@ -21,7 +21,6 @@
       "interval": 60000,
       "maxTextLength": 32,
       "showIcon": true,
-      "showReset": true,
       "showProgress": true,
       "showIdle": true,
       "showWeekly": true,
@@ -52,13 +51,6 @@
         "key": "showIcon",
         "type": "boolean",
         "label": "Show icon",
-        "defaultValue": true
-      },
-      {
-        "key": "showReset",
-        "type": "boolean",
-        "label": "Show reset/idle text",
-        "description": "Show the active block reset time, or idle when no block is active.",
         "defaultValue": true
       },
       {

@@ -57,7 +57,6 @@ Item {
   readonly property bool compact: !vertical && barSize <= 26
   readonly property int maxTextLength: Math.max(4, Number(setting("maxTextLength", compact ? 10 : 32)))
   readonly property bool showIcon: setting("showIcon", true) === true
-  readonly property bool showReset: setting("showReset", true) === true
   readonly property bool showProgress: setting("showProgress", true) === true
   readonly property bool showIdle: setting("showIdle", true) === true
   readonly property bool showWeekly: setting("showWeekly", true) === true
@@ -78,13 +77,6 @@ Item {
   readonly property string sessionPrimary: clipped((compact || displayMode === "percent") ? shortText : displayText)
   readonly property string weekPrimary: clipped((compact || displayMode === "percent") ? weekShortText : weekText)
   readonly property string primaryText: activeMode === 1 ? weekPrimary : sessionPrimary
-  readonly property string secondaryText: {
-    if (!showReset) return ""
-    if (activeMode === 1) return weekActive && weekResetText.length > 0 ? weekResetText : ""
-    if (activeBlock && resetText.length > 0) return resetText
-    if (!activeBlock && loadedOnce) return "idle"
-    return ""
-  }
 
   visible: !hiddenState && primaryText.length > 0
   implicitWidth: visible ? button.implicitWidth : 0
@@ -221,11 +213,11 @@ Item {
 
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
     readonly property int horizontalPadding: root.vertical ? 0 : (root.compact ? 5 : 8)
-    readonly property int minimumWidth: root.vertical ? root.barSize : (root.compact ? 34 : 44)
+    readonly property int stableMinimumWidth: root.vertical ? root.barSize : (root.compact ? 58 : 104)
     readonly property int meterHeight: root.showProgress && !root.vertical ? 2 : 0
     readonly property bool meterAtTop: !root.vertical && root.bar && root.bar.position === "top"
 
-    width: root.vertical ? root.barSize : Math.max(minimumWidth, content.implicitWidth + horizontalPadding * 2)
+    width: root.vertical ? root.barSize : Math.max(stableMinimumWidth, content.implicitWidth + horizontalPadding * 2)
     height: root.vertical ? Math.max(root.barSize, content.implicitHeight + 10) : root.barSize
     implicitWidth: width
     implicitHeight: height
@@ -301,17 +293,6 @@ Item {
         fontFamily: bar ? bar.fontFamily : "Hack Nerd Font Propo"
         pixelSize: root.compact ? 12 : 14
         fontWeight: root.actionableState ? Font.DemiBold : Font.Normal
-        colorDuration: motionTokens.colorDuration
-      }
-
-      BarCycleText {
-        id: resetLabel
-        visible: !root.vertical && !root.compact && root.secondaryText.length > 0
-        anchors.verticalCenter: parent.verticalCenter
-        text: root.secondaryText
-        color: root.actionableState ? root.moduleColor : root.mutedColor
-        fontFamily: bar ? bar.fontFamily : "Hack Nerd Font Propo"
-        pixelSize: 11
         colorDuration: motionTokens.colorDuration
       }
     }

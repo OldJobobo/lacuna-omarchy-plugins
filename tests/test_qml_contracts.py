@@ -1902,11 +1902,22 @@ class QmlContractTests(unittest.TestCase):
         for plugin in ["lacuna.claude-usage", "lacuna.codex-usage"]:
             qml = read(f"{plugin}/Widget.qml")
             self.assertIn('readonly property bool showProgress: setting("showProgress", true) === true', qml)
+            self.assertIn("readonly property int stableMinimumWidth: root.vertical ? root.barSize : (root.compact ? 58 : 104)", qml)
+            self.assertIn("width: root.vertical ? root.barSize : Math.max(stableMinimumWidth, content.implicitWidth + horizontalPadding * 2)", qml)
             self.assertIn('readonly property bool meterAtTop: !root.vertical && root.bar && root.bar.position === "top"', qml)
             self.assertIn("y: button.meterAtTop ? 3 : parent.height - height - 3", qml)
             self.assertIn("anchors.verticalCenterOffset: button.meterHeight > 0 ? (button.meterAtTop ? 1 : -1) : 0", qml)
             self.assertIn("readonly property int activeUsedPercent: activeMode === 1 ? weekUsedPercent : usedPercent", qml)
             self.assertIn("parent.width * root.activeUsedPercent / 100", qml)
+
+        claude_qml = read("lacuna.claude-usage/Widget.qml")
+        claude_manifest = read_json("lacuna.claude-usage/manifest.json")
+        claude_schema = {entry["key"]: entry for entry in claude_manifest["barWidget"]["schema"]}
+        self.assertNotIn("secondaryText", claude_qml)
+        self.assertNotIn("resetLabel", claude_qml)
+        self.assertNotIn("showReset", claude_qml)
+        self.assertNotIn("showReset", claude_manifest["barWidget"]["defaults"])
+        self.assertNotIn("showReset", claude_schema)
 
         codex_manifest = read_json("lacuna.codex-usage/manifest.json")
         codex_schema = {entry["key"]: entry for entry in codex_manifest["barWidget"]["schema"]}

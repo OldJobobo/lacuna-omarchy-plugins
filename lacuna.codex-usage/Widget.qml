@@ -199,11 +199,11 @@ Item {
 
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
     readonly property int horizontalPadding: root.vertical ? 0 : (root.compact ? 5 : 8)
-    readonly property int minimumWidth: root.vertical ? root.barSize : 32
+    readonly property int stableMinimumWidth: root.vertical ? root.barSize : (root.compact ? 58 : 104)
     readonly property int meterHeight: root.showProgress && !root.vertical ? 2 : 0
     readonly property bool meterAtTop: !root.vertical && root.bar && root.bar.position === "top"
 
-    width: root.vertical ? root.barSize : Math.max(minimumWidth, content.implicitWidth + horizontalPadding * 2)
+    width: root.vertical ? root.barSize : Math.max(stableMinimumWidth, content.implicitWidth + horizontalPadding * 2)
     height: root.vertical ? Math.max(root.barSize, content.implicitHeight + 10) : root.barSize
     implicitWidth: width
     implicitHeight: height
