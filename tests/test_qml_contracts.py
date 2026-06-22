@@ -1333,6 +1333,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("if (!sidebarSettingsLoaded()) return false", window)
         self.assertIn("lacunaSettings.data.sidebar", window)
         self.assertIn("var mode = sidebarDefaultMode()", window)
+        self.assertIn("sidebarDefaultMode: root.sidebarDefaultMode()", window)
+        self.assertNotIn("sidebarDefaultMode: sidebarState.defaultMode", window)
         self.assertIn("if (!root.sidebarSettingsLoaded())", window)
         self.assertIn("if (root.sidebarDefaultKeepsMenuOpen())", window)
         self.assertIn("root.applySidebarDefaultState()", window)

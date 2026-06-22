@@ -1572,7 +1572,7 @@ Item {
     sidebarExclusive: sidebarState.exclusive
     sidebarCollapsed: sidebarState.collapsed
     sidebarCornerPieces: sidebarState.cornerPieces
-    sidebarDefaultMode: sidebarState.defaultMode
+    sidebarDefaultMode: root.sidebarDefaultMode()
     compact: root.compact
     barSizeMode: barSizeModeService.barSizeMode
     designStyle: root.designStyle
