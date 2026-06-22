@@ -202,6 +202,8 @@ Item {
     return [
       { value: "trackingLines", label: "VHS" },
       { value: "crt", label: "CRT" },
+      { value: "filmGrain", label: "Film Grain" },
+      { value: "dustMotes", label: "Dust Motes" },
       { value: "auroraDrift", label: "Aurora" },
       { value: "rainfall", label: "Rain" },
       { value: "cinematicLight", label: "Cinematic Light" },
@@ -209,22 +211,59 @@ Item {
     ]
   }
 
+  function normalizeBackgroundEffectId(effectId) {
+    var id = String(effectId || "").trim()
+    if (id === "trackingLines" || id === "filmGrain" || id === "dustMotes" || id === "auroraDrift" || id === "rainfall" || id === "cinematicLight" || id === "godRays" || id === "crt") return id
+    return ""
+  }
+
+  function activeBackgroundEffects() {
+    var source = root.backgroundEffects && Array.isArray(root.backgroundEffects.activeEffects)
+      ? root.backgroundEffects.activeEffects
+      : [root.backgroundEffects && root.backgroundEffects.activeEffect ? root.backgroundEffects.activeEffect : "trackingLines"]
+    var seen = {}
+    var stack = []
+    for (var i = 0; i < source.length; i++) {
+      var id = normalizeBackgroundEffectId(source[i])
+      if (id === "" || seen[id] === true) continue
+      seen[id] = true
+      stack.push(id)
+    }
+    return stack
+  }
+
   function activeBackgroundEffect() {
-    var effectId = root.backgroundEffects && root.backgroundEffects.activeEffect ? String(root.backgroundEffects.activeEffect) : "trackingLines"
-    if (effectId === "auroraDrift" || effectId === "rainfall" || effectId === "cinematicLight" || effectId === "godRays" || effectId === "crt") return effectId
+    var stack = activeBackgroundEffects()
+    if (stack.length > 0) return stack[0]
     return "trackingLines"
   }
 
+  function backgroundEffectStackIndex(effectId) {
+    var id = String(effectId || "")
+    var stack = activeBackgroundEffects()
+    for (var i = 0; i < stack.length; i++) {
+      if (stack[i] === id) return i
+    }
+    return -1
+  }
+
+  function backgroundEffectStackCount() {
+    return activeBackgroundEffects().length
+  }
+
   function backgroundEffectEnabled(effectId) {
+    if (!backgroundEffectsEnabled()) return false
     var effects = root.backgroundEffects && root.backgroundEffects.effects ? root.backgroundEffects.effects : ({})
     var effect = effects[String(effectId || "")]
     if (effect && typeof effect === "object" && effect.enabled === false) return false
-    return backgroundEffectsEnabled() && activeBackgroundEffect() === String(effectId || "")
+    return backgroundEffectStackIndex(effectId) >= 0
   }
 
   function backgroundEffectName(effectId) {
     if (effectId === "trackingLines") return "Tracking Lines"
     if (effectId === "crt") return "CRT"
+    if (effectId === "filmGrain") return "Film Grain"
+    if (effectId === "dustMotes") return "Dust Motes"
     if (effectId === "auroraDrift") return "Aurora Drift"
     if (effectId === "rainfall") return "Rainfall"
     if (effectId === "cinematicLight") return "Cinematic Light"
@@ -234,28 +273,47 @@ Item {
 
   function backgroundEffectHint(effectId) {
     if (effectId === "trackingLines") {
-      return activeBackgroundEffect() === effectId ? "Selected VHS tracking animation" : "VHS tracking animation is available"
+      return backgroundEffectEnabled(effectId) ? "VHS tracking animation is in the stack" : "VHS tracking animation is available"
     }
     if (effectId === "crt") {
-      return activeBackgroundEffect() === effectId ? "Selected CRT scanline animation" : "CRT scanline animation is available"
+      return backgroundEffectEnabled(effectId) ? "CRT scanline animation is in the stack" : "CRT scanline animation is available"
+    }
+    if (effectId === "filmGrain") {
+      return backgroundEffectEnabled(effectId) ? "Film grain texture is in the stack" : "Film grain texture is available"
+    }
+    if (effectId === "dustMotes") {
+      return backgroundEffectEnabled(effectId) ? "Drifting dust motes are in the stack" : "Dust mote drift is available"
     }
     if (effectId === "auroraDrift") {
-      return activeBackgroundEffect() === effectId ? "Selected aurora ribbon animation" : "Aurora ribbon animation is available"
+      return backgroundEffectEnabled(effectId) ? "Aurora ribbon animation is in the stack" : "Aurora ribbon animation is available"
     }
     if (effectId === "rainfall") {
-      return activeBackgroundEffect() === effectId ? "Selected rain animation" : "Rain animation is available"
+      return backgroundEffectEnabled(effectId) ? "Rain animation is in the stack" : "Rain animation is available"
     }
     if (effectId === "cinematicLight") {
-      return activeBackgroundEffect() === effectId ? "Selected cinematic light animation" : "Cinematic light animation is available"
+      return backgroundEffectEnabled(effectId) ? "Cinematic light animation is in the stack" : "Cinematic light animation is available"
     }
     if (effectId === "godRays") {
-      return activeBackgroundEffect() === effectId ? "Selected god rays animation" : "God rays animation is available"
+      return backgroundEffectEnabled(effectId) ? "God rays animation is in the stack" : "God rays animation is available"
     }
     return backgroundEffectEnabled(effectId) ? "Effect is visible" : "Effect is hidden"
   }
 
   function backgroundEffectsHint() {
-    return backgroundEffectsEnabled() ? "Wallpaper-layer animation is visible" : "Wallpaper-layer animation is hidden"
+    if (!backgroundEffectsEnabled()) return "Wallpaper-layer animations are hidden"
+    var count = backgroundEffectStackCount()
+    if (count === 0) return "No animation selected"
+    if (count === 1) return backgroundEffectName(activeBackgroundEffect()) + " is visible"
+    return count + " animations stacked"
+  }
+
+  function backgroundEffectStackWarning() {
+    var count = backgroundEffectStackCount()
+    return count > 3 ? count + " animations are active; heavy stacks may affect shell performance" : ""
+  }
+
+  function backgroundEffectsForegroundOverlayEnabled() {
+    return root.backgroundEffects && root.backgroundEffects.foregroundOverlay === true
   }
 
   function backgroundVignetteEnabled() {
@@ -283,6 +341,11 @@ Item {
   function backgroundEffectPluginId(effectId) {
     if (effectId === "trackingLines") return "lacuna.vhs-overlay"
     if (effectId === "crt") return "lacuna.crt-overlay"
+    if (effectId === "filmGrain") return "lacuna.film-grain-overlay"
+    if (effectId === "dustMotes") return "lacuna.dust-motes-overlay"
+    if (effectId === "auroraDrift") return "lacuna.aurora-drift"
+    if (effectId === "rainfall") return "lacuna.rainfall-overlay"
+    if (effectId === "cinematicLight") return "lacuna.cinematic-light-overlay"
     if (effectId === "godRays") return "lacuna.god-rays-overlay"
     return ""
   }
@@ -314,13 +377,13 @@ Item {
   }
 
   function backgroundEffectForegroundEnabled(effectId) {
-    var settings = backgroundEffectLayerSettings(effectId)
-    return settings.foregroundOverlay === true
+    effectId
+    return backgroundEffectsForegroundOverlayEnabled()
   }
 
   function backgroundEffectForegroundHint(effectId) {
     var name = backgroundEffectName(effectId)
-    return backgroundEffectForegroundEnabled(effectId) ? name + " draws above windows" : name + " stays behind windows"
+    return backgroundEffectForegroundEnabled(effectId) ? name + " draws above shell UI" : name + " stays behind shell UI"
   }
 
   function cinematicLightSettings() {

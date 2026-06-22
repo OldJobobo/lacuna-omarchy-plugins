@@ -49,6 +49,8 @@
     { "id": "lacuna.desktop-clock" },
     { "id": "lacuna.vhs-overlay" },
     { "id": "lacuna.crt-overlay" },
+    { "id": "lacuna.film-grain-overlay" },
+    { "id": "lacuna.dust-motes-overlay" },
     { "id": "lacuna.aurora-drift" },
     { "id": "lacuna.rainfall-overlay" },
     { "id": "lacuna.cinematic-light-overlay" },

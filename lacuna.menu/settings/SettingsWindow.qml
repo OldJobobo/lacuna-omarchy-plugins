@@ -41,6 +41,7 @@ Item {
     return [
       { id: "overview", icon: "apps", label: "Overview", hint: "Current Lacuna state" },
       { id: "appearance", icon: "palette", label: "Appearance", hint: "Style, colors, theme shortcuts" },
+      { id: "animations", icon: "background", label: "Animations", hint: "Background, foreground, and vignette effects" },
       { id: "layout", icon: "density-normal", label: "Layout", hint: "Sidebar and density behavior" },
       { id: "preferred-apps", icon: "preferred-apps", label: "Preferred Apps", hint: "Role-based app launch targets" },
       { id: "desktop-clock", icon: "clock", label: "Desktop Clock", hint: "Desktop layer clock placement" },
@@ -101,9 +102,19 @@ Item {
     return item
   }
 
+  function stackRow(effectId, enabled, index, count) {
+    var item = row("background", root.registry.backgroundEffectName(effectId), root.registry.backgroundEffectHint(effectId), enabled ? "#" + String(index + 1) : "Off", "lacuna", "toggle-background-effect-" + effectId, "stack-effect", enabled)
+    item.effectId = effectId
+    item.moveUpAction = "move-background-effect-up-" + effectId
+    item.moveDownAction = "move-background-effect-down-" + effectId
+    item.canMoveUp = enabled && index > 0
+    item.canMoveDown = enabled && index >= 0 && index < count - 1
+    return item
+  }
+
   function controlKey(entry) {
     if (!entry) return ""
-    if (entry.control === "toggle") return "toggle:" + String(entry.action || entry.label || "")
+    if (entry.control === "toggle" || entry.control === "stack-effect") return "toggle:" + String(entry.action || entry.label || "")
     if (entry.control === "segments" || entry.control === "select" || entry.control === "search-select")
       return "value:" + String(entry.optionActionPrefix || entry.action || entry.label || "")
     if (entry.control === "slider") return "value:" + String(entry.optionActionPrefix || entry.action || entry.label || "")
@@ -159,14 +170,39 @@ Item {
 
   function backgroundEffectRows() {
     var rows = [
-      section("Background Effects", "Wallpaper-layer animation effects controlled by Lacuna.", "lacuna"),
+      section("Global", "Wallpaper-layer animation and frame-overlay controls.", "lacuna"),
       row("photo", "Background Vignette", root.registry.backgroundVignetteHint(), root.registry.backgroundVignetteEnabled() ? "On" : "Off", "lacuna", "toggle-background-vignette", "toggle", root.registry.backgroundVignetteEnabled()),
       row("sliders", "Vignette Intensity", root.registry.backgroundVignetteIntensityHint(), root.registry.backgroundVignetteIntensityName(), "lacuna", "", "slider", false, [], String(root.registry.backgroundVignetteIntensity()), "set-background-vignette-intensity-", "", root.registry.backgroundVignetteIntensity(), 0, 1, 0.01),
-      row("background", "Background Animations", root.registry.backgroundEffectsHint(), root.registry.backgroundEffectsEnabled() ? "On" : "Off", "lacuna", "toggle-background-effects", "toggle", root.registry.backgroundEffectsEnabled()),
-      selectRow("background", "Animation", "Choose one wallpaper-layer animation", root.registry.activeBackgroundEffect(), root.registry.backgroundEffectOptions(), "set-background-effect-", "lacuna", "Animation")
+      row("background", "Background Animations", root.registry.backgroundEffectsHint(), root.registry.backgroundEffectsEnabled() ? "On" : "Off", "lacuna", "toggle-background-effects", "toggle", root.registry.backgroundEffectsEnabled())
     ]
 
-    if (root.registry.activeBackgroundEffect() === "cinematicLight") {
+    var activeStack = root.registry.activeBackgroundEffects()
+    var stackCount = activeStack.length
+    rows.push(section("Active Animations", stackCount === 0 ? "No animations selected." : "Rendered in numbered order. Click an active row to remove it.", "lacuna"))
+
+    var options = root.registry.backgroundEffectOptions()
+    for (var stackIndex = 0; stackIndex < activeStack.length; stackIndex++) {
+      rows.push(stackRow(activeStack[stackIndex], true, stackIndex, stackCount))
+    }
+
+    if (stackCount < options.length) {
+      rows.push(section("Add Animation", "Click an entry to add it to the stack.", "lacuna"))
+    }
+
+    for (var optionIndex = 0; optionIndex < options.length; optionIndex++) {
+      var effectId = String(options[optionIndex].value || "")
+      if (root.registry.backgroundEffectStackIndex(effectId) < 0) {
+        rows.push(stackRow(effectId, false, -1, stackCount))
+      }
+    }
+
+    var stackWarning = root.registry.backgroundEffectStackWarning()
+    if (stackWarning !== "") {
+      rows.push(section("Performance", stackWarning, "danger"))
+    }
+
+    if (root.registry.backgroundEffectEnabled("cinematicLight")) {
+      rows.push(section("Effect Controls", "Controls for enabled animation layers.", "lacuna"))
       rows.push(selectRow("photo", "Light Style", root.registry.cinematicLightStyleHint(), root.registry.cinematicLightStylePreset(), root.registry.cinematicLightStyleOptions(), "set-cinematic-light-style-", "lacuna", "Style"))
       rows.push(selectRow("sliders", "Intensity", root.registry.cinematicLightIntensityHint(), root.registry.cinematicLightIntensity(), root.registry.cinematicLightIntensityOptions(), "set-cinematic-light-intensity-", "lacuna", "Intensity"))
       rows.push(section("Light Motion", root.registry.cinematicLightMotionHint(), "lacuna"))
@@ -175,12 +211,19 @@ Item {
       rows.push(row("motion", "Active Shimmer", "More frequent glints, pulse variation, and shimmer", root.registry.cinematicLightActiveShimmerEnabled() ? "On" : "Off", "lacuna", "toggle-cinematic-light-motion-activeShimmer", "toggle", root.registry.cinematicLightActiveShimmerEnabled()))
     }
 
-    var activeEffect = root.registry.activeBackgroundEffect()
-    if (root.registry.backgroundEffectForegroundCapable(activeEffect)) {
-      rows.push(row("layers", "Foreground Overlay", root.registry.backgroundEffectForegroundHint(activeEffect), root.registry.backgroundEffectForegroundEnabled(activeEffect) ? "On" : "Off", "lacuna", "toggle-background-effect-foreground-" + activeEffect, "toggle", root.registry.backgroundEffectForegroundEnabled(activeEffect)))
+    if (stackCount > 0) {
+      rows.push(row("layers", "Foreground Overlay", root.registry.backgroundEffectForegroundHint(root.registry.activeBackgroundEffect()), root.registry.backgroundEffectForegroundEnabled(root.registry.activeBackgroundEffect()) ? "On" : "Off", "lacuna", "toggle-background-effect-foreground-" + root.registry.activeBackgroundEffect(), "toggle", root.registry.backgroundEffectForegroundEnabled(root.registry.activeBackgroundEffect())))
     }
 
     return rows
+  }
+
+  function activateEntryAction(entry, action) {
+    var next = {}
+    for (var key in entry) next[key] = entry[key]
+    next.action = action
+    next.control = "button"
+    handleEntry(next)
   }
 
   function colorProfileName() {
@@ -245,6 +288,7 @@ Item {
       return [
         section("Status", "Fast links into each settings area.", "lacuna"),
         navRow("palette", "Appearance", root.registry.designStyleHint(), "appearance", "lacuna", root.registry.designStyleName()),
+        navRow("background", "Animations", root.registry.backgroundEffectsHint(), "animations", "lacuna", root.registry.backgroundEffectStackCount() + " active"),
         navRow(root.registry.compact ? "density-compact" : "density-normal", "Layout", sidebarModeName() + " / default " + sidebarDefaultModeName(), "layout", "lacuna", densityName()),
         navRow("preferred-apps", "Preferred Apps", preferredSummary(), "preferred-apps", "lacuna", "Edit"),
         navRow("clock", "Desktop Clock", clockAnchorName(), "desktop-clock", "lacuna", root.registry.desktopClockEnabled ? "On" : "Off"),
@@ -273,8 +317,12 @@ Item {
           { value: "auto", label: "Auto" },
           { value: "comfort", label: "Comfort" },
           { value: "flush", label: "Flush" }
-        ], root.registry.frameReserveMode, "set-frame-reserve-mode-"),
-      ].concat(backgroundEffectRows())
+        ], root.registry.frameReserveMode, "set-frame-reserve-mode-")
+      ]
+    }
+
+    if (sectionId === "animations") {
+      return backgroundEffectRows()
     }
 
     if (sectionId === "layout") {
@@ -382,7 +430,7 @@ Item {
 
   function activateControl(entry, value) {
     if (!entry || entry.kind !== "row") return
-    if (entry.control === "toggle") {
+    if (entry.control === "toggle" || entry.control === "stack-effect") {
       var desired = !currentControlChecked(entry)
       setControlOverride(entry, desired)
       handleEntry(entry, desired)
@@ -396,8 +444,8 @@ Item {
     handleEntry(entry)
   }
 
-  width: 400
-  height: 560
+  width: 560
+  height: 660
   clip: true
   focus: open
   Keys.onEscapePressed: root.closeRequested()
@@ -527,6 +575,8 @@ Item {
               width: parent.width
               sourceComponent: entry.kind === "section"
                 ? sectionDelegate
+                : entry.control === "stack-effect"
+                  ? stackDelegate
                 : entry.control === "select"
                   ? selectDelegate
                   : rowDelegate
@@ -579,6 +629,32 @@ Item {
             onTriggered: root.activateControl(parent.entry)
             onOptionSelected: function(value) { root.activateControl(parent.entry, value) }
             onSliderChanged: function(value) { root.activateControl(parent.entry, value) }
+          }
+        }
+
+        Component {
+          id: stackDelegate
+
+          SettingsStackRow {
+            width: parent.width
+            icon: parent.entry.icon
+            label: parent.entry.label
+            hint: parent.entry.hint
+            value: parent.entry.value
+            checked: root.currentControlChecked(parent.entry)
+            canMoveUp: parent.entry.canMoveUp
+            canMoveDown: parent.entry.canMoveDown
+            compact: root.compact
+            foreground: root.foreground
+            background: root.background
+            muted: root.muted
+            toneAccent: root.toneAccent(parent.entry.tone)
+            titleFontFamily: root.itemFontFamily
+            bodyFontFamily: root.bodyFontFamily
+            designTokens: root.designTokens
+            onToggled: root.activateControl(parent.entry)
+            onMoveUp: root.activateEntryAction(parent.entry, parent.entry.moveUpAction)
+            onMoveDown: root.activateEntryAction(parent.entry, parent.entry.moveDownAction)
           }
         }
 

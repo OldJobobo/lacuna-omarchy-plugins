@@ -60,9 +60,19 @@ Item {
       },
       backgroundEffects: {
         enabled: true,
+        foregroundOverlay: false,
         activeEffect: "trackingLines",
+        activeEffects: [
+          "trackingLines"
+        ],
         effects: {
           trackingLines: {
+            enabled: true
+          },
+          filmGrain: {
+            enabled: true
+          },
+          dustMotes: {
             enabled: true
           },
           auroraDrift: {
@@ -188,7 +198,9 @@ Item {
     var defaults = defaultData().backgroundEffects
     var next = {
       enabled: true,
+      foregroundOverlay: defaults.foregroundOverlay === true,
       activeEffect: defaults.activeEffect,
+      activeEffects: defaults.activeEffects.slice(),
       effects: {}
     }
 
@@ -198,7 +210,9 @@ Item {
 
     if (value && typeof value === "object") {
       next.enabled = value.enabled !== false
-      next.activeEffect = normalizeBackgroundEffectId(value.activeEffect || value.selectedEffect || value.currentEffect, defaults.activeEffect)
+      next.foregroundOverlay = value.foregroundOverlay === true
+      next.activeEffects = normalizeBackgroundEffectStack(value.activeEffects, value.activeEffect || value.selectedEffect || value.currentEffect)
+      next.activeEffect = next.activeEffects.length > 0 ? next.activeEffects[0] : normalizeBackgroundEffectId(value.activeEffect || value.selectedEffect || value.currentEffect, defaults.activeEffect)
 
       var sourceEffects = value.effects && typeof value.effects === "object" ? value.effects : {}
       for (var effectId in sourceEffects) {
@@ -212,18 +226,38 @@ Item {
     }
 
     if (!next.effects.trackingLines) next.effects.trackingLines = { enabled: true }
+    if (!next.effects.filmGrain) next.effects.filmGrain = { enabled: true }
+    if (!next.effects.dustMotes) next.effects.dustMotes = { enabled: true }
     if (!next.effects.auroraDrift) next.effects.auroraDrift = { enabled: true }
     if (!next.effects.rainfall) next.effects.rainfall = { enabled: true }
     if (!next.effects.cinematicLight) next.effects.cinematicLight = { enabled: true }
     if (!next.effects.godRays) next.effects.godRays = { enabled: true }
     if (!next.effects.crt) next.effects.crt = { enabled: true }
+    if (!value || typeof value !== "object") {
+      next.activeEffect = next.activeEffects.length > 0 ? next.activeEffects[0] : defaults.activeEffect
+    }
+    return next
+  }
+
+  function normalizeBackgroundEffectStack(value, fallback) {
+    var source = Array.isArray(value) ? value : [fallback || defaultData().backgroundEffects.activeEffect]
+    var seen = {}
+    var next = []
+    for (var i = 0; i < source.length; i++) {
+      var id = normalizeBackgroundEffectId(source[i], "")
+      if (id === "" || seen[id] === true) continue
+      seen[id] = true
+      next.push(id)
+    }
     return next
   }
 
   function normalizeBackgroundEffectId(value, fallback) {
     var id = String(value || "").trim()
-    if (id === "trackingLines" || id === "auroraDrift" || id === "rainfall" || id === "cinematicLight" || id === "godRays" || id === "crt") return id
-    if (fallback === "auroraDrift" || fallback === "rainfall" || fallback === "cinematicLight" || fallback === "godRays" || fallback === "crt") return fallback
+    if (id === "trackingLines" || id === "filmGrain" || id === "dustMotes" || id === "auroraDrift" || id === "rainfall" || id === "cinematicLight" || id === "godRays" || id === "crt") return id
+    if (fallback === "filmGrain" || fallback === "dustMotes" || fallback === "auroraDrift" || fallback === "rainfall" || fallback === "cinematicLight" || fallback === "godRays" || fallback === "crt") return fallback
+    if (fallback === "trackingLines") return fallback
+    if (fallback === "") return ""
     return "trackingLines"
   }
 

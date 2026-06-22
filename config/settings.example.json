@@ -29,9 +29,19 @@
   },
   "backgroundEffects": {
     "enabled": true,
+    "foregroundOverlay": false,
+    "activeEffects": [
+      "trackingLines"
+    ],
     "activeEffect": "trackingLines",
     "effects": {
       "trackingLines": {
+        "enabled": true
+      },
+      "filmGrain": {
+        "enabled": true
+      },
+      "dustMotes": {
         "enabled": true
       },
       "auroraDrift": {

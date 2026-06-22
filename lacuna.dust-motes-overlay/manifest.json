@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.dust-motes-overlay",
+  "name": "Lacuna Dust Motes Overlay",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Slow floating dust motes for quiet wallpaper depth.",
+  "kinds": [
+    "overlay"
+  ],
+  "activation": "persistent",
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "Overlay.qml"
+  },
+  "defaults": {
+    "effectEnabled": true,
+    "intensity": 0.5,
+    "speed": 0.7,
+    "moteCount": 72,
+    "moteSize": 2.6,
+    "accentBlend": 0.42,
+    "mouseReactive": true,
+    "mouseInfluence": 0.28
+  },
+  "schema": [
+    {
+      "key": "effectEnabled",
+      "type": "boolean",
+      "label": "Effect enabled",
+      "defaultValue": true
+    },
+    {
+      "key": "intensity",
+      "type": "number",
+      "label": "Intensity",
+      "defaultValue": 0.5
+    },
+    {
+      "key": "speed",
+      "type": "number",
+      "label": "Speed",
+      "defaultValue": 0.7
+    },
+    {
+      "key": "moteCount",
+      "type": "number",
+      "label": "Mote count",
+      "defaultValue": 72
+    },
+    {
+      "key": "moteSize",
+      "type": "number",
+      "label": "Mote size",
+      "defaultValue": 2.6
+    },
+    {
+      "key": "accentBlend",
+      "type": "number",
+      "label": "Accent blend",
+      "defaultValue": 0.42
+    },
+    {
+      "key": "mouseReactive",
+      "type": "boolean",
+      "label": "Mouse reactive",
+      "defaultValue": true
+    },
+    {
+      "key": "mouseInfluence",
+      "type": "number",
+      "label": "Mouse influence",
+      "defaultValue": 0.28
+    }
+  ],
+  "lacuna": {
+    "standalone": true,
+    "bundle": "standalone",
+    "requires": [],
+    "recommends": []
+  }
+}

@@ -83,7 +83,7 @@ Item {
   property bool panelVisible: panelController.panelVisible
   readonly property bool settingsPanelOpen: panelController.isFlyoutOpen("settings")
   readonly property bool settingsPanelVisible: panelController.isFlyoutVisible("settings")
-  property int settingsPanelWidth: Math.round(sizeMix(400, 360))
+  property int settingsPanelWidth: Math.round(sizeMix(560, 500))
   readonly property bool shellSettingsPanelOpen: panelController.isFlyoutOpen("shellSettings")
   readonly property bool shellSettingsPanelVisible: panelController.isFlyoutVisible("shellSettings")
   property int shellSettingsPanelWidth: Math.round(sizeMix(520, 440))
@@ -326,7 +326,7 @@ Item {
 
   function settingsFlyoutHeight() {
     var availableHeight = menuWindow.height - barBottomY - designTokens.topInset - designTokens.bottomInset
-    return Math.max(260, Math.min(availableHeight, compact ? 430 : 470))
+    return Math.max(360, Math.min(availableHeight, compact ? 560 : 660))
   }
 
   function settingsFlyoutY(panelHeight) {
@@ -893,8 +893,13 @@ Item {
     if (!next.backgroundEffects || typeof next.backgroundEffects !== "object") next.backgroundEffects = lacunaSettings.normalizeBackgroundEffects({})
     if (!next.backgroundEffects.effects || typeof next.backgroundEffects.effects !== "object") next.backgroundEffects.effects = {}
     next.backgroundEffects.enabled = true
-    next.backgroundEffects.activeEffect = lacunaSettings.normalizeBackgroundEffectId(id, next.backgroundEffects.activeEffect)
+    var normalizedId = lacunaSettings.normalizeBackgroundEffectId(id, "")
+    if (normalizedId === "") return
+    next.backgroundEffects.activeEffects = [normalizedId]
+    next.backgroundEffects.activeEffect = normalizedId
     next.backgroundEffects.effects.trackingLines = { enabled: true }
+    next.backgroundEffects.effects.filmGrain = { enabled: true }
+    next.backgroundEffects.effects.dustMotes = { enabled: true }
     next.backgroundEffects.effects.auroraDrift = { enabled: true }
     next.backgroundEffects.effects.rainfall = { enabled: true }
     next.backgroundEffects.effects.cinematicLight = { enabled: true }
@@ -902,31 +907,79 @@ Item {
     next.backgroundEffects.effects.crt = { enabled: true }
     lacunaSettings.save(next)
 
-    var pluginId = registry.backgroundEffectPluginId(next.backgroundEffects.activeEffect)
+    var pluginId = registry.backgroundEffectPluginId(normalizedId)
     if (pluginId !== "" && !shellPluginEnabled(pluginId)) {
       setShellPluginEnabled(pluginId, true)
     }
   }
 
-  function setBackgroundEffectForeground(effectId, enabled) {
-    var id = registry.activeBackgroundEffect() === effectId ? effectId : registry.activeBackgroundEffect()
-    var pluginId = registry.backgroundEffectPluginId(id)
-    if (pluginId === "") return
-
-    if (!shellPluginEnabled(pluginId)) {
+  function ensureBackgroundEffectPlugin(effectId) {
+    var pluginId = registry.backgroundEffectPluginId(effectId)
+    if (pluginId !== "" && !shellPluginEnabled(pluginId)) {
       setShellPluginEnabled(pluginId, true)
     }
+  }
 
-    var next = registry.backgroundEffectLayerSettings(id)
-    next.foregroundOverlay = enabled === true
-
-    if (shell && typeof shell.updateEntryInline === "function") {
-      shell.updateEntryInline(pluginId, next)
-      pluginStateRevision++
-      return
+  function currentBackgroundEffectStack(settings) {
+    var backgroundEffects = settings && settings.backgroundEffects ? settings.backgroundEffects : ({})
+    var source = Array.isArray(backgroundEffects.activeEffects)
+      ? backgroundEffects.activeEffects
+      : (backgroundEffects.activeEffect ? [backgroundEffects.activeEffect] : [])
+    var stack = []
+    var seen = {}
+    for (var i = 0; i < source.length; i++) {
+      var id = lacunaSettings.normalizeBackgroundEffectId(source[i], "")
+      if (id === "" || seen[id] === true) continue
+      seen[id] = true
+      stack.push(id)
     }
+    return stack
+  }
 
-    commands.run("notify-send 'Lacuna' 'Background overlay settings require the Omarchy shell plugin registry'")
+  function saveBackgroundEffectStack(stack, enableAnimations) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    if (!next.backgroundEffects || typeof next.backgroundEffects !== "object") next.backgroundEffects = lacunaSettings.normalizeBackgroundEffects({})
+    if (!next.backgroundEffects.effects || typeof next.backgroundEffects.effects !== "object") next.backgroundEffects.effects = {}
+    next.backgroundEffects.enabled = enableAnimations === true ? true : next.backgroundEffects.enabled !== false
+    next.backgroundEffects.activeEffects = stack
+    next.backgroundEffects.activeEffect = stack.length > 0 ? stack[0] : "trackingLines"
+    lacunaSettings.save(next)
+
+    for (var i = 0; i < stack.length; i++) {
+      ensureBackgroundEffectPlugin(stack[i])
+    }
+  }
+
+  function setBackgroundEffectStackEnabled(effectId, enabled) {
+    var id = lacunaSettings.normalizeBackgroundEffectId(effectId, "")
+    if (id === "") return
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    var stack = currentBackgroundEffectStack(next)
+    var index = stack.indexOf(id)
+    if (enabled === true && index < 0) stack.push(id)
+    if (enabled !== true && index >= 0) stack.splice(index, 1)
+    saveBackgroundEffectStack(stack, enabled === true)
+  }
+
+  function moveBackgroundEffectInStack(effectId, direction) {
+    var id = lacunaSettings.normalizeBackgroundEffectId(effectId, "")
+    if (id === "") return
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    var stack = currentBackgroundEffectStack(next)
+    var index = stack.indexOf(id)
+    var target = direction < 0 ? index - 1 : index + 1
+    if (index < 0 || target < 0 || target >= stack.length) return
+    var moved = stack[index]
+    stack.splice(index, 1)
+    stack.splice(target, 0, moved)
+    saveBackgroundEffectStack(stack, false)
+  }
+
+  function setBackgroundEffectForeground(effectId, enabled) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    if (!next.backgroundEffects || typeof next.backgroundEffects !== "object") next.backgroundEffects = lacunaSettings.normalizeBackgroundEffects({})
+    next.backgroundEffects.foregroundOverlay = enabled === true
+    lacunaSettings.save(next)
   }
 
   function toggleBackgroundEffectForeground(effectId) {
@@ -1206,6 +1259,22 @@ Item {
 
     if (entry.action.indexOf("set-background-effect-") === 0) {
       setBackgroundEffect(entry.action.substring("set-background-effect-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("toggle-background-effect-") === 0 && entry.action.indexOf("toggle-background-effect-foreground-") !== 0) {
+      var toggledEffect = entry.action.substring("toggle-background-effect-".length)
+      setBackgroundEffectStackEnabled(toggledEffect, desiredChecked(entry, !registry.backgroundEffectEnabled(toggledEffect)))
+      return true
+    }
+
+    if (entry.action.indexOf("move-background-effect-up-") === 0) {
+      moveBackgroundEffectInStack(entry.action.substring("move-background-effect-up-".length), -1)
+      return true
+    }
+
+    if (entry.action.indexOf("move-background-effect-down-") === 0) {
+      moveBackgroundEffectInStack(entry.action.substring("move-background-effect-down-".length), 1)
       return true
     }
 

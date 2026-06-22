@@ -22,6 +22,7 @@ Item {
   readonly property string themeNamePath: configHome + "/omarchy/current/theme.name"
   readonly property var overlaySettings: pluginSettings()
   readonly property bool configuredEnabled: boolSetting("effectEnabled", true)
+  readonly property bool foregroundOverlay: backgroundForegroundOverlayEnabled()
   readonly property bool lacunaGodRaysEnabled: backgroundEffectEnabled("godRays", true)
   readonly property bool effectVisible: configuredEnabled && lacunaGodRaysEnabled && runtimeEnabled && effectiveIntensity > 0.001
   readonly property real configuredIntensity: clamp(numberSetting("intensity", 0.82), 0, 1)
@@ -104,17 +105,34 @@ Item {
   function backgroundEffectEnabled(effectId, fallbackValue) {
     var settings = lacunaSettings && typeof lacunaSettings === "object" ? lacunaSettings : {}
     var backgroundEffects = settings.backgroundEffects && typeof settings.backgroundEffects === "object" ? settings.backgroundEffects : null
+    var id = String(effectId || "")
     if (!backgroundEffects) return fallbackValue
     if (backgroundEffects.enabled === false) return false
-    if (backgroundEffects.activeEffect !== undefined || backgroundEffects.selectedEffect !== undefined || backgroundEffects.currentEffect !== undefined) {
-      var activeEffect = String(backgroundEffects.activeEffect || backgroundEffects.selectedEffect || backgroundEffects.currentEffect || "trackingLines")
-      return activeEffect === String(effectId || "")
-    }
 
     var effects = backgroundEffects.effects && typeof backgroundEffects.effects === "object" ? backgroundEffects.effects : {}
-    var effect = effects[String(effectId || "")]
+    var effect = effects[id]
+    if (effect && typeof effect === "object" && effect.enabled === false) return false
+
+    if (Array.isArray(backgroundEffects.activeEffects)) {
+      for (var i = 0; i < backgroundEffects.activeEffects.length; i++) {
+        if (String(backgroundEffects.activeEffects[i] || "") === id) return true
+      }
+      return false
+    }
+
+    if (backgroundEffects.activeEffect !== undefined || backgroundEffects.selectedEffect !== undefined || backgroundEffects.currentEffect !== undefined) {
+      var activeEffect = String(backgroundEffects.activeEffect || backgroundEffects.selectedEffect || backgroundEffects.currentEffect || "trackingLines")
+      return activeEffect === id
+    }
+
     if (!effect || typeof effect !== "object") return fallbackValue
     return effect.enabled !== false
+  }
+
+  function backgroundForegroundOverlayEnabled() {
+    var settings = lacunaSettings && typeof lacunaSettings === "object" ? lacunaSettings : {}
+    var backgroundEffects = settings.backgroundEffects && typeof settings.backgroundEffects === "object" ? settings.backgroundEffects : null
+    return backgroundEffects && backgroundEffects.foregroundOverlay === true
   }
 
   function loadLacunaSettings(raw) {
@@ -231,7 +249,7 @@ Item {
       implicitWidth: 0
       implicitHeight: 0
       WlrLayershell.namespace: "lacuna-god-rays-overlay"
-      WlrLayershell.layer: WlrLayer.Bottom
+      WlrLayershell.layer: root.foregroundOverlay ? WlrLayer.Overlay : WlrLayer.Bottom
       WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
       exclusionMode: ExclusionMode.Ignore
       mask: Region {}
