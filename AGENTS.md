@@ -24,10 +24,22 @@ Use the repository check script for local validation:
 - `python3 -m pytest`: run the test suite directly.
 - `rg --files`: list tracked source-like files quickly.
 - `find . -maxdepth 2 -path './lacuna.*' -print`: inspect plugin layout.
+- `./scripts/dev deploy <plugin-id>`: developer-only live deploy from this checkout into `~/.config/omarchy/plugins/`, rescan, restart Omarchy shell, and verify the installed copy matches the repo.
 - `omarchy plugin rescan`: ask Omarchy shell to reload installed plugins.
 - `OMARCHY_PATH="$HOME/.local/share/omarchy" omarchy-shell shell summon lacuna.menu "{}"`: smoke-test the menu plugin once implemented.
 
 For local testing, copy or symlink a plugin directory into `~/.config/omarchy/plugins/<plugin-id>/`, then rescan or restart Omarchy shell. No plugin should start a second Quickshell process.
+
+## Live Install Verification
+
+When changing behavior that the running Omarchy shell should exhibit, repository edits and tests are not enough. Before saying a user-visible plugin issue is fixed:
+
+- Run `./scripts/dev deploy <plugin-id>` for each changed installed plugin, or `./scripts/dev deploy --all --only-changed` to deploy every repo plugin whose live copy differs from this checkout or is missing.
+- Use `./scripts/dev deploy <plugin-id> --dry-run` to preview the deploy/rescan/restart/verify steps.
+- If bypassing the helper, deploy the changed plugin into the live install at `~/.config/omarchy/plugins/<plugin-id>/` or confirm that path is a symlink to the edited repo directory.
+- If using `omarchy plugin update <plugin-id>`, remember it installs from the committed source state; it will not include uncommitted repo edits. Prefer `./scripts/dev deploy` for uncommitted fixes.
+- The dev helper runs `omarchy plugin rescan`, restarts Omarchy shell by default, and verifies the installed files match this checkout. Do not skip that verification.
+- Only report a live shell issue as fixed after the installed copy and the running shell have been refreshed. If you only changed the repo, say it is implemented in the repo but not yet deployed live.
 
 ## Coding Style & Naming Conventions
 
@@ -58,7 +70,7 @@ Read it before touching any attached flyout. The load-bearing invariants:
 
 ## Testing Guidelines
 
-Until automated tests exist, validate changes inside Omarchy shell. Confirm that each widget appears in Omarchy Settings, can be placed in `bar.layout`, survives shell restart, and uses injected `bar`, `moduleName`, and `settings` properties. Test script paths through `manifest.__sourceDir` or another plugin-relative path.
+For any fix reported against live shell behavior, run `./scripts/dev deploy <plugin-id>` and include its verification result in the final status. Also validate the behavior inside Omarchy shell when the change is visual or stateful. Confirm that each widget appears in Omarchy Settings, can be placed in `bar.layout`, survives shell restart, and uses injected `bar`, `moduleName`, and `settings` properties. Test script paths through `manifest.__sourceDir` or another plugin-relative path.
 
 ## Commit & Pull Request Guidelines
 

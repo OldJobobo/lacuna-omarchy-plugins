@@ -1,0 +1,253 @@
+#!/usr/bin/env python3
+"""Developer utilities for Lacuna Omarchy plugins."""
+
+from __future__ import annotations
+
+import argparse
+import filecmp
+import os
+import shutil
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+BACKUPS_TO_KEEP = 2
+
+
+def config_home() -> Path:
+    return Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+
+
+def plugins_dir() -> Path:
+    return config_home() / "omarchy" / "plugins"
+
+
+def run_command(command: list[str], dry_run: bool) -> int:
+    if dry_run:
+        print("  " + " ".join(command))
+        return 0
+    return subprocess.run(command, check=False).returncode
+
+
+def remove_path(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+    elif path.is_dir():
+        shutil.rmtree(path)
+
+
+def prune_backups(plugin_id: str, keep: int = BACKUPS_TO_KEEP) -> None:
+    backups = sorted(
+        plugins_dir().glob(f".{plugin_id}.bak.*"),
+        key=lambda path: (path.stat().st_mtime, path.name),
+        reverse=True,
+    )
+    for backup in backups[max(0, keep):]:
+        remove_path(backup)
+
+
+def backup_target(target: Path) -> Path | None:
+    if not target.exists() and not target.is_symlink():
+        return None
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    base = target.parent / f".{target.name}.bak.{timestamp}"
+    backup = base
+    suffix = 1
+    while backup.exists():
+        backup = target.parent / f"{base.name}-{suffix}"
+        suffix += 1
+    shutil.move(str(target), str(backup))
+    prune_backups(target.name)
+    return backup
+
+
+def plugin_ids_from_args(args: argparse.Namespace) -> list[str]:
+    if args.all:
+        ids = sorted(path.name for path in ROOT.glob("lacuna.*") if (path / "manifest.json").is_file())
+    else:
+        ids = [item for value in args.plugins for item in value.split(",") if item]
+    if not ids:
+        raise SystemExit("Choose at least one plugin id, or pass --all.")
+
+    unknown = [plugin_id for plugin_id in ids if not (ROOT / plugin_id / "manifest.json").is_file()]
+    if unknown:
+        raise SystemExit(f"Unknown Lacuna plugin id: {', '.join(sorted(unknown))}")
+
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for plugin_id in ids:
+        if plugin_id not in seen:
+            seen.add(plugin_id)
+            ordered.append(plugin_id)
+    return ordered
+
+
+def relative_files(base: Path) -> dict[str, Path]:
+    files: dict[str, Path] = {}
+    if not base.is_dir():
+        return files
+    for path in sorted(base.rglob("*")):
+        if "__pycache__" in path.parts:
+            continue
+        if path.is_file():
+            files[str(path.relative_to(base))] = path
+    return files
+
+
+def installed_matches_source(plugin_id: str) -> tuple[bool, list[str]]:
+    source = ROOT / plugin_id
+    target = plugins_dir() / plugin_id
+    if target.is_symlink() and target.resolve() == source.resolve():
+        return True, []
+    if not target.is_dir():
+        return False, [f"missing installed directory: {target}"]
+
+    source_files = relative_files(source)
+    target_files = relative_files(target)
+    issues: list[str] = []
+    for relative in sorted(source_files.keys() - target_files.keys()):
+        issues.append(f"missing installed file: {relative}")
+    for relative in sorted(target_files.keys() - source_files.keys()):
+        issues.append(f"extra installed file: {relative}")
+    for relative in sorted(source_files.keys() & target_files.keys()):
+        if not filecmp.cmp(source_files[relative], target_files[relative], shallow=False):
+            issues.append(f"changed installed file: {relative}")
+    return not issues, issues
+
+
+def source_differs_from_install(plugin_id: str) -> bool:
+    matches, _issues = installed_matches_source(plugin_id)
+    return not matches
+
+
+def validate_plugin(plugin_id: str, dry_run: bool) -> int:
+    return run_command(["omarchy", "plugin", "validate", str(ROOT / plugin_id)], dry_run)
+
+
+def deploy_plugin(plugin_id: str, dry_run: bool) -> int:
+    source = ROOT / plugin_id
+    target = plugins_dir() / plugin_id
+    print(f"  deploy {plugin_id} -> {target}", flush=True)
+    code = validate_plugin(plugin_id, dry_run)
+    if code != 0:
+        return code
+    if dry_run:
+        return 0
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    stage = target.parent / f".{plugin_id}.tmp.{os.getpid()}"
+    remove_path(stage)
+    backup = None
+    try:
+        shutil.copytree(source, stage, symlinks=True, ignore=shutil.ignore_patterns("__pycache__"))
+        backup = backup_target(target)
+        shutil.move(str(stage), str(target))
+    except Exception as error:
+        remove_path(stage)
+        if backup and backup.exists() and not target.exists():
+            shutil.move(str(backup), str(target))
+        print(f"Failed to deploy {plugin_id}: {error}", file=sys.stderr)
+        return 1
+    if backup:
+        print(f"    previous install backed up to {backup}")
+    return 0
+
+
+def verify_plugins(plugin_ids: list[str], dry_run: bool) -> int:
+    failed = False
+    for plugin_id in plugin_ids:
+        if dry_run:
+            print(f"  verify {plugins_dir() / plugin_id} matches {ROOT / plugin_id}")
+            continue
+        matches, issues = installed_matches_source(plugin_id)
+        if matches:
+            print(f"  verified {plugin_id}: installed copy matches repo")
+            continue
+        failed = True
+        print(f"  verification failed for {plugin_id}:")
+        for issue in issues[:8]:
+            print(f"    {issue}")
+        if len(issues) > 8:
+            print(f"    ... {len(issues) - 8} more issue(s)")
+    return 1 if failed else 0
+
+
+def deploy(args: argparse.Namespace) -> int:
+    plugin_ids = plugin_ids_from_args(args)
+    if args.only_changed:
+        deploy_ids = [plugin_id for plugin_id in plugin_ids if source_differs_from_install(plugin_id)]
+    else:
+        deploy_ids = plugin_ids
+
+    print("Dev deploy plan")
+    if deploy_ids:
+        for plugin_id in deploy_ids:
+            print(f"  - {plugin_id}")
+    else:
+        print("  Nothing selected.")
+
+    unchanged = [plugin_id for plugin_id in plugin_ids if plugin_id not in deploy_ids]
+    if unchanged:
+        print(f"\nAlready deployed from this checkout: {len(unchanged)} plugin(s)")
+
+    print("\nCommands")
+    if deploy_ids:
+        for plugin_id in deploy_ids:
+            print(f"  deploy {plugin_id} -> {plugins_dir() / plugin_id}")
+        print("  omarchy plugin rescan")
+        if args.restart_shell:
+            print("  omarchy restart shell")
+        print("  verify installed plugin files match this checkout")
+    else:
+        print("  No dev deploy commands needed.")
+
+    if args.dry_run:
+        return 0
+    if not deploy_ids:
+        return 0
+
+    for plugin_id in deploy_ids:
+        prune_backups(plugin_id)
+        code = deploy_plugin(plugin_id, args.dry_run)
+        if code != 0:
+            return code
+
+    code = run_command(["omarchy", "plugin", "rescan"], args.dry_run)
+    if code != 0:
+        return code
+    if args.restart_shell:
+        code = run_command(["omarchy", "restart", "shell"], args.dry_run)
+        if code != 0:
+            return code
+    return verify_plugins(deploy_ids, args.dry_run)
+
+
+def parser() -> argparse.ArgumentParser:
+    base = argparse.ArgumentParser(description="Developer utilities for Lacuna Omarchy plugins.")
+    subparsers = base.add_subparsers(dest="command")
+
+    deploy_parser = subparsers.add_parser("deploy", help="Deploy working-tree plugin changes into the live Omarchy install.")
+    deploy_parser.add_argument("plugins", nargs="*", help="Plugin id or comma-separated plugin ids.")
+    deploy_parser.add_argument("--all", action="store_true", help="Deploy every top-level lacuna.* plugin.")
+    deploy_parser.add_argument("--dry-run", action="store_true", help="Print the plan without changing live files.")
+    deploy_parser.add_argument("--only-changed", action="store_true", help="Skip plugins whose installed copy already matches the repo.")
+    restart = deploy_parser.add_mutually_exclusive_group()
+    restart.add_argument("--restart-shell", action="store_true", default=True, help="Restart Omarchy shell after rescan (default).")
+    restart.add_argument("--no-restart-shell", dest="restart_shell", action="store_false", help="Only rescan plugins; do not restart shell.")
+
+    return base
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parser().parse_args(argv)
+    if args.command == "deploy":
+        return deploy(args)
+    parser().print_help()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
