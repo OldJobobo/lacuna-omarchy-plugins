@@ -52,6 +52,10 @@ class QmlContractTests(unittest.TestCase):
         qml = read("lacuna.menu/services/LacunaSettings.qml")
 
         self.assertIn('designStyle: "lacuna"', qml)
+        self.assertIn("designStyles: {", qml)
+        self.assertIn("function normalizeDesignStyles", qml)
+        self.assertIn("function normalizeDesignStyleBar", qml)
+        self.assertIn("function normalizeBarLayoutEntry", qml)
         self.assertIn('style === "lacuna" || style === "carbon"', qml)
         self.assertIn('return "lacuna"', qml)
 
@@ -1768,6 +1772,7 @@ class QmlContractTests(unittest.TestCase):
         bar = read("lacuna.bar/Bar.qml")
         adapter = read("lacuna.bar/OmarchyBarAdapter.qml")
         frame = read("lacuna.bar/LacunaFrameWindow.qml")
+        omarchy_bar = read("lacuna.bar/OmarchyBar.qml")
 
         self.assertEqual(["bar"], manifest["kinds"])
         self.assertEqual("Bar.qml", manifest["entryPoints"]["bar"])
@@ -1818,6 +1823,10 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property var barItem: omarchyBar", adapter)
         self.assertIn("function debugBarGeometry()", adapter)
         self.assertIn("function openConfigPanel()", adapter)
+        self.assertIn("readonly property real itemImplicitWidth", omarchy_bar)
+        self.assertIn("readonly property real itemImplicitHeight", omarchy_bar)
+        self.assertIn("activeItem.visible !== false || itemImplicitWidth > 0 || itemImplicitHeight > 0", omarchy_bar)
+        self.assertNotIn("readonly property bool contentVisible: activeItem && activeItem.visible", omarchy_bar)
         self.assertIn('WlrLayershell.namespace: "lacuna-bar-frame"', frame)
         self.assertIn("WlrLayershell.exclusionMode: ExclusionMode.Ignore", frame)
         self.assertIn("mask: Region {}", frame)

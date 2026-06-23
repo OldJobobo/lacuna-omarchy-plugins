@@ -25,6 +25,11 @@ Item {
     return {
       version: 1,
       designStyle: "lacuna",
+      designStyles: {
+        lacuna: {},
+        omarchy: {},
+        material: {}
+      },
       colorProfile: "semantic",
       compact: false,
       reduceMotion: false,
@@ -115,6 +120,7 @@ Item {
     if (value && typeof value === "object") {
       next.version = Number(value.version || 1)
       next.designStyle = normalizeDesignStyle(value.designStyle)
+      next.designStyles = normalizeDesignStyles(value.designStyles || value.stylePresets || value.designStylePresets)
       next.colorProfile = String(value.colorProfile || "").toLowerCase() === "colorful" ? "colorful" : "semantic"
       next.quickLaunchLayout = normalizeLayoutMode(value.quickLaunchLayout || value.quickLaunchView, "list")
       next.dailyLaunchLayout = normalizeLayoutMode(value.dailyLaunchLayout || value.launchLayout || value.dailyLaunchView, "list")
@@ -413,6 +419,96 @@ Item {
     if (style === "lacuna" || style === "carbon") return "lacuna"
     if (style === "omarchy" || style === "material") return style
     return "lacuna"
+  }
+
+  function normalizeDesignStyles(value) {
+    var next = defaultData().designStyles
+    if (!value || typeof value !== "object") return next
+
+    var styles = ["lacuna", "omarchy", "material"]
+    for (var i = 0; i < styles.length; i++) {
+      var style = styles[i]
+      var source = value[style]
+      if (!source || typeof source !== "object") continue
+
+      var preset = {}
+      var bar = normalizeDesignStyleBar(source.bar || source.barLayout)
+      if (bar !== null) preset.bar = bar
+      next[style] = preset
+    }
+
+    return next
+  }
+
+  function normalizeDesignStyleBar(value) {
+    if (!value || typeof value !== "object") return null
+    var sourceLayout = value.layout && typeof value.layout === "object" ? value.layout : value
+    var layout = normalizeBarLayout(sourceLayout)
+    var centerAnchor = String(value.centerAnchor || "").trim()
+
+    if (centerAnchor === ""
+        && layout.left.length === 0
+        && layout.center.length === 0
+        && layout.right.length === 0) return null
+
+    var next = { layout: layout }
+    if (centerAnchor !== "") next.centerAnchor = centerAnchor
+    return next
+  }
+
+  function normalizeBarLayout(value) {
+    var next = { left: [], center: [], right: [] }
+    if (!value || typeof value !== "object") return next
+
+    var sections = ["left", "center", "right"]
+    for (var i = 0; i < sections.length; i++) {
+      var section = sections[i]
+      var source = Array.isArray(value[section]) ? value[section] : []
+      for (var j = 0; j < source.length; j++) {
+        var entry = normalizeBarLayoutEntry(source[j])
+        if (entry !== null) next[section].push(entry)
+      }
+    }
+
+    return next
+  }
+
+  function normalizeBarLayoutEntry(value) {
+    if (!value || typeof value !== "object") return null
+    var id = String(value.id || "").trim()
+    if (id === "") return null
+
+    var next = { id: id }
+    for (var key in value) {
+      if (key === "id") continue
+      var normalized = normalizeJsonValue(value[key])
+      if (normalized !== undefined) next[key] = normalized
+    }
+    return next
+  }
+
+  function normalizeJsonValue(value) {
+    if (value === null) return null
+    var t = typeof value
+    if (t === "string" || t === "boolean") return value
+    if (t === "number") return isFinite(value) ? value : undefined
+    if (Array.isArray(value)) {
+      var list = []
+      for (var i = 0; i < value.length; i++) {
+        var item = normalizeJsonValue(value[i])
+        if (item !== undefined) list.push(item)
+      }
+      return list
+    }
+    if (t === "object") {
+      var object = {}
+      for (var key in value) {
+        var child = normalizeJsonValue(value[key])
+        if (child !== undefined) object[key] = child
+      }
+      return object
+    }
+    return undefined
   }
 
   function nextDesignStyle(value) {
