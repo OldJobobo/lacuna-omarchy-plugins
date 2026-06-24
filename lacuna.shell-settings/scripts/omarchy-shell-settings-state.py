@@ -101,7 +101,7 @@ def focused_monitor():
 
 
 def idle_status():
-  raw = run_redirected("omarchy shell idle status")
+  raw = run_redirected("omarchy toggle idle status")
   if not raw:
     return {}
   try:
@@ -112,19 +112,28 @@ def idle_status():
 
 
 def notification_dnd():
-  value = run_redirected("omarchy shell notifications isDnd").lower()
+  value = run_redirected("omarchy-shell notifications isDnd").lower()
   if value == "on":
     return True
   return False
 
 
 def nightlight_on():
+  raw = run_redirected("omarchy toggle nightlight --status")
+  if raw:
+    try:
+      parsed = json.loads(raw)
+      if isinstance(parsed, dict) and isinstance(parsed.get("enabled"), bool):
+        return parsed.get("enabled")
+    except Exception:
+      pass
+
   raw = run_redirected("hyprctl hyprsunset temperature")
-  digits = "".join(ch for ch in raw if ch.isdigit())
-  if not digits:
+  match = re.search(r"\d+", raw)
+  if not match:
     return False
   try:
-    return int(digits) < 5000
+    return int(match.group(0)) < 6000
   except ValueError:
     return False
 

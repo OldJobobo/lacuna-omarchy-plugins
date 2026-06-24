@@ -70,6 +70,7 @@
     "mode": "off",
     "reserveMode": "auto",
     "shadow": false,
+    "border": false,
     "thickness": 8,
     "radius": 14,
     "shadowDirection": "bottom_right",

@@ -7,6 +7,7 @@ Item {
 
   property string mode: "off"
   property bool shadowEnabled: false
+  property bool borderEnabled: false
   property string barPosition: "top"
   property int barSize: 0
   property int barBottomY: 0
@@ -17,6 +18,8 @@ Item {
   property bool cornerPieces: true
   property real progress: 1
   property color frameColor: "#101315"
+  property color borderColor: Qt.rgba(1, 1, 1, 0.18)
+  property real borderWidth: 1
   property color shadowColor: "black"
   property real shadowOpacity: 0.88
   property real shadowBlur: 0.85
@@ -71,6 +74,25 @@ Item {
   readonly property real surfaceShadowSize: Math.max(12, Math.min(34, shadowExtent))
   readonly property bool sidebarOnRight: rightEdgeOccupied && !leftEdgeOccupied
   readonly property real sidebarOccupiedWidth: sidebarWidth + (sidebarCornerVisible ? sidebarCornerWidth : 0)
+  readonly property real borderLeft: Math.max(0, leftEdgeOccupied ? sidebarX + sidebarWidth : (leftBar ? effectiveBarSize : t))
+  readonly property real borderTop: Math.max(0, topBar ? barBottomY : t)
+  readonly property real borderRight: Math.max(borderLeft + 1, effectiveFrameWidth - (rightEdgeOccupied ? Math.max(0, effectiveFrameWidth - sidebarX) : (rightBar ? effectiveBarSize : t)))
+  readonly property real borderBottom: Math.max(borderTop + 1, height - (bottomBar ? effectiveBarSize : t))
+  readonly property real borderInset: Math.max(0, borderWidth / 2)
+  readonly property real strokeLeft: borderLeft + borderInset
+  readonly property real strokeTop: borderTop + borderInset
+  readonly property real strokeRight: borderRight - borderInset
+  readonly property real strokeBottom: borderBottom - borderInset
+  readonly property real borderRadius: cornerPieces ? Math.max(0.01, Math.min(cornerSize, (borderRight - borderLeft) / 2, (borderBottom - borderTop) / 2) - borderInset) : 0.01
+  readonly property bool leftAttachmentGapVisible: leftEdgeOccupied && flyoutVisible && flyoutHeight > 0
+  readonly property bool rightAttachmentGapVisible: rightEdgeOccupied && flyoutVisible && flyoutHeight > 0
+  readonly property real attachmentGapTop: Math.max(strokeTop + borderRadius, flyoutY - borderInset)
+  readonly property real attachmentGapBottom: Math.min(strokeBottom - borderRadius, flyoutY + flyoutHeight + borderInset)
+  readonly property bool attachmentGapRenderable: attachmentGapBottom > attachmentGapTop + borderWidth
+  readonly property real rightVerticalUpperEndY: rightAttachmentGapVisible && attachmentGapRenderable ? attachmentGapTop : strokeBottom - borderRadius
+  readonly property real rightVerticalLowerStartY: rightAttachmentGapVisible && attachmentGapRenderable ? attachmentGapBottom : strokeBottom - borderRadius
+  readonly property real leftVerticalLowerEndY: leftAttachmentGapVisible && attachmentGapRenderable ? attachmentGapBottom : strokeTop + borderRadius
+  readonly property real leftVerticalUpperStartY: leftAttachmentGapVisible && attachmentGapRenderable ? attachmentGapTop : strokeTop + borderRadius
   readonly property real horizontalBarShadowX: leftEdgeOccupied ? Math.max(0, sidebarX + sidebarOccupiedWidth) : 0
   readonly property real horizontalBarShadowRightInset: rightEdgeOccupied ? Math.max(0, effectiveFrameWidth - sidebarX + (sidebarCornerVisible ? sidebarCornerWidth : 0)) : 0
   readonly property real horizontalBarShadowWidth: Math.max(0, effectiveFrameWidth - horizontalBarShadowX - horizontalBarShadowRightInset + barEdgeCasterOverrun)
@@ -333,6 +355,84 @@ Item {
     shadowHorizontalOffset: root.shadowOffsetX
     shadowVerticalOffset: root.shadowOffsetY
     z: -2
+  }
+
+  Shape {
+    id: frameBorderSource
+
+    anchors.fill: parent
+    visible: root.frameEnabled && root.borderEnabled && root.clampedProgress > 0.001
+    asynchronous: false
+    antialiasing: true
+    preferredRendererType: Shape.CurveRenderer
+    z: 2
+
+    ShapePath {
+      fillColor: "transparent"
+      strokeColor: root.borderColor
+      strokeWidth: root.borderWidth
+      capStyle: ShapePath.FlatCap
+      joinStyle: ShapePath.RoundJoin
+      startX: root.strokeLeft + root.borderRadius
+      startY: root.strokeTop
+
+      PathLine {
+        x: root.strokeRight - root.borderRadius
+        y: root.strokeTop
+      }
+      PathCubic {
+        x: root.strokeRight
+        y: root.strokeTop + root.borderRadius
+        control1X: root.strokeRight - root.borderRadius * (1 - root.curveKappa)
+        control1Y: root.strokeTop
+        control2X: root.strokeRight
+        control2Y: root.strokeTop + root.borderRadius * (1 - root.curveKappa)
+      }
+      PathLine {
+        x: root.strokeRight
+        y: root.rightVerticalUpperEndY
+      }
+      PathMove {
+        x: root.strokeRight
+        y: root.rightVerticalLowerStartY
+      }
+      PathCubic {
+        x: root.strokeRight - root.borderRadius
+        y: root.strokeBottom
+        control1X: root.strokeRight
+        control1Y: root.strokeBottom - root.borderRadius * (1 - root.curveKappa)
+        control2X: root.strokeRight - root.borderRadius * (1 - root.curveKappa)
+        control2Y: root.strokeBottom
+      }
+      PathLine {
+        x: root.strokeLeft + root.borderRadius
+        y: root.strokeBottom
+      }
+      PathCubic {
+        x: root.strokeLeft
+        y: root.strokeBottom - root.borderRadius
+        control1X: root.strokeLeft + root.borderRadius * (1 - root.curveKappa)
+        control1Y: root.strokeBottom
+        control2X: root.strokeLeft
+        control2Y: root.strokeBottom - root.borderRadius * (1 - root.curveKappa)
+      }
+      PathLine {
+        x: root.strokeLeft
+        y: root.leftVerticalLowerEndY
+      }
+      PathMove {
+        x: root.strokeLeft
+        y: root.leftVerticalUpperStartY
+      }
+      PathCubic {
+        x: root.strokeLeft + root.borderRadius
+        y: root.strokeTop
+        control1X: root.strokeLeft
+        control1Y: root.strokeTop + root.borderRadius * (1 - root.curveKappa)
+        control2X: root.strokeLeft + root.borderRadius * (1 - root.curveKappa)
+        control2Y: root.strokeTop
+      }
+    }
   }
 
   Item {

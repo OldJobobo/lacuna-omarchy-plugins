@@ -59,10 +59,99 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('style === "lacuna" || style === "carbon"', qml)
         self.assertIn('return "lacuna"', qml)
 
+    def test_lacuna_frame_border_option_is_configurable_and_separate_from_shadow(self):
+        menu_settings = read("lacuna.menu/services/LacunaSettings.qml")
+        state_service = read("lacuna.state/Service.qml")
+        settings_example = read_json("config/settings.example.json")
+        full_settings = read_json("tests/fixtures/full-settings.json")
+        registry = read("lacuna.menu/menu/MenuRegistry.qml")
+        settings_window = read("lacuna.menu/settings/SettingsWindow.qml")
+        menu_window = read("lacuna.menu/menu/MenuWindow.qml")
+        overlay = read("lacuna.menu/menu/LacunaFrameOverlay.qml")
+        panel_border = read("lacuna.menu/menu/LacunaPanelBorder.qml")
+        bar = read("lacuna.bar/Bar.qml")
+        adapter = read("lacuna.bar/OmarchyBarAdapter.qml")
+        omarchy_bar = read("lacuna.bar/OmarchyBar.qml")
+        frame = read("lacuna.bar/LacunaFrameWindow.qml")
+        border_window = read("lacuna.bar/LacunaFrameBorderWindow.qml")
+
+        self.assertIs(settings_example["frame"]["border"], False)
+        self.assertIs(full_settings["frame"]["border"], True)
+        for qml in [menu_settings, state_service]:
+            self.assertIn("border: false", qml)
+            self.assertIn("next.frame.border = value.frame.border === true", qml)
+
+        self.assertIn("property bool frameBorder: false", registry)
+        self.assertIn('row("corners", "Frame Border"', settings_window)
+        self.assertIn('"toggle-frame-border"', settings_window)
+        self.assertIn("readonly property bool frameBorder: boolSetting(frameSettings.border, false)", menu_window)
+        self.assertIn("readonly property bool frameBorderAttachedFlyoutVisible", menu_window)
+        self.assertIn("readonly property bool frameBorderAttachedConnectorVisible", menu_window)
+        self.assertIn("readonly property real frameBorderAttachedFlyoutY", menu_window)
+        self.assertIn("frameBorderWindowY + (frameBorderAttachedConnectorVisible ? panelHost.connectorMaskY : panelHost.flyoutMaskY)", menu_window)
+        self.assertIn("frameBorderAttachedConnectorVisible ? panelHost.connectorMaskHeight : panelHost.flyoutMaskHeight", menu_window)
+        self.assertIn("function setFrameBorder(enabled)", menu_window)
+        self.assertIn('if (entry.action === "toggle-frame-border")', menu_window)
+        self.assertIn("frameBorder: root.frameBorder", menu_window)
+        self.assertIn('borderEnabled: root.lacunaEnabled && !root.barOwnsLacunaFrame && root.frameBorder && root.frameMode !== "off"', menu_window)
+        self.assertIn("borderColor: menuTheme.seam", menu_window)
+        self.assertIn("LacunaPanelBorder", menu_window)
+        self.assertIn("active: root.lacunaEnabled && root.frameBorder", menu_window)
+        self.assertIn("flyoutVisible: panelController.flyoutRenderable && panelController.flyoutProgress > 0.001", menu_window)
+        self.assertIn("readonly property bool frameBorder: frameSettings.border === true", bar)
+        self.assertIn("LacunaFrameBorderWindow", bar)
+        self.assertIn("active: root.frameEnabled && root.frameBorder", bar)
+        self.assertIn("borderColor: barTheme.seam", bar)
+        self.assertNotIn("property bool frameBorder: false", adapter)
+        self.assertNotIn("property bool frameBorder: false", omarchy_bar)
+
+        self.assertIn("property bool borderEnabled: false", overlay)
+        self.assertIn("id: frameBorderSource", overlay)
+        self.assertIn("strokeColor: root.borderColor", overlay)
+        self.assertIn("root.curveKappa", overlay)
+        self.assertNotIn("PathArc {\n        x: root.borderRight", overlay)
+
+        self.assertIn("property bool active: false", border_window)
+        self.assertIn("property color borderColor", border_window)
+        self.assertIn("id: frameBorderSource", border_window)
+        self.assertIn('fillColor: "transparent"', border_window)
+        self.assertIn("strokeColor: root.borderColor", border_window)
+        self.assertIn("strokeWidth: root.borderWidth", border_window)
+        self.assertIn('WlrLayershell.namespace: "lacuna-bar-frame-border"', border_window)
+        self.assertIn("WlrLayershell.layer: WlrLayer.Overlay", border_window)
+        self.assertIn("mask: Region {}", border_window)
+        self.assertIn("readonly property real borderInset: Math.max(0, borderWidth / 2)", border_window)
+        self.assertIn("readonly property real borderRight: holeRight - borderInset", border_window)
+        self.assertIn("readonly property real borderRadius: Math.max(minArcRadius, holeRadius - borderInset)", border_window)
+        self.assertIn("readonly property real attachmentGapTop: Math.max(borderTop + borderRadius, attachedFlyoutY - borderInset)", border_window)
+        self.assertIn("readonly property real attachmentGapBottom: Math.min(borderBottom - borderRadius, attachedFlyoutY + attachedFlyoutHeight + borderInset)", border_window)
+        self.assertIn("readonly property bool leftAttachmentGapVisible", border_window)
+        self.assertIn("readonly property real leftVerticalUpperStartY", border_window)
+        self.assertIn("attachedFlyoutVisible: hostedMenu.sidebarScreen === modelData && hostedMenu.frameBorderAttachedFlyoutVisible", bar)
+        self.assertIn("root.borderRadius * (1 - root.curveKappa)", border_window)
+        self.assertIn("readonly property real borderInset: Math.max(0, borderWidth / 2)", overlay)
+        self.assertIn("readonly property real strokeRight: borderRight - borderInset", overlay)
+        self.assertIn("readonly property real attachmentGapTop: Math.max(strokeTop + borderRadius, flyoutY - borderInset)", overlay)
+        self.assertIn("readonly property real attachmentGapBottom: Math.min(strokeBottom - borderRadius, flyoutY + flyoutHeight + borderInset)", overlay)
+        self.assertIn("readonly property bool leftAttachmentGapVisible", overlay)
+        self.assertIn("PathMove", overlay)
+        self.assertIn("PathMove", border_window)
+        self.assertIn("property bool connectorVisible: false", panel_border)
+        self.assertIn("property bool flyoutVisible: false", panel_border)
+        self.assertIn("readonly property real outlineLeft: connectorVisible ? flyoutX : strokeLeft", panel_border)
+        self.assertIn("control1X: root.connectorVisible ? root.connectorX : root.outlineLeft", panel_border)
+        self.assertIn("control2X: root.connectorVisible ? root.connectorX + root.effectiveConnectorWidth * (1 - root.curveKappa) : root.outlineLeft", panel_border)
+        self.assertIn("strokeColor: root.borderColor", panel_border)
+        self.assertIn("source: frameSource", overlay)
+        self.assertIn("source: frameSource", frame)
+        self.assertIn("shadowEnabled: root.shadowEnabled", overlay)
+        self.assertIn("shadowEnabled: root.active && root.shadowEnabled", frame)
+        self.assertNotIn("id: frameBorderSource", frame)
+
     def test_lacuna_menu_surface_ignores_shell_surface_alpha(self):
         qml = read("lacuna.menu/services/Theme.qml")
 
-        self.assertIn('property color panelBackground: shellSurfaceColor("bar.background", color("background"))', qml)
+        self.assertIn('property color panelBackground: shellSurfaceColor("menu.background", shellSurfaceColor("popups.background", color("background")))', qml)
         self.assertIn("function shellSurfaceColor", qml)
         self.assertIn("function opaqueColor", qml)
         self.assertIn("return opaqueColor(shellColor(name, fallbackColor))", qml)
@@ -76,6 +165,21 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("function unquoteValue", qml)
         self.assertIn('var match = line.match(/^([A-Za-z0-9_-]+)\\s*=\\s*(.+)$/)', qml)
         self.assertNotIn("property color panelBackground: color(\"background\")", qml)
+        self.assertNotIn('property color panelBackground: shellSurfaceColor("bar.background"', qml)
+
+    def test_theme_reads_omarchy4_current_theme_state(self):
+        theme = read("lacuna.menu/services/Theme.qml")
+        bar_size = read("lacuna.menu/services/BarSizeMode.qml")
+
+        for qml in [theme, bar_size]:
+            self.assertIn('Quickshell.env("XDG_STATE_HOME")', qml)
+            self.assertIn('"/omarchy/current/theme/colors.toml"', qml)
+            self.assertIn('"/omarchy/current/theme/shell.toml"', qml)
+            self.assertNotIn('XDG_CONFIG_HOME") ? Quickshell.env("XDG_CONFIG_HOME") + "/omarchy/current/theme', qml)
+
+        self.assertIn('"/omarchy/current/theme.name"', theme)
+        self.assertIn('"OMARCHY_PATH=" + quote(omarchyPath) + " omarchy-shell"', bar_size)
+        self.assertNotIn('"OMARCHY_PATH=" + quote(omarchyPath) + " omarchy shell"', bar_size)
 
     def test_theme_parse_fallbacks_emit_diagnostics(self):
         qml = read("lacuna.menu/services/Theme.qml")
@@ -511,7 +615,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property int pendingCount", combined)
         self.assertIn('if (id === "Dnd") return dnd || pendingCount > 0', combined)
         self.assertIn('pendingCount + " pending notification"', combined)
-        self.assertIn('bar.run("omarchy shell notifications showHistory")', combined)
+        self.assertIn('bar.run("omarchy-shell notifications showHistory")', combined)
         self.assertIn('bar.run("omarchy toggle notification silencing")', combined)
         self.assertIn('else if (recording) bar.run("omarchy capture screenrecording --stop-recording")', combined)
         self.assertIn("Qt.LeftButton | Qt.MiddleButton | Qt.RightButton", combined)
@@ -576,6 +680,12 @@ class QmlContractTests(unittest.TestCase):
             qml = read(path)
             self.assertIn("readonly property bool tooltipHovered", qml, path)
             self.assertIn("clickArea.containsMouse", qml, path)
+
+    def test_lacuna_bar_module_slot_visibility_does_not_depend_on_child_visible(self):
+        qml = read("lacuna.bar/OmarchyBar.qml")
+
+        self.assertIn("readonly property bool contentVisible: activeItem && (itemImplicitWidth > 0 || itemImplicitHeight > 0)", qml)
+        self.assertNotIn("activeItem.visible !== false || itemImplicitWidth", qml)
 
     def test_lacuna_native_replacement_widgets_have_expected_contracts(self):
         replacements = {
@@ -1362,14 +1472,44 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("settings-persistence.json", qml)
         self.assertIn("manageIdle", qml)
         self.assertIn("manageNightlight", qml)
-        self.assertIn("omarchy shell idle status", qml)
-        self.assertIn("omarchy shell idle \" + (enabled ? \"enable\" : \"disable\")", qml)
+        self.assertIn("omarchy toggle idle status", qml)
+        self.assertIn("omarchy toggle idle \" + (enabled ? \"allow-idle\" : \"stay-awake\")", qml)
         self.assertIn("omarchy toggle nightlight --status", qml)
         self.assertIn("hyprctl hyprsunset temperature", qml)
         self.assertIn('target: "lacuna-settings-persistence"', qml)
         self.assertIn("Idle Inhibit", panel)
         self.assertIn("Nightlight", panel)
         self.assertIn("setManagedToggles", panel)
+
+    def test_shell_settings_service_uses_omarchy_4_toggle_contracts(self):
+        for path in [
+            "lacuna.shell-settings/Service.qml",
+            "lacuna.menu/services/OmarchyShellSettingsService.qml",
+        ]:
+            qml = read(path)
+            self.assertIn('omarchy toggle bar " + (want ? "on" : "off")', qml, path)
+            self.assertIn('omarchy toggle idle " + (want ? "allow-idle" : "stay-awake")', qml, path)
+            self.assertIn("omarchy-shell notifications isDnd", qml, path)
+            self.assertIn("omarchy-shell notifications toggleDnd", qml, path)
+            self.assertIn("omarchy-shell -q omarchy.indicators refresh", qml, path)
+            self.assertIn("function setNightlight", qml, path)
+            self.assertIn("hyprctl hyprsunset temperature", qml, path)
+            self.assertNotIn("omarchy toggle idle\")", qml, path)
+            self.assertNotIn("omarchy toggle notification silencing", qml, path)
+            self.assertNotIn("omarchy toggle nightlight\")", qml, path)
+
+    def test_menu_debug_commands_match_omarchy_4_routes(self):
+        for path in [
+            "lacuna.menu/menu/MenuCommandCatalog.qml",
+            "lacuna.shell-settings/Panel.qml",
+        ]:
+            qml = read(path)
+            self.assertIn("omarchy commands --check", qml, path)
+            self.assertIn("omarchy-shell shell ping", qml, path)
+            self.assertIn("omarchy toggle idle status", qml, path)
+            self.assertIn("omarchy-shell idle debug", qml, path)
+            self.assertNotIn("omarchy debug --print --no-sudo", qml, path)
+            self.assertNotIn("omarchy debug idle", qml, path)
 
     def test_window_gaps_toggle_uses_theme_size_when_enabled(self):
         service = read("lacuna.shell-settings/Service.qml")
@@ -1825,7 +1965,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("function openConfigPanel()", adapter)
         self.assertIn("readonly property real itemImplicitWidth", omarchy_bar)
         self.assertIn("readonly property real itemImplicitHeight", omarchy_bar)
-        self.assertIn("activeItem.visible !== false || itemImplicitWidth > 0 || itemImplicitHeight > 0", omarchy_bar)
+        self.assertIn("readonly property bool contentVisible: activeItem && (itemImplicitWidth > 0 || itemImplicitHeight > 0)", omarchy_bar)
         self.assertNotIn("readonly property bool contentVisible: activeItem && activeItem.visible", omarchy_bar)
         self.assertIn('WlrLayershell.namespace: "lacuna-bar-frame"', frame)
         self.assertIn("WlrLayershell.exclusionMode: ExclusionMode.Ignore", frame)

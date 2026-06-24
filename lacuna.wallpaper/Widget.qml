@@ -20,8 +20,8 @@ Item {
   readonly property int maxTextLength: Math.max(4, Number(setting("maxTextLength", 18)))
   readonly property bool showIcon: boolSetting("showIcon", true)
   readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
-  readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
-  readonly property string backgroundLink: configHome + "/omarchy/current/background"
+  readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")
+  readonly property string backgroundLink: stateHome + "/omarchy/current/background"
   readonly property string wallpaperTitle: backgroundPath ? formatTitle(backgroundPath) : "No Wallpaper"
   readonly property string nextWallpaperTitle: nextBackgroundPath ? formatTitle(nextBackgroundPath) : ""
   readonly property string displayText: clipped(wallpaperTitle)
@@ -33,8 +33,8 @@ Item {
 
   enabled: widgetEnabled
   visible: widgetEnabled && displayText.length > 0
-  implicitWidth: visible ? button.implicitWidth : 0
-  implicitHeight: visible ? button.implicitHeight : 0
+  implicitWidth: widgetEnabled && displayText.length > 0 ? button.implicitWidth : 0
+  implicitHeight: widgetEnabled && displayText.length > 0 ? button.implicitHeight : 0
   readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {

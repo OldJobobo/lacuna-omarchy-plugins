@@ -78,6 +78,7 @@
     "mode": "fullframe",
     "reserveMode": "comfort",
     "shadow": true,
+    "border": true,
     "thickness": 10,
     "radius": 16,
     "shadowDirection": "bottom_right",

@@ -11,16 +11,17 @@ Item {
     prefix: "Lacuna Theme"
   }
 
-  readonly property string colorsPath: Quickshell.env("XDG_CONFIG_HOME") ? Quickshell.env("XDG_CONFIG_HOME") + "/omarchy/current/theme/colors.toml" : Quickshell.env("HOME") + "/.config/omarchy/current/theme/colors.toml"
-  readonly property string shellPath: Quickshell.env("XDG_CONFIG_HOME") ? Quickshell.env("XDG_CONFIG_HOME") + "/omarchy/current/theme/shell.toml" : Quickshell.env("HOME") + "/.config/omarchy/current/theme/shell.toml"
-  readonly property string themeNamePath: Quickshell.env("XDG_CONFIG_HOME") ? Quickshell.env("XDG_CONFIG_HOME") + "/omarchy/current/theme.name" : Quickshell.env("HOME") + "/.config/omarchy/current/theme.name"
+  readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state"
+  readonly property string colorsPath: stateHome + "/omarchy/current/theme/colors.toml"
+  readonly property string shellPath: stateHome + "/omarchy/current/theme/shell.toml"
+  readonly property string themeNamePath: stateHome + "/omarchy/current/theme.name"
   property var palette: ({})
   property var shellValues: ({})
   property string themeName: ""
   property string themeTitle: formatTitle(themeName)
   property color foreground: shellColor("menu.text", color("foreground"))
   property color background: color("background")
-  property color panelBackground: shellSurfaceColor("bar.background", color("background"))
+  property color panelBackground: shellSurfaceColor("menu.background", shellSurfaceColor("popups.background", color("background")))
   property color accent: shellColor("menu.selected", color("accent"))
   property color voidColor: withAlpha(background, 0.18)
   property color border: withAlpha(foreground, 0.18)

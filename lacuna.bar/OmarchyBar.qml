@@ -154,6 +154,9 @@ Item {
       out.push({
         id: slot.moduleName,
         section: slot.region,
+        registered: slot.registered === true,
+        qmlCustom: slot.qmlCustom === true,
+        commandCustom: slot.commandCustom === true,
         x: Math.round(point.x),
         y: Math.round(point.y),
         width: Math.round(slot.width),
@@ -1396,7 +1399,7 @@ Item {
 
     readonly property real itemImplicitWidth: activeItem ? Number(activeItem.implicitWidth || 0) : 0
     readonly property real itemImplicitHeight: activeItem ? Number(activeItem.implicitHeight || 0) : 0
-    readonly property bool contentVisible: activeItem && (activeItem.visible !== false || itemImplicitWidth > 0 || itemImplicitHeight > 0)
+    readonly property bool contentVisible: activeItem && (itemImplicitWidth > 0 || itemImplicitHeight > 0)
     readonly property real naturalWidth: contentVisible ? (root.vertical ? root.barSize : itemImplicitWidth) : 0
     readonly property real naturalHeight: contentVisible ? itemImplicitHeight : 0
 

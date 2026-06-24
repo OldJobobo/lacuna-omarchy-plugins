@@ -106,6 +106,7 @@ Item {
         mode: "off",
         reserveMode: "auto",
         shadow: false,
+        border: false,
         thickness: 8,
         radius: 14,
         shadowDirection: "bottom_right",
@@ -148,6 +149,7 @@ Item {
         next.frame.mode = normalizeFrameMode(value.frame.mode)
         next.frame.reserveMode = normalizeFrameReserveMode(value.frame.reserveMode)
         next.frame.shadow = value.frame.shadow === true
+        next.frame.border = value.frame.border === true
         next.frame.thickness = boundedInt(value.frame.thickness, 8, 2, 24)
         next.frame.radius = boundedInt(value.frame.radius, 14, 0, 32)
         next.frame.shadowDirection = normalizeShadowDirection(value.frame.shadowDirection)

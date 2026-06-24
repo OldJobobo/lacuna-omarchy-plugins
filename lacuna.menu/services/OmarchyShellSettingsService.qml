@@ -274,6 +274,17 @@ Item {
     run("omarchy hyprland monitor scaling " + quote(value))
   }
 
+  function refreshIndicatorsCommand() {
+    return "omarchy-shell -q omarchy.indicators refresh >/dev/null 2>&1"
+  }
+
+  function setNightlight(enabled) {
+    var temp = enabled === true ? "4000" : "6500"
+    run("if ! pgrep -x hyprsunset >/dev/null; then setsid uwsm-app -- hyprsunset >/dev/null 2>&1 & sleep 1; fi"
+      + "; hyprctl hyprsunset temperature " + temp + " >/dev/null 2>&1"
+      + "; " + refreshIndicatorsCommand())
+  }
+
   function omarchyPathPrefix() {
     return "OMARCHY_PATH=${OMARCHY_PATH:-$HOME/.local/share/omarchy}"
   }
@@ -356,7 +367,7 @@ Item {
     var want = desired === true
     if (key === "barVisible") {
       setOptimisticToggle("barVisible", want)
-      run("omarchy toggle bar " + (want ? "show" : "hide"))
+      run("omarchy toggle bar " + (want ? "on" : "off"))
       return
     }
     if (key === "windowGapsEnabled") {
@@ -383,13 +394,15 @@ Item {
       run("omarchy toggle suspend")
     } else if (key === "idleEnabled") {
       setOptimisticToggle("idleEnabled", want)
-      run("omarchy toggle idle")
+      run("omarchy toggle idle " + (want ? "allow-idle" : "stay-awake"))
     } else if (key === "notificationSilencing") {
       setOptimisticToggle("notificationSilencing", want)
-      run("omarchy toggle notification silencing")
+      run("current=$(omarchy-shell notifications isDnd 2>/dev/null || true)"
+        + "; if [ \"$current\" != " + quote(want ? "on" : "off") + " ]; then omarchy-shell notifications toggleDnd >/dev/null; fi"
+        + "; " + refreshIndicatorsCommand())
     } else if (key === "nightlight") {
       setOptimisticToggle("nightlight", want)
-      run("omarchy toggle nightlight")
+      setNightlight(want)
     }
   }
 

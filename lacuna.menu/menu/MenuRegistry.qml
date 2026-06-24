@@ -27,6 +27,7 @@ Item {
   property string frameMode: "off"
   property string frameReserveMode: "auto"
   property bool frameShadow: false
+  property bool frameBorder: false
   property var backgroundEffects: ({})
   property var backgroundVignette: ({})
   property var shellBarConfig: ({})

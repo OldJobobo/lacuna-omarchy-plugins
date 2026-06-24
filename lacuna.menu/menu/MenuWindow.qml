@@ -114,6 +114,11 @@ Item {
   readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutShellSettings ? shellSettingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : activeFlyoutYoutubeMusic ? youtubeMusicWidth : 0
   readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutShellSettings ? shellSettingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : activeFlyoutYoutubeMusic ? youtubeMusicFlyoutHeight() : 0
   readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutShellSettings ? shellSettingsFlyoutY(shellSettingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : activeFlyoutYoutubeMusic ? youtubeMusicFlyoutY(youtubeMusicFlyoutHeight()) : 0
+  readonly property bool frameBorderAttachedFlyoutVisible: lacunaEnabled && panelController.flyoutRenderable && panelController.flyoutProgress > 0.001
+  readonly property bool frameBorderAttachedConnectorVisible: frameBorderAttachedFlyoutVisible && sidebarSurfaceVisible && sidebarState.cornerPieces && settingsConnectorWidth > 0
+  readonly property real frameBorderWindowY: visualTopInset
+  readonly property real frameBorderAttachedFlyoutY: frameBorderWindowY + (frameBorderAttachedConnectorVisible ? panelHost.connectorMaskY : panelHost.flyoutMaskY)
+  readonly property real frameBorderAttachedFlyoutHeight: frameBorderAttachedConnectorVisible ? panelHost.connectorMaskHeight : panelHost.flyoutMaskHeight
   readonly property int frameOverlayWidth: !lacunaEnabled || barOwnsLacunaFrame || frameMode === "off" ? 0 : ((sidebarScreen ? sidebarScreen.width : 0) + 100)
   readonly property bool frameReserveActive: !barOwnsLacunaFrame && lacunaEnabled && sidebarState.exclusive && (panelController.menuRenderable || frameMode === "fullframe") && frameMode !== "off"
   readonly property bool sidebarReserveActive: lacunaEnabled && sidebarState.exclusive && panelController.menuRenderable && sidebarSurfaceVisible
@@ -171,6 +176,7 @@ Item {
   readonly property string frameMode: validFrameMode(frameSettings.mode)
   readonly property string frameReserveMode: validFrameReserveMode(frameSettings.reserveMode)
   readonly property bool frameShadow: boolSetting(frameSettings.shadow, false)
+  readonly property bool frameBorder: boolSetting(frameSettings.border, false)
   readonly property int frameThickness: positiveInt(frameSettings.thickness, 8)
   readonly property int frameRadius: Math.max(0, positiveInt(frameSettings.radius, 14))
   readonly property int frameShadowOffsetX: numberSetting(frameSettings.shadowOffsetX, 2)
@@ -996,6 +1002,16 @@ Item {
     setFrameShadow(!lacunaSettings.normalize(lacunaSettings.data).frame.shadow)
   }
 
+  function setFrameBorder(enabled) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    next.frame.border = enabled === true
+    lacunaSettings.save(next)
+  }
+
+  function toggleFrameBorder() {
+    setFrameBorder(!lacunaSettings.normalize(lacunaSettings.data).frame.border)
+  }
+
   function setSidebarDefaultMode(mode) {
     sidebarState.setDefaultMode(mode)
     applySidebarDefaultState()
@@ -1239,6 +1255,11 @@ Item {
 
     if (entry.action === "toggle-frame-shadow") {
       setFrameShadow(desiredChecked(entry, !lacunaSettings.normalize(lacunaSettings.data).frame.shadow))
+      return true
+    }
+
+    if (entry.action === "toggle-frame-border") {
+      setFrameBorder(desiredChecked(entry, !lacunaSettings.normalize(lacunaSettings.data).frame.border))
       return true
     }
 
@@ -1585,6 +1606,7 @@ Item {
     frameMode: root.frameMode
     frameReserveMode: root.frameReserveMode
     frameShadow: root.frameShadow
+    frameBorder: root.frameBorder
     backgroundEffects: root.backgroundEffectsSettings
     backgroundVignette: root.backgroundVignetteSettings
     instantRestart: root.instantRestart
@@ -1703,6 +1725,7 @@ Item {
       anchors.fill: parent
       mode: root.lacunaEnabled && !root.barOwnsLacunaFrame ? root.frameMode : "off"
       shadowEnabled: root.lacunaEnabled && !root.barOwnsLacunaFrame && root.frameShadow && root.frameMode !== "off"
+      borderEnabled: root.lacunaEnabled && !root.barOwnsLacunaFrame && root.frameBorder && root.frameMode !== "off"
       barPosition: root.barPosition
       barSize: root.barControlSize
       barBottomY: root.barBottomY
@@ -1714,6 +1737,7 @@ Item {
       cornerPieces: sidebarState.cornerPieces
       progress: root.frameOverlayProgress
       frameColor: root.panelColor
+      borderColor: menuTheme.seam
       shadowOffsetX: root.frameShadowOffsetX
       shadowOffsetY: root.frameShadowOffsetY
       sidebarX: panelHost.sidebarMaskX
@@ -2022,6 +2046,25 @@ Item {
         bodyFontFamily: root.bodyFontFamily
         onCloseRequested: panelController.closeFlyout("youtubeMusic")
       }
+    }
+
+    LacunaPanelBorder {
+      id: attachedFlyoutBorder
+
+      anchors.fill: parent
+      active: root.lacunaEnabled && root.frameBorder
+      connectorVisible: root.sidebarSurfaceVisible && panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      flyoutVisible: panelController.flyoutRenderable && panelController.flyoutProgress > 0.001
+      openToLeft: root.panelOnRight
+      connectorX: panelHost.connectorX
+      connectorY: panelHost.connectorY
+      connectorWidth: panelHost.effectiveConnectorWidth
+      flyoutX: panelHost.flyoutMaskX
+      flyoutY: panelHost.flyoutMaskY
+      flyoutWidth: panelHost.flyoutMaskWidth
+      flyoutHeight: panelHost.flyoutMaskHeight
+      panelRadius: root.lacunaJoinRadius
+      borderColor: menuTheme.seam
     }
 
     Item {

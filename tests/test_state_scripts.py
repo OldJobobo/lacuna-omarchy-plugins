@@ -99,7 +99,9 @@ class StateScriptTests(unittest.TestCase):
         self.assertIn("stderr=subprocess.DEVNULL", script)
         self.assertNotIn('["bash", "-lc"', script)
         self.assertNotIn("NamedTemporaryFile", script)
-        self.assertIn("int(digits) < 5000", script)
+        self.assertIn("omarchy toggle nightlight --status", script)
+        self.assertIn("isinstance(parsed.get(\"enabled\"), bool)", script)
+        self.assertIn("int(match.group(0)) < 6000", script)
 
     def test_bar_size_state_preserves_user_runtime_state_on_toggle(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -185,13 +187,13 @@ class StateScriptTests(unittest.TestCase):
             fake_bin = tmp_path / "bin"
             fake_bin.mkdir()
             shell_log = tmp_path / "omarchy-shell.log"
-            fake_omarchy = fake_bin / "omarchy"
-            fake_omarchy.write_text(
+            fake_omarchy_shell = fake_bin / "omarchy-shell"
+            fake_omarchy_shell.write_text(
                 "#!/usr/bin/env bash\n"
                 "printf '%s\\n' \"$*\" >> \"$OMARCHY_SHELL_LOG\"\n",
                 encoding="utf-8",
             )
-            fake_omarchy.chmod(0o755)
+            fake_omarchy_shell.chmod(0o755)
 
             run_shell_script(
                 REFRESH_THEME_BACKGROUND,
@@ -205,4 +207,4 @@ class StateScriptTests(unittest.TestCase):
             )
 
             self.assertEqual(background_link.resolve(), source_background)
-            self.assertIn("shell -q background set " + str(source_background), shell_log.read_text(encoding="utf-8"))
+            self.assertIn("-q background set " + str(source_background), shell_log.read_text(encoding="utf-8"))

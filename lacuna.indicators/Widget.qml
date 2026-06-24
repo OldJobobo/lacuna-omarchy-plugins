@@ -145,7 +145,7 @@ Item {
         if (notificationService) notificationService.setDoNotDisturb(!notificationService.doNotDisturb)
         else bar.run("omarchy toggle notification silencing")
       } else {
-        bar.run("omarchy shell notifications showHistory")
+        bar.run("omarchy-shell notifications showHistory")
       }
     } else if (id === "NightLight") {
       if (button === Qt.MiddleButton) root.refresh()
@@ -207,7 +207,7 @@ Item {
 
   Process {
     id: idleProc
-    command: ["bash", "-c", "omarchy shell idle status 2>/dev/null"]
+    command: ["bash", "-c", "omarchy toggle idle status 2>/dev/null"]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {

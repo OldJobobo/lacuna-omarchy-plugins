@@ -20,17 +20,17 @@ Item {
   readonly property int maxTextLength: Math.max(4, Number(setting("maxTextLength", 26)))
   readonly property bool showIcon: boolSetting("showIcon", true)
   readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
-  readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
-  readonly property string colorsPath: configHome + "/omarchy/current/theme/colors.toml"
-  readonly property string themeNamePath: configHome + "/omarchy/current/theme.name"
+  readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")
+  readonly property string colorsPath: stateHome + "/omarchy/current/theme/colors.toml"
+  readonly property string themeNamePath: stateHome + "/omarchy/current/theme.name"
   readonly property string themeTitle: formatTitle(themeName)
   readonly property string displayText: clipped(themeTitle)
   readonly property string tooltipText: themeTooltip()
 
   enabled: widgetEnabled
   visible: widgetEnabled && themeTitle.length > 0
-  implicitWidth: visible ? button.implicitWidth : 0
-  implicitHeight: visible ? button.implicitHeight : 0
+  implicitWidth: widgetEnabled && themeTitle.length > 0 ? button.implicitWidth : 0
+  implicitHeight: widgetEnabled && themeTitle.length > 0 ? button.implicitHeight : 0
   readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {

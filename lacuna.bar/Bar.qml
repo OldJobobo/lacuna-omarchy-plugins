@@ -28,6 +28,7 @@ Item {
   readonly property int frameThickness: positiveInt(frameSettings.thickness, 8)
   readonly property int frameRadius: Math.max(0, positiveInt(frameSettings.radius, 14))
   readonly property bool frameShadow: frameSettings.shadow === true
+  readonly property bool frameBorder: frameSettings.border === true
   readonly property int frameShadowOffsetX: numberSetting(frameSettings.shadowOffsetX, 2)
   readonly property int frameShadowOffsetY: numberSetting(frameSettings.shadowOffsetY, 3)
   readonly property bool cornerPieces: sidebarSettings.cornerPieces !== false
@@ -204,6 +205,30 @@ Item {
       rightEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && hostedMenu.panelOnRight
       leftOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
       rightOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
+    }
+  }
+
+  Variants {
+    model: Quickshell.screens
+
+    LacunaFrameBorderWindow {
+      required property var modelData
+
+      targetScreen: modelData
+      active: root.frameEnabled && root.frameBorder
+      barPosition: root.position
+      barSize: root.barSize
+      frameThickness: root.frameThickness
+      frameRadius: root.frameRadius
+      cornerPieces: root.cornerPieces
+      borderColor: barTheme.seam
+      leftEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && !hostedMenu.panelOnRight
+      rightEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && hostedMenu.panelOnRight
+      leftOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
+      rightOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
+      attachedFlyoutVisible: hostedMenu.sidebarScreen === modelData && hostedMenu.frameBorderAttachedFlyoutVisible
+      attachedFlyoutY: hostedMenu.frameBorderAttachedFlyoutY
+      attachedFlyoutHeight: hostedMenu.frameBorderAttachedFlyoutHeight
     }
   }
 

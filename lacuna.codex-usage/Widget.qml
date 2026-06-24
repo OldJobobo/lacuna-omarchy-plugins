@@ -10,10 +10,10 @@ Item {
   property string moduleName: "lacuna.codex-usage"
   property var settings: ({})
 
-  property string displayText: ""
-  property string shortText: ""
-  property string tooltipText: ""
-  property string cssClass: "hidden"
+  property string displayText: "Codex"
+  property string shortText: "Codex"
+  property string tooltipText: "<b>Codex Usage</b><br/>Loading usage data"
+  property string cssClass: "idle"
   property string resetText: ""
   property string planText: ""
   property string sourceText: ""
@@ -71,8 +71,8 @@ Item {
   readonly property string primaryText: activeMode === 1 ? weekPrimary : sessionPrimary
 
   visible: !hiddenState && primaryText.length > 0
-  implicitWidth: visible ? button.implicitWidth : 0
-  implicitHeight: visible ? button.implicitHeight : 0
+  implicitWidth: !hiddenState && primaryText.length > 0 ? button.implicitWidth : 0
+  implicitHeight: !hiddenState && primaryText.length > 0 ? button.implicitHeight : 0
   readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {

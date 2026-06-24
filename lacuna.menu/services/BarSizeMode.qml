@@ -15,9 +15,9 @@ Item {
   property var commandRunner: null
   property string themeName: ""
   property string omarchyPath: Quickshell.env("OMARCHY_PATH") || ((Quickshell.env("HOME") || "") + "/.local/share/omarchy")
-  readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || ((Quickshell.env("HOME") || "") + "/.config")
-  readonly property string colorsPath: configHome + "/omarchy/current/theme/colors.toml"
-  readonly property string shellPath: configHome + "/omarchy/current/theme/shell.toml"
+  readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || ((Quickshell.env("HOME") || "") + "/.local/state")
+  readonly property string colorsPath: stateHome + "/omarchy/current/theme/colors.toml"
+  readonly property string shellPath: stateHome + "/omarchy/current/theme/shell.toml"
   readonly property string barSizeMode: currentMode()
   property string colorsRaw: ""
   property string shellRaw: ""
@@ -243,7 +243,7 @@ Item {
 
     var colorsB64 = Qt.btoa(colorsRaw || "")
     var shellB64 = Qt.btoa(nextShellRaw || shellRaw || "")
-    var command = "OMARCHY_PATH=" + quote(omarchyPath) + " omarchy shell"
+    var command = "OMARCHY_PATH=" + quote(omarchyPath) + " omarchy-shell"
       + " shell applyTheme " + quote(colorsB64) + " " + quote(shellB64)
     commandRunner.run(command)
   }

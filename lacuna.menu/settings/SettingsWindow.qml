@@ -313,6 +313,7 @@ Item {
           { value: "fullframe", label: "On" }
         ], root.registry.frameMode, "set-frame-mode-"),
         row("photo", "Frame Shadow", root.registry.frameShadow ? "Apply one cohesive shadow pass to the frame layer" : "Keep frame pieces fill-only", root.registry.frameShadow ? "On" : "Off", "lacuna", "toggle-frame-shadow", "toggle", root.registry.frameShadow),
+        row("corners", "Frame Border", root.registry.frameBorder ? "Draw a fine inner edge around the frame reveal" : "Keep the frame reveal without an inner edge", root.registry.frameBorder ? "On" : "Off", "lacuna", "toggle-frame-border", "toggle", root.registry.frameBorder),
         row("density-normal", "Frame Reserve", frameReserveModeHint(), frameReserveModeName(), "lacuna", "", "segments", false, [
           { value: "auto", label: "Auto" },
           { value: "comfort", label: "Comfort" },

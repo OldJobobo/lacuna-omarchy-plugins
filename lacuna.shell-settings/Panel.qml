@@ -139,11 +139,11 @@ Item {
     }
 
     function debugCommand() {
-      return terminalCommand("omarchy debug --print --no-sudo; printf '\\nCommand exited. Press Enter to close...'; read -r _", "Omarchy Debug", false)
+      return terminalCommand("omarchy version; printf '\\n'; omarchy version channel; omarchy version pkgs; printf '\\n'; omarchy commands --check; printf '\\n'; omarchy-shell shell ping; printf '\\nCommand exited. Press Enter to close...'; read -r _", "Omarchy Debug", false)
     }
 
     function debugIdleCommand() {
-      return terminalCommand("omarchy debug idle; printf '\\nCommand exited. Press Enter to close...'; read -r _", "Omarchy Idle Debug", false)
+      return terminalCommand("omarchy toggle idle status; printf '\\n'; omarchy-shell idle debug; printf '\\nCommand exited. Press Enter to close...'; read -r _", "Omarchy Idle Debug", false)
     }
 
     function switchThemeCommand() {

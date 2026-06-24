@@ -11,23 +11,23 @@ Item {
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property var sink: Pipewire.defaultAudioSink
-  readonly property bool muted: sink && sink.audio ? sink.audio.muted : true
-  readonly property real volume: sink && sink.audio ? sink.audio.volume : 0
+  readonly property bool hasSink: !!sink && !!sink.audio
+  readonly property bool muted: hasSink ? sink.audio.muted : true
+  readonly property real volume: hasSink ? sink.audio.volume : 0
   readonly property int percent: Math.round(volume * 100)
-  readonly property color moduleColor: colorProfile.statusColor(muted ? "warning" : "normal", "audio")
+  readonly property color moduleColor: colorProfile.statusColor(!hasSink || muted ? "warning" : "normal", "audio")
   readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
   readonly property int wheelStep: Math.max(1, Math.min(25, Number(setting("wheelStep", 5))))
   readonly property string icon: {
-    if (!sink || !sink.audio) return ""
+    if (!hasSink) return ""
     if (muted || volume <= 0) return ""
     if (volume >= 0.67) return ""
     if (volume >= 0.34) return ""
     return ""
   }
 
-  visible: sink !== null
-  implicitWidth: visible ? button.implicitWidth : 0
-  implicitHeight: visible ? button.implicitHeight : 0
+  implicitWidth: button.implicitWidth
+  implicitHeight: button.implicitHeight
   readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {
@@ -36,12 +36,17 @@ Item {
   }
 
   function setVolume(next) {
-    if (!sink || !sink.audio) return
+    if (!hasSink) return
     sink.audio.volume = Math.max(0, Math.min(1.5, next))
   }
 
   function toggleMute() {
-    if (sink && sink.audio) sink.audio.muted = !sink.audio.muted
+    if (hasSink) sink.audio.muted = !sink.audio.muted
+  }
+
+  function tooltip() {
+    if (!hasSink) return "No audio sink"
+    return (muted ? "Muted" : "Volume " + percent + "%") + "<br/>Wheel adjusts volume"
   }
 
   ColorProfile {
@@ -96,7 +101,7 @@ Item {
       anchors.fill: parent
       hoverEnabled: true
       acceptedButtons: Qt.LeftButton | Qt.RightButton
-      onEntered: if (root.bar) root.bar.showTooltip(root, (root.muted ? "Muted" : "Volume " + root.percent + "%") + "<br/>Wheel adjusts volume")
+      onEntered: if (root.bar) root.bar.showTooltip(root, root.tooltip())
       onExited: if (root.bar) root.bar.hideTooltip(root)
       onClicked: function(mouse) {
         if (!root.bar) return
