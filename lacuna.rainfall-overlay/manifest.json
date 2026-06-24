@@ -15,12 +15,12 @@
   },
   "defaults": {
     "effectEnabled": true,
-    "intensity": 0.92,
+    "intensity": 0.72,
     "speed": 0.62,
     "dropCount": 180,
     "slant": 0.08,
-    "mistAmount": 0.42,
-    "splashAmount": 0.5,
+    "mistAmount": 0.34,
+    "splashAmount": 0.38,
     "accentBlend": 0.42,
     "vignette": true
   },
@@ -35,7 +35,7 @@
       "key": "intensity",
       "type": "number",
       "label": "Intensity",
-      "defaultValue": 0.92
+      "defaultValue": 0.72
     },
     {
       "key": "speed",
@@ -59,13 +59,13 @@
       "key": "mistAmount",
       "type": "number",
       "label": "Mist amount",
-      "defaultValue": 0.42
+      "defaultValue": 0.34
     },
     {
       "key": "splashAmount",
       "type": "number",
       "label": "Splash amount",
-      "defaultValue": 0.5
+      "defaultValue": 0.38
     },
     {
       "key": "accentBlend",

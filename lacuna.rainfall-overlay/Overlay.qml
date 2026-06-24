@@ -24,13 +24,13 @@ Item {
   readonly property bool foregroundOverlay: backgroundForegroundOverlayEnabled()
   readonly property bool lacunaRainfallEnabled: backgroundEffectEnabled("rainfall", true)
   readonly property bool effectVisible: configuredEnabled && lacunaRainfallEnabled && runtimeEnabled && effectiveIntensity > 0.001
-  readonly property real configuredIntensity: clamp(numberSetting("intensity", 0.92), 0, 1)
+  readonly property real configuredIntensity: clamp(numberSetting("intensity", 0.72), 0, 1)
   readonly property real effectiveIntensity: runtimeIntensity >= 0 ? clamp(runtimeIntensity, 0, 1) : configuredIntensity
   readonly property real speed: clamp(numberSetting("speed", 0.62), 0.15, 4)
   readonly property int dropCount: Math.max(16, Math.min(320, Math.round(numberSetting("dropCount", 180))))
   readonly property real slant: clamp(numberSetting("slant", 0.08), -0.2, 0.35)
-  readonly property real mistAmount: clamp(numberSetting("mistAmount", 0.42), 0, 1)
-  readonly property real splashAmount: clamp(numberSetting("splashAmount", 0.5), 0, 1)
+  readonly property real mistAmount: clamp(numberSetting("mistAmount", 0.34), 0, 1)
+  readonly property real splashAmount: clamp(numberSetting("splashAmount", 0.38), 0, 1)
   readonly property real accentBlend: clamp(numberSetting("accentBlend", 0.42), 0, 1)
   readonly property bool vignette: boolSetting("vignette", true)
   readonly property color themeBackground: themeColor("background", "#101315")
@@ -261,7 +261,7 @@ Item {
             y: Math.round(rainWindow.height * (0.38 + index * 0.11))
             width: rainWindow.width
             height: bandHeight
-            opacity: root.mistAmount * (0.12 + root.seededNoise(seed + 7) * 0.16)
+            opacity: root.mistAmount * (0.08 + root.seededNoise(seed + 7) * 0.11)
             gradient: Gradient {
               orientation: Gradient.Vertical
               GradientStop {
@@ -270,7 +270,7 @@ Item {
               }
               GradientStop {
                 position: 0.46
-                color: Qt.rgba(root.shadowRainColor.r, root.shadowRainColor.g, root.shadowRainColor.b, 0.46)
+                color: Qt.rgba(root.shadowRainColor.r, root.shadowRainColor.g, root.shadowRainColor.b, 0.34)
               }
               GradientStop {
                 position: 1
@@ -306,12 +306,12 @@ Item {
             id: drop
 
             readonly property real seed: index + 101
-            readonly property int dropLength: Math.round(34 + root.seededNoise(seed + 3) * 70)
-            readonly property int dropWidth: root.seededNoise(seed + 5) > 0.7 ? 2 : 1
+            readonly property int dropLength: Math.round(26 + root.seededNoise(seed + 3) * 56)
+            readonly property int dropWidth: root.seededNoise(seed + 5) > 0.86 ? 2 : 1
             readonly property int baseX: Math.round(root.seededNoise(seed + 7) * (rainWindow.width + 420)) - 210
             readonly property int phaseOffset: Math.round(root.seededNoise(seed + 11) * rainWindow.height)
             readonly property real dropSpeed: 0.72 + root.seededNoise(seed + 13) * 0.72
-            readonly property real dropOpacity: 0.34 + root.seededNoise(seed + 17) * 0.5
+            readonly property real dropOpacity: 0.22 + root.seededNoise(seed + 17) * 0.32
 
             x: Math.round(baseX + y * root.windDrift)
             y: -dropLength - phaseOffset
@@ -340,7 +340,7 @@ Item {
             Rectangle {
               anchors.fill: parent
               radius: Math.max(0.5, width / 2)
-              color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.62)
+              color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.44)
             }
 
             Rectangle {
@@ -350,7 +350,7 @@ Item {
               height: Math.round(parent.height * 0.56)
               radius: 0.5
               color: "#d7edf5"
-              opacity: 0.14
+              opacity: 0.08
             }
 
             Rectangle {
@@ -364,11 +364,11 @@ Item {
                 }
                 GradientStop {
                   position: 0.24
-                  color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.16)
+                  color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.1)
                 }
                 GradientStop {
                   position: 0.78
-                  color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.68)
+                  color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.46)
                 }
                 GradientStop {
                   position: 1
@@ -386,15 +386,15 @@ Item {
             id: rainSheet
 
             readonly property real seed: index + 2201
-            readonly property int sheetLength: Math.round(86 + root.seededNoise(seed + 3) * 130)
+            readonly property int sheetLength: Math.round(68 + root.seededNoise(seed + 3) * 104)
             readonly property int baseX: Math.round(index * 34 + root.seededNoise(seed + 5) * 46) - 80
             readonly property real sheetSpeed: 0.72 + root.seededNoise(seed + 7) * 0.5
 
             x: Math.round(baseX + y * root.windDrift * 0.55)
             y: -sheetLength
-            width: root.seededNoise(seed + 11) > 0.68 ? 2 : 1
+            width: root.seededNoise(seed + 11) > 0.82 ? 2 : 1
             height: sheetLength
-            opacity: 0.18 + root.seededNoise(seed + 13) * 0.16
+            opacity: 0.1 + root.seededNoise(seed + 13) * 0.1
             rotation: root.dropRotation
             transformOrigin: Item.Center
 
@@ -410,7 +410,7 @@ Item {
             Rectangle {
               anchors.fill: parent
               radius: Math.max(0.5, width / 2)
-              color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.58)
+              color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.36)
             }
           }
         }
@@ -422,16 +422,16 @@ Item {
             id: foregroundDrop
 
             readonly property real seed: index + 1301
-            readonly property int dropLength: Math.round(54 + root.seededNoise(seed + 3) * 92)
+            readonly property int dropLength: Math.round(42 + root.seededNoise(seed + 3) * 72)
             readonly property int baseX: Math.round(root.seededNoise(seed + 7) * (rainWindow.width + 520)) - 260
             readonly property int phaseOffset: Math.round(root.seededNoise(seed + 11) * rainWindow.height)
             readonly property real dropSpeed: 1.08 + root.seededNoise(seed + 13) * 0.82
 
             x: Math.round(baseX + y * root.windDrift)
             y: -dropLength - phaseOffset
-            width: 3
+            width: 2
             height: dropLength
-            opacity: 0.72
+            opacity: 0.46
             rotation: root.dropRotation
             transformOrigin: Item.Center
 
@@ -454,7 +454,7 @@ Item {
             Rectangle {
               anchors.fill: parent
               radius: 1
-              color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.7)
+              color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.48)
             }
 
             Rectangle {
@@ -464,7 +464,7 @@ Item {
               height: Math.round(parent.height * 0.58)
               radius: 0.5
               color: "#d7edf5"
-              opacity: 0.18
+              opacity: 0.1
             }
 
             Rectangle {
@@ -478,11 +478,11 @@ Item {
                 }
                 GradientStop {
                   position: 0.18
-                  color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.24)
+                  color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.14)
                 }
                 GradientStop {
                   position: 0.82
-                  color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 1)
+                  color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.64)
                 }
                 GradientStop {
                   position: 1
@@ -520,13 +520,13 @@ Item {
 
               NumberAnimation {
                 from: 0
-                to: 0.34
+                to: 0.22
                 duration: Math.max(90, 150 / root.speed)
                 easing.type: Easing.OutCubic
               }
 
               NumberAnimation {
-                from: 0.34
+                from: 0.22
                 to: 0
                 duration: Math.max(220, 520 / root.speed)
                 easing.type: Easing.OutCubic
@@ -555,7 +555,7 @@ Item {
               width: parent.width
               height: 1
               radius: 1
-              color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.72)
+              color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.46)
             }
 
             Rectangle {
@@ -564,7 +564,7 @@ Item {
               width: Math.round(parent.width * 0.58)
               height: 1
               radius: 1
-              color: Qt.rgba(root.shadowRainColor.r, root.shadowRainColor.g, root.shadowRainColor.b, 0.55)
+              color: Qt.rgba(root.shadowRainColor.r, root.shadowRainColor.g, root.shadowRainColor.b, 0.36)
             }
           }
         }
