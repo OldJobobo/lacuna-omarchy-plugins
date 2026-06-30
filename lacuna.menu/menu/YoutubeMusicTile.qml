@@ -27,7 +27,7 @@ Item {
   readonly property bool sentToBackground: service && service.backgroundVideoEnabled === true
   readonly property bool localPreviewVisible: hasTrack && !sentToBackground
   readonly property bool playing: service && service.playing === true && service.paused !== true
-  readonly property string title: hasTrack ? service.displayTitle : (available ? "YouTube Music" : "YouTube Music unavailable")
+  readonly property string title: hasTrack ? service.displayTitle : (available ? "Media" : "Media unavailable")
   readonly property string subtitle: service ? service.statusText() : "Service disabled"
   readonly property string thumbnail: service && service.thumbnail ? String(service.thumbnail) : ""
   readonly property string previewUrl: service && service.previewStreamUrl ? String(service.previewStreamUrl) : ""
@@ -73,20 +73,26 @@ Item {
 
   function syncPreviewPlayback() {
     if (!previewActive) {
+      previewPositionSettleTimer.stop()
       previewPlayer.stop()
       return
     }
     if (!localPreviewVisible) {
+      previewPositionSettleTimer.stop()
       previewPlayer.pause()
       return
     }
-    syncPreviewPosition(true)
-    if (playing) previewPlayer.play()
-    else previewPlayer.pause()
+    if (playing) {
+      previewPlayer.play()
+      previewPositionSettleTimer.restart()
+    } else {
+      previewPositionSettleTimer.stop()
+      previewPlayer.pause()
+    }
   }
 
   function syncPreviewPosition(force) {
-    if (!previewActive) return
+    if (!previewActive || previewPlayer.playbackState === MediaPlayer.StoppedState) return
     var target = Math.max(0, Math.round(playbackPosition * 1000))
     if (force || Math.abs(previewPlayer.position - target) > 900) {
       previewPlayer.setPosition(target)
@@ -175,7 +181,7 @@ Item {
         }
         loops: MediaPlayer.Infinite
         onSourceChanged: root.syncPreviewPlayback()
-        onPlaybackStateChanged: root.syncPreviewPosition(true)
+        onPlaybackStateChanged: if (playbackState === MediaPlayer.PlayingState) previewPositionSettleTimer.restart()
       }
 
       VideoOutput {
@@ -496,6 +502,13 @@ Item {
       interval: 2600
       repeat: false
       onTriggered: root.volumeOpen = false
+    }
+
+    Timer {
+      id: previewPositionSettleTimer
+      interval: 350
+      repeat: false
+      onTriggered: root.syncPreviewPosition(true)
     }
 
     Timer {

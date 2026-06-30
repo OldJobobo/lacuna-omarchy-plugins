@@ -96,7 +96,7 @@ Column {
     LacunaText {
       width: parent.width - headerFavoriteButton.width - closeButton.width - parent.spacing * 2
       anchors.verticalCenter: parent.verticalCenter
-      text: "YouTube Music"
+      text: "Media"
       color: root.foreground
       fontFamily: "Tektur"
       font.pixelSize: root.compact ? 13 : 15
@@ -205,7 +205,7 @@ Column {
             anchors.left: parent.left
             anchors.leftMargin: 10
             anchors.verticalCenter: parent.verticalCenter
-            text: "Search or paste URL"
+            text: "Search media or paste YouTube URL"
             color: root.muted
             fontFamily: root.bodyFontFamily
             font.pixelSize: root.compact ? 10 : 11
@@ -552,7 +552,7 @@ Column {
 
                 LacunaText {
                   width: parent.width
-                  text: [modelData.uploader || "", modelData.duration || ""].filter(function(v) {
+                  text: [modelData.source || modelData.provider || "", modelData.uploader || "", modelData.duration || ""].filter(function(v) {
                     return String(v).length > 0;
                   }).join(" / ")
                   color: root.muted
@@ -740,7 +740,7 @@ Column {
 
                 LacunaText {
                   width: parent.width
-                  text: [modelData.uploader || "", modelData.duration || ""].filter(function(v) {
+                  text: [modelData.source || modelData.provider || "", modelData.uploader || "", modelData.duration || ""].filter(function(v) {
                     return String(v).length > 0;
                   }).join(" / ")
                   color: root.muted
@@ -887,7 +887,7 @@ Column {
           LacunaText {
             visible: root.queueLength === 0
             width: parent.width
-            text: "Add tracks from Search"
+            text: "Add media from Search"
             color: root.muted
             fontFamily: root.bodyFontFamily
             font.pixelSize: root.compact ? 9 : 10
@@ -965,7 +965,7 @@ Column {
 
                 LacunaText {
                   width: parent.width
-                  text: [modelData.uploader || "", modelData.duration || ""].filter(function(v) {
+                  text: [modelData.source || modelData.provider || "", modelData.uploader || "", modelData.duration || ""].filter(function(v) {
                     return String(v).length > 0;
                   }).join(" / ")
                   color: root.muted
@@ -1072,7 +1072,7 @@ Column {
           LacunaText {
             visible: root.favoritesLength === 0
             width: parent.width
-            text: "Favorite tracks from Search or Queue"
+            text: "Favorite media from Search or Queue"
             color: root.muted
             fontFamily: root.bodyFontFamily
             font.pixelSize: root.compact ? 9 : 10

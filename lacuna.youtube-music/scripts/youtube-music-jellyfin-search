@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import sys
+import urllib.parse
+import urllib.request
+
+
+PLAYABLE_TYPES = "Audio,Movie,Episode,MusicVideo,Video"
+
+
+def clean_server_url(value):
+    return str(value or "").strip().rstrip("/")
+
+
+def duration_text(ticks):
+    try:
+        seconds = int(int(ticks) / 10_000_000)
+    except (TypeError, ValueError):
+        return ""
+    minutes, second = divmod(seconds, 60)
+    hours, minute = divmod(minutes, 60)
+    if hours:
+        return f"{hours}:{minute:02d}:{second:02d}"
+    return f"{minute}:{second:02d}"
+
+
+def item_media_type(item):
+    item_type = str(item.get("Type") or "")
+    media_type = str(item.get("MediaType") or "")
+    if item_type == "Audio" or media_type == "Audio":
+        return "audio"
+    return "video"
+
+
+def stream_url(server_url, api_key, item_id):
+    query = urllib.parse.urlencode({"api_key": api_key})
+    return f"{server_url}/Items/{urllib.parse.quote(item_id)}/Download?{query}"
+
+
+def thumbnail_url(server_url, api_key, item_id, image_tags):
+    if not isinstance(image_tags, dict) or not image_tags.get("Primary"):
+        return ""
+    query = urllib.parse.urlencode({"fillWidth": 420, "quality": 90, "api_key": api_key})
+    return f"{server_url}/Items/{urllib.parse.quote(item_id)}/Images/Primary?{query}"
+
+
+def artist_text(item):
+    artists = item.get("Artists")
+    if isinstance(artists, list) and artists:
+        return ", ".join(str(name) for name in artists if name)
+    for key in ("SeriesName", "AlbumArtist", "Album", "ChannelName", "ProductionYear"):
+        value = item.get(key)
+        if value:
+            return str(value)
+    return ""
+
+
+def normalize_item(server_url, api_key, item):
+    item_id = str(item.get("Id") or "")
+    if not item_id:
+        return None
+    media_type = item_media_type(item)
+    return {
+        "id": item_id,
+        "provider": "jellyfin",
+        "providerId": item_id,
+        "mediaType": media_type,
+        "streamKind": "audio" if media_type == "audio" else "video",
+        "libraryName": str(item.get("CollectionType") or ""),
+        "title": str(item.get("Name") or "Untitled Jellyfin item"),
+        "uploader": artist_text(item),
+        "durationText": duration_text(item.get("RunTimeTicks")),
+        "thumbnail": thumbnail_url(server_url, api_key, item_id, item.get("ImageTags")),
+        "url": stream_url(server_url, api_key, item_id),
+        "source": "Jellyfin",
+    }
+
+
+def request_json(url, api_key):
+    request = urllib.request.Request(url, headers={
+        "Accept": "application/json",
+        "X-Emby-Token": api_key,
+    })
+    with urllib.request.urlopen(request, timeout=8) as response:
+        return json.loads(response.read().decode("utf-8") or "{}")
+
+
+def load_config(raw):
+    try:
+        return json.loads(raw or "{}")
+    except json.JSONDecodeError:
+        return {}
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config-json", required=True)
+    parser.add_argument("--limit", type=int, default=30)
+    parser.add_argument("query")
+    args = parser.parse_args(argv)
+
+    config = load_config(args.config_json)
+    if config.get("enabled") is not True:
+        print(json.dumps({"results": [], "error": ""}))
+        return 0
+
+    server_url = clean_server_url(config.get("serverUrl"))
+    api_key = str(config.get("apiKey") or "").strip()
+    user_id = str(config.get("userId") or "").strip()
+    if not server_url or not api_key:
+        print(json.dumps({"results": [], "error": "Jellyfin is not configured"}))
+        return 0
+
+    limit = max(1, min(80, args.limit))
+    endpoint = f"{server_url}/Users/{urllib.parse.quote(user_id)}/Items" if user_id else f"{server_url}/Items"
+    query = urllib.parse.urlencode({
+        "SearchTerm": args.query.strip(),
+        "Recursive": "true",
+        "IncludeItemTypes": PLAYABLE_TYPES,
+        "Fields": "PrimaryImageAspectRatio,MediaSources,ParentId,Path",
+        "Limit": limit,
+    })
+
+    try:
+        payload = request_json(f"{endpoint}?{query}", api_key)
+    except Exception as exc:
+        print(json.dumps({"results": [], "error": f"Jellyfin search failed: {exc}"}))
+        return 0
+
+    rows = []
+    for item in payload.get("Items", []):
+        if isinstance(item, dict):
+            normalized = normalize_item(server_url, api_key, item)
+            if normalized:
+                rows.append(normalized)
+
+    print(json.dumps({"results": rows[:limit], "error": ""}))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

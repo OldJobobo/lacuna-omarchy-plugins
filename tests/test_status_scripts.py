@@ -7,6 +7,10 @@ stubbed helpers, without depending on the real external tools.
 """
 
 import json
+import contextlib
+import importlib.machinery
+import importlib.util
+import io
 import os
 import shutil
 import stat
@@ -31,6 +35,14 @@ def run(cmd, env_overrides) -> subprocess.CompletedProcess:
     env = dict(os.environ)
     env.update(env_overrides)
     return subprocess.run(cmd, env=env, capture_output=True, text=True)
+
+
+def load_script(path: Path, name: str):
+    loader = importlib.machinery.SourceFileLoader(name, str(path))
+    spec = importlib.util.spec_from_loader(name, loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
 
 
 class ClaudeCodeStatusTests(unittest.TestCase):
@@ -283,6 +295,8 @@ class YoutubeMusicScriptTests(unittest.TestCase):
     SEARCH_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-search"
     CONTROL_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-control"
     PREVIEW_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-preview"
+    JELLYFIN_SEARCH_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-jellyfin-search"
+    JELLYFIN_STREAM_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-jellyfin-stream"
 
     def test_dependency_check_reports_missing_tools(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -438,6 +452,97 @@ class YoutubeMusicScriptTests(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(payload["results"], [])
         self.assertIn("yt-dlp", payload["error"])
+
+    def test_jellyfin_search_normalizes_playable_media(self):
+        module = load_script(self.JELLYFIN_SEARCH_SCRIPT, "youtube_music_jellyfin_search_test")
+        seen = {}
+
+        def fake_request_json(url, api_key):
+            seen["url"] = url
+            seen["api_key"] = api_key
+            return {
+                "Items": [{
+                    "Id": "audio-1",
+                    "Type": "Audio",
+                    "MediaType": "Audio",
+                    "Name": "Jelly Song",
+                    "Artists": ["Jelly Artist"],
+                    "RunTimeTicks": 1850000000,
+                    "ImageTags": {"Primary": "tag"},
+                }, {
+                    "Id": "movie-1",
+                    "Type": "Movie",
+                    "MediaType": "Video",
+                    "Name": "Jelly Movie",
+                    "ProductionYear": 2026,
+                    "RunTimeTicks": 72000000000,
+                    "ImageTags": {"Primary": "tag"},
+                }]
+            }
+
+        module.request_json = fake_request_json
+        config = json.dumps({
+            "enabled": True,
+            "serverUrl": "https://jellyfin.example/base/",
+            "apiKey": "secret-token",
+            "userId": "user-1",
+        })
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            code = module.main(["--config-json", config, "--limit", "5", "jelly"])
+
+        self.assertEqual(code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["error"], "")
+        self.assertTrue(seen["url"].startswith("https://jellyfin.example/base/Users/user-1/Items?"))
+        self.assertIn("SearchTerm=jelly", seen["url"])
+        self.assertIn("IncludeItemTypes=Audio%2CMovie%2CEpisode%2CMusicVideo%2CVideo", seen["url"])
+        self.assertEqual(seen["api_key"], "secret-token")
+        self.assertEqual([item["provider"] for item in payload["results"]], ["jellyfin", "jellyfin"])
+        self.assertEqual(payload["results"][0]["mediaType"], "audio")
+        self.assertEqual(payload["results"][0]["streamKind"], "audio")
+        self.assertEqual(payload["results"][0]["durationText"], "3:05")
+        self.assertIn("/Items/audio-1/Download?", payload["results"][0]["url"])
+        self.assertIn("/Items/audio-1/Images/Primary?", payload["results"][0]["thumbnail"])
+        self.assertEqual(payload["results"][1]["mediaType"], "video")
+
+    def test_jellyfin_search_missing_config_is_nonfatal(self):
+        result = run([
+            sys.executable,
+            str(self.JELLYFIN_SEARCH_SCRIPT),
+            "--config-json",
+            '{"enabled": true}',
+            "demo",
+        ], {})
+
+        self.assertEqual(result.returncode, 0)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["results"], [])
+        self.assertIn("Jellyfin", payload["error"])
+
+    def test_jellyfin_stream_resolver_returns_direct_urls(self):
+        config = json.dumps({
+            "enabled": True,
+            "serverUrl": "https://jellyfin.example/base/",
+            "apiKey": "secret-token",
+        })
+        result = run([
+            sys.executable,
+            str(self.JELLYFIN_STREAM_SCRIPT),
+            "--config-json",
+            config,
+            "--item-id",
+            "movie 1",
+            "--media-type",
+            "video",
+        ], {})
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["error"], "")
+        self.assertEqual(payload["mediaType"], "video")
+        self.assertEqual(payload["url"], "https://jellyfin.example/base/Items/movie%201/Download?api_key=secret-token")
+        self.assertEqual(payload["thumbnail"], "https://jellyfin.example/base/Items/movie%201/Images/Primary?fillWidth=420&quality=90&api_key=secret-token")
 
     def test_preview_prefers_direct_mp4_format(self):
         with tempfile.TemporaryDirectory() as tmpdir:
