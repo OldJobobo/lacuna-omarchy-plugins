@@ -21,16 +21,17 @@ Item {
   readonly property string colorsPath: configHome + "/omarchy/current/theme/colors.toml"
   readonly property string themeNamePath: configHome + "/omarchy/current/theme.name"
   readonly property var overlaySettings: pluginSettings()
+  readonly property var filmGrainSettings: backgroundEffectSettings("filmGrain")
   readonly property bool configuredEnabled: boolSetting("effectEnabled", true)
   readonly property bool foregroundOverlay: backgroundForegroundOverlayEnabled()
   readonly property bool lacunaFilmGrainEnabled: backgroundEffectEnabled("filmGrain", true)
   readonly property bool effectVisible: configuredEnabled && lacunaFilmGrainEnabled && runtimeEnabled && effectiveIntensity > 0.001
-  readonly property real configuredIntensity: clamp(numberSetting("intensity", 0.28), 0, 1)
-  readonly property real effectiveIntensity: runtimeIntensity >= 0 ? clamp(runtimeIntensity, 0, 1) : configuredIntensity
-  readonly property real speed: clamp(numberSetting("speed", 1), 0.2, 5)
-  readonly property int grainCount: Math.max(32, Math.min(520, Math.round(numberSetting("grainCount", 180))))
-  readonly property real grainSize: clamp(numberSetting("grainSize", 1.35), 0.6, 3.5)
-  readonly property real accentBlend: clamp(numberSetting("accentBlend", 0.18), 0, 1)
+  readonly property real configuredIntensity: clamp(effectNumberSetting("intensity", "intensity", 0.28), 0, 1)
+  readonly property real effectiveIntensity: (runtimeIntensity >= 0 ? clamp(runtimeIntensity, 0, 1) : configuredIntensity) * backgroundAnimationOpacity()
+  readonly property real speed: clamp(effectNumberSetting("speed", "speed", 1), 0.2, 5)
+  readonly property int grainCount: Math.max(32, Math.min(520, Math.round(effectNumberSetting("grainCount", "grainCount", 180))))
+  readonly property real grainSize: clamp(effectNumberSetting("grainSize", "grainSize", 1.35), 0.6, 3.5)
+  readonly property real accentBlend: clamp(effectNumberSetting("accentBlend", "accentBlend", 0.18), 0, 1)
   readonly property color themeForeground: themeColor("foreground", "#d8dee9")
   readonly property color themeAccent: themeColor("accent", themeColor("color14", "#88c0d0"))
   readonly property color grainColor: mixColor(themeForeground, themeAccent, accentBlend)
@@ -64,6 +65,13 @@ Item {
 
   function numberSetting(key, fallbackValue) {
     var value = Number(settingValue(key, fallbackValue))
+    return isNaN(value) ? fallbackValue : value
+  }
+
+  function effectNumberSetting(effectKey, pluginKey, fallbackValue) {
+    var value = filmGrainSettings && filmGrainSettings[effectKey] !== undefined
+      ? Number(filmGrainSettings[effectKey])
+      : numberSetting(pluginKey, fallbackValue)
     return isNaN(value) ? fallbackValue : value
   }
 
@@ -101,6 +109,21 @@ Item {
 
     if (!effect || typeof effect !== "object") return fallbackValue
     return effect.enabled !== false
+  }
+
+  function backgroundEffectSettings(effectId) {
+    var settings = lacunaSettings && typeof lacunaSettings === "object" ? lacunaSettings : {}
+    var backgroundEffects = settings.backgroundEffects && typeof settings.backgroundEffects === "object" ? settings.backgroundEffects : null
+    var effects = backgroundEffects && backgroundEffects.effects && typeof backgroundEffects.effects === "object" ? backgroundEffects.effects : {}
+    var effect = effects[String(effectId || "")]
+    return effect && typeof effect === "object" ? effect : ({})
+  }
+
+  function backgroundAnimationOpacity() {
+    var settings = lacunaSettings && typeof lacunaSettings === "object" ? lacunaSettings : {}
+    var backgroundEffects = settings.backgroundEffects && typeof settings.backgroundEffects === "object" ? settings.backgroundEffects : null
+    if (!backgroundEffects || backgroundEffects.opacity === undefined) return 1
+    return clamp(Number(backgroundEffects.opacity), 0, 1)
   }
 
   function backgroundForegroundOverlayEnabled() {
@@ -294,7 +317,8 @@ Item {
         speed: root.speed,
         grainCount: root.grainCount,
         grainSize: root.grainSize,
-        accentBlend: root.accentBlend
+        accentBlend: root.accentBlend,
+        animationOpacity: root.backgroundAnimationOpacity()
       })
     }
   }

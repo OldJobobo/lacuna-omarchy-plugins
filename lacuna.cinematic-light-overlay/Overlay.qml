@@ -26,7 +26,7 @@ Item {
   readonly property bool lacunaCinematicLightEnabled: backgroundEffectEnabled("cinematicLight", true)
   readonly property bool effectVisible: configuredEnabled && lacunaCinematicLightEnabled && runtimeEnabled && effectiveIntensity > 0.001
   readonly property real configuredIntensity: clamp(numberSetting("intensity", 1), 0, 1)
-  readonly property real effectiveIntensity: runtimeIntensity >= 0 ? clamp(runtimeIntensity, 0, 1) : configuredIntensity
+  readonly property real effectiveIntensity: (runtimeIntensity >= 0 ? clamp(runtimeIntensity, 0, 1) : configuredIntensity) * backgroundAnimationOpacity()
   readonly property real speed: clamp(numberSetting("speed", 1), 0.15, 4)
   readonly property string stylePreset: normalizeStylePreset(settingValue("stylePreset", "lightLeak"))
   readonly property var motionModes: normalizedMotionModes()
@@ -169,6 +169,13 @@ Item {
 
     if (!effect || typeof effect !== "object") return fallbackValue
     return effect.enabled !== false
+  }
+
+  function backgroundAnimationOpacity() {
+    var settings = lacunaSettings && typeof lacunaSettings === "object" ? lacunaSettings : {}
+    var backgroundEffects = settings.backgroundEffects && typeof settings.backgroundEffects === "object" ? settings.backgroundEffects : null
+    if (!backgroundEffects || backgroundEffects.opacity === undefined) return 1
+    return clamp(Number(backgroundEffects.opacity), 0, 1)
   }
 
   function backgroundForegroundOverlayEnabled() {

@@ -25,7 +25,7 @@ Item {
   readonly property bool lacunaRainfallEnabled: backgroundEffectEnabled("rainfall", true)
   readonly property bool effectVisible: configuredEnabled && lacunaRainfallEnabled && runtimeEnabled && effectiveIntensity > 0.001
   readonly property real configuredIntensity: clamp(numberSetting("intensity", 0.72), 0, 1)
-  readonly property real effectiveIntensity: runtimeIntensity >= 0 ? clamp(runtimeIntensity, 0, 1) : configuredIntensity
+  readonly property real effectiveIntensity: (runtimeIntensity >= 0 ? clamp(runtimeIntensity, 0, 1) : configuredIntensity) * backgroundAnimationOpacity()
   readonly property real speed: clamp(numberSetting("speed", 0.62), 0.15, 4)
   readonly property int dropCount: Math.max(16, Math.min(320, Math.round(numberSetting("dropCount", 180))))
   readonly property real slant: clamp(numberSetting("slant", 0.08), -0.2, 0.35)
@@ -114,6 +114,13 @@ Item {
 
     if (!effect || typeof effect !== "object") return fallbackValue
     return effect.enabled !== false
+  }
+
+  function backgroundAnimationOpacity() {
+    var settings = lacunaSettings && typeof lacunaSettings === "object" ? lacunaSettings : {}
+    var backgroundEffects = settings.backgroundEffects && typeof settings.backgroundEffects === "object" ? settings.backgroundEffects : null
+    if (!backgroundEffects || backgroundEffects.opacity === undefined) return 1
+    return clamp(Number(backgroundEffects.opacity), 0, 1)
   }
 
   function backgroundForegroundOverlayEnabled() {

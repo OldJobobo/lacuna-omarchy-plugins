@@ -27,19 +27,22 @@ Item {
   readonly property string colorsPath: configHome + "/omarchy/current/theme/colors.toml"
   readonly property string themeNamePath: configHome + "/omarchy/current/theme.name"
   readonly property var overlaySettings: pluginSettings()
+  readonly property var dustMotesSettings: backgroundEffectSettings("dustMotes")
   readonly property bool configuredEnabled: boolSetting("effectEnabled", true)
   readonly property bool foregroundOverlay: backgroundForegroundOverlayEnabled()
   readonly property bool lacunaDustMotesEnabled: backgroundEffectEnabled("dustMotes", true)
   readonly property bool effectVisible: configuredEnabled && lacunaDustMotesEnabled && runtimeEnabled && effectiveIntensity > 0.001
-  readonly property real configuredIntensity: clamp(numberSetting("intensity", 0.5), 0, 1)
-  readonly property real effectiveIntensity: runtimeIntensity >= 0 ? clamp(runtimeIntensity, 0, 1) : configuredIntensity
-  readonly property real speed: clamp(numberSetting("speed", 0.7), 0.15, 4)
-  readonly property int moteCount: Math.max(12, Math.min(180, Math.round(numberSetting("moteCount", 72))))
-  readonly property real moteSize: clamp(numberSetting("moteSize", 2.6), 1, 8)
-  readonly property real accentBlend: clamp(numberSetting("accentBlend", 0.42), 0, 1)
-  readonly property bool mouseReactive: boolSetting("mouseReactive", true)
-  readonly property real mouseInfluence: clamp(numberSetting("mouseInfluence", 0.28), 0, 1)
-  readonly property real cursorInfluenceRadius: 180 + mouseInfluence * 220
+  readonly property real configuredIntensity: clamp(effectNumberSetting("intensity", "intensity", 0.5), 0, 1)
+  readonly property real effectiveIntensity: (runtimeIntensity >= 0 ? clamp(runtimeIntensity, 0, 1) : configuredIntensity) * backgroundAnimationOpacity()
+  readonly property real speed: clamp(effectNumberSetting("speed", "speed", 0.7), 0.15, 4)
+  readonly property int moteCount: Math.max(12, Math.min(180, Math.round(effectNumberSetting("moteCount", "moteCount", 72))))
+  readonly property real moteSize: clamp(effectNumberSetting("moteSize", "moteSize", 2.6), 1, 8)
+  readonly property real accentBlend: clamp(effectNumberSetting("accentBlend", "accentBlend", 0.42), 0, 1)
+  readonly property bool mouseReactive: effectBoolSetting("mouseReactive", "mouseReactive", true)
+  readonly property real mouseInfluence: clamp(effectNumberSetting("mouseInfluence", "mouseInfluence", 0.28), 0, 1)
+  readonly property real cursorInfluenceRadius: 220 + mouseInfluence * 320
+  readonly property real cursorInfluenceRadiusSquared: cursorInfluenceRadius * cursorInfluenceRadius
+  readonly property real cursorSpeed: Math.sqrt(cursorVelocityX * cursorVelocityX + cursorVelocityY * cursorVelocityY)
   readonly property color themeForeground: themeColor("foreground", "#d8dee9")
   readonly property color themeAccent: themeColor("accent", themeColor("color14", "#88c0d0"))
   readonly property color moteColor: mixColor(themeForeground, themeAccent, accentBlend)
@@ -76,8 +79,30 @@ Item {
     return isNaN(value) ? fallbackValue : value
   }
 
+  function effectNumberSetting(effectKey, pluginKey, fallbackValue) {
+    var value = dustMotesSettings && dustMotesSettings[effectKey] !== undefined
+      ? Number(dustMotesSettings[effectKey])
+      : numberSetting(pluginKey, fallbackValue)
+    return isNaN(value) ? fallbackValue : value
+  }
+
   function boolSetting(key, fallbackValue) {
     var value = settingValue(key, fallbackValue)
+    if (value === true || value === false) return value
+    var normalized = String(value || "").toLowerCase()
+    if (normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "on") return true
+    if (normalized === "false" || normalized === "0" || normalized === "no" || normalized === "off") return false
+    return fallbackValue
+  }
+
+  function effectBoolSetting(effectKey, pluginKey, fallbackValue) {
+    if (dustMotesSettings && dustMotesSettings[effectKey] !== undefined) {
+      return boolValue(dustMotesSettings[effectKey], fallbackValue)
+    }
+    return boolSetting(pluginKey, fallbackValue)
+  }
+
+  function boolValue(value, fallbackValue) {
     if (value === true || value === false) return value
     var normalized = String(value || "").toLowerCase()
     if (normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "on") return true
@@ -110,6 +135,21 @@ Item {
 
     if (!effect || typeof effect !== "object") return fallbackValue
     return effect.enabled !== false
+  }
+
+  function backgroundEffectSettings(effectId) {
+    var settings = lacunaSettings && typeof lacunaSettings === "object" ? lacunaSettings : {}
+    var backgroundEffects = settings.backgroundEffects && typeof settings.backgroundEffects === "object" ? settings.backgroundEffects : null
+    var effects = backgroundEffects && backgroundEffects.effects && typeof backgroundEffects.effects === "object" ? backgroundEffects.effects : {}
+    var effect = effects[String(effectId || "")]
+    return effect && typeof effect === "object" ? effect : ({})
+  }
+
+  function backgroundAnimationOpacity() {
+    var settings = lacunaSettings && typeof lacunaSettings === "object" ? lacunaSettings : {}
+    var backgroundEffects = settings.backgroundEffects && typeof settings.backgroundEffects === "object" ? settings.backgroundEffects : null
+    if (!backgroundEffects || backgroundEffects.opacity === undefined) return 1
+    return clamp(Number(backgroundEffects.opacity), 0, 1)
   }
 
   function backgroundForegroundOverlayEnabled() {
@@ -192,10 +232,10 @@ Item {
         var dx = nextX - lastCursorX
         var dy = nextY - lastCursorY
         var distance = Math.sqrt(dx * dx + dy * dy)
-        if (distance > 1) {
+        if (distance > 0.5) {
           cursorVelocityX = Math.max(-90, Math.min(90, dx))
           cursorVelocityY = Math.max(-90, Math.min(90, dy))
-          cursorKick = Math.min(1, distance / 150) * mouseInfluence
+          cursorKick = Math.max(cursorKick, Math.min(1, 0.35 + distance / 180))
           cursorDecayTimer.restart()
         }
       }
@@ -259,7 +299,7 @@ Item {
   Timer {
     id: cursorDecayTimer
 
-    interval: 150
+    interval: 520
     repeat: false
     onTriggered: {
       root.cursorVelocityX = 0
@@ -269,15 +309,15 @@ Item {
   }
 
   Behavior on cursorVelocityX {
-    NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+    NumberAnimation { duration: 360; easing.type: Easing.OutCubic }
   }
 
   Behavior on cursorVelocityY {
-    NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+    NumberAnimation { duration: 360; easing.type: Easing.OutCubic }
   }
 
   Behavior on cursorKick {
-    NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+    NumberAnimation { duration: 420; easing.type: Easing.OutCubic }
   }
 
   Process {
@@ -327,11 +367,101 @@ Item {
       }
 
       Item {
+        id: dustLayer
+
         anchors.fill: parent
         enabled: false
         opacity: root.effectiveIntensity
 
+        ListModel {
+          id: transientMotes
+        }
+
+        function updatePersistentMotes() {
+          for (var i = 0; i < persistentMoteRepeater.count; i++) {
+            var item = persistentMoteRepeater.itemAt(i)
+            if (item) item.applyAirDisturbance()
+          }
+        }
+
+        function updateTransientMotes() {
+          for (var i = transientMoteRepeater.count - 1; i >= 0; i--) {
+            var item = transientMoteRepeater.itemAt(i)
+            if (item) item.advanceFrame(33)
+          }
+        }
+
+        function cursorInsideWindow() {
+          return dustWindow.cursorLocalX >= 0
+            && dustWindow.cursorLocalY >= 0
+            && dustWindow.cursorLocalX <= dustWindow.width
+            && dustWindow.cursorLocalY <= dustWindow.height
+        }
+
+        function spawnTransientMote() {
+          if (!root.mouseReactive || root.mouseInfluence <= 0 || !cursorInsideWindow()) return
+
+          var speed = root.cursorSpeed
+          if (speed < 2) return
+
+          var spawnChance = Math.min(0.92, 0.52 + speed / 460) * Math.max(0.72, root.mouseInfluence)
+          if (Math.random() > spawnChance) return
+
+          var burstCount = 1 + (Math.random() < Math.min(0.42, speed / 430) ? 1 : 0)
+          var maxTransient = Math.round(22 + root.mouseInfluence * 52)
+
+          for (var i = 0; i < burstCount; i++) {
+            while (transientMotes.count >= maxTransient) transientMotes.remove(0)
+
+            var angle = Math.random() * Math.PI * 2
+            var radius = Math.sqrt(Math.random()) * (14 + root.moteSize * 3.4)
+            var originX = Math.cos(angle) * radius
+            var originY = Math.sin(angle) * radius
+            var outwardX = radius > 0 ? originX / radius : Math.cos(angle)
+            var outwardY = radius > 0 ? originY / radius : Math.sin(angle)
+            var sideX = -outwardY
+            var sideY = outwardX
+            var lift = 0.48 + Math.random() * 1.10
+            var size = Math.max(1.5, root.moteSize * (0.72 + Math.random() * 0.58))
+
+            transientMotes.append({
+              px: dustWindow.cursorLocalX - size / 2 + originX,
+              py: dustWindow.cursorLocalY - size / 2 + originY,
+              vx: outwardX * lift + sideX * (Math.random() - 0.5) * 0.7 + root.cursorVelocityX * (0.0015 + Math.random() * 0.0035),
+              vy: outwardY * lift + sideY * (Math.random() - 0.5) * 0.7 + root.cursorVelocityY * (0.0015 + Math.random() * 0.0035),
+              size: size,
+              alpha: 0.46 + Math.random() * 0.28,
+              age: 0,
+              life: 5000 + Math.random() * 4000
+            })
+          }
+        }
+
+        Timer {
+          interval: 58
+          repeat: true
+          running: root.effectVisible && root.mouseReactive
+          onTriggered: dustLayer.spawnTransientMote()
+        }
+
+        Timer {
+          interval: 33
+          repeat: true
+          running: root.effectVisible
+          triggeredOnStart: true
+          onTriggered: dustLayer.updatePersistentMotes()
+        }
+
+        Timer {
+          interval: 33
+          repeat: true
+          running: root.effectVisible && transientMotes.count > 0
+          onTriggered: dustLayer.updateTransientMotes()
+        }
+
         Repeater {
+          id: persistentMoteRepeater
+
           model: root.moteCount
 
           Rectangle {
@@ -341,55 +471,72 @@ Item {
 
             readonly property real seed: index + 1
             readonly property real sizeNoise: root.seededNoise(seed + 2)
-            readonly property real centerX: x + width / 2
-            readonly property real centerY: y + height / 2
-            readonly property real cursorDx: centerX - dustWindow.cursorLocalX
-            readonly property real cursorDy: centerY - dustWindow.cursorLocalY
-            readonly property real cursorDistance: Math.max(1, Math.sqrt(cursorDx * cursorDx + cursorDy * cursorDy))
-            readonly property real cursorFalloff: root.cursorKick > 0 && root.cursorX >= 0 && cursorDistance < root.cursorInfluenceRadius
-              ? Math.pow(1 - cursorDistance / root.cursorInfluenceRadius, 2)
-              : 0
             readonly property real moteVariance: 0.65 + root.seededNoise(seed + 83) * 0.7
-            readonly property real radialPush: 18 * root.cursorKick * cursorFalloff * moteVariance
-            readonly property real windScale: 0.16 * cursorFalloff * moteVariance
-            readonly property real gustX: cursorDx / cursorDistance * radialPush + root.cursorVelocityX * windScale
-            readonly property real gustY: cursorDy / cursorDistance * radialPush + root.cursorVelocityY * windScale
-            property real gustOffsetX: gustX
-            property real gustOffsetY: gustY
+            readonly property real wakeVariance: 0.86 + root.seededNoise(seed + 89) * 0.28
+            readonly property real damping: 0.865 + root.seededNoise(seed + 97) * 0.035
+            readonly property real spring: 0.0025 + root.seededNoise(seed + 101) * 0.004
+            readonly property real swirlDirection: root.seededNoise(seed + 107) > 0.5 ? 1 : -1
+            property real airOffsetX: 0
+            property real airOffsetY: 0
+            property real airVelocityX: 0
+            property real airVelocityY: 0
+            property real airAge: 0
             width: Math.max(1, Math.round(root.moteSize * (0.5 + sizeNoise * 1.4)))
             height: width
             radius: width / 2
             color: root.moteColor
             opacity: 0.16 + root.seededNoise(seed + 7) * 0.50
-            scale: 1 + cursorFalloff * root.cursorKick * 0.75
             x: Math.round(root.seededNoise(seed + 11) * Math.max(1, dustWindow.width))
             y: Math.round(root.seededNoise(seed + 17) * Math.max(1, dustWindow.height))
 
-            Behavior on gustOffsetX {
-              NumberAnimation { duration: 190; easing.type: Easing.OutCubic }
+            function clampAir(value) {
+              return root.clamp(value, -180, 180)
             }
 
-            Behavior on gustOffsetY {
-              NumberAnimation { duration: 190; easing.type: Easing.OutCubic }
-            }
+            function applyAirDisturbance() {
+              airAge += 0.033
+              if (root.mouseReactive && root.mouseInfluence > 0 && root.cursorX >= 0 && root.cursorKick > 0) {
+                var cursorDx = x + width / 2 + airOffsetX - dustWindow.cursorLocalX
+                var cursorDy = y + height / 2 + airOffsetY - dustWindow.cursorLocalY
+                var distanceSquared = cursorDx * cursorDx + cursorDy * cursorDy
 
-            Behavior on scale {
-              NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
-            }
+                if (distanceSquared < root.cursorInfluenceRadiusSquared) {
+                  var cursorDistance = Math.max(1, Math.sqrt(distanceSquared))
+                  var cursorFalloff = Math.pow(1 - cursorDistance / root.cursorInfluenceRadius, 1.35)
+                  var radialStrength = 10 + root.cursorSpeed * (0.07 + root.seededNoise(seed + 113) * 0.045)
+                  var wakeStrength = 0.18 + root.cursorKick * (0.12 + root.seededNoise(seed + 127) * 0.10)
+                  var swirlStrength = (1.8 + root.cursorSpeed * 0.012) * swirlDirection
+                  var noiseX = Math.sin(airAge * (0.8 + root.seededNoise(seed + 131) * 0.5) + seed) * 1.1
+                  var noiseY = Math.cos(airAge * (0.7 + root.seededNoise(seed + 137) * 0.5) + seed * 0.7) * 1.1
+                  var forceScale = root.mouseInfluence * cursorFalloff * moteVariance * wakeVariance
+                  var radialX = cursorDx / cursorDistance
+                  var radialY = cursorDy / cursorDistance
+                  var swirlX = -radialY * swirlStrength
+                  var swirlY = radialX * swirlStrength
+                  airVelocityX += (radialX * radialStrength + root.cursorVelocityX * wakeStrength + swirlX + noiseX) * forceScale * 0.062
+                  airVelocityY += (radialY * radialStrength + root.cursorVelocityY * wakeStrength + swirlY + noiseY) * forceScale * 0.062
+                }
+              }
 
-            Rectangle {
-              anchors.centerIn: parent
-              width: parent.width * (2.1 + root.cursorKick)
-              height: width
-              radius: width / 2
-              color: root.moteColor
-              opacity: mote.cursorFalloff * root.cursorKick * 0.24
+              airVelocityX = root.clamp((airVelocityX - airOffsetX * spring) * damping, -10, 10)
+              airVelocityY = root.clamp((airVelocityY - airOffsetY * spring) * damping, -10, 10)
+              airOffsetX = clampAir(airOffsetX + airVelocityX)
+              airOffsetY = clampAir(airOffsetY + airVelocityY)
+
+              if (Math.abs(airOffsetX) < 0.05 && Math.abs(airVelocityX) < 0.05) {
+                airOffsetX = 0
+                airVelocityX = 0
+              }
+              if (Math.abs(airOffsetY) < 0.05 && Math.abs(airVelocityY) < 0.05) {
+                airOffsetY = 0
+                airVelocityY = 0
+              }
             }
 
             transform: [
               Translate {
-                x: mote.gustOffsetX
-                y: mote.gustOffsetY
+                x: mote.airOffsetX
+                y: mote.airOffsetY
               }
             ]
 
@@ -436,6 +583,66 @@ Item {
                 duration: Math.max(3000, Math.round((7000 + root.seededNoise(seed + 71) * 5000) / root.speed))
                 easing.type: Easing.InOutSine
               }
+            }
+          }
+        }
+
+        Repeater {
+          id: transientMoteRepeater
+
+          model: transientMotes
+
+          Rectangle {
+            id: transientMote
+
+            required property int index
+            required property real px
+            required property real py
+            required property real vx
+            required property real vy
+            required property real size
+            required property real alpha
+            required property real age
+            required property real life
+
+            width: Math.max(1, size)
+            height: width
+            radius: width / 2
+            x: px
+            y: py
+            color: root.moteColor
+            opacity: alpha * Math.min(1, age / 220) * Math.pow(Math.max(0, 1 - age / life), 0.95)
+
+            function applyCursorInfluence() {
+              if (!root.mouseReactive || root.mouseInfluence <= 0 || root.cursorX < 0) return
+
+              var centerX = px + width / 2
+              var centerY = py + height / 2
+              var dx = centerX - dustWindow.cursorLocalX
+              var dy = centerY - dustWindow.cursorLocalY
+              var distanceSquared = dx * dx + dy * dy
+              if (distanceSquared >= root.cursorInfluenceRadiusSquared) return
+
+              var distance = Math.max(1, Math.sqrt(distanceSquared))
+              var falloff = Math.pow(1 - distance / root.cursorInfluenceRadius, 1.2)
+              var radialForce = (0.20 + root.cursorSpeed * 0.0025) * root.mouseInfluence * falloff
+              var wakeForce = 0.012 * root.mouseInfluence * falloff
+              transientMote.vx += dx / distance * radialForce + root.cursorVelocityX * wakeForce
+              transientMote.vy += dy / distance * radialForce + root.cursorVelocityY * wakeForce
+            }
+
+            function advanceFrame(deltaMs) {
+              transientMote.age += deltaMs
+              if (transientMote.age >= transientMote.life) {
+                if (transientMote.index >= 0 && transientMote.index < transientMotes.count) transientMotes.remove(transientMote.index)
+                return
+              }
+
+              transientMote.applyCursorInfluence()
+              transientMote.vx = root.clamp(transientMote.vx * 0.968, -7.5, 7.5)
+              transientMote.vy = root.clamp(transientMote.vy * 0.968, -7.5, 7.5)
+              transientMote.px += transientMote.vx
+              transientMote.py += transientMote.vy
             }
           }
         }
