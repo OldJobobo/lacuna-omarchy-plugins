@@ -6,10 +6,16 @@
   "author": "Lacuna",
   "description": "Lacuna-styled battery and power status control for the Omarchy bar.",
   "kinds": [
+    "service",
+    "panel",
     "bar-widget"
   ],
   "activation": "on-demand",
+  "persistent": true,
+  "keepLoaded": true,
   "entryPoints": {
+    "service": "Service.qml",
+    "panel": "Panel.qml",
     "barWidget": "Widget.qml"
   },
   "barWidget": {

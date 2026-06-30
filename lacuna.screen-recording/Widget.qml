@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell.Io
 
 Item {
   id: root
@@ -7,12 +6,12 @@ Item {
   property var bar: null
   property string moduleName: "lacuna.screen-recording"
   property var settings: ({})
-  property bool recording: false
+  property var recordingService: null
 
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
+  readonly property bool recording: recordingService ? recordingService.recording : false
   readonly property color moduleColor: colorProfile.statusColor(recording ? "active" : "normal", "recording")
-  readonly property int intervalMs: Math.max(500, Number(setting("interval", 1500)))
   readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
   readonly property bool showInactive: boolSetting("showInactive", false)
 
@@ -31,12 +30,33 @@ Item {
     return value === true || String(value).toLowerCase() === "true"
   }
 
+  function resolveService() {
+    if (recordingService) return
+    if (bar && bar.shell && typeof bar.shell.ensureService === "function") {
+      var ensured = bar.shell.ensureService("lacuna.screen-recording")
+      if (ensured) {
+        recordingService = ensured
+        return
+      }
+    }
+    if (bar && bar.shell && typeof bar.shell.serviceFor === "function") {
+      var existing = bar.shell.serviceFor("lacuna.screen-recording")
+      if (existing) recordingService = existing
+    }
+  }
+
   function refresh() {
-    if (!statusProc.running) statusProc.running = true
+    if (recordingService && typeof recordingService.refresh === "function") recordingService.refresh()
   }
 
   function tooltip() {
+    if (recordingService && typeof recordingService.tooltip === "function") return recordingService.tooltip()
     return recording ? "Screen recording active<br/>Click to stop" : "Screen recording<br/>Click to start"
+  }
+
+  function toggleRecording() {
+    if (recordingService && typeof recordingService.toggleRecording === "function")
+      recordingService.toggleRecording()
   }
 
   ColorProfile {
@@ -50,18 +70,14 @@ Item {
     id: motionTokens
   }
 
-  Timer {
-    interval: root.intervalMs
-    running: true
-    repeat: true
-    triggeredOnStart: true
-    onTriggered: root.refresh()
-  }
+  Component.onCompleted: resolveService()
+  onBarChanged: resolveService()
 
-  Process {
-    id: statusProc
-    command: ["pgrep", "--quiet", "-f", "^gpu-screen-recorder"]
-    onExited: function(exitCode) { root.recording = exitCode === 0 }
+  Timer {
+    interval: 500
+    running: root.recordingService === null
+    repeat: true
+    onTriggered: root.resolveService()
   }
 
   Item {
@@ -113,22 +129,9 @@ Item {
       onExited: if (root.bar) root.bar.hideTooltip(root)
       onClicked: function(mouse) {
         if (!root.bar) return
-        if (mouse.button === Qt.MiddleButton) {
-          root.refresh()
-        } else if (root.recording) {
-          root.bar.run("omarchy capture screenrecording --stop-recording")
-          refreshDelay.restart()
-        } else {
-          root.bar.run("omarchy capture screenrecording")
-          refreshDelay.restart()
-        }
+        if (mouse.button === Qt.MiddleButton) root.refresh()
+        else root.toggleRecording()
       }
     }
-  }
-
-  Timer {
-    id: refreshDelay
-    interval: 1500
-    onTriggered: root.refresh()
   }
 }

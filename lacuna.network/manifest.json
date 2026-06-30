@@ -4,12 +4,17 @@
   "name": "Lacuna Network",
   "version": "0.1.0",
   "author": "Lacuna",
-  "description": "Lacuna-styled network status control for the Omarchy bar.",
+  "description": "Lacuna network provider, bar pill, and panel backed by Omarchy's NetworkManager data.",
   "kinds": [
+    "service",
+    "panel",
     "bar-widget"
   ],
-  "activation": "on-demand",
+  "activation": "persistent",
+  "keepLoaded": true,
   "entryPoints": {
+    "service": "Service.qml",
+    "panel": "Panel.qml",
     "barWidget": "Widget.qml"
   },
   "barWidget": {

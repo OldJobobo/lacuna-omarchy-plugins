@@ -4,12 +4,17 @@
   "name": "Lacuna Audio",
   "version": "0.1.0",
   "author": "Lacuna",
-  "description": "Lacuna-styled PipeWire output control for the Omarchy bar.",
+  "description": "Lacuna audio provider, bar pill, and panel backed by PipeWire.",
   "kinds": [
+    "service",
+    "panel",
     "bar-widget"
   ],
-  "activation": "on-demand",
+  "activation": "persistent",
+  "keepLoaded": true,
   "entryPoints": {
+    "service": "Service.qml",
+    "panel": "Panel.qml",
     "barWidget": "Widget.qml"
   },
   "barWidget": {

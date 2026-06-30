@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell.Bluetooth
 
 Item {
   id: root
@@ -7,21 +6,17 @@ Item {
   property var bar: null
   property string moduleName: "lacuna.bluetooth"
   property var settings: ({})
+  property var bluetoothService: null
+  property bool flyoutOpen: false
 
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
-  readonly property var adapter: Bluetooth.defaultAdapter
-  readonly property var devices: Bluetooth.devices ? Bluetooth.devices.values : []
-  readonly property var connectedDevices: connectedBluetoothDevices()
-  readonly property bool enabled: adapter && adapter.enabled
-  readonly property color moduleColor: colorProfile.statusColor(!adapter || !enabled ? "warning" : connectedDevices.length > 0 ? "active" : "normal", "bluetooth")
+  readonly property bool available: bluetoothService ? bluetoothService.available : false
+  readonly property bool enabled: bluetoothService ? bluetoothService.enabled : false
+  readonly property bool connected: bluetoothService ? bluetoothService.connected : false
+  readonly property color moduleColor: colorProfile.statusColor(!available || !enabled ? "warning" : connected ? "active" : "normal", "bluetooth")
   readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
-  readonly property string icon: {
-    if (!adapter) return "󰂲"
-    if (!adapter.enabled) return "󰂲"
-    if (connectedDevices.length > 0) return "󰂱"
-    return "󰂯"
-  }
+  readonly property string icon: bluetoothService ? bluetoothService.icon : "󰂲"
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -32,39 +27,37 @@ Item {
     return value === undefined || value === null ? fallback : value
   }
 
-  function deviceLabel(device) {
-    if (!device) return ""
-    return String(device.deviceName || device.name || "").trim()
-  }
-
-  function connectedBluetoothDevices() {
-    var list = []
-    for (var i = 0; i < devices.length; i++) {
-      var d = devices[i]
-      if (d && d.connected) list.push(d)
-    }
-    return list
-  }
-
   function tooltip() {
-    if (!adapter) return "No Bluetooth adapter"
-    if (!adapter.enabled) return "Bluetooth off<br/>Right click to turn on"
-    if (connectedDevices.length === 0) return "Bluetooth on<br/>No connected devices"
+    if (bluetoothService && typeof bluetoothService.tooltip === "function") return bluetoothService.tooltip()
+    return available ? "Bluetooth" : "No Bluetooth adapter"
+  }
 
-    var names = []
-    for (var i = 0; i < connectedDevices.length; i++) {
-      var label = deviceLabel(connectedDevices[i])
-      if (label) names.push(label)
+  function resolveService() {
+    if (bluetoothService) return
+    if (bar && bar.shell && typeof bar.shell.ensureService === "function") {
+      var ensured = bar.shell.ensureService("lacuna.bluetooth")
+      if (ensured) {
+        bluetoothService = ensured
+        return
+      }
     }
-    return "Bluetooth connected<br/>" + (names.length > 0 ? names.join("<br/>") : connectedDevices.length + " devices")
+    if (bar && bar.shell && typeof bar.shell.serviceFor === "function") {
+      var existing = bar.shell.serviceFor("lacuna.bluetooth")
+      if (existing) bluetoothService = existing
+    }
   }
 
   function toggleBluetooth() {
-    if (!adapter) return
-    adapter.enabled = !adapter.enabled
-    if (adapter.enabled) Qt.callLater(function() {
-      if (root.adapter) root.adapter.discovering = true
-    })
+    if (bluetoothService && typeof bluetoothService.toggleBluetooth === "function")
+      bluetoothService.toggleBluetooth()
+  }
+
+  function close() {
+    flyoutOpen = false
+  }
+
+  function togglePanel() {
+    flyoutOpen = !flyoutOpen
   }
 
   ColorProfile {
@@ -76,6 +69,16 @@ Item {
 
   MotionTokens {
     id: motionTokens
+  }
+
+  Component.onCompleted: resolveService()
+  onBarChanged: resolveService()
+
+  Timer {
+    interval: 500
+    running: root.bluetoothService === null
+    repeat: true
+    onTriggered: root.resolveService()
   }
 
   Item {
@@ -118,9 +121,22 @@ Item {
       onEntered: if (root.bar) root.bar.showTooltip(root, root.tooltip())
       onExited: if (root.bar) root.bar.hideTooltip(root)
       onClicked: function(mouse) {
+        if (!root.bar) return
         if (mouse.button === Qt.RightButton) root.toggleBluetooth()
-        else if (root.bar) root.bar.run("omarchy notification send -g 󰂯 \"Bluetooth\" \"$(bluetoothctl show 2>/dev/null; bluetoothctl devices Connected 2>/dev/null)\"")
+        else {
+          root.bar.hideTooltip(root)
+          root.togglePanel()
+        }
       }
     }
+  }
+
+  BluetoothFlyout {
+    anchorItem: root
+    owner: root
+    bar: root.bar
+    service: root.bluetoothService
+    accentColor: root.moduleColor
+    open: root.flyoutOpen
   }
 }
