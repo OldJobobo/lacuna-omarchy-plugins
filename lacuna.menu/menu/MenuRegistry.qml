@@ -308,6 +308,20 @@ Item {
     return count + " animations stacked"
   }
 
+  function backgroundAnimationOpacity() {
+    var value = Number(root.backgroundEffects && root.backgroundEffects.opacity !== undefined ? root.backgroundEffects.opacity : 1)
+    if (isNaN(value)) value = 1
+    return Math.max(0, Math.min(1, value))
+  }
+
+  function backgroundAnimationOpacityName() {
+    return Math.round(backgroundAnimationOpacity() * 100) + "%"
+  }
+
+  function backgroundAnimationOpacityHint() {
+    return "Overall animation opacity " + backgroundAnimationOpacityName()
+  }
+
   function backgroundEffectStackWarning() {
     var count = backgroundEffectStackCount()
     return count > 3 ? count + " animations are active; heavy stacks may affect shell performance" : ""
@@ -372,6 +386,73 @@ Item {
 
     return defaults
   }
+
+  function backgroundEffectRuntimeSettings(effectId) {
+    var effects = root.backgroundEffects && root.backgroundEffects.effects ? root.backgroundEffects.effects : ({})
+    var settings = effects[String(effectId || "")]
+    return settings && typeof settings === "object" ? settings : ({})
+  }
+
+  function filmGrainSettings() {
+    var settings = backgroundEffectRuntimeSettings("filmGrain")
+    return {
+      intensity: Math.max(0, Math.min(1, numberSetting(settings.intensity, 0.28))),
+      speed: Math.max(0.2, Math.min(5, numberSetting(settings.speed, 1))),
+      grainCount: Math.max(32, Math.min(520, Math.round(numberSetting(settings.grainCount, 180)))),
+      grainSize: Math.max(0.6, Math.min(3.5, numberSetting(settings.grainSize, 1.35))),
+      accentBlend: Math.max(0, Math.min(1, numberSetting(settings.accentBlend, 0.18)))
+    }
+  }
+
+  function filmGrainIntensity() { return filmGrainSettings().intensity }
+  function filmGrainSpeed() { return filmGrainSettings().speed }
+  function filmGrainGrainCount() { return filmGrainSettings().grainCount }
+  function filmGrainGrainSize() { return filmGrainSettings().grainSize }
+  function filmGrainAccentBlend() { return filmGrainSettings().accentBlend }
+  function filmGrainIntensityName() { return Math.round(filmGrainIntensity() * 100) + "%" }
+  function filmGrainSpeedName() { return Math.round(filmGrainSpeed() * 100) + "%" }
+  function filmGrainGrainCountName() { return String(filmGrainGrainCount()) }
+  function filmGrainGrainSizeName() { return Math.round(filmGrainGrainSize() * 100) + "%" }
+  function filmGrainAccentBlendName() { return Math.round(filmGrainAccentBlend() * 100) + "%" }
+  function filmGrainIntensityHint() { return "Film grain layer opacity " + filmGrainIntensityName() }
+  function filmGrainSpeedHint() { return "Refresh speed " + filmGrainSpeedName() }
+  function filmGrainGrainCountHint() { return "Visible grain particles " + filmGrainGrainCountName() }
+  function filmGrainGrainSizeHint() { return "Grain dot size " + filmGrainGrainSizeName() }
+  function filmGrainAccentBlendHint() { return "Theme accent tint " + filmGrainAccentBlendName() }
+
+  function dustMotesSettings() {
+    var settings = backgroundEffectRuntimeSettings("dustMotes")
+    return {
+      intensity: Math.max(0, Math.min(1, numberSetting(settings.intensity, 0.5))),
+      speed: Math.max(0.15, Math.min(4, numberSetting(settings.speed, 0.7))),
+      moteCount: Math.max(12, Math.min(180, Math.round(numberSetting(settings.moteCount, 72)))),
+      moteSize: Math.max(1, Math.min(8, numberSetting(settings.moteSize, 2.6))),
+      accentBlend: Math.max(0, Math.min(1, numberSetting(settings.accentBlend, 0.42))),
+      mouseReactive: settings.mouseReactive !== false,
+      mouseInfluence: Math.max(0, Math.min(1, numberSetting(settings.mouseInfluence, 0.28)))
+    }
+  }
+
+  function dustMotesIntensity() { return dustMotesSettings().intensity }
+  function dustMotesSpeed() { return dustMotesSettings().speed }
+  function dustMotesMoteCount() { return dustMotesSettings().moteCount }
+  function dustMotesMoteSize() { return dustMotesSettings().moteSize }
+  function dustMotesAccentBlend() { return dustMotesSettings().accentBlend }
+  function dustMotesMouseReactive() { return dustMotesSettings().mouseReactive }
+  function dustMotesMouseInfluence() { return dustMotesSettings().mouseInfluence }
+  function dustMotesIntensityName() { return Math.round(dustMotesIntensity() * 100) + "%" }
+  function dustMotesSpeedName() { return Math.round(dustMotesSpeed() * 100) + "%" }
+  function dustMotesMoteCountName() { return String(dustMotesMoteCount()) }
+  function dustMotesMoteSizeName() { return Math.round(dustMotesMoteSize() * 100) + "%" }
+  function dustMotesAccentBlendName() { return Math.round(dustMotesAccentBlend() * 100) + "%" }
+  function dustMotesMouseInfluenceName() { return Math.round(dustMotesMouseInfluence() * 100) + "%" }
+  function dustMotesIntensityHint() { return "Dust mote layer opacity " + dustMotesIntensityName() }
+  function dustMotesSpeedHint() { return "Drift speed " + dustMotesSpeedName() }
+  function dustMotesMoteCountHint() { return "Visible dust motes " + dustMotesMoteCountName() }
+  function dustMotesMoteSizeHint() { return "Mote dot size " + dustMotesMoteSizeName() }
+  function dustMotesAccentBlendHint() { return "Theme accent tint " + dustMotesAccentBlendName() }
+  function dustMotesMouseReactiveHint() { return dustMotesMouseReactive() ? "Cursor movement pushes nearby motes" : "Cursor movement does not affect motes" }
+  function dustMotesMouseInfluenceHint() { return "Cursor push strength " + dustMotesMouseInfluenceName() }
 
   function backgroundEffectForegroundCapable(effectId) {
     return backgroundEffectPluginId(effectId) !== ""

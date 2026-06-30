@@ -42,8 +42,15 @@ Item {
   property int shadowBlurMax: 28
   property real shadowOffsetX: 2
   property real shadowOffsetY: 3
+  property bool topBarShadowEnabled: false
+  property real topBarShadowX: 0
+  property real topBarShadowY: 0
+  property real topBarShadowWidth: 0
+  property real topBarShadowHeight: frameThickness
 
   readonly property bool hasVisibleSurface: sidebarVisible || (flyoutRenderable && flyoutWidth > 0 && flyoutHeight > 0)
+  readonly property real barEdgeShadowOpacity: Math.min(1, shadowOpacity * 1.35)
+  readonly property real topBarPanelShadowOpacity: Math.min(1, shadowOpacity * 0.72)
   readonly property real shadowBottomClipInset: fullFrame
     ? Math.max(0, frameThickness + shadowBlurMax + Math.abs(shadowOffsetY))
     : 0
@@ -78,6 +85,20 @@ Item {
         blurMax: root.shadowBlurMax
         shadowHorizontalOffset: root.shadowOffsetX
         shadowVerticalOffset: root.shadowOffsetY
+      }
+
+      Rectangle {
+        visible: root.shadowEnabled && root.topBarShadowEnabled && root.topBarShadowWidth > 0 && root.topBarShadowHeight > 0
+        x: root.topBarShadowX
+        y: root.topBarShadowY
+        width: root.topBarShadowWidth
+        height: root.topBarShadowHeight
+        gradient: Gradient {
+          orientation: Gradient.Vertical
+          GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, root.topBarPanelShadowOpacity * 0.56) }
+          GradientStop { position: 0.38; color: Qt.rgba(0, 0, 0, root.topBarPanelShadowOpacity * 0.24) }
+          GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0) }
+        }
       }
     }
   }

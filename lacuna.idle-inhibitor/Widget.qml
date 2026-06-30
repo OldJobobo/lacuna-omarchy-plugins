@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell.Io
 
 Item {
   id: root
@@ -7,12 +6,14 @@ Item {
   property var bar: null
   property string moduleName: "lacuna.idle-inhibitor"
   property var settings: ({})
-  property bool stayAwake: false
+  property var idleService: null
 
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
+  readonly property bool serviceLoaded: idleService !== null
+  readonly property bool stayAwake: idleService ? idleService.stayAwake : false
+  readonly property bool idleEnabled: idleService ? idleService.idleEnabled : !stayAwake
   readonly property color moduleColor: colorProfile.statusColor(stayAwake ? "active" : "normal", "idle")
-  readonly property int intervalMs: Math.max(500, Number(setting("interval", 5000)))
   readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
   readonly property bool showInactive: boolSetting("showInactive", false)
 
@@ -31,16 +32,31 @@ Item {
     return value === true || String(value).toLowerCase() === "true"
   }
 
-  function parseData(raw) {
-    try { return JSON.parse(String(raw || "{}")) } catch (e) { return {} }
-  }
-
-  function refresh() {
-    if (!statusProc.running) statusProc.running = true
-  }
-
   function tooltip() {
     return stayAwake ? "Stay Awake active<br/>Click to allow idle lock" : "Idle locking enabled<br/>Click to stay awake"
+  }
+
+  function resolveService() {
+    if (idleService) return
+    if (bar && bar.shell && typeof bar.shell.ensureService === "function") {
+      var ensured = bar.shell.ensureService("omarchy.idle")
+      if (ensured) {
+        idleService = ensured
+        return
+      }
+    }
+    if (bar && bar.shell && typeof bar.shell.serviceFor === "function") {
+      var existing = bar.shell.serviceFor("omarchy.idle")
+      if (existing) idleService = existing
+    }
+  }
+
+  function toggleIdle() {
+    if (idleService && typeof idleService.setIdleEnabled === "function") {
+      idleService.setIdleEnabled(!idleEnabled)
+      return
+    }
+    if (bar) bar.run("omarchy toggle idle")
   }
 
   ColorProfile {
@@ -54,25 +70,14 @@ Item {
     id: motionTokens
   }
 
-  Timer {
-    interval: root.intervalMs
-    running: true
-    repeat: true
-    triggeredOnStart: true
-    onTriggered: root.refresh()
-  }
+  Component.onCompleted: resolveService()
+  onBarChanged: resolveService()
 
-  Process {
-    id: statusProc
-    command: ["bash", "-c", "omarchy toggle idle status 2>/dev/null"]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: {
-        var data = root.parseData(text)
-        root.stayAwake = data && data.enabled === false
-      }
-    }
-    onExited: function(exitCode) { if (exitCode !== 0) root.stayAwake = false }
+  Timer {
+    interval: 500
+    running: root.idleService === null
+    repeat: true
+    onTriggered: root.resolveService()
   }
 
   Item {
@@ -125,19 +130,9 @@ Item {
       onExited: if (root.bar) root.bar.hideTooltip(root)
       onClicked: function(mouse) {
         if (!root.bar) return
-        if (mouse.button === Qt.MiddleButton) {
-          root.refresh()
-        } else {
-          root.bar.run("omarchy toggle idle")
-          refreshDelay.restart()
-        }
+        if (mouse.button === Qt.MiddleButton) root.resolveService()
+        else root.toggleIdle()
       }
     }
-  }
-
-  Timer {
-    id: refreshDelay
-    interval: 1500
-    onTriggered: root.refresh()
   }
 }

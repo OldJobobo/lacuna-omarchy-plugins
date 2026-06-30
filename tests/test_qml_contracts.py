@@ -318,9 +318,23 @@ class QmlContractTests(unittest.TestCase):
         self.assertLess(window.index("LacunaPanelUnifiedSurface"), window.index("MenuSurface"))
         self.assertIn("shadowEnabled: root.lacunaEnabled && root.frameShadow && (root.sidebarSurfaceVisible || panelController.flyoutRenderable)", window)
         self.assertIn("shadowBlurMax: root.panelShadowBlurMax", window)
+        self.assertIn('readonly property bool topBarPanelShadowVisible: lacunaEnabled && frameShadow && frameMode === "off" && root.topBar && root.sidebarSurfaceVisible', window)
+        self.assertIn("readonly property int topBarPanelShadowVisualWidth", window)
+        self.assertIn("visualWidth: Math.max(root.frameOverlayWidth, root.topBarPanelShadowVisualWidth)", window)
+        self.assertIn("topBarShadowEnabled: root.topBarPanelShadowVisible", window)
+        self.assertIn("topBarShadowX: root.topBarPanelShadowX", window)
+        self.assertIn("topBarShadowWidth: root.topBarPanelShadowWidth", window)
+        self.assertIn("readonly property real topBarPanelShadowX: 0", window)
+        self.assertIn("readonly property real topBarPanelShadowWidth: topBarPanelShadowVisualWidth", window)
+        self.assertIn("readonly property real topBarPanelShadowHeight: Math.max(10, Math.round(barEdgeCasterSize * 0.62))", window)
         self.assertIn("backgroundVisible: false", window)
         self.assertIn("LacunaDropShadow", unified)
         self.assertIn("source: surfaceSource", unified)
+        self.assertIn("property bool topBarShadowEnabled: false", unified)
+        self.assertIn("readonly property real barEdgeShadowOpacity: Math.min(1, shadowOpacity * 1.35)", unified)
+        self.assertIn("readonly property real topBarPanelShadowOpacity: Math.min(1, shadowOpacity * 0.72)", unified)
+        self.assertIn("visible: root.shadowEnabled && root.topBarShadowEnabled && root.topBarShadowWidth > 0 && root.topBarShadowHeight > 0", unified)
+        self.assertIn("GradientStop { position: 0.38; color: Qt.rgba(0, 0, 0, root.topBarPanelShadowOpacity * 0.24) }", unified)
         self.assertIn("Math.max(0, frameThickness + shadowBlurMax + Math.abs(shadowOffsetY))", unified)
         self.assertIn("id: shadowClip", unified)
         self.assertIn("height: Math.max(0, parent.height - root.shadowBottomClipInset)", unified)
@@ -442,6 +456,10 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.bar/LacunaGeometry.qml",
             "lacuna.claude-usage/LacunaGeometry.qml",
             "lacuna.codex-usage/LacunaGeometry.qml",
+            "lacuna.network/LacunaGeometry.qml",
+            "lacuna.audio/LacunaGeometry.qml",
+            "lacuna.bluetooth/LacunaGeometry.qml",
+            "lacuna.power/LacunaGeometry.qml",
         }
         for path in sorted(geometry_files):
             self.assertIn("readonly property real curveKappa: " + literal, read(path), path)
@@ -457,6 +475,10 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.bar/LacunaFrameWindow.qml",
             "lacuna.claude-usage/BarFlyoutSurface.qml",
             "lacuna.codex-usage/BarFlyoutSurface.qml",
+            "lacuna.network/BarFlyoutSurface.qml",
+            "lacuna.audio/BarFlyoutSurface.qml",
+            "lacuna.bluetooth/BarFlyoutSurface.qml",
+            "lacuna.power/BarFlyoutSurface.qml",
         ]
         for path in consumers:
             qml = read(path)
@@ -592,6 +614,10 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('if (id === "StayAwake") return "Zz"', combined)
         self.assertIn('text: "Zz"', standalone)
         self.assertIn("opacity: root.stayAwake || mouseArea.containsMouse ? 1 : 0.55", standalone)
+        self.assertIn('bar.shell.ensureService("omarchy.idle")', standalone)
+        self.assertIn('bar.shell.serviceFor("omarchy.idle")', standalone)
+        self.assertIn("idleService.setIdleEnabled(!idleEnabled)", standalone)
+        self.assertNotIn("omarchy toggle idle status", standalone)
         self.assertIn('font.bold: indicatorButton.indicatorId === "StayAwake"', combined)
         self.assertIn("function hasConfiguredActiveIndicator", combined)
         self.assertIn("function readableIndicatorColor(id, active)", combined)
@@ -709,14 +735,14 @@ class QmlContractTests(unittest.TestCase):
         for section in ["left", "center", "right"]:
             layout_ids.extend(entry["id"] for entry in example["bar"]["layout"][section])
 
-        omarchy_default_system_widgets = {
+        native_system_ids = {
             "lacuna.bluetooth": "omarchy.bluetooth",
             "lacuna.network": "omarchy.network",
             "lacuna.audio": "omarchy.audio",
             "lacuna.power": "omarchy.power",
         }
 
-        for plugin_id, native_id in replacements.items():
+        for plugin_id in replacements:
             manifest = read_json(f"{plugin_id}/manifest.json")
             qml = read(f"{plugin_id}/Widget.qml")
 
@@ -724,16 +750,396 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("bar-widget", manifest["kinds"])
             self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
             self.assertEqual("Lacuna", manifest["barWidget"]["category"])
-            if plugin_id in omarchy_default_system_widgets:
-                self.assertIn(omarchy_default_system_widgets[plugin_id], layout_ids)
-                self.assertNotIn(plugin_id, layout_ids)
-            else:
-                self.assertIn(plugin_id, layout_ids)
-            self.assertNotIn(f'moduleName: "{native_id}"', qml)
+            self.assertIn(plugin_id, layout_ids)
+            if plugin_id in native_system_ids:
+                self.assertNotIn(f'moduleName: "{native_system_ids[plugin_id]}"', qml)
             self.assertIn(f'moduleName: "{plugin_id}"', qml)
             self.assertIn("barSize", qml)
             if plugin_id != "lacuna.tray":
                 self.assertIn("colorProfile", qml)
+        for native_id in ["omarchy.bluetooth", "omarchy.network", "omarchy.audio", "omarchy.power"]:
+            self.assertNotIn(native_id, layout_ids)
+
+    def test_lacuna_network_exposes_provider_widget_and_panel_contract(self):
+        manifest = read_json("lacuna.network/manifest.json")
+        service = read("lacuna.network/Service.qml")
+        widget = read("lacuna.network/Widget.qml")
+        panel = read("lacuna.network/Panel.qml")
+        flyout = read("lacuna.network/NetworkFlyout.qml")
+        model = read("lacuna.network/NetworkModel.js")
+
+        self.assertEqual(["service", "panel", "bar-widget"], manifest["kinds"])
+        self.assertTrue(manifest["keepLoaded"])
+        self.assertEqual("Service.qml", manifest["entryPoints"]["service"])
+        self.assertEqual("Panel.qml", manifest["entryPoints"]["panel"])
+        self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
+
+        for snippet in [
+            "import Quickshell.Networking",
+            "readonly property bool networkManagerAvailable: Networking.backend === NetworkBackendType.NetworkManager",
+            "readonly property var wifiDevice: findDevice(DeviceType.Wifi)",
+            "readonly property var connectedWifiNetwork: findConnectedWifiNetwork()",
+            "property var wifiNetworks: []",
+            "function refresh(scanWifi)",
+            "function connectKnown(ssid)",
+            "function connectWithPassphrase(ssid, passphrase)",
+            "function disconnect(network)",
+            "function forget(row)",
+            "function toggleWifi()",
+            "Networking.wifiEnabled = !Networking.wifiEnabled",
+            'target: "lacuna-network"',
+        ]:
+            self.assertIn(snippet, service)
+
+        for snippet in [
+            'bar.shell.ensureService("lacuna.network")',
+            'bar.shell.serviceFor("lacuna.network")',
+            "NetworkFlyout {",
+            "flyoutOpen = !flyoutOpen",
+            "root.networkService.toggleWifi()",
+            "networkService.tooltip",
+        ]:
+            self.assertIn(snippet, widget)
+
+        for snippet in [
+            "property var service: null",
+            "PanelWindow {",
+            'WlrLayershell.namespace: "lacuna-network-panel"',
+            "WlrLayershell.layer: WlrLayer.Overlay",
+            'shell.ensureService("lacuna.network")',
+            "activeService.refresh(true)",
+            "activeService.toggleWifi()",
+            "activeService.connectKnown(row.ssid)",
+            "activeService.connectWithPassphrase(row.ssid, root.passwordText)",
+            "activeService.disconnect(row.network)",
+            "activeService.forget(row)",
+            "component ActionChip: Rectangle",
+            "component SignalBars: Row",
+            "component NetworkSlat: Rectangle",
+            "Flickable {",
+            'text: "LACUNA NETWORK PROVIDER"',
+            '"SIGNALS IN RANGE"',
+            "function onConnectionFailed(reason)",
+            "ConnectionFailReason.NoSecrets",
+        ]:
+            self.assertIn(snippet, panel)
+        self.assertNotIn("FloatingWindow", panel)
+        self.assertNotIn("PanelSectionHeader", panel)
+
+        for snippet in [
+            "PopupWindow {",
+            "required property Item anchorItem",
+            "BarFlyoutSurface {",
+            "HyprlandFocusGrab {",
+            "bar.requestPopout(root)",
+            "activeService.refresh(true)",
+            "activeService.toggleWifi()",
+            "activeService.connectKnown(row.ssid)",
+            "activeService.connectWithPassphrase(row.ssid, root.passwordText)",
+            "activeService.disconnect(row.network)",
+            "activeService.forget(row)",
+            "component ActionChip: Rectangle",
+            "component SignalBars: Row",
+            "component NetworkSlat: Rectangle",
+            "Flickable {",
+            'text: "LACUNA NETWORK"',
+            '"SIGNALS IN RANGE"',
+        ]:
+            self.assertIn(snippet, flyout)
+
+        for snippet in [
+            "function parseNetworkStatus(raw)",
+            "function wifiIconFor(strength)",
+            "function connectionIcon(kind, signalStrength)",
+            "function wifiRow(network)",
+            "function sortWifiRows(rows)",
+            "function networkFailureReason(reason, reasons)",
+        ]:
+            self.assertIn(snippet, model)
+
+    def test_lacuna_audio_exposes_provider_widget_and_panel_contract(self):
+        manifest = read_json("lacuna.audio/manifest.json")
+        service = read("lacuna.audio/Service.qml")
+        widget = read("lacuna.audio/Widget.qml")
+        flyout = read("lacuna.audio/AudioFlyout.qml")
+        panel = read("lacuna.audio/Panel.qml")
+        model = read("lacuna.audio/AudioModel.js")
+
+        self.assertEqual(["service", "panel", "bar-widget"], manifest["kinds"])
+        self.assertTrue(manifest["keepLoaded"])
+        self.assertEqual("Service.qml", manifest["entryPoints"]["service"])
+        self.assertEqual("Panel.qml", manifest["entryPoints"]["panel"])
+        self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
+
+        for snippet in [
+            "import Quickshell.Services.Pipewire",
+            "readonly property var sink: Pipewire.defaultAudioSink",
+            "readonly property var source: Pipewire.defaultAudioSource",
+            "readonly property var streams:",
+            "function setOutputVolume(value)",
+            "function toggleOutputMute()",
+            "function setDefaultSink(node)",
+            "function setStreamVolume(node, value)",
+            'target: "lacuna-audio"',
+        ]:
+            self.assertIn(snippet, service)
+
+        for snippet in [
+            'bar.shell.ensureService("lacuna.audio")',
+            'bar.shell.serviceFor("lacuna.audio")',
+            "AudioFlyout {",
+            "flyoutOpen = !flyoutOpen",
+            "audioService.toggleOutputMute()",
+            "audioService.tooltip",
+        ]:
+            self.assertIn(snippet, widget)
+
+        for snippet in [
+            "PopupWindow {",
+            "required property Item anchorItem",
+            "BarFlyoutSurface {",
+            "HyprlandFocusGrab {",
+            "bar.requestPopout(root)",
+            "activeService.setOutputVolume(value / 100)",
+            "activeService.toggleOutputMute()",
+            "activeService.setDefaultSink(modelData)",
+            "activeService.setDefaultSource(modelData)",
+            "component ActionChip: Rectangle",
+            "component DeviceSlat: Rectangle",
+            'text: "LACUNA AUDIO"',
+            'text: "OUTPUT DEVICES"',
+        ]:
+            self.assertIn(snippet, flyout)
+
+        for snippet in [
+            "PanelWindow {",
+            'WlrLayershell.namespace: "lacuna-audio-panel"',
+            "component ActionChip: Rectangle",
+            "component VolumeSlab: Rectangle",
+            "component DeviceSlat: Rectangle",
+            "component StreamSlat: VolumeSlab",
+            'text: "LACUNA AUDIO PROVIDER"',
+            'text: "OUTPUT DEVICES"',
+            'text: "PLAYBACK STREAMS"',
+            "activeService.setOutputVolume(value / 100)",
+            "activeService.setDefaultSink(modelData)",
+            "activeService.setStreamVolume(node, value / 100)",
+        ]:
+            self.assertIn(snippet, panel)
+        self.assertNotIn("FloatingWindow", panel)
+
+        for snippet in [
+            "function outputIcon(hasSink, muted, volume)",
+            "function inputIcon(hasSource, muted)",
+            "function outputMood(volume, muted)",
+            "function nodeLabel(node)",
+            "function isPlaybackStream(node)",
+            "function streamLabel(node)",
+        ]:
+            self.assertIn(snippet, model)
+
+    def test_lacuna_bluetooth_exposes_provider_widget_and_panel_contract(self):
+        manifest = read_json("lacuna.bluetooth/manifest.json")
+        service = read("lacuna.bluetooth/Service.qml")
+        widget = read("lacuna.bluetooth/Widget.qml")
+        flyout = read("lacuna.bluetooth/BluetoothFlyout.qml")
+        panel = read("lacuna.bluetooth/Panel.qml")
+        model = read("lacuna.bluetooth/BluetoothModel.js")
+
+        self.assertEqual(["service", "panel", "bar-widget"], manifest["kinds"])
+        self.assertTrue(manifest["keepLoaded"])
+        self.assertEqual("Service.qml", manifest["entryPoints"]["service"])
+        self.assertEqual("Panel.qml", manifest["entryPoints"]["panel"])
+        self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
+
+        for snippet in [
+            "import Quickshell.Bluetooth",
+            "readonly property var adapter: Bluetooth.defaultAdapter",
+            "readonly property var devices: Bluetooth.devices ? Bluetooth.devices.values : []",
+            "readonly property var connectedDevices: deviceGroups.connected || []",
+            "function startDiscovery()",
+            "function toggleBluetooth()",
+            "function connectDevice(device)",
+            "function disconnectDevice(device)",
+            "function forgetDevice(device)",
+            "omarchy-bluetooth-device",
+            "omarchy-audio-output-set-default",
+            'target: "lacuna-bluetooth"',
+        ]:
+            self.assertIn(snippet, service)
+
+        for snippet in [
+            'bar.shell.ensureService("lacuna.bluetooth")',
+            'bar.shell.serviceFor("lacuna.bluetooth")',
+            "BluetoothFlyout {",
+            "flyoutOpen = !flyoutOpen",
+            "bluetoothService.toggleBluetooth()",
+            "bluetoothService.tooltip",
+        ]:
+            self.assertIn(snippet, widget)
+
+        for snippet in [
+            "PopupWindow {",
+            "required property Item anchorItem",
+            "BarFlyoutSurface {",
+            "HyprlandFocusGrab {",
+            "bar.requestPopout(root)",
+            "activeService.startDiscovery()",
+            "activeService.toggleBluetooth()",
+            "activeService.connectDevice(device)",
+            "activeService.disconnectDevice(device)",
+            "activeService.forgetDevice(slat.device)",
+            "component ActionChip: Rectangle",
+            "component DeviceSlat: Rectangle",
+            'text: "LACUNA BLUETOOTH"',
+            'text: "PAIRED DEVICES"',
+            'text: "DISCOVERED"',
+        ]:
+            self.assertIn(snippet, flyout)
+
+        for snippet in [
+            "PanelWindow {",
+            'WlrLayershell.namespace: "lacuna-bluetooth-panel"',
+            "WlrLayershell.layer: WlrLayer.Overlay",
+            'shell.ensureService("lacuna.bluetooth")',
+            "activeService.startDiscovery()",
+            "activeService.toggleBluetooth()",
+            "activeService.connectDevice(device)",
+            "activeService.disconnectDevice(device)",
+            "activeService.forgetDevice(slat.device)",
+            "component ActionChip: Rectangle",
+            "component DeviceSlat: Rectangle",
+            'text: "LACUNA BLUETOOTH PROVIDER"',
+            'text: "PAIRED DEVICES"',
+            'text: "DISCOVERED"',
+        ]:
+            self.assertIn(snippet, panel)
+        self.assertNotIn("FloatingWindow", panel)
+        self.assertNotIn("PanelSectionHeader", panel)
+
+        for snippet in [
+            "function deviceLabel(device)",
+            "function deviceLists(devices)",
+            "function pendingAction(actions, address)",
+            "function bluetoothSinkMatchesDevice(node, device)",
+            "function deviceStatus(device, pending, section)",
+        ]:
+            self.assertIn(snippet, model)
+
+    def test_lacuna_power_exposes_provider_widget_and_panel_contract(self):
+        manifest = read_json("lacuna.power/manifest.json")
+        service = read("lacuna.power/Service.qml")
+        widget = read("lacuna.power/Widget.qml")
+        flyout = read("lacuna.power/PowerFlyout.qml")
+        panel = read("lacuna.power/Panel.qml")
+        model = read("lacuna.power/PowerModel.js")
+
+        self.assertEqual(["service", "panel", "bar-widget"], manifest["kinds"])
+        self.assertTrue(manifest["keepLoaded"])
+        self.assertEqual("Service.qml", manifest["entryPoints"]["service"])
+        self.assertEqual("Panel.qml", manifest["entryPoints"]["panel"])
+        self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
+
+        for snippet in [
+            "import Quickshell.Services.UPower",
+            "readonly property var device: UPower.displayDevice",
+            "readonly property bool onBattery: UPower.onBattery",
+            "function refresh()",
+            "function updateProfiles(raw)",
+            "function setProfile(profile)",
+            "omarchy-battery-status",
+            "omarchy-powerprofiles-list",
+            "omarchy-system-stats",
+            'target: "lacuna-power"',
+        ]:
+            self.assertIn(snippet, service)
+
+        for snippet in [
+            'bar.shell.ensureService("lacuna.power")',
+            'bar.shell.serviceFor("lacuna.power")',
+            "PowerFlyout {",
+            "flyoutOpen = !flyoutOpen",
+            "powerService.tooltip",
+            "root.powerService.refresh()",
+        ]:
+            self.assertIn(snippet, widget)
+
+        for snippet in [
+            "PopupWindow {",
+            "required property Item anchorItem",
+            "BarFlyoutSurface {",
+            "HyprlandFocusGrab {",
+            "bar.requestPopout(root)",
+            "activeService.refresh()",
+            "activeService.setProfile(modelData)",
+            "component ActionChip: Rectangle",
+            "component StatTile: Rectangle",
+            'text: "LACUNA POWER"',
+            'text: "Power profile"',
+            'label: "TIME LEFT"',
+            'label: "DRAW"',
+        ]:
+            self.assertIn(snippet, flyout)
+
+        for snippet in [
+            "PanelWindow {",
+            'WlrLayershell.namespace: "lacuna-power-panel"',
+            "WlrLayershell.layer: WlrLayer.Overlay",
+            'shell.ensureService("lacuna.power")',
+            "activeService.refresh()",
+            "activeService.setProfile(modelData)",
+            "component ActionChip: Rectangle",
+            "component StatTile: Rectangle",
+            'text: "LACUNA POWER PROVIDER"',
+            'text: "Power profile"',
+            'label: "TIME LEFT"',
+            'label: "DRAW"',
+        ]:
+            self.assertIn(snippet, panel)
+        self.assertNotIn("FloatingWindow", panel)
+        self.assertNotIn("PanelSectionHeader", panel)
+
+        for snippet in [
+            "function parseKeyValue(raw)",
+            "function parseProfiles(raw, previousIndex)",
+            "function profileIcon(name)",
+            "function batteryIcon(device, onBattery, states)",
+            "function modeLabel(device, onBattery, states)",
+        ]:
+            self.assertIn(snippet, model)
+
+    def test_lacuna_screen_recording_exposes_provider_widget_contract(self):
+        manifest = read_json("lacuna.screen-recording/manifest.json")
+        service = read("lacuna.screen-recording/Service.qml")
+        widget = read("lacuna.screen-recording/Widget.qml")
+
+        self.assertEqual(["service", "bar-widget"], manifest["kinds"])
+        self.assertTrue(manifest["keepLoaded"])
+        self.assertEqual("Service.qml", manifest["entryPoints"]["service"])
+        self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
+
+        for snippet in [
+            'command: ["pgrep", "--quiet", "-f", "^gpu-screen-recorder"]',
+            "function refresh()",
+            "function startRecording()",
+            "function stopRecording()",
+            "function toggleRecording()",
+            'Quickshell.execDetached(["omarchy", "capture", "screenrecording"])',
+            'Quickshell.execDetached(["omarchy", "capture", "screenrecording", "--stop-recording"])',
+            'target: "lacuna-screen-recording"',
+        ]:
+            self.assertIn(snippet, service)
+
+        for snippet in [
+            'bar.shell.ensureService("lacuna.screen-recording")',
+            'bar.shell.serviceFor("lacuna.screen-recording")',
+            "recordingService.toggleRecording()",
+            "recordingService.tooltip",
+            "visible: recording || showInactive",
+        ]:
+            self.assertIn(snippet, widget)
+        self.assertNotIn("pgrep", widget)
+        self.assertNotIn("omarchy capture screenrecording", widget)
 
     def test_lacuna_tray_dispatches_status_notifier_context_menus(self):
         manifest = read_json("lacuna.tray/manifest.json")
@@ -826,6 +1232,8 @@ class QmlContractTests(unittest.TestCase):
         settings_window = read("lacuna.menu/settings/SettingsWindow.qml")
         window = read("lacuna.menu/menu/MenuWindow.qml")
         example = read_json("config/shell.lacuna-native-replacements.example.json")
+        settings_example = read_json("config/settings.example.json")
+        full_settings = read_json("tests/fixtures/full-settings.json")
 
         self.assertEqual("lacuna.aurora-drift", manifest["id"])
         self.assertEqual(["overlay"], manifest["kinds"])
@@ -927,10 +1335,30 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('backgroundEffectEnabled("crt", true)', crt)
         self.assertIn("foregroundOverlay: false", settings)
         self.assertIn("foregroundOverlay: false", state_service)
+        self.assertIn("opacity: 1", settings)
+        self.assertIn("opacity: 1", state_service)
         self.assertIn("activeEffects: [", settings)
         self.assertIn("activeEffects: [", state_service)
         self.assertIn("function normalizeBackgroundEffectStack", settings)
         self.assertIn("function normalizeBackgroundEffectStack", state_service)
+        self.assertIn("function normalizeBackgroundEffectConfig", settings)
+        self.assertIn("function normalizeBackgroundEffectConfig", state_service)
+        self.assertIn("intensity: 0.28", settings)
+        self.assertIn("grainCount: 180", settings)
+        self.assertIn("grainSize: 1.35", settings)
+        self.assertIn("accentBlend: 0.18", settings)
+        self.assertEqual(1, settings_example["backgroundEffects"]["opacity"])
+        self.assertEqual(0.28, settings_example["backgroundEffects"]["effects"]["filmGrain"]["intensity"])
+        self.assertEqual(180, settings_example["backgroundEffects"]["effects"]["filmGrain"]["grainCount"])
+        self.assertEqual(0.92, full_settings["backgroundEffects"]["opacity"])
+        self.assertEqual(0.42, full_settings["backgroundEffects"]["effects"]["filmGrain"]["intensity"])
+        self.assertIn("mediaProviders", settings_example)
+        self.assertIn("jellyfin", settings_example["mediaProviders"])
+        self.assertFalse(settings_example["mediaProviders"]["jellyfin"]["enabled"])
+        self.assertEqual("https://jellyfin.example", full_settings["mediaProviders"]["jellyfin"]["serverUrl"])
+        self.assertIn("mediaProviders", read("lacuna.menu/services/LacunaSettings.qml"))
+        self.assertIn("function normalizeMediaProviders", read("lacuna.menu/services/LacunaSettings.qml"))
+        self.assertIn("function normalizeMediaProviders", read("lacuna.state/Service.qml"))
         self.assertIn("backgroundEffects.activeEffect", qml)
         self.assertIn("backgroundEffects.activeEffect", vhs)
         self.assertIn("backgroundEffects.activeEffect", film)
@@ -942,24 +1370,68 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("Array.isArray(backgroundEffects.activeEffects)", overlay)
             self.assertIn("backgroundEffects.activeEffects.length", overlay)
             self.assertIn("readonly property bool foregroundOverlay: backgroundForegroundOverlayEnabled()", overlay)
+            self.assertIn("* backgroundAnimationOpacity()", overlay)
+            self.assertIn("function backgroundAnimationOpacity()", overlay)
             self.assertIn("function backgroundForegroundOverlayEnabled", overlay)
             self.assertIn("backgroundEffects.foregroundOverlay === true", overlay)
             self.assertIn("WlrLayershell.layer: root.foregroundOverlay ? WlrLayer.Overlay : WlrLayer.Bottom", overlay)
         self.assertIn('target: "lacuna-film-grain-overlay"', film)
         self.assertIn('WlrLayershell.namespace: "lacuna-film-grain-overlay"', film)
+        self.assertIn('readonly property var filmGrainSettings: backgroundEffectSettings("filmGrain")', film)
+        self.assertIn("function effectNumberSetting", film)
+        self.assertIn("function backgroundEffectSettings", film)
+        self.assertIn("animationOpacity: root.backgroundAnimationOpacity()", film)
         self.assertIn("Timer {", film)
         self.assertIn("grainTick++", film)
         self.assertIn('target: "lacuna-dust-motes-overlay"', dust)
         self.assertIn('WlrLayershell.namespace: "lacuna-dust-motes-overlay"', dust)
-        self.assertIn('readonly property bool mouseReactive: boolSetting("mouseReactive", true)', dust)
-        self.assertIn('readonly property real mouseInfluence: clamp(numberSetting("mouseInfluence", 0.28), 0, 1)', dust)
+        self.assertIn('readonly property var dustMotesSettings: backgroundEffectSettings("dustMotes")', dust)
+        self.assertIn('readonly property bool mouseReactive: effectBoolSetting("mouseReactive", "mouseReactive", true)', dust)
+        self.assertIn('readonly property real mouseInfluence: clamp(effectNumberSetting("mouseInfluence", "mouseInfluence", 0.28), 0, 1)', dust)
+        self.assertIn("function effectBoolSetting", dust)
+        self.assertIn("function backgroundEffectSettings", dust)
         self.assertIn('cursorProc.command = ["hyprctl", "cursorpos", "-j"]', dust)
         self.assertIn("function applyCursorPayload", dust)
         self.assertIn("cursorDecayTimer.restart()", dust)
-        self.assertIn("readonly property real cursorFalloff", dust)
+        self.assertIn("readonly property real cursorInfluenceRadiusSquared", dust)
+        self.assertIn("readonly property real cursorSpeed", dust)
+        self.assertIn("property real airOffsetX: 0", dust)
+        self.assertIn("property real airVelocityX: 0", dust)
+        self.assertIn("function updatePersistentMotes", dust)
+        self.assertIn("persistentMoteRepeater.itemAt(i)", dust)
+        self.assertIn("function applyAirDisturbance", dust)
+        self.assertIn("var distanceSquared = cursorDx * cursorDx + cursorDy * cursorDy", dust)
+        self.assertIn("root.cursorVelocityX * wakeStrength", dust)
+        self.assertIn("airVelocityX = root.clamp", dust)
+        self.assertIn("onTriggered: dustLayer.updatePersistentMotes()", dust)
+        self.assertIn("ListModel {", dust)
+        self.assertIn("id: transientMotes", dust)
+        self.assertIn("function updateTransientMotes", dust)
+        self.assertIn("transientMoteRepeater.itemAt(i)", dust)
+        self.assertIn("function spawnTransientMote", dust)
+        self.assertIn("while (transientMotes.count >= maxTransient) transientMotes.remove(0)", dust)
+        self.assertIn("transientMotes.append({", dust)
+        self.assertIn("var radius = Math.sqrt(Math.random()) * (14 + root.moteSize * 3.4)", dust)
+        self.assertIn("var sideX = -outwardY", dust)
+        self.assertIn("vx: outwardX * lift + sideX * (Math.random() - 0.5) * 0.7 + root.cursorVelocityX * (0.0015 + Math.random() * 0.0035)", dust)
+        self.assertIn("life: 5000 + Math.random() * 4000", dust)
+        self.assertIn("transientMotes.remove(transientMote.index)", dust)
+        self.assertIn("opacity: alpha * Math.min(1, age / 220) * Math.pow(Math.max(0, 1 - age / life), 0.95)", dust)
+        self.assertIn("function applyCursorInfluence", dust)
+        self.assertIn("if (distanceSquared >= root.cursorInfluenceRadiusSquared) return", dust)
+        self.assertIn("var radialForce = (0.20 + root.cursorSpeed * 0.0025) * root.mouseInfluence * falloff", dust)
+        self.assertIn("transientMote.applyCursorInfluence()", dust)
+        self.assertIn("transientMote.vx = root.clamp(transientMote.vx * 0.968, -7.5, 7.5)", dust)
+        self.assertIn("readonly property real wakeVariance", dust)
+        self.assertIn("readonly property real damping", dust)
+        self.assertIn("readonly property real spring", dust)
+        self.assertIn("var swirlStrength", dust)
+        self.assertIn("var noiseX", dust)
         self.assertIn("transform: [", dust)
         self.assertIn("Translate {", dust)
-        self.assertIn("mote.cursorFalloff * root.cursorKick", dust)
+        self.assertIn("x: mote.airOffsetX", dust)
+        self.assertIn("y: mote.airOffsetY", dust)
+        self.assertNotIn("mote.cursorFalloff * root.cursorKick", dust)
         self.assertIn("SequentialAnimation on x", dust)
         self.assertIn("SequentialAnimation on y", dust)
         self.assertIn('target: "lacuna-aurora-drift"', qml)
@@ -1034,6 +1506,23 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("function backgroundVignetteIntensity", registry)
         self.assertIn("function backgroundVignetteIntensityName", registry)
         self.assertIn("function backgroundVignetteIntensityHint", registry)
+        self.assertIn("function backgroundAnimationOpacity", registry)
+        self.assertIn("function backgroundAnimationOpacityName", registry)
+        self.assertIn("function backgroundAnimationOpacityHint", registry)
+        self.assertIn("function backgroundEffectRuntimeSettings", registry)
+        self.assertIn("function filmGrainSettings", registry)
+        self.assertIn("function filmGrainIntensity", registry)
+        self.assertIn("function filmGrainGrainCount", registry)
+        self.assertIn("function filmGrainGrainSize", registry)
+        self.assertIn("function filmGrainAccentBlend", registry)
+        self.assertIn("function dustMotesSettings", registry)
+        self.assertIn("function dustMotesIntensity", registry)
+        self.assertIn("function dustMotesSpeed", registry)
+        self.assertIn("function dustMotesMoteCount", registry)
+        self.assertIn("function dustMotesMoteSize", registry)
+        self.assertIn("function dustMotesAccentBlend", registry)
+        self.assertIn("function dustMotesMouseReactive", registry)
+        self.assertIn("function dustMotesMouseInfluence", registry)
         self.assertIn("function cinematicLightSettings", registry)
         self.assertIn("function cinematicLightIntensityOptions", registry)
         self.assertIn("function cinematicLightIntensity", registry)
@@ -1063,10 +1552,37 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('"Vignette Intensity"', settings_window)
         self.assertIn('"slider"', settings_window)
         self.assertIn('"set-background-vignette-intensity-"', settings_window)
+        self.assertIn('"Animation Opacity"', settings_window)
+        self.assertIn('"set-background-animation-opacity-"', settings_window)
         self.assertIn('"Global"', settings_window)
         self.assertIn('"Active Animations"', settings_window)
         self.assertIn('"Add Animation"', settings_window)
         self.assertIn('"Effect Controls"', settings_window)
+        self.assertIn('"Film Grain"', settings_window)
+        self.assertIn('"Grain Opacity"', settings_window)
+        self.assertIn('"Grain Size"', settings_window)
+        self.assertIn('"Grain Count"', settings_window)
+        self.assertIn('"Grain Speed"', settings_window)
+        self.assertIn('"Accent Tint"', settings_window)
+        self.assertIn('"set-film-grain-intensity-"', settings_window)
+        self.assertIn('"set-film-grain-size-"', settings_window)
+        self.assertIn('"set-film-grain-count-"', settings_window)
+        self.assertIn('"set-film-grain-speed-"', settings_window)
+        self.assertIn('"set-film-grain-accent-"', settings_window)
+        self.assertIn('"Dust Motes"', settings_window)
+        self.assertIn('"Mote Opacity"', settings_window)
+        self.assertIn('"Mote Speed"', settings_window)
+        self.assertIn('"Mote Count"', settings_window)
+        self.assertIn('"Mote Size"', settings_window)
+        self.assertIn('"Mouse Reactive"', settings_window)
+        self.assertIn('"Mouse Influence"', settings_window)
+        self.assertIn('"set-dust-motes-intensity-"', settings_window)
+        self.assertIn('"set-dust-motes-speed-"', settings_window)
+        self.assertIn('"set-dust-motes-count-"', settings_window)
+        self.assertIn('"set-dust-motes-size-"', settings_window)
+        self.assertIn('"set-dust-motes-accent-"', settings_window)
+        self.assertIn('"toggle-dust-motes-mouse-reactive"', settings_window)
+        self.assertIn('"set-dust-motes-mouse-influence-"', settings_window)
         self.assertIn('"stack-effect"', settings_window)
         self.assertIn("SettingsStackRow", settings_window)
         self.assertIn('"move-background-effect-up-"', settings_window)
@@ -1112,6 +1628,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("function setBackgroundEffectsEnabled", window)
         self.assertIn("function setBackgroundVignetteEnabled", window)
         self.assertIn("function setBackgroundVignetteIntensity", window)
+        self.assertIn("function setBackgroundAnimationOpacity", window)
         self.assertIn("function setBackgroundEffect", window)
         self.assertIn("function setBackgroundEffectStackEnabled", window)
         self.assertIn("function moveBackgroundEffectInStack", window)
@@ -1122,12 +1639,29 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("function toggleBackgroundEffectForeground", window)
         self.assertIn("next.backgroundEffects.foregroundOverlay = enabled === true", window)
         self.assertIn("setShellPluginEnabled(pluginId, true)", window)
+        self.assertIn("function setFilmGrainSetting", window)
+        self.assertIn('ensureBackgroundEffectPlugin("filmGrain")', window)
+        self.assertIn("function setDustMotesSetting", window)
+        self.assertIn('ensureBackgroundEffectPlugin("dustMotes")', window)
         self.assertIn("function setCinematicLightSetting", window)
         self.assertIn("function toggleCinematicLightMotion", window)
         self.assertIn('shell.updateEntryInline("lacuna.cinematic-light-overlay", next)', window)
         self.assertNotIn("next.foregroundOverlay = enabled === true", window)
         self.assertIn('entry.action.indexOf("toggle-background-effect-foreground-") === 0', window)
         self.assertIn('entry.action.indexOf("set-background-vignette-intensity-") === 0', window)
+        self.assertIn('entry.action.indexOf("set-background-animation-opacity-") === 0', window)
+        self.assertIn('entry.action.indexOf("set-film-grain-intensity-") === 0', window)
+        self.assertIn('entry.action.indexOf("set-film-grain-size-") === 0', window)
+        self.assertIn('entry.action.indexOf("set-film-grain-count-") === 0', window)
+        self.assertIn('entry.action.indexOf("set-film-grain-speed-") === 0', window)
+        self.assertIn('entry.action.indexOf("set-film-grain-accent-") === 0', window)
+        self.assertIn('entry.action.indexOf("set-dust-motes-intensity-") === 0', window)
+        self.assertIn('entry.action.indexOf("set-dust-motes-speed-") === 0', window)
+        self.assertIn('entry.action.indexOf("set-dust-motes-count-") === 0', window)
+        self.assertIn('entry.action.indexOf("set-dust-motes-size-") === 0', window)
+        self.assertIn('entry.action.indexOf("set-dust-motes-accent-") === 0', window)
+        self.assertIn('entry.action === "toggle-dust-motes-mouse-reactive"', window)
+        self.assertIn('entry.action.indexOf("set-dust-motes-mouse-influence-") === 0', window)
         self.assertIn('entry.action.indexOf("set-cinematic-light-style-") === 0', window)
         self.assertIn('entry.action.indexOf("set-cinematic-light-intensity-") === 0', window)
         self.assertIn('entry.action.indexOf("toggle-cinematic-light-motion-") === 0', window)
@@ -1707,10 +2241,28 @@ class QmlContractTests(unittest.TestCase):
             "version: 3",
             "favorites: normalizeUniqueTrackList(source.favorites, 500)",
             "repeatMode: normalizeRepeatMode(source.repeatMode)",
+            "provider: provider",
+            "providerId: String(track.providerId || track.itemId || track.id || \"\")",
+            "mediaType: mediaType",
+            "streamKind: streamKind",
+            "libraryName: String(track.libraryName || \"\")",
             "favorites: favorites",
             "repeatMode: repeatMode",
             "favorites = restored.favorites",
             "repeatMode = restored.repeatMode",
+            "property var lacunaSettings: ({})",
+            "readonly property string lacunaSettingsFile",
+            "readonly property bool jellyfinConfigured",
+            "readonly property string jellyfinSearchScript",
+            "readonly property string jellyfinStreamScript",
+            "function jellyfinProviderSettings()",
+            "function providerFor(track)",
+            "function streamKindFor(track)",
+            "function itemHasVideo(track)",
+            "providerSearchActive = true",
+            "startJellyfinSearch(trimmed, providerSearchLimit(\"jellyfin\"))",
+            "jellyfinSearchProc.command = [jellyfinSearchScript, \"--config-json\", jellyfinConfigJson",
+            "completeProviderSearch(\"jellyfin\", rows, error)",
             "function normalizeUniqueTrackList",
             "function normalizeRepeatMode",
             "function isYoutubeUrl(value)",
@@ -1720,7 +2272,7 @@ class QmlContractTests(unittest.TestCase):
             "property bool pendingDefaultSuggestions: false",
             "function loadDefaultSuggestions()",
             "pendingDefaultSuggestions = true",
-            "if (root.pendingDefaultSuggestions && root.ytdlpAvailable) root.loadDefaultSuggestions()",
+            "if (root.pendingDefaultSuggestions && (root.ytdlpAvailable || root.jellyfinConfigured)) root.loadDefaultSuggestions()",
             "videoIdFromUrl(normalizedUrl)",
             "Paste a YouTube URL",
             "function favoriteIndex(track)",
@@ -1745,6 +2297,7 @@ class QmlContractTests(unittest.TestCase):
             "resolvingBackground = false",
             "backgroundStreamUrl = \"\"",
             "backgroundRequestUrl = \"\"",
+            "Background video is unavailable for audio-only media",
             "if (hasTrack && previewStreamUrl === \"\" && !resolvingPreview) resolvePreview(currentTrack)",
             "backgroundRequestRevision: root.backgroundRequestRevision",
             "repeatMode: root.repeatMode",
@@ -1756,6 +2309,8 @@ class QmlContractTests(unittest.TestCase):
             "function cycleRepeatMode(): string",
         ]:
             self.assertIn(snippet, service)
+        self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-jellyfin-search").exists())
+        self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-jellyfin-stream").exists())
 
     def test_youtube_music_favorites_are_available_in_menu_ui(self):
         flyout = read("lacuna.menu/menu/FlyoutYoutubeMusicContent.qml")
@@ -1777,7 +2332,7 @@ class QmlContractTests(unittest.TestCase):
             "defaultSuggestionsTimer.restart()",
             "onOpenChanged: ensureDefaultSuggestions()",
             "onActiveTabChanged: ensureDefaultSuggestions()",
-            'text: "Search or paste URL"',
+            'text: "Search media or paste YouTube URL"',
             'icon: root.inputIsYoutubeUrl ? "player-play" : "search"',
             "id: transportControls",
             'visible: root.activeTab !== "search"',
@@ -1789,7 +2344,9 @@ class QmlContractTests(unittest.TestCase):
             "root.service.toggleFavorite(modelData)",
             "root.service.playFavorite(index)",
             "root.service.removeFavorite(index)",
-            "Favorite tracks from Search or Queue",
+            "Favorite media from Search or Queue",
+            'text: "Media"',
+            "modelData.source || modelData.provider || \"\"",
             "id: favoritesScroll",
             "id: headerFavoriteButton",
             "showLabels: false",
@@ -1814,9 +2371,17 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property bool localPreviewVisible: hasTrack && !sentToBackground", tile)
         self.assertIn("function syncPreviewPosition(force)", tile)
         self.assertIn("if (!localPreviewVisible) {", tile)
+        self.assertIn("previewPositionSettleTimer.stop()", tile)
+        self.assertIn("previewPlayer.play()", tile)
+        self.assertIn("previewPositionSettleTimer.restart()", tile)
         self.assertIn("previewPlayer.pause()", tile)
+        self.assertIn("previewPlayer.playbackState === MediaPlayer.StoppedState", tile)
         self.assertIn("previewPlayer.setPosition(target)", tile)
+        self.assertIn("id: previewPositionSettleTimer", tile)
+        self.assertIn("onPlaybackStateChanged: if (playbackState === MediaPlayer.PlayingState) previewPositionSettleTimer.restart()", tile)
         self.assertIn("onPlaybackPositionChanged: syncPreviewPosition(false)", tile)
+        self.assertLess(tile.index("previewPlayer.play()"), tile.index("previewPositionSettleTimer.restart()"))
+        self.assertLess(tile.index("previewPlayer.play()"), tile.index("previewPlayer.setPosition(target)"))
         self.assertIn('name === "heart-filled"', icons)
         self.assertIn('if (icon === "heart" || icon === "heart-filled")', icons)
         self.assertIn('if (icon === "repeat")', icons)
@@ -1968,6 +2533,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property bool contentVisible: activeItem && (itemImplicitWidth > 0 || itemImplicitHeight > 0)", omarchy_bar)
         self.assertNotIn("readonly property bool contentVisible: activeItem && activeItem.visible", omarchy_bar)
         self.assertIn('WlrLayershell.namespace: "lacuna-bar-frame"', frame)
+        self.assertIn("WlrLayershell.layer: WlrLayer.Top", frame)
         self.assertIn("WlrLayershell.exclusionMode: ExclusionMode.Ignore", frame)
         self.assertIn("mask: Region {}", frame)
         self.assertIn('import "../lacuna.menu/components"', frame)

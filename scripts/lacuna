@@ -19,6 +19,10 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = "lacuna"
 LEGACY_PLUGIN = "lacuna.compact-pill"
 BACKUPS_TO_KEEP = 2
+OMARCHY_STOCK_SHELL_CONFIG_PATHS = [
+    Path.home() / ".local/share/omarchy/config/omarchy/shell.json",
+    Path("/usr/share/omarchy/config/omarchy/shell.json"),
+]
 OMARCHY_NATIVE_REPLACEMENT_PLUGINS = {
     "lacuna.audio",
     "lacuna.bluetooth",
@@ -35,6 +39,16 @@ OMARCHY_NATIVE_REPLACEMENT_PLUGINS = {
     "lacuna.tray",
     "lacuna.weather",
     "lacuna.workspaces",
+}
+OMARCHY_TO_LACUNA_REPLACEMENTS = {
+    "omarchy.audio": "lacuna.audio",
+    "omarchy.bluetooth": "lacuna.bluetooth",
+    "omarchy.network": "lacuna.network",
+    "omarchy.power": "lacuna.power",
+}
+LACUNA_TO_OMARCHY_REPLACEMENTS = {
+    lacuna_id: omarchy_id
+    for omarchy_id, lacuna_id in OMARCHY_TO_LACUNA_REPLACEMENTS.items()
 }
 
 LACUNA_BAR_LAYOUT = {
@@ -64,12 +78,10 @@ LACUNA_BAR_LAYOUT = {
         {"id": "lacuna.tray"},
         {"id": "lacuna.theme"},
         {"id": "lacuna.wallpaper"},
-        {"id": "lacuna.bar-seam"},
-        {"id": "omarchy.bluetooth"},
-        {"id": "omarchy.network"},
-        {"id": "omarchy.audio"},
-        {"id": "omarchy.power"},
-        {"id": "lacuna.bar-seam"},
+        {"id": "lacuna.bluetooth"},
+        {"id": "lacuna.network"},
+        {"id": "lacuna.audio"},
+        {"id": "lacuna.power"},
         {"id": "lacuna.system-stats"},
         {"id": "lacuna.temperature"},
         {"id": "lacuna.bar-size-pill"},
@@ -516,6 +528,30 @@ def default_shell_config() -> dict:
     }
 
 
+def stock_shell_config() -> dict:
+    for path in OMARCHY_STOCK_SHELL_CONFIG_PATHS:
+        if not path.exists():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        if isinstance(data, dict):
+            return ensure_shell_config_shape(data)
+    return {
+        "version": 1,
+        "bar": {
+            "centerAnchor": "omarchy.clock",
+            "layout": {
+                "left": [{"id": "omarchy.menu"}, {"id": "omarchy.workspaces"}],
+                "center": [{"id": "omarchy.clock", "format": "dddd HH:mm"}],
+                "right": [{"id": "omarchy.audio"}],
+            },
+        },
+        "plugins": [],
+    }
+
+
 def read_shell_config() -> dict:
     path = shell_config_path()
     if not path.exists():
@@ -588,6 +624,25 @@ def remove_shell_entries(config: dict, plugin_id: str) -> list[dict]:
     return removed
 
 
+def restore_stock_bar_config(config: dict) -> None:
+    current_bar = config.get("bar", {})
+    if not isinstance(current_bar, dict):
+        current_bar = {}
+
+    stock_bar = stock_shell_config().get("bar", {})
+    if not isinstance(stock_bar, dict):
+        stock_bar = default_shell_config()["bar"]
+    stock_bar = json.loads(json.dumps(stock_bar))
+
+    for key, value in current_bar.items():
+        if key not in {"id", "layout", "centerAnchor"}:
+            stock_bar[key] = value
+
+    stock_bar.pop("id", None)
+    config["bar"] = stock_bar
+    ensure_shell_config_shape(config)
+
+
 def has_shell_entry(config: dict, plugin_id: str) -> bool:
     if config["bar"].get("id") == plugin_id:
         return True
@@ -658,16 +713,17 @@ def apply_lacuna_bar_layout_to_config(config: dict, available: set[str]) -> None
             plugin_id = entry_id(item)
             if plugin_id and plugin_id in LACUNA_BAR_LAYOUT_PLUGIN_IDS and isinstance(item, dict):
                 removed_by_id.setdefault(plugin_id, item)
+            if plugin_id and plugin_id in OMARCHY_TO_LACUNA_REPLACEMENTS and isinstance(item, dict):
+                lacuna_id = OMARCHY_TO_LACUNA_REPLACEMENTS[plugin_id]
+                migrated = dict(item)
+                migrated["id"] = lacuna_id
+                removed_by_id.setdefault(lacuna_id, migrated)
         layout[section] = []
 
     for section, index, template_entry in layout_template_entries():
         plugin_id = template_entry["id"]
         if plugin_id.startswith("lacuna.") and plugin_id not in available:
             continue
-        if plugin_id.startswith("omarchy."):
-            lacuna_equivalent = "lacuna." + plugin_id.removeprefix("omarchy.")
-            if plugin_id not in available and lacuna_equivalent not in available:
-                continue
         entry = removed_by_id.get(plugin_id, dict(template_entry))
         for key, value in template_entry.items():
             entry.setdefault(key, value)
@@ -729,9 +785,21 @@ def deactivate_plugins(ids: list[str], dry_run: bool) -> int:
     config = ensure_shell_config_shape(read_shell_config())
     for plugin_id in ids:
         remove_shell_entries(config, plugin_id)
+    if "lacuna.bar" in ids:
+        restore_stock_bar_config(config)
     write_shell_config(config)
     print(f"  updated {shell_config_path()}", flush=True)
     return 0
+
+
+def uninstall_reload_command(ids: list[str]) -> list[str]:
+    if "lacuna.bar" in ids:
+        return ["omarchy", "restart", "shell"]
+    return ["omarchy", "plugin", "rescan"]
+
+
+def uninstall_reload_label(ids: list[str]) -> str:
+    return " ".join(uninstall_reload_command(ids))
 
 
 def activation_commands(ids: list[str], apply_layout_choice: bool = False) -> list[str]:
@@ -750,10 +818,12 @@ def uninstall_stage_commands(ids: list[str]) -> list[str]:
     commands = []
     if ids:
         commands.append(f"update {shell_config_path()} once")
+    if "lacuna.bar" in ids:
+        commands.append("restore stock Omarchy bar layout in shell.json")
     for plugin_id in ids:
         commands.append(f"remove {plugins_dir() / plugin_id}")
     if ids:
-        commands.append("omarchy plugin rescan")
+        commands.append(uninstall_reload_label(ids))
     return commands
 
 
@@ -905,7 +975,7 @@ def uninstall_plugins(ids: list[str], dry_run: bool) -> int:
         if code != 0:
             return code
     if ids:
-        return run_command(["omarchy", "plugin", "rescan"], dry_run)
+        return run_command(uninstall_reload_command(ids), dry_run)
     return 0
 
 

@@ -39,22 +39,40 @@
   "shellSettings": {
     "surface": "flyout"
   },
+  "mediaProviders": {
+    "jellyfin": {
+      "enabled": true,
+      "serverUrl": "https://jellyfin.example",
+      "apiKey": "fixture-api-key",
+      "userId": "fixture-user"
+    }
+  },
   "sidebar": {
     "defaultMode": "rail",
     "collapsed": true,
     "exclusive": false,
     "cornerPieces": false
   },
-  "backgroundEffects": {
-    "enabled": true,
-    "activeEffect": "auroraDrift",
-    "effects": {
-      "trackingLines": {
-        "enabled": true
-      },
-      "auroraDrift": {
-        "enabled": true
-      },
+    "backgroundEffects": {
+        "enabled": true,
+        "foregroundOverlay": false,
+        "opacity": 0.92,
+        "activeEffect": "auroraDrift",
+        "effects": {
+            "trackingLines": {
+                "enabled": true
+            },
+            "filmGrain": {
+                "enabled": true,
+                "intensity": 0.42,
+                "speed": 1.1,
+                "grainCount": 220,
+                "grainSize": 1.6,
+                "accentBlend": 0.25
+            },
+            "auroraDrift": {
+                "enabled": true
+            },
       "rainfall": {
         "enabled": true
       },

@@ -173,7 +173,9 @@ Item {
       section("Global", "Wallpaper-layer animation and frame-overlay controls.", "lacuna"),
       row("photo", "Background Vignette", root.registry.backgroundVignetteHint(), root.registry.backgroundVignetteEnabled() ? "On" : "Off", "lacuna", "toggle-background-vignette", "toggle", root.registry.backgroundVignetteEnabled()),
       row("sliders", "Vignette Intensity", root.registry.backgroundVignetteIntensityHint(), root.registry.backgroundVignetteIntensityName(), "lacuna", "", "slider", false, [], String(root.registry.backgroundVignetteIntensity()), "set-background-vignette-intensity-", "", root.registry.backgroundVignetteIntensity(), 0, 1, 0.01),
-      row("background", "Background Animations", root.registry.backgroundEffectsHint(), root.registry.backgroundEffectsEnabled() ? "On" : "Off", "lacuna", "toggle-background-effects", "toggle", root.registry.backgroundEffectsEnabled())
+      row("background", "Background Animations", root.registry.backgroundEffectsHint(), root.registry.backgroundEffectsEnabled() ? "On" : "Off", "lacuna", "toggle-background-effects", "toggle", root.registry.backgroundEffectsEnabled()),
+      row("sliders", "Animation Opacity", root.registry.backgroundAnimationOpacityHint(), root.registry.backgroundAnimationOpacityName(), "lacuna", "", "slider", false, [], String(root.registry.backgroundAnimationOpacity()), "set-background-animation-opacity-", "", root.registry.backgroundAnimationOpacity(), 0, 1, 0.01),
+      row("layers", "Foreground Overlay", root.registry.backgroundEffectForegroundHint(root.registry.activeBackgroundEffect()), root.registry.backgroundEffectForegroundEnabled(root.registry.activeBackgroundEffect()) ? "On" : "Off", "lacuna", "toggle-background-effect-foreground-" + root.registry.activeBackgroundEffect(), "toggle", root.registry.backgroundEffectForegroundEnabled(root.registry.activeBackgroundEffect()))
     ]
 
     var activeStack = root.registry.activeBackgroundEffects()
@@ -211,8 +213,24 @@ Item {
       rows.push(row("motion", "Active Shimmer", "More frequent glints, pulse variation, and shimmer", root.registry.cinematicLightActiveShimmerEnabled() ? "On" : "Off", "lacuna", "toggle-cinematic-light-motion-activeShimmer", "toggle", root.registry.cinematicLightActiveShimmerEnabled()))
     }
 
-    if (stackCount > 0) {
-      rows.push(row("layers", "Foreground Overlay", root.registry.backgroundEffectForegroundHint(root.registry.activeBackgroundEffect()), root.registry.backgroundEffectForegroundEnabled(root.registry.activeBackgroundEffect()) ? "On" : "Off", "lacuna", "toggle-background-effect-foreground-" + root.registry.activeBackgroundEffect(), "toggle", root.registry.backgroundEffectForegroundEnabled(root.registry.activeBackgroundEffect())))
+    if (root.registry.backgroundEffectEnabled("filmGrain")) {
+      rows.push(section("Film Grain", "Tune grain visibility and texture.", "lacuna"))
+      rows.push(row("sliders", "Grain Opacity", root.registry.filmGrainIntensityHint(), root.registry.filmGrainIntensityName(), "lacuna", "", "slider", false, [], String(root.registry.filmGrainIntensity()), "set-film-grain-intensity-", "", root.registry.filmGrainIntensity(), 0, 1, 0.01))
+      rows.push(row("sliders", "Grain Size", root.registry.filmGrainGrainSizeHint(), root.registry.filmGrainGrainSizeName(), "lacuna", "", "slider", false, [], String(root.registry.filmGrainGrainSize()), "set-film-grain-size-", "", root.registry.filmGrainGrainSize(), 0.6, 3.5, 0.05))
+      rows.push(row("sliders", "Grain Count", root.registry.filmGrainGrainCountHint(), root.registry.filmGrainGrainCountName(), "lacuna", "", "slider", false, [], String(root.registry.filmGrainGrainCount()), "set-film-grain-count-", "", root.registry.filmGrainGrainCount(), 32, 520, 4))
+      rows.push(row("sliders", "Grain Speed", root.registry.filmGrainSpeedHint(), root.registry.filmGrainSpeedName(), "lacuna", "", "slider", false, [], String(root.registry.filmGrainSpeed()), "set-film-grain-speed-", "", root.registry.filmGrainSpeed(), 0.2, 5, 0.05))
+      rows.push(row("color-swatch", "Accent Tint", root.registry.filmGrainAccentBlendHint(), root.registry.filmGrainAccentBlendName(), "lacuna", "", "slider", false, [], String(root.registry.filmGrainAccentBlend()), "set-film-grain-accent-", "", root.registry.filmGrainAccentBlend(), 0, 1, 0.01))
+    }
+
+    if (root.registry.backgroundEffectEnabled("dustMotes")) {
+      rows.push(section("Dust Motes", "Tune mote density, drift, tint, and cursor response.", "lacuna"))
+      rows.push(row("sliders", "Mote Opacity", root.registry.dustMotesIntensityHint(), root.registry.dustMotesIntensityName(), "lacuna", "", "slider", false, [], String(root.registry.dustMotesIntensity()), "set-dust-motes-intensity-", "", root.registry.dustMotesIntensity(), 0, 1, 0.01))
+      rows.push(row("sliders", "Mote Speed", root.registry.dustMotesSpeedHint(), root.registry.dustMotesSpeedName(), "lacuna", "", "slider", false, [], String(root.registry.dustMotesSpeed()), "set-dust-motes-speed-", "", root.registry.dustMotesSpeed(), 0.15, 4, 0.05))
+      rows.push(row("sliders", "Mote Count", root.registry.dustMotesMoteCountHint(), root.registry.dustMotesMoteCountName(), "lacuna", "", "slider", false, [], String(root.registry.dustMotesMoteCount()), "set-dust-motes-count-", "", root.registry.dustMotesMoteCount(), 12, 180, 4))
+      rows.push(row("sliders", "Mote Size", root.registry.dustMotesMoteSizeHint(), root.registry.dustMotesMoteSizeName(), "lacuna", "", "slider", false, [], String(root.registry.dustMotesMoteSize()), "set-dust-motes-size-", "", root.registry.dustMotesMoteSize(), 1, 8, 0.05))
+      rows.push(row("color-swatch", "Accent Tint", root.registry.dustMotesAccentBlendHint(), root.registry.dustMotesAccentBlendName(), "lacuna", "", "slider", false, [], String(root.registry.dustMotesAccentBlend()), "set-dust-motes-accent-", "", root.registry.dustMotesAccentBlend(), 0, 1, 0.01))
+      rows.push(row("motion", "Mouse Reactive", root.registry.dustMotesMouseReactiveHint(), root.registry.dustMotesMouseReactive() ? "On" : "Off", "lacuna", "toggle-dust-motes-mouse-reactive", "toggle", root.registry.dustMotesMouseReactive()))
+      rows.push(row("sliders", "Mouse Influence", root.registry.dustMotesMouseInfluenceHint(), root.registry.dustMotesMouseInfluenceName(), "lacuna", "", "slider", false, [], String(root.registry.dustMotesMouseInfluence()), "set-dust-motes-mouse-influence-", "", root.registry.dustMotesMouseInfluence(), 0, 1, 0.01))
     }
 
     return rows

@@ -138,6 +138,11 @@ Item {
   readonly property int frameReserveLeft: frameReserveActive && frameMode === "fullframe" && !root.leftBar && (root.panelOnRight || !root.sidebarSurfaceVisible) ? frameThickness + reservePadding : 0
   readonly property int frameReserveRight: frameReserveActive && frameMode === "fullframe" && !root.panelOnRight && !root.rightBar ? frameThickness + reservePadding : 0
   readonly property int topBarShadowReserve: frameReserveActive && root.topBar ? reservePadding : 0
+  readonly property bool topBarPanelShadowVisible: lacunaEnabled && frameShadow && frameMode === "off" && root.topBar && root.sidebarSurfaceVisible
+  readonly property int topBarPanelShadowVisualWidth: topBarPanelShadowVisible && root.sidebarScreen ? Math.max(0, Number(root.sidebarScreen.width) || 0) : 0
+  readonly property real topBarPanelShadowX: 0
+  readonly property real topBarPanelShadowWidth: topBarPanelShadowVisualWidth
+  readonly property real topBarPanelShadowHeight: Math.max(10, Math.round(barEdgeCasterSize * 0.62))
   readonly property real frameOverlayProgress: !lacunaEnabled ? 0 : frameMode === "fullframe" ? 1 : panelController.menuProgress
   property string pendingFlyoutFocus: ""
   property bool pendingSystemRestartConfirmation: false
@@ -887,6 +892,14 @@ Item {
     }
   }
 
+  function setBackgroundAnimationOpacity(value) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    if (!next.backgroundEffects || typeof next.backgroundEffects !== "object") next.backgroundEffects = lacunaSettings.normalizeBackgroundEffects({})
+    var opacity = Number(value)
+    next.backgroundEffects.opacity = isNaN(opacity) ? 1 : Math.max(0, Math.min(1, opacity))
+    lacunaSettings.save(next)
+  }
+
   function desiredChecked(entry, fallback) {
     return valueHelpers.desiredChecked(entry, fallback)
   }
@@ -986,6 +999,71 @@ Item {
     if (!next.backgroundEffects || typeof next.backgroundEffects !== "object") next.backgroundEffects = lacunaSettings.normalizeBackgroundEffects({})
     next.backgroundEffects.foregroundOverlay = enabled === true
     lacunaSettings.save(next)
+  }
+
+  function setFilmGrainSetting(key, value) {
+    var normalizedKey = String(key || "")
+    if (normalizedKey !== "intensity"
+        && normalizedKey !== "speed"
+        && normalizedKey !== "grainCount"
+        && normalizedKey !== "grainSize"
+        && normalizedKey !== "accentBlend") return
+
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    if (!next.backgroundEffects || typeof next.backgroundEffects !== "object") next.backgroundEffects = lacunaSettings.normalizeBackgroundEffects({})
+    if (!next.backgroundEffects.effects || typeof next.backgroundEffects.effects !== "object") next.backgroundEffects.effects = {}
+    var grain = next.backgroundEffects.effects.filmGrain && typeof next.backgroundEffects.effects.filmGrain === "object"
+      ? next.backgroundEffects.effects.filmGrain
+      : ({ enabled: true })
+
+    var parsed = Number(value)
+    if (isNaN(parsed)) return
+    if (normalizedKey === "intensity") grain.intensity = Math.max(0, Math.min(1, parsed))
+    else if (normalizedKey === "speed") grain.speed = Math.max(0.2, Math.min(5, parsed))
+    else if (normalizedKey === "grainCount") grain.grainCount = Math.max(32, Math.min(520, Math.round(parsed)))
+    else if (normalizedKey === "grainSize") grain.grainSize = Math.max(0.6, Math.min(3.5, parsed))
+    else if (normalizedKey === "accentBlend") grain.accentBlend = Math.max(0, Math.min(1, parsed))
+    grain.enabled = true
+    next.backgroundEffects.effects.filmGrain = grain
+    lacunaSettings.save(next)
+
+    ensureBackgroundEffectPlugin("filmGrain")
+  }
+
+  function setDustMotesSetting(key, value) {
+    var normalizedKey = String(key || "")
+    if (normalizedKey !== "intensity"
+        && normalizedKey !== "speed"
+        && normalizedKey !== "moteCount"
+        && normalizedKey !== "moteSize"
+        && normalizedKey !== "accentBlend"
+        && normalizedKey !== "mouseReactive"
+        && normalizedKey !== "mouseInfluence") return
+
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    if (!next.backgroundEffects || typeof next.backgroundEffects !== "object") next.backgroundEffects = lacunaSettings.normalizeBackgroundEffects({})
+    if (!next.backgroundEffects.effects || typeof next.backgroundEffects.effects !== "object") next.backgroundEffects.effects = {}
+    var dust = next.backgroundEffects.effects.dustMotes && typeof next.backgroundEffects.effects.dustMotes === "object"
+      ? next.backgroundEffects.effects.dustMotes
+      : ({ enabled: true })
+
+    if (normalizedKey === "mouseReactive") {
+      dust.mouseReactive = value === true
+    } else {
+      var parsed = Number(value)
+      if (isNaN(parsed)) return
+      if (normalizedKey === "intensity") dust.intensity = Math.max(0, Math.min(1, parsed))
+      else if (normalizedKey === "speed") dust.speed = Math.max(0.15, Math.min(4, parsed))
+      else if (normalizedKey === "moteCount") dust.moteCount = Math.max(12, Math.min(180, Math.round(parsed)))
+      else if (normalizedKey === "moteSize") dust.moteSize = Math.max(1, Math.min(8, parsed))
+      else if (normalizedKey === "accentBlend") dust.accentBlend = Math.max(0, Math.min(1, parsed))
+      else if (normalizedKey === "mouseInfluence") dust.mouseInfluence = Math.max(0, Math.min(1, parsed))
+    }
+    dust.enabled = true
+    next.backgroundEffects.effects.dustMotes = dust
+    lacunaSettings.save(next)
+
+    ensureBackgroundEffectPlugin("dustMotes")
   }
 
   function toggleBackgroundEffectForeground(effectId) {
@@ -1278,6 +1356,11 @@ Item {
       return true
     }
 
+    if (entry.action.indexOf("set-background-animation-opacity-") === 0) {
+      setBackgroundAnimationOpacity(entry.action.substring("set-background-animation-opacity-".length))
+      return true
+    }
+
     if (entry.action.indexOf("set-background-effect-") === 0) {
       setBackgroundEffect(entry.action.substring("set-background-effect-".length))
       return true
@@ -1302,6 +1385,66 @@ Item {
     if (entry.action.indexOf("toggle-background-effect-foreground-") === 0) {
       var foregroundEffect = entry.action.substring("toggle-background-effect-foreground-".length)
       setBackgroundEffectForeground(foregroundEffect, desiredChecked(entry, !registry.backgroundEffectForegroundEnabled(foregroundEffect)))
+      return true
+    }
+
+    if (entry.action.indexOf("set-film-grain-intensity-") === 0) {
+      setFilmGrainSetting("intensity", entry.action.substring("set-film-grain-intensity-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-film-grain-size-") === 0) {
+      setFilmGrainSetting("grainSize", entry.action.substring("set-film-grain-size-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-film-grain-count-") === 0) {
+      setFilmGrainSetting("grainCount", entry.action.substring("set-film-grain-count-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-film-grain-speed-") === 0) {
+      setFilmGrainSetting("speed", entry.action.substring("set-film-grain-speed-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-film-grain-accent-") === 0) {
+      setFilmGrainSetting("accentBlend", entry.action.substring("set-film-grain-accent-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-dust-motes-intensity-") === 0) {
+      setDustMotesSetting("intensity", entry.action.substring("set-dust-motes-intensity-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-dust-motes-speed-") === 0) {
+      setDustMotesSetting("speed", entry.action.substring("set-dust-motes-speed-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-dust-motes-count-") === 0) {
+      setDustMotesSetting("moteCount", entry.action.substring("set-dust-motes-count-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-dust-motes-size-") === 0) {
+      setDustMotesSetting("moteSize", entry.action.substring("set-dust-motes-size-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-dust-motes-accent-") === 0) {
+      setDustMotesSetting("accentBlend", entry.action.substring("set-dust-motes-accent-".length))
+      return true
+    }
+
+    if (entry.action === "toggle-dust-motes-mouse-reactive") {
+      setDustMotesSetting("mouseReactive", desiredChecked(entry, !registry.dustMotesMouseReactive()))
+      return true
+    }
+
+    if (entry.action.indexOf("set-dust-motes-mouse-influence-") === 0) {
+      setDustMotesSetting("mouseInfluence", entry.action.substring("set-dust-motes-mouse-influence-".length))
       return true
     }
 
@@ -1682,7 +1825,7 @@ Item {
     panelWidth: root.panelWidth
     surfaceRightInset: root.surfaceRightInset
     flyoutLaneWidth: root.flyoutLaneWidth
-    visualWidth: root.frameOverlayWidth
+    visualWidth: Math.max(root.frameOverlayWidth, root.topBarPanelShadowVisualWidth)
     visualTopInset: root.visualTopInset
     visualBottomInset: root.visualBottomInset
     visualLeftInset: root.visualLeftInset
@@ -1798,6 +1941,11 @@ Item {
       shadowOffsetX: root.frameShadowOffsetX
       shadowOffsetY: root.frameShadowOffsetY
       shadowBlurMax: root.panelShadowBlurMax
+      topBarShadowEnabled: root.topBarPanelShadowVisible
+      topBarShadowX: root.topBarPanelShadowX
+      topBarShadowY: root.barBottomY
+      topBarShadowWidth: root.topBarPanelShadowWidth
+      topBarShadowHeight: root.topBarPanelShadowHeight
     }
 
     MenuSurface {

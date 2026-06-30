@@ -142,6 +142,19 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertNotIn("disable lacuna.clock if enabled", result.stdout)
         self.assertNotIn("omarchy plugin remove", result.stdout)
 
+    def test_uninstall_lacuna_bar_dry_run_reports_stock_bar_restore_and_shell_restart(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            installed = config_home / "omarchy" / "plugins" / "lacuna.bar"
+            installed.mkdir(parents=True)
+            (installed / "manifest.json").write_text("{}", encoding="utf-8")
+
+            result = run_lacuna(["uninstall", "--all", "--dry-run", "--yes"], config_home=config_home)
+
+        self.assertIn("restore stock Omarchy bar layout in shell.json", result.stdout)
+        self.assertIn("omarchy restart shell", result.stdout)
+        self.assertNotIn("omarchy plugin rescan", result.stdout)
+
     def test_uninstall_requires_all_or_plugin_selection(self):
         with tempfile.TemporaryDirectory() as tmp:
             config_home = Path(tmp) / "config"
@@ -328,13 +341,74 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertEqual(data["plugins"], [{"id": "lacuna.state"}])
         self.assertEqual(data["bar"]["layout"]["right"], [])
 
-    def test_lacuna_bar_layout_brackets_native_cluster_with_seams(self):
+    def test_deactivating_lacuna_bar_restores_stock_omarchy_layout(self):
+        module = load_installer_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            stock = config_home / "stock-shell.json"
+            stock.parent.mkdir(parents=True)
+            stock.write_text(
+                """
+{
+  "version": 1,
+  "bar": {
+    "position": "top",
+    "centerAnchor": "omarchy.clock",
+    "layout": {
+      "left": [{ "id": "omarchy.menu" }, { "id": "omarchy.workspaces" }],
+      "center": [{ "id": "omarchy.clock", "format": "dddd HH:mm" }],
+      "right": [{ "id": "omarchy.tray" }, { "id": "omarchy.audio" }]
+    }
+  },
+  "plugins": []
+}
+""",
+                encoding="utf-8",
+            )
+            shell_json = config_home / "omarchy" / "shell.json"
+            shell_json.parent.mkdir(parents=True)
+            shell_json.write_text(
+                """
+{
+  "version": 1,
+  "bar": {
+    "id": "lacuna.bar",
+    "position": "bottom",
+    "transparent": true,
+    "centerAnchor": "lacuna.clock",
+    "layout": { "left": [], "center": [], "right": [] }
+  },
+  "plugins": [{ "id": "lacuna.state" }]
+}
+""",
+                encoding="utf-8",
+            )
+
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+                mock.patch.object(module, "OMARCHY_STOCK_SHELL_CONFIG_PATHS", [stock]):
+                result = module.deactivate_plugins(["lacuna.bar", "lacuna.state"], dry_run=False)
+
+            data = __import__("json").loads(shell_json.read_text(encoding="utf-8"))
+
+        self.assertEqual(result, 0)
+        self.assertNotIn("id", data["bar"])
+        self.assertEqual("bottom", data["bar"]["position"])
+        self.assertIs(data["bar"]["transparent"], True)
+        self.assertEqual("omarchy.clock", data["bar"]["centerAnchor"])
+        self.assertEqual([{"id": "omarchy.menu"}, {"id": "omarchy.workspaces"}], data["bar"]["layout"]["left"])
+        self.assertEqual([{"id": "omarchy.clock", "format": "dddd HH:mm"}], data["bar"]["layout"]["center"])
+        self.assertEqual([{"id": "omarchy.tray"}, {"id": "omarchy.audio"}], data["bar"]["layout"]["right"])
+        self.assertEqual([], data["plugins"])
+
+    def test_lacuna_bar_layout_omits_bar_seam_by_default(self):
         module = load_installer_module()
         right = [entry["id"] for entry in module.LACUNA_BAR_LAYOUT["right"]]
-        self.assertEqual(2, right.count("lacuna.bar-seam"))
-        # a seam immediately precedes and follows the native (bt/net/audio/power) cluster
-        self.assertEqual("lacuna.bar-seam", right[right.index("omarchy.bluetooth") - 1])
-        self.assertEqual("lacuna.bar-seam", right[right.index("omarchy.power") + 1])
+        self.assertNotIn("lacuna.bar-seam", right)
+        self.assertEqual(
+            ["lacuna.bluetooth", "lacuna.network", "lacuna.audio", "lacuna.power"],
+            right[right.index("lacuna.bluetooth"):right.index("lacuna.power") + 1],
+        )
         self.assertEqual("lacuna.bar-size-pill", right[-1])
 
     def test_lacuna_bar_activation_replaces_omarchy_layout_with_lacuna_modules(self):
@@ -394,14 +468,18 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertEqual(data["bar"]["id"], "lacuna.bar")
         self.assertEqual(
-            ["omarchy.bluetooth", "omarchy.network", "omarchy.audio", "omarchy.power"],
-            [plugin_id for plugin_id in layout_ids if plugin_id.startswith("omarchy.")],
+            ["lacuna.bluetooth", "lacuna.network", "lacuna.audio", "lacuna.power"],
+            [plugin_id for plugin_id in layout_ids if plugin_id in {"lacuna.bluetooth", "lacuna.network", "lacuna.audio", "lacuna.power"}],
         )
+        self.assertNotIn("omarchy.bluetooth", layout_ids)
+        self.assertNotIn("omarchy.network", layout_ids)
+        self.assertNotIn("omarchy.audio", layout_ids)
+        self.assertNotIn("omarchy.power", layout_ids)
         self.assertEqual(data["bar"]["layout"]["left"][0]["id"], "lacuna.menu-button")
         self.assertEqual(data["bar"]["layout"]["center"][0]["id"], "lacuna.voxtype")
         self.assertEqual(data["bar"]["layout"]["right"][0]["id"], "lacuna.tray")
         self.assertIn({"id": "lacuna.temperature", "mode": "compact"}, data["bar"]["layout"]["right"])
-        self.assertIn({"id": "omarchy.power", "showPercent": True}, data["bar"]["layout"]["right"])
+        self.assertIn({"id": "lacuna.power", "showPercent": True}, data["bar"]["layout"]["right"])
         self.assertEqual("lacuna.bar-size-pill", data["bar"]["layout"]["right"][-1]["id"])
 
     def test_lacuna_bar_layout_uses_available_modules_and_preserves_entry_settings(self):

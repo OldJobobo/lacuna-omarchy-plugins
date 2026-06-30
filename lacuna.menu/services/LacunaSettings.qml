@@ -57,6 +57,14 @@ Item {
       shellSettings: {
         surface: "flyout"
       },
+      mediaProviders: {
+        jellyfin: {
+          enabled: false,
+          serverUrl: "",
+          apiKey: "",
+          userId: ""
+        }
+      },
       sidebar: {
         defaultMode: "off",
         collapsed: false,
@@ -66,6 +74,7 @@ Item {
       backgroundEffects: {
         enabled: true,
         foregroundOverlay: false,
+        opacity: 1,
         activeEffect: "trackingLines",
         activeEffects: [
           "trackingLines"
@@ -75,10 +84,22 @@ Item {
             enabled: true
           },
           filmGrain: {
-            enabled: true
+            enabled: true,
+            intensity: 0.28,
+            speed: 1,
+            grainCount: 180,
+            grainSize: 1.35,
+            accentBlend: 0.18
           },
           dustMotes: {
-            enabled: true
+            enabled: true,
+            intensity: 0.5,
+            speed: 0.7,
+            moteCount: 72,
+            moteSize: 2.6,
+            accentBlend: 0.42,
+            mouseReactive: true,
+            mouseInfluence: 0.28
           },
           auroraDrift: {
             enabled: true
@@ -137,6 +158,7 @@ Item {
       next.preferredApps = normalizePreferredApps(value.preferredApps || value.defaultLaunchers || value.appDefaults)
       next.power = normalizePowerSettings(value.power || value.session || value.system)
       next.shellSettings = normalizeShellSettings(value.shellSettings || value.omarchySettings)
+      next.mediaProviders = normalizeMediaProviders(value.mediaProviders || value.providers)
       if (value.sidebar && typeof value.sidebar === "object") {
         next.sidebar.defaultMode = normalizeSidebarDefaultMode(value.sidebar.defaultMode)
         next.sidebar.collapsed = value.sidebar.collapsed === true
@@ -202,48 +224,91 @@ Item {
     return next
   }
 
+  function normalizeMediaProviders(value) {
+    var next = defaultData().mediaProviders
+    if (value && typeof value === "object") {
+      var jellyfin = value.jellyfin && typeof value.jellyfin === "object" ? value.jellyfin : ({})
+      next.jellyfin = {
+        enabled: jellyfin.enabled === true,
+        serverUrl: String(jellyfin.serverUrl || ""),
+        apiKey: String(jellyfin.apiKey || ""),
+        userId: String(jellyfin.userId || "")
+      }
+    }
+    return next
+  }
+
   function normalizeBackgroundEffects(value) {
     var defaults = defaultData().backgroundEffects
     var next = {
       enabled: true,
       foregroundOverlay: defaults.foregroundOverlay === true,
+      opacity: defaults.opacity,
       activeEffect: defaults.activeEffect,
       activeEffects: defaults.activeEffects.slice(),
       effects: {}
     }
 
     for (var defaultId in defaults.effects) {
-      next.effects[defaultId] = { enabled: defaults.effects[defaultId].enabled !== false }
+      next.effects[defaultId] = normalizeBackgroundEffectConfig(defaultId, defaults.effects[defaultId])
     }
 
     if (value && typeof value === "object") {
       next.enabled = value.enabled !== false
       next.foregroundOverlay = value.foregroundOverlay === true
+      next.opacity = boundedReal(value.opacity, defaults.opacity, 0, 1)
       next.activeEffects = normalizeBackgroundEffectStack(value.activeEffects, value.activeEffect || value.selectedEffect || value.currentEffect)
       next.activeEffect = next.activeEffects.length > 0 ? next.activeEffects[0] : normalizeBackgroundEffectId(value.activeEffect || value.selectedEffect || value.currentEffect, defaults.activeEffect)
 
       var sourceEffects = value.effects && typeof value.effects === "object" ? value.effects : {}
       for (var effectId in sourceEffects) {
-        var sourceEffect = sourceEffects[effectId]
-        if (sourceEffect && typeof sourceEffect === "object") {
-          next.effects[effectId] = { enabled: sourceEffect.enabled !== false }
-        } else {
-          next.effects[effectId] = { enabled: sourceEffect === true }
-        }
+        next.effects[effectId] = normalizeBackgroundEffectConfig(effectId, sourceEffects[effectId])
       }
     }
 
-    if (!next.effects.trackingLines) next.effects.trackingLines = { enabled: true }
-    if (!next.effects.filmGrain) next.effects.filmGrain = { enabled: true }
-    if (!next.effects.dustMotes) next.effects.dustMotes = { enabled: true }
-    if (!next.effects.auroraDrift) next.effects.auroraDrift = { enabled: true }
-    if (!next.effects.rainfall) next.effects.rainfall = { enabled: true }
-    if (!next.effects.cinematicLight) next.effects.cinematicLight = { enabled: true }
-    if (!next.effects.godRays) next.effects.godRays = { enabled: true }
-    if (!next.effects.crt) next.effects.crt = { enabled: true }
+    if (!next.effects.trackingLines) next.effects.trackingLines = normalizeBackgroundEffectConfig("trackingLines", true)
+    if (!next.effects.filmGrain) next.effects.filmGrain = normalizeBackgroundEffectConfig("filmGrain", true)
+    if (!next.effects.dustMotes) next.effects.dustMotes = normalizeBackgroundEffectConfig("dustMotes", true)
+    if (!next.effects.auroraDrift) next.effects.auroraDrift = normalizeBackgroundEffectConfig("auroraDrift", true)
+    if (!next.effects.rainfall) next.effects.rainfall = normalizeBackgroundEffectConfig("rainfall", true)
+    if (!next.effects.cinematicLight) next.effects.cinematicLight = normalizeBackgroundEffectConfig("cinematicLight", true)
+    if (!next.effects.godRays) next.effects.godRays = normalizeBackgroundEffectConfig("godRays", true)
+    if (!next.effects.crt) next.effects.crt = normalizeBackgroundEffectConfig("crt", true)
     if (!value || typeof value !== "object") {
       next.activeEffect = next.activeEffects.length > 0 ? next.activeEffects[0] : defaults.activeEffect
     }
+    return next
+  }
+
+  function normalizeBackgroundEffectConfig(effectId, value) {
+    var defaults = defaultData().backgroundEffects.effects[String(effectId || "")] || { enabled: true }
+    var next = {}
+    for (var key in defaults) next[key] = defaults[key]
+
+    if (value === true || value === false) {
+      next.enabled = value === true
+      return next
+    }
+
+    if (value && typeof value === "object") {
+      next.enabled = value.enabled !== false
+      if (effectId === "filmGrain") {
+        next.intensity = boundedReal(value.intensity, defaults.intensity, 0, 1)
+        next.speed = boundedReal(value.speed, defaults.speed, 0.2, 5)
+        next.grainCount = boundedInt(value.grainCount, defaults.grainCount, 32, 520)
+        next.grainSize = boundedReal(value.grainSize, defaults.grainSize, 0.6, 3.5)
+        next.accentBlend = boundedReal(value.accentBlend, defaults.accentBlend, 0, 1)
+      } else if (effectId === "dustMotes") {
+        next.intensity = boundedReal(value.intensity, defaults.intensity, 0, 1)
+        next.speed = boundedReal(value.speed, defaults.speed, 0.15, 4)
+        next.moteCount = boundedInt(value.moteCount, defaults.moteCount, 12, 180)
+        next.moteSize = boundedReal(value.moteSize, defaults.moteSize, 1, 8)
+        next.accentBlend = boundedReal(value.accentBlend, defaults.accentBlend, 0, 1)
+        next.mouseReactive = value.mouseReactive !== false
+        next.mouseInfluence = boundedReal(value.mouseInfluence, defaults.mouseInfluence, 0, 1)
+      }
+    }
+
     return next
   }
 
