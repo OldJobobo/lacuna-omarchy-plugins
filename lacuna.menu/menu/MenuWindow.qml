@@ -138,7 +138,7 @@ Item {
   readonly property int frameReserveLeft: frameReserveActive && frameMode === "fullframe" && !root.leftBar && (root.panelOnRight || !root.sidebarSurfaceVisible) ? frameThickness + reservePadding : 0
   readonly property int frameReserveRight: frameReserveActive && frameMode === "fullframe" && !root.panelOnRight && !root.rightBar ? frameThickness + reservePadding : 0
   readonly property int topBarShadowReserve: frameReserveActive && root.topBar ? reservePadding : 0
-  readonly property bool topBarPanelShadowVisible: lacunaEnabled && frameShadow && frameMode === "off" && root.topBar && root.sidebarSurfaceVisible
+  readonly property bool topBarPanelShadowVisible: lacunaEnabled && frameShadow && frameMode === "off" && root.topBar
   readonly property int topBarPanelShadowVisualWidth: topBarPanelShadowVisible && root.sidebarScreen ? Math.max(0, Number(root.sidebarScreen.width) || 0) : 0
   readonly property real topBarPanelShadowX: 0
   readonly property real topBarPanelShadowWidth: topBarPanelShadowVisualWidth
@@ -1818,7 +1818,7 @@ Item {
     targetScreen: root.sidebarScreen
     menuOpen: root.menuState.open
     panelVisible: root.lacunaEnabled && root.panelVisible
-    keepMapped: root.lacunaEnabled && root.frameMode !== "off"
+    keepMapped: root.lacunaEnabled && (root.frameMode !== "off" || root.topBarPanelShadowVisible)
     flyoutOpen: root.lacunaEnabled && root.flyoutOpen
     flyoutInteractive: root.lacunaEnabled && root.flyoutInteractive
     exclusive: sidebarState.exclusive
