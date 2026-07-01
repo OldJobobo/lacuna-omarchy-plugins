@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+auth_dir=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --auth-dir)
+      auth_dir="${2:-}"
+      shift 2
+      ;;
+    *)
+      printf 'Unknown argument: %s\n' "$1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+if [ -z "$auth_dir" ]; then
+  config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  auth_dir="$config_home/omarchy/lacuna/youtube"
+else
+  config_home="${auth_dir%/*}"
+fi
+
+detect_browser() {
+  for entry in \
+    "zen:zen-browser" \
+    "zen:zen" \
+    "firefox:firefox" \
+    "brave:brave-browser" \
+    "brave:brave" \
+    "chromium:chromium" \
+    "chrome:google-chrome" \
+    "chrome:google-chrome-stable" \
+    "edge:microsoft-edge" \
+    "vivaldi:vivaldi" \
+    "opera:opera"; do
+    name="${entry%%:*}"
+    command="${entry#*:}"
+    if command -v "$command" >/dev/null 2>&1; then
+      printf '%s:%s\n' "$name" "$command"
+      return 0
+    fi
+  done
+  return 1
+}
+
+browser_entry="$(detect_browser || true)"
+if [ -z "$browser_entry" ]; then
+  notify-send "Lacuna YouTube" "No supported browser found for YouTube login" 2>/dev/null || true
+  exit 1
+fi
+
+browser_name="${browser_entry%%:*}"
+browser_command="${browser_entry#*:}"
+settings_file="$config_home/settings.json"
+mkdir -p "$auth_dir" "$(dirname "$settings_file")"
+
+"$browser_command" "https://www.youtube.com" >/dev/null 2>&1 &
+
+terminal=""
+for candidate in foot ghostty alacritty kitty wezterm xterm; do
+  if command -v "$candidate" >/dev/null 2>&1; then
+    terminal="$candidate"
+    break
+  fi
+done
+
+if [ -z "$terminal" ]; then
+  notify-send "Lacuna YouTube" "Sign in to YouTube in $browser_command, then Lacuna will use $browser_name cookies" 2>/dev/null || true
+else
+  script='
+printf "%s\n" "YouTube account connection"
+printf "%s\n\n" "A browser opened to youtube.com. Sign in there, then press Enter here."
+printf "%s" "Press Enter after signing in..."
+read -r _
+'
+  case "$terminal" in
+    foot) foot --title "YouTube Login" sh -c "$script" ;;
+    ghostty) ghostty -e sh -c "$script" ;;
+    alacritty) alacritty --title "YouTube Login" -e sh -c "$script" ;;
+    kitty) kitty --title "YouTube Login" sh -c "$script" ;;
+    wezterm) wezterm start -- sh -c "$script" ;;
+    xterm) xterm -T "YouTube Login" -e sh -c "$script" ;;
+  esac
+fi
+
+python_bin="${PYTHON:-$(command -v python3 || true)}"
+if [ -z "$python_bin" ]; then
+  notify-send "Lacuna YouTube" "python3 is required to save YouTube login settings" 2>/dev/null || true
+  exit 1
+fi
+
+"$python_bin" - "$settings_file" "$browser_name" "$HOME" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+settings_path = Path(sys.argv[1]).expanduser().resolve()
+browser_name = sys.argv[2]
+home = Path(sys.argv[3]).expanduser()
+
+
+def newest_profile(root):
+    if not root.exists():
+        return ""
+    profiles = [path for path in root.iterdir() if path.is_dir() and (path / "cookies.sqlite").exists()]
+    if not profiles:
+        profiles = [path for path in root.iterdir() if path.is_dir()]
+    if not profiles:
+        return ""
+    return str(max(profiles, key=lambda path: path.stat().st_mtime).resolve())
+
+
+def cookie_source(name):
+    if name == "zen":
+        profile = newest_profile(home / ".zen")
+        return f"firefox:{profile}" if profile else "firefox"
+    return name
+
+try:
+    data = json.loads(settings_path.read_text(encoding="utf-8") or "{}")
+except (FileNotFoundError, json.JSONDecodeError):
+    data = {}
+
+if not isinstance(data, dict):
+    data = {}
+providers = data.setdefault("mediaProviders", {})
+if not isinstance(providers, dict):
+    providers = {}
+    data["mediaProviders"] = providers
+youtube = providers.setdefault("youtube", {})
+if not isinstance(youtube, dict):
+    youtube = {}
+    providers["youtube"] = youtube
+
+youtube["enabled"] = True
+youtube["cookiesFromBrowser"] = cookie_source(browser_name)
+youtube.setdefault("cookiesFile", "")
+providers.pop("youtubeMusic", None)
+settings_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+
+notify-send "Lacuna YouTube" "Using $browser_name cookies for YouTube search and playback" 2>/dev/null || true

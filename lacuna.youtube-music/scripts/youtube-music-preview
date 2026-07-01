@@ -1,12 +1,37 @@
 #!/usr/bin/env python3
 import json
+import os
 import shutil
 import subprocess
 import sys
 
 
+def load_config(raw):
+    try:
+        payload = json.loads(raw or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def ytdlp_auth_args(config):
+    if config.get("enabled") is not True:
+        return []
+    cookies_file = str(config.get("cookiesFile") or "").strip()
+    if cookies_file:
+        return ["--cookies", os.path.expanduser(cookies_file)]
+    cookies_from_browser = str(config.get("cookiesFromBrowser") or "").strip()
+    if cookies_from_browser:
+        return ["--cookies-from-browser", cookies_from_browser]
+    return []
+
+
 def main(argv=None):
-    argv = argv or sys.argv[1:]
+    argv = list(argv or sys.argv[1:])
+    config = {}
+    if argv[:1] == ["--config-json"]:
+        config = load_config(argv[1] if len(argv) > 1 else "{}")
+        argv = argv[2:]
     if not argv:
         print(json.dumps({"url": "", "error": "missing url"}))
         return 1
@@ -18,6 +43,7 @@ def main(argv=None):
 
     cmd = [
         ytdlp,
+        *ytdlp_auth_args(config),
         "--no-warnings",
         "--no-playlist",
         "--get-url",

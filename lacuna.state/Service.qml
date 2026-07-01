@@ -58,6 +58,11 @@ Item {
         surface: "flyout"
       },
       mediaProviders: {
+        youtube: {
+          enabled: false,
+          cookiesFromBrowser: "",
+          cookiesFile: ""
+        },
         jellyfin: {
           enabled: false,
           serverUrl: "",
@@ -227,6 +232,13 @@ Item {
   function normalizeMediaProviders(value) {
     var next = defaultData().mediaProviders
     if (value && typeof value === "object") {
+      var youtube = value.youtube && typeof value.youtube === "object" ? value.youtube : ({})
+      var legacyYoutubeMusic = value.youtubeMusic && typeof value.youtubeMusic === "object" ? value.youtubeMusic : ({})
+      next.youtube = {
+        enabled: youtube.enabled === true || legacyYoutubeMusic.enabled === true,
+        cookiesFromBrowser: String(youtube.cookiesFromBrowser || ""),
+        cookiesFile: String(youtube.cookiesFile || legacyYoutubeMusic.authPath || "")
+      }
       var jellyfin = value.jellyfin && typeof value.jellyfin === "object" ? value.jellyfin : ({})
       next.jellyfin = {
         enabled: jellyfin.enabled === true,

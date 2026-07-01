@@ -28,6 +28,7 @@ Item {
     if (icon === "world" || icon === "browser") return "M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0 M3.6 9h16.8 M3.6 15h16.8 M11.5 3a17 17 0 0 0 0 18 M12.5 3a17 17 0 0 1 0 18"
     if (icon === "code") return "M7 8l-4 4l4 4 M17 8l4 4l-4 4 M14 4l-4 16"
     if (icon === "music") return "M6 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0 M18 15a3 3 0 1 0 0 6a3 3 0 0 0 0 -6 M9 17v-12l12 -2v12 M9 9l12 -2"
+    if (icon === "user-circle" || icon === "account") return "M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0 M8 20a4 4 0 0 1 8 0 M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"
     if (icon === "heart" || icon === "heart-filled") return "M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572"
     if (icon === "palette" || icon === "theme" || icon === "customize") return "M12 21a9 9 0 1 1 0 -18c4.97 0 9 3.58 9 8c0 2.21 -1.79 4 -4 4h-2a2 2 0 0 0 -1 3.73a1.3 1.3 0 0 1 -1 2.27z M7.5 10.5h.01 M10.5 7.5h.01 M14.5 7.5h.01 M17.5 10.5h.01"
     if (icon === "file-text" || icon === "office") return "M14 3v4a1 1 0 0 0 1 1h4 M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z M9 9h1 M9 13h6 M9 17h6"

@@ -22,6 +22,11 @@
     "surface": "flyout"
   },
   "mediaProviders": {
+    "youtube": {
+      "enabled": false,
+      "cookiesFromBrowser": "",
+      "cookiesFile": ""
+    },
     "jellyfin": {
       "enabled": false,
       "serverUrl": "",

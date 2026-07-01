@@ -1355,8 +1355,11 @@ class QmlContractTests(unittest.TestCase):
         self.assertEqual(0.92, full_settings["backgroundEffects"]["opacity"])
         self.assertEqual(0.42, full_settings["backgroundEffects"]["effects"]["filmGrain"]["intensity"])
         self.assertIn("mediaProviders", settings_example)
+        self.assertIn("youtube", settings_example["mediaProviders"])
+        self.assertFalse(settings_example["mediaProviders"]["youtube"]["enabled"])
         self.assertIn("jellyfin", settings_example["mediaProviders"])
         self.assertFalse(settings_example["mediaProviders"]["jellyfin"]["enabled"])
+        self.assertEqual("firefox", full_settings["mediaProviders"]["youtube"]["cookiesFromBrowser"])
         self.assertEqual("https://jellyfin.example", full_settings["mediaProviders"]["jellyfin"]["serverUrl"])
         self.assertIn("mediaProviders", read("lacuna.menu/services/LacunaSettings.qml"))
         self.assertIn("function normalizeMediaProviders", read("lacuna.menu/services/LacunaSettings.qml"))
@@ -2253,8 +2256,16 @@ class QmlContractTests(unittest.TestCase):
             "favorites = restored.favorites",
             "repeatMode = restored.repeatMode",
             "property var lacunaSettings: ({})",
+            "property string searchFilter: \"all\"",
             "readonly property string lacunaSettingsFile",
             "readonly property bool jellyfinConfigured",
+            "readonly property string authScript",
+            "readonly property string youtubeAuthDir",
+            "readonly property string youtubeCookiesFile",
+            "readonly property string youtubeConfigJson",
+            "readonly property bool youtubeLoginEnabled",
+            "function youtubeProviderSettings()",
+            "function youtubeConfigValue(key, fallback)",
             "readonly property string jellyfinSearchScript",
             "readonly property string jellyfinStreamScript",
             "readonly property string infoScript",
@@ -2269,6 +2280,7 @@ class QmlContractTests(unittest.TestCase):
             "completeProviderSearch(\"jellyfin\", rows, error)",
             "function normalizeUniqueTrackList",
             "function normalizeRepeatMode",
+            "function normalizeSearchFilter(value)",
             "function isYoutubeUrl(value)",
             "function normalizeYoutubeUrl(value)",
             "function playUrl(url)",
@@ -2279,12 +2291,22 @@ class QmlContractTests(unittest.TestCase):
             "readonly property string defaultSuggestionsQuery",
             "property bool pendingDefaultSuggestions: false",
             "function loadDefaultSuggestions()",
+            "function refreshYoutubeResultsAfterLogin()",
+            "if (youtubeLoginEnabled) refreshYoutubeResultsAfterLogin()",
+            "function setSearchFilter(value)",
+            "searchFilter = next",
+            "function startYoutubeSuggestions(limit)",
+            "startYoutubeSuggestions(Math.min(maxResults, 24))",
+            "searchProc.command = [searchScript, \"--config-json\", youtubeConfigJson, \"--filter\", searchFilter",
             "pendingDefaultSuggestions = true",
-            "if (root.pendingDefaultSuggestions && (root.ytdlpAvailable || root.jellyfinConfigured)) root.loadDefaultSuggestions()",
+            "if (root.pendingDefaultSuggestions && (root.ytdlpAvailable || root.jellyfinConfigured || root.youtubeLoginEnabled)) root.loadDefaultSuggestions()",
+            "function openYoutubeMusicLogin()",
+            "authProc.command = [authScript, \"--auth-dir\", youtubeAuthDir]",
+            "id: authProc",
             "videoIdFromUrl(normalizedUrl)",
             "resolveTrackInfo(currentTrack)",
             "id: trackInfoProc",
-            "trackInfoProc.command = [infoScript, root.trackInfoRequestUrl]",
+            "trackInfoProc.command = [infoScript, \"--config-json\", root.youtubeConfigJson, root.trackInfoRequestUrl]",
             "root.currentTrack = resolved",
             "Paste a YouTube URL",
             "function favoriteIndex(track)",
@@ -2321,6 +2343,7 @@ class QmlContractTests(unittest.TestCase):
             "refreshingFavorites: root.refreshingFavorites",
             "backgroundRequestRevision: root.backgroundRequestRevision",
             "repeatMode: root.repeatMode",
+            "searchFilter: root.searchFilter",
             "onFavoritesChanged: {",
             "favoritesRevision += 1",
             "favoritesLength: root.favoritesLength",
@@ -2328,12 +2351,21 @@ class QmlContractTests(unittest.TestCase):
             "function toggleFavoriteCurrent(): string",
             "function refreshFavoriteMetadata(): string",
             "function cycleRepeatMode(): string",
+            "function openYoutubeMusicLogin(): string",
         ]:
             self.assertIn(snippet, service)
+        self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-auth").exists())
         self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-jellyfin-search").exists())
         self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-jellyfin-stream").exists())
         self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-info").exists())
         self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-refresh-favorites").exists())
+        search_script = read("lacuna.youtube-music/scripts/youtube-music-search")
+        self.assertIn("def youtube_home_results", search_script)
+        self.assertIn("def filtered_home_music_rows", search_script)
+        self.assertIn('parser.add_argument("--filter"', search_script)
+        self.assertIn('"https://www.youtube.com/"', search_script)
+        self.assertIn('"YouTube Home"', search_script)
+        self.assertIn('"YouTube Home Music"', search_script)
 
     def test_youtube_music_favorites_are_available_in_menu_ui(self):
         flyout = read("lacuna.menu/menu/FlyoutYoutubeMusicContent.qml")
@@ -2341,10 +2373,15 @@ class QmlContractTests(unittest.TestCase):
         icons = read("lacuna.menu/components/LacunaTablerIcon.qml")
 
         for snippet in [
+            "id: accountButton",
+            'icon: "user-circle"',
+            "root.service.openYoutubeMusicLogin()",
             'id: "favorites"',
             'icon: "heart"',
             'label: "Favorites"',
             "readonly property string repeatMode",
+            "readonly property string currentSearchFilter",
+            "function setSearchFilter(value)",
             "readonly property int favoritesLength",
             "readonly property int favoritesRevision",
             "readonly property bool inputIsYoutubeUrl",
@@ -2357,6 +2394,11 @@ class QmlContractTests(unittest.TestCase):
             "onActiveTabChanged: ensureDefaultSuggestions()",
             'text: "Search media or paste YouTube URL"',
             'icon: root.inputIsYoutubeUrl ? "player-play" : "search"',
+            "id: searchFilterRow",
+            'text: "All"',
+            'text: "Music"',
+            'root.setSearchFilter("all")',
+            'root.setSearchFilter("music")',
             "id: transportControls",
             'visible: root.activeTab !== "search"',
             "id: durationBadgeText",
@@ -2378,6 +2420,7 @@ class QmlContractTests(unittest.TestCase):
             "model: root.favoritesRevision >= 0 && root.service && root.service.favorites ? root.service.favorites : []",
         ]:
             self.assertIn(snippet, flyout)
+        self.assertIn('icon === "user-circle" || icon === "account"', icons)
 
         self.assertIn('icon: root.service && root.service.currentFavorite ? "heart-filled" : "heart"', flyout)
         self.assertIn('icon: root.currentFavorite ? "heart-filled" : "heart"', tile)

@@ -37,6 +37,7 @@ Item {
   property string status: "checking"
   property string errorText: ""
   property string lastQuery: ""
+  property string searchFilter: "all"
   property string repeatMode: "none"
   property var results: []
   property var allResults: []
@@ -58,6 +59,7 @@ Item {
   readonly property string sourceDir: manifest && manifest.__sourceDir ? manifest.__sourceDir : localPath(Qt.resolvedUrl("."))
   readonly property string checkScript: sourceDir + "/scripts/youtube-music-check"
   readonly property string searchScript: sourceDir + "/scripts/youtube-music-search"
+  readonly property string authScript: sourceDir + "/scripts/youtube-music-auth"
   readonly property string infoScript: sourceDir + "/scripts/youtube-music-info"
   readonly property string refreshFavoritesScript: sourceDir + "/scripts/youtube-music-refresh-favorites"
   readonly property string controlScript: sourceDir + "/scripts/youtube-music-control"
@@ -71,7 +73,10 @@ Item {
   readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy/lacuna"
   readonly property string stateFile: configDir + "/youtube-music.json"
   readonly property string lacunaSettingsFile: configDir + "/settings.json"
+  readonly property string youtubeAuthDir: configDir + "/youtube"
+  readonly property string youtubeCookiesFile: youtubeAuthDir + "/cookies.txt"
   readonly property string jellyfinConfigJson: JSON.stringify(jellyfinProviderSettings())
+  readonly property string youtubeConfigJson: JSON.stringify(youtubeProviderSettings())
   readonly property int maxResults: boundedInt(setting("maxResults", 60), 60, 12, 80)
   readonly property string defaultSuggestionsQuery: String(setting("defaultSuggestionsQuery", "official music videos"))
   property int visibleLimit: 18
@@ -88,6 +93,7 @@ Item {
   readonly property bool jellyfinConfigured: jellyfinConfigValue("enabled", false) === true
     && String(jellyfinConfigValue("serverUrl", "") || "").trim() !== ""
     && String(jellyfinConfigValue("apiKey", "") || "").trim() !== ""
+  readonly property bool youtubeLoginEnabled: youtubeConfigValue("enabled", false) === true
 
   function localPath(url) {
     var value = String(url || "")
@@ -272,6 +278,23 @@ Item {
     }
   }
 
+  function youtubeProviderSettings() {
+    var settings = lacunaSettings && typeof lacunaSettings === "object" ? lacunaSettings : ({})
+    var providers = settings.mediaProviders && typeof settings.mediaProviders === "object" ? settings.mediaProviders : ({})
+    var youtube = providers.youtube && typeof providers.youtube === "object" ? providers.youtube : ({})
+    return {
+      enabled: youtube.enabled === true,
+      cookiesFromBrowser: String(youtube.cookiesFromBrowser || ""),
+      cookiesFile: String(youtube.cookiesFile || ""),
+      defaultSuggestionsQuery: defaultSuggestionsQuery
+    }
+  }
+
+  function youtubeConfigValue(key, fallback) {
+    var cfg = youtubeProviderSettings()
+    return cfg[key] !== undefined ? cfg[key] : fallback
+  }
+
   function jellyfinConfigValue(key, fallback) {
     var cfg = jellyfinProviderSettings()
     return cfg[key] !== undefined ? cfg[key] : fallback
@@ -412,10 +435,14 @@ Item {
     checkProc.running = true
   }
 
+  function normalizeSearchFilter(value) {
+    return String(value || "all") === "music" ? "music" : "all"
+  }
+
   function search(query) {
     var trimmed = String(query || "").trim()
     if (trimmed === "") return
-    if (!ytdlpAvailable && !jellyfinConfigured) {
+    if (!ytdlpAvailable && !jellyfinConfigured && !youtubeLoginEnabled) {
       errorText = "yt-dlp is required for search"
       status = "unavailable"
       return
@@ -441,7 +468,13 @@ Item {
 
   function startYoutubeSearch(query, limit) {
     searchProc.output = ""
-    searchProc.command = [searchScript, "--limit", String(limit), query]
+    searchProc.command = [searchScript, "--config-json", youtubeConfigJson, "--filter", searchFilter, "--limit", String(limit), query]
+    searchProc.running = true
+  }
+
+  function startYoutubeSuggestions(limit) {
+    searchProc.output = ""
+    searchProc.command = [searchScript, "--config-json", youtubeConfigJson, "--filter", searchFilter, "--limit", String(limit), "--suggestions"]
     searchProc.running = true
   }
 
@@ -467,12 +500,46 @@ Item {
 
   function loadDefaultSuggestions() {
     if (searching || allResults.length > 0) return
-    if (!ytdlpAvailable && !jellyfinConfigured) {
+    if (!ytdlpAvailable && !jellyfinConfigured && !youtubeLoginEnabled) {
       pendingDefaultSuggestions = true
       return
     }
     pendingDefaultSuggestions = false
-    search(defaultSuggestionsQuery)
+    searching = true
+    errorText = ""
+    lastQuery = ""
+    visibleLimit = 18
+    allResults = []
+    results = []
+    providerSearchActive = false
+    startYoutubeSuggestions(Math.min(maxResults, 24))
+  }
+
+  function refreshYoutubeResultsAfterLogin() {
+    if (!youtubeLoginEnabled || searching) return
+    var query = String(lastQuery || "").trim()
+    allResults = []
+    results = []
+    visibleLimit = 18
+    if (query !== "") search(query)
+    else loadDefaultSuggestions()
+  }
+
+  function setSearchFilter(value) {
+    var next = normalizeSearchFilter(value)
+    if (searchFilter === next) return
+    searchFilter = next
+    var query = String(lastQuery || "").trim()
+    allResults = []
+    results = []
+    visibleLimit = 18
+    if (query !== "") search(query)
+    else loadDefaultSuggestions()
+  }
+
+  function openYoutubeMusicLogin() {
+    authProc.command = [authScript, "--auth-dir", youtubeAuthDir]
+    authProc.running = true
   }
 
   function visibleSlice(rows) {
@@ -818,7 +885,12 @@ Item {
     if (url === "") return
 
     commandProc.output = ""
-    commandProc.command = [controlScript, "start", "--socket", mpvSocket, "--runtime-dir", runtimeDir, "--url", url, "--volume", String(volume), "--start", String(Math.max(0, Number(startAt) || 0)), audioOnly ? "--audio-only" : "--video"]
+    var args = [controlScript, "start", "--socket", mpvSocket, "--runtime-dir", runtimeDir, "--url", url, "--volume", String(volume), "--start", String(Math.max(0, Number(startAt) || 0))]
+    var youtubeConfig = youtubeProviderSettings()
+    if (youtubeConfig.enabled === true && youtubeConfig.cookiesFromBrowser !== "") args.push("--cookies-from-browser", youtubeConfig.cookiesFromBrowser)
+    if (youtubeConfig.enabled === true && youtubeConfig.cookiesFile !== "") args.push("--cookies-file", youtubeConfig.cookiesFile)
+    args.push(audioOnly ? "--audio-only" : "--video")
+    commandProc.command = args
     commandProc.running = true
     commandRunning = true
     playing = true
@@ -854,7 +926,12 @@ Item {
   onLastQueryChanged: scheduleStateSave()
   onBackgroundVideoEnabledChanged: if (backgroundVideoEnabled) updatePlaybackPosition()
   onJellyfinConfiguredChanged: {
-    if (pendingDefaultSuggestions && (ytdlpAvailable || jellyfinConfigured)) loadDefaultSuggestions()
+    if (pendingDefaultSuggestions && (ytdlpAvailable || jellyfinConfigured || youtubeLoginEnabled)) loadDefaultSuggestions()
+    status = available ? "ready" : "unavailable"
+  }
+  onYoutubeLoginEnabledChanged: {
+    if (youtubeLoginEnabled) refreshYoutubeResultsAfterLogin()
+    else if (pendingDefaultSuggestions && (ytdlpAvailable || jellyfinConfigured || youtubeLoginEnabled)) loadDefaultSuggestions()
     status = available ? "ready" : "unavailable"
   }
 
@@ -897,7 +974,7 @@ Item {
       }
       previewProc.requestUrl = root.previewRequestUrl
       previewProc.output = ""
-      previewProc.command = [previewScript, root.previewRequestUrl]
+      previewProc.command = [previewScript, "--config-json", root.youtubeConfigJson, root.previewRequestUrl]
       previewProc.running = true
     }
   }
@@ -915,7 +992,7 @@ Item {
       }
       trackInfoProc.requestUrl = root.trackInfoRequestUrl
       trackInfoProc.output = ""
-      trackInfoProc.command = [infoScript, root.trackInfoRequestUrl]
+      trackInfoProc.command = [infoScript, "--config-json", root.youtubeConfigJson, root.trackInfoRequestUrl]
       trackInfoProc.running = true
     }
   }
@@ -933,7 +1010,7 @@ Item {
       }
       backgroundProc.requestUrl = root.backgroundRequestUrl
       backgroundProc.output = ""
-      backgroundProc.command = [backgroundScript, root.backgroundRequestUrl]
+      backgroundProc.command = [backgroundScript, "--config-json", root.youtubeConfigJson, root.backgroundRequestUrl]
       backgroundProc.running = true
     }
   }
@@ -977,7 +1054,7 @@ Item {
         root.errorText = "Dependency check failed"
       }
       root.status = root.available ? "ready" : "unavailable"
-      if (root.pendingDefaultSuggestions && (root.ytdlpAvailable || root.jellyfinConfigured)) root.loadDefaultSuggestions()
+      if (root.pendingDefaultSuggestions && (root.ytdlpAvailable || root.jellyfinConfigured || root.youtubeLoginEnabled)) root.loadDefaultSuggestions()
     }
   }
 
@@ -1038,6 +1115,10 @@ Item {
       }
       root.completeProviderSearch("jellyfin", rows, error)
     }
+  }
+
+  Process {
+    id: authProc
   }
 
   Process {
@@ -1260,7 +1341,10 @@ Item {
         favoritesLength: root.favoritesLength,
         refreshingFavorites: root.refreshingFavorites,
         currentFavorite: root.currentFavorite,
-        repeatMode: root.repeatMode
+        repeatMode: root.repeatMode,
+        searchFilter: root.searchFilter,
+        youtubeLoginEnabled: root.youtubeLoginEnabled,
+        youtubeCookiesFile: root.youtubeCookiesFile
       })
     }
 
@@ -1311,6 +1395,11 @@ Item {
 
     function cycleRepeatMode(): string {
       root.cycleRepeatMode()
+      return status()
+    }
+
+    function openYoutubeMusicLogin(): string {
+      root.openYoutubeMusicLogin()
       return status()
     }
   }

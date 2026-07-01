@@ -26,6 +26,7 @@ Column {
   readonly property int favoritesRevision: service && service.favoritesRevision !== undefined ? Number(service.favoritesRevision) : 0
   readonly property int favoritesLength: service && service.favoritesLength !== undefined ? Number(service.favoritesLength) : 0
   readonly property string repeatMode: service && service.repeatMode ? String(service.repeatMode) : "none"
+  readonly property string currentSearchFilter: service && service.searchFilter ? String(service.searchFilter) : "all"
   readonly property bool inputIsYoutubeUrl: service && typeof service.isYoutubeUrl === "function" && service.isYoutubeUrl(searchInput.text)
 
   signal closeRequested()
@@ -50,6 +51,11 @@ Column {
       service.loadDefaultSuggestions()
       defaultSuggestionsTimer.restart()
     }
+  }
+
+  function setSearchFilter(value) {
+    if (service && typeof service.setSearchFilter === "function")
+      service.setSearchFilter(value)
   }
 
   function durationText(track) {
@@ -94,13 +100,34 @@ Column {
     spacing: 8
 
     LacunaText {
-      width: parent.width - headerFavoriteButton.width - closeButton.width - parent.spacing * 2
+      width: parent.width - accountButton.width - headerFavoriteButton.width - closeButton.width - parent.spacing * 3
       anchors.verticalCenter: parent.verticalCenter
       text: "Media"
       color: root.foreground
       fontFamily: "Tektur"
       font.pixelSize: root.compact ? 13 : 15
       font.weight: Font.DemiBold
+    }
+
+    LacunaIconButton {
+      id: accountButton
+
+      icon: "user-circle"
+      disabled: !root.service
+      opacity: disabled ? 0.42 : 1
+      foreground: root.foreground
+      muted: root.service && root.service.youtubeLoginEnabled ? root.accent : root.muted
+      accent: root.accent
+      hoverAccent: root.accent
+      buttonSize: root.compact ? 24 : 28
+      buttonRadius: root.designTokens.controlRadius
+      hoverOpacity: root.designTokens.hoverOpacity
+      pressOpacity: root.designTokens.activeOpacity
+      iconSize: root.compact ? 13 : 15
+      onTriggered: {
+        if (root.service && typeof root.service.openYoutubeMusicLogin === "function")
+          root.service.openYoutubeMusicLogin()
+      }
     }
 
     LacunaIconButton {
@@ -248,6 +275,71 @@ Column {
             onTriggered: root.search()
           }
 
+        }
+
+        Row {
+          id: searchFilterRow
+
+          visible: root.activeTab === "search"
+          width: parent.width
+          height: visible ? (root.compact ? 24 : 28) : 0
+          spacing: 6
+
+          LacunaRect {
+            width: Math.round((parent.width - parent.spacing) / 2)
+            height: parent.height
+            radius: root.designTokens.controlRadius
+            color: root.currentSearchFilter === "all"
+              ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.18)
+              : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.055)
+            border.width: root.currentSearchFilter === "all" ? 1 : 0
+            border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.32)
+
+            LacunaText {
+              anchors.centerIn: parent
+              text: "All"
+              color: root.currentSearchFilter === "all" ? root.foreground : root.muted
+              fontFamily: root.bodyFontFamily
+              font.pixelSize: root.compact ? 9 : 10
+              font.weight: root.currentSearchFilter === "all" ? Font.DemiBold : Font.Normal
+            }
+
+            LacunaStateLayer {
+              anchors.fill: parent
+              stateColor: root.accent
+              hoverOpacity: root.designTokens.hoverOpacity
+              pressOpacity: root.designTokens.activeOpacity
+              onTriggered: root.setSearchFilter("all")
+            }
+          }
+
+          LacunaRect {
+            width: parent.width - x
+            height: parent.height
+            radius: root.designTokens.controlRadius
+            color: root.currentSearchFilter === "music"
+              ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.18)
+              : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.055)
+            border.width: root.currentSearchFilter === "music" ? 1 : 0
+            border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.32)
+
+            LacunaText {
+              anchors.centerIn: parent
+              text: "Music"
+              color: root.currentSearchFilter === "music" ? root.foreground : root.muted
+              fontFamily: root.bodyFontFamily
+              font.pixelSize: root.compact ? 9 : 10
+              font.weight: root.currentSearchFilter === "music" ? Font.DemiBold : Font.Normal
+            }
+
+            LacunaStateLayer {
+              anchors.fill: parent
+              stateColor: root.accent
+              hoverOpacity: root.designTokens.hoverOpacity
+              pressOpacity: root.designTokens.activeOpacity
+              onTriggered: root.setSearchFilter("music")
+            }
+          }
         }
 
         Row {

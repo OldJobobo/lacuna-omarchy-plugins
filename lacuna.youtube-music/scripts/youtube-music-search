@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -49,32 +50,24 @@ def normalize(entry):
     }
 
 
-def normalize_ytmusic(entry):
-    artists = entry.get("artists") if isinstance(entry, dict) else []
-    artist_text = ""
-    if isinstance(artists, list):
-        artist_text = ", ".join(str(item.get("name") or "") for item in artists if isinstance(item, dict) and item.get("name"))
-    thumbnails = entry.get("thumbnails")
-    thumb = ""
-    if isinstance(thumbnails, list) and thumbnails:
-        for item in reversed(thumbnails):
-            if isinstance(item, dict) and item.get("url"):
-                thumb = item["url"]
-                break
-    video_id = str(entry.get("videoId") or "")
-    return {
-        "id": video_id,
-        "title": entry.get("title") or "Untitled song",
-        "uploader": artist_text,
-        "durationText": entry.get("duration") or "",
-        "thumbnail": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg" if video_id else thumb,
-        "url": f"https://www.youtube.com/watch?v={video_id}" if video_id else "",
-        "source": "YouTube Music",
-    }
+def load_config(raw):
+    try:
+        payload = json.loads(raw or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
-def ytmusic_results(query, limit):
-    return None
+def ytdlp_auth_args(config):
+    if config.get("enabled") is not True:
+        return []
+    cookies_file = str(config.get("cookiesFile") or "").strip()
+    if cookies_file:
+        return ["--cookies", os.path.expanduser(cookies_file)]
+    cookies_from_browser = str(config.get("cookiesFromBrowser") or "").strip()
+    if cookies_from_browser:
+        return ["--cookies-from-browser", cookies_from_browser]
+    return []
 
 
 def parse_duration(text):
@@ -139,16 +132,28 @@ def filtered_music_rows(rows, limit):
     return usable[:limit]
 
 
-def ytdlp_results(ytdlp, query, limit):
+def filtered_home_music_rows(rows, limit):
+    preferred = [item for item in rows if music_score(item) >= 4 and not disqualified(item)]
+    if not preferred:
+        preferred = [item for item in rows if music_score(item) >= 2 and not disqualified(item)]
+    preferred.sort(key=lambda item: (-music_score(item), item.get("_index", 0)))
+    for item in preferred:
+        item.pop("_index", None)
+        item.pop("description", None)
+        item["source"] = "YouTube Home Music"
+    return preferred[:limit]
+
+
+def ytdlp_results(ytdlp, query, limit, config=None, search_filter="all"):
     search_limit = max(40, min(80, limit * 3))
-    music_query = f"{query} music"
     cmd = [
         ytdlp,
+        *ytdlp_auth_args(config or {}),
         "--flat-playlist",
         "--dump-json",
         "--skip-download",
         "--no-warnings",
-        f"ytsearch{search_limit}:{music_query}",
+        f"ytsearch{search_limit}:{query}",
     ]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=20, check=False)
@@ -174,35 +179,102 @@ def ytdlp_results(ytdlp, query, limit):
             item["source"] = "YouTube"
             rows.append(item)
 
-    rows.sort(key=lambda item: (-music_score(item), item.get("_index", 0)))
+    if search_filter == "music":
+        rows.sort(key=lambda item: (-music_score(item), item.get("_index", 0)))
+    else:
+        rows.sort(key=lambda item: item.get("_index", 0))
     for item in rows:
         item.pop("_index", None)
-    return filtered_music_rows(rows, limit), ""
+    if search_filter == "music":
+        return filtered_music_rows(rows, limit), ""
+    for item in rows:
+        item.pop("description", None)
+    return rows[:limit], ""
+
+
+def youtube_home_results(ytdlp, limit, config=None, music_only=False):
+    playlist_limit = max(1, min(80 if music_only else 40, max(limit, limit * 4 if music_only else limit)))
+    cmd = [
+        ytdlp,
+        *ytdlp_auth_args(config or {}),
+        "--playlist-items",
+        f"1-{playlist_limit}",
+        "--flat-playlist",
+        "--dump-json",
+        "--skip-download",
+        "--no-warnings",
+        "https://www.youtube.com/",
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=25, check=False)
+    except subprocess.TimeoutExpired:
+        return [], "YouTube home timed out"
+
+    if result.returncode != 0:
+        message = (result.stderr or result.stdout or "YouTube home failed").strip().splitlines()
+        return [], message[-1] if message else "YouTube home failed"
+
+    rows = []
+    seen = set()
+    for index, line in enumerate(result.stdout.splitlines()):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        item = normalize(entry)
+        url = item["url"]
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        item["_index"] = index
+        item["source"] = "YouTube Home"
+        rows.append(item)
+        if not music_only and len(rows) >= limit:
+            break
+    if music_only:
+        return filtered_home_music_rows(rows, limit), ""
+    for item in rows:
+        item.pop("_index", None)
+        item.pop("description", None)
+    return rows, ""
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--config-json", default="{}")
+    parser.add_argument("--filter", choices=["all", "music"], default="all")
     parser.add_argument("--limit", type=int, default=8)
-    parser.add_argument("query")
+    parser.add_argument("--suggestions", action="store_true")
+    parser.add_argument("query", nargs="?")
     args = parser.parse_args(argv)
 
     ytdlp = shutil.which("yt-dlp")
+    config = load_config(args.config_json)
+    limit = max(1, min(80, args.limit))
+    query = str(args.query or "").strip()
+
     if not ytdlp:
         print(json.dumps({"results": [], "error": "yt-dlp is not installed"}))
         return 0
 
-    limit = max(1, min(80, args.limit))
-    query = args.query.strip()
+    if args.suggestions and config.get("enabled") is True:
+        rows, error = youtube_home_results(ytdlp, limit, config, args.filter == "music")
+        if rows or error:
+            print(json.dumps({"results": rows, "error": error}))
+            return 0
+
+    if args.suggestions:
+        fallback_query = str(config.get("defaultSuggestionsQuery") or "official music videos").strip()
+        query = fallback_query or "official music videos"
+
     if not query:
         print(json.dumps({"results": [], "error": ""}))
         return 0
 
-    rows = ytmusic_results(query, limit)
-    if rows is not None:
-        print(json.dumps({"results": rows[:limit], "error": ""}))
-        return 0
-
-    rows, error = ytdlp_results(ytdlp, query, limit)
+    rows, error = ytdlp_results(ytdlp, query, limit, config, args.filter)
     print(json.dumps({"results": rows, "error": error}))
     return 0
 

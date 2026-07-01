@@ -40,6 +40,11 @@
     "surface": "flyout"
   },
   "mediaProviders": {
+    "youtube": {
+      "enabled": true,
+      "cookiesFromBrowser": "firefox",
+      "cookiesFile": ""
+    },
     "jellyfin": {
       "enabled": true,
       "serverUrl": "https://jellyfin.example",

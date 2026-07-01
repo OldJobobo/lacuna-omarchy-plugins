@@ -80,6 +80,10 @@ def start(args):
         "--msg-level=all=warn",
         "--term-playing-msg=",
     ]
+    if args.cookies_from_browser:
+        command.append(f"--ytdl-raw-options=cookies-from-browser={args.cookies_from_browser}")
+    if args.cookies_file:
+        command.append(f"--ytdl-raw-options=cookies={args.cookies_file}")
     if args.audio_only:
         command.append("--no-video")
     command.append(args.url)
@@ -123,6 +127,8 @@ def main(argv=None):
     start_parser.add_argument("--url", required=True)
     start_parser.add_argument("--volume", type=int, default=70)
     start_parser.add_argument("--start", type=float, default=0)
+    start_parser.add_argument("--cookies-from-browser", default="")
+    start_parser.add_argument("--cookies-file", default="")
     mode = start_parser.add_mutually_exclusive_group()
     mode.add_argument("--audio-only", action="store_true")
     mode.add_argument("--video", action="store_true")

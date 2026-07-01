@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -43,8 +44,32 @@ def normalize(entry, fallback_url):
     }
 
 
+def load_config(raw):
+    try:
+        payload = json.loads(raw or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def ytdlp_auth_args(config):
+    if config.get("enabled") is not True:
+        return []
+    cookies_file = str(config.get("cookiesFile") or "").strip()
+    if cookies_file:
+        return ["--cookies", os.path.expanduser(cookies_file)]
+    cookies_from_browser = str(config.get("cookiesFromBrowser") or "").strip()
+    if cookies_from_browser:
+        return ["--cookies-from-browser", cookies_from_browser]
+    return []
+
+
 def main(argv=None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
+    config = {}
+    if args[:1] == ["--config-json"]:
+        config = load_config(args[1] if len(args) > 1 else "{}")
+        args = args[2:]
     url = args[0].strip() if args else ""
     if not url:
         print(json.dumps({"track": None, "error": "Missing YouTube URL"}))
@@ -57,6 +82,7 @@ def main(argv=None) -> int:
 
     cmd = [
         ytdlp,
+        *ytdlp_auth_args(config),
         "--dump-single-json",
         "--skip-download",
         "--no-warnings",

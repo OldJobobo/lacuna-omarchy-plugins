@@ -299,6 +299,7 @@ class YoutubeMusicScriptTests(unittest.TestCase):
     PREVIEW_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-preview"
     JELLYFIN_SEARCH_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-jellyfin-search"
     JELLYFIN_STREAM_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-jellyfin-stream"
+    AUTH_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-auth"
 
     def test_dependency_check_reports_missing_tools(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -341,7 +342,7 @@ class YoutubeMusicScriptTests(unittest.TestCase):
         self.assertEqual(payload["error"], "")
         self.assertEqual(len(payload["results"]), 1)
         self.assertIn("--flat-playlist", argv)
-        self.assertIn("ytsearch40:demo query music", argv)
+        self.assertIn("ytsearch40:demo query", argv)
         item = payload["results"][0]
         self.assertEqual(item["id"], "abc123")
         self.assertEqual(item["title"], "Demo Track")
@@ -366,7 +367,7 @@ class YoutubeMusicScriptTests(unittest.TestCase):
                 "for row in rows: print(json.dumps(row))\n",
             )
             result = run(
-                [sys.executable, str(self.SEARCH_SCRIPT), "--limit", "2", "demo track"],
+                [sys.executable, str(self.SEARCH_SCRIPT), "--filter", "music", "--limit", "2", "demo track"],
                 {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
             )
 
@@ -391,7 +392,7 @@ class YoutubeMusicScriptTests(unittest.TestCase):
                 "for row in rows: print(json.dumps(row))\n",
             )
             result = run(
-                [sys.executable, str(self.SEARCH_SCRIPT), "--limit", "3", "small artist"],
+                [sys.executable, str(self.SEARCH_SCRIPT), "--filter", "music", "--limit", "3", "small artist"],
                 {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
             )
 
@@ -417,7 +418,7 @@ class YoutubeMusicScriptTests(unittest.TestCase):
                 "for row in rows: print(json.dumps(row))\n",
             )
             result = run(
-                [sys.executable, str(self.SEARCH_SCRIPT), "--limit", "4", "small artist"],
+                [sys.executable, str(self.SEARCH_SCRIPT), "--filter", "music", "--limit", "4", "small artist"],
                 {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
             )
 
@@ -438,13 +439,192 @@ class YoutubeMusicScriptTests(unittest.TestCase):
                 "for idx in range(3): print(json.dumps({'id': f'id{idx}', 'title': f'Mix {idx}', 'duration': 3600}))\n",
             )
             result = run(
-                [sys.executable, str(self.SEARCH_SCRIPT), "--limit", "80", "ambient mix"],
+                [sys.executable, str(self.SEARCH_SCRIPT), "--filter", "music", "--limit", "80", "ambient mix"],
                 {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
             )
             argv = json.loads((tmp / "argv.json").read_text())
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("ytsearch80:ambient mix music", argv)
+        self.assertIn("ytsearch80:ambient mix", argv)
+
+    def test_all_filter_keeps_general_youtube_order(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            write_exec(
+                bin_dir / "yt-dlp",
+                "#!/usr/bin/env python3\n"
+                "import json, pathlib, sys\n"
+                f"pathlib.Path({str(tmp / 'argv.json')!r}).write_text(json.dumps(sys.argv))\n"
+                "rows = [\n"
+                "  {'id': 'general1', 'title': 'Demo Track reaction review', 'uploader': 'Video Channel', 'duration': 720},\n"
+                "  {'id': 'song1', 'title': 'Demo Track Official Audio', 'uploader': 'Demo Artist - Topic', 'duration': 185},\n"
+                "]\n"
+                "for row in rows: print(json.dumps(row))\n",
+            )
+            result = run(
+                [sys.executable, str(self.SEARCH_SCRIPT), "--filter", "all", "--limit", "2", "demo track"],
+                {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+            )
+            argv = json.loads((tmp / "argv.json").read_text())
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("ytsearch40:demo track", argv)
+        self.assertNotIn("ytsearch40:demo track music", argv)
+        payload = json.loads(result.stdout)
+        self.assertEqual([item["id"] for item in payload["results"]], ["general1", "song1"])
+
+    def test_search_uses_general_youtube_browser_cookies(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            write_exec(
+                bin_dir / "yt-dlp",
+                "#!/usr/bin/env python3\n"
+                "import json, pathlib, sys\n"
+                f"pathlib.Path({str(tmp / 'argv.json')!r}).write_text(json.dumps(sys.argv))\n"
+                "print(json.dumps({'id': 'general1', 'title': 'General YouTube Video', 'uploader': 'Video Channel', 'duration': 300}))\n",
+            )
+            config = json.dumps({"enabled": True, "cookiesFromBrowser": "firefox"})
+            result = run(
+                [sys.executable, str(self.SEARCH_SCRIPT), "--config-json", config, "--limit", "5", "demo"],
+                {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+            )
+            argv = json.loads((tmp / "argv.json").read_text())
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--cookies-from-browser", argv)
+        self.assertIn("firefox", argv)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["error"], "")
+        self.assertEqual(payload["results"][0]["id"], "general1")
+        self.assertEqual(payload["results"][0]["source"], "YouTube")
+
+    def test_default_suggestions_use_authenticated_youtube_home_feed(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            write_exec(
+                bin_dir / "yt-dlp",
+                "#!/usr/bin/env python3\n"
+                "import json, pathlib, sys\n"
+                f"pathlib.Path({str(tmp / 'argv.json')!r}).write_text(json.dumps(sys.argv))\n"
+                "rows = [\n"
+                "  {'id': 'home1', 'title': 'Personal Coding Video', 'uploader': 'Dev Channel', 'duration': 1260},\n"
+                "  {'id': 'home2', 'title': 'Longform Essay', 'uploader': 'Essay Channel', 'duration': 4184},\n"
+                "]\n"
+                "for row in rows: print(json.dumps(row))\n",
+            )
+            config = json.dumps({"enabled": True, "cookiesFromBrowser": "firefox"})
+            result = run(
+                [sys.executable, str(self.SEARCH_SCRIPT), "--config-json", config, "--filter", "all", "--limit", "5", "--suggestions"],
+                {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+            )
+            argv = json.loads((tmp / "argv.json").read_text())
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--cookies-from-browser", argv)
+        self.assertIn("firefox", argv)
+        self.assertIn("--playlist-items", argv)
+        self.assertIn("1-5", argv)
+        self.assertIn("https://www.youtube.com/", argv)
+        self.assertNotIn("ytsearch", " ".join(argv))
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["error"], "")
+        self.assertEqual([item["id"] for item in payload["results"]], ["home1", "home2"])
+        self.assertEqual(payload["results"][0]["source"], "YouTube Home")
+
+    def test_music_default_suggestions_filter_authenticated_youtube_home_feed(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            write_exec(
+                bin_dir / "yt-dlp",
+                "#!/usr/bin/env python3\n"
+                "import json, pathlib, sys\n"
+                f"pathlib.Path({str(tmp / 'argv.json')!r}).write_text(json.dumps(sys.argv))\n"
+                "rows = [\n"
+                "  {'id': 'code1', 'title': 'Your Apps Dont Need an API Anymore', 'uploader': 'Dev Channel', 'duration': 1260},\n"
+                "  {'id': 'music1', 'title': 'Artist - Song Title', 'uploader': 'Artist', 'duration': 180},\n"
+                "  {'id': 'review1', 'title': 'Classic Album Review', 'uploader': 'Talk Channel', 'duration': 900},\n"
+                "  {'id': 'mix1', 'title': 'Deep Focus Synthwave Mix', 'uploader': 'Music Channel', 'duration': 3600},\n"
+                "]\n"
+                "for row in rows: print(json.dumps(row))\n",
+            )
+            config = json.dumps({"enabled": True, "cookiesFromBrowser": "firefox"})
+            result = run(
+                [sys.executable, str(self.SEARCH_SCRIPT), "--config-json", config, "--filter", "music", "--limit", "3", "--suggestions"],
+                {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+            )
+            argv = json.loads((tmp / "argv.json").read_text())
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--cookies-from-browser", argv)
+        self.assertIn("firefox", argv)
+        self.assertIn("--playlist-items", argv)
+        self.assertIn("1-12", argv)
+        self.assertIn("https://www.youtube.com/", argv)
+        self.assertNotIn("ytsearch", " ".join(argv))
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["error"], "")
+        self.assertEqual([item["id"] for item in payload["results"]], ["music1", "mix1"])
+        self.assertEqual(payload["results"][0]["source"], "YouTube Home Music")
+
+    def test_auth_helper_handles_missing_auth_dir_and_enables_browser_cookies(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            write_exec(bin_dir / "firefox", "#!/usr/bin/env sh\nexit 0\n")
+            write_exec(bin_dir / "notify-send", "#!/usr/bin/env sh\nexit 0\n")
+            for terminal in ["foot", "ghostty", "alacritty", "kitty", "wezterm", "xterm"]:
+                write_exec(bin_dir / terminal, "#!/usr/bin/env sh\nexit 0\n")
+            auth_dir = tmp / "omarchy" / "lacuna" / "youtube"
+            result = run(
+                [str(self.AUTH_SCRIPT), "--auth-dir", str(auth_dir)],
+                {
+                    "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+                    "HOME": str(tmp),
+                    "XDG_CONFIG_HOME": str(tmp / "config"),
+                    "PYTHON": sys.executable,
+                },
+            )
+            settings = json.loads((tmp / "omarchy" / "lacuna" / "settings.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(settings["mediaProviders"]["youtube"]["enabled"])
+        self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFromBrowser"], "firefox")
+
+    def test_auth_helper_maps_zen_to_firefox_profile_cookie_source(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            write_exec(bin_dir / "zen-browser", "#!/usr/bin/env sh\nexit 0\n")
+            write_exec(bin_dir / "notify-send", "#!/usr/bin/env sh\nexit 0\n")
+            for terminal in ["foot", "ghostty", "alacritty", "kitty", "wezterm", "xterm"]:
+                write_exec(bin_dir / terminal, "#!/usr/bin/env sh\nexit 0\n")
+            profile = tmp / ".zen" / "abc.default"
+            profile.mkdir(parents=True)
+            (profile / "cookies.sqlite").write_text("", encoding="utf-8")
+            auth_dir = tmp / "omarchy" / "lacuna" / "youtube"
+            result = run(
+                [str(self.AUTH_SCRIPT), "--auth-dir", str(auth_dir)],
+                {
+                    "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+                    "HOME": str(tmp),
+                    "XDG_CONFIG_HOME": str(tmp / "config"),
+                    "PYTHON": sys.executable,
+                },
+            )
+            settings = json.loads((tmp / "omarchy" / "lacuna" / "settings.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFromBrowser"], f"firefox:{profile}")
 
     def test_search_handles_missing_ytdlp(self):
         with tempfile.TemporaryDirectory() as tmpdir:
