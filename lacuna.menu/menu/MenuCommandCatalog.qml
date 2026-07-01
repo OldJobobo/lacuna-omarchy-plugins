@@ -85,8 +85,12 @@ Item {
     return terminalCommand("omarchy toggle idle status; printf '\\n'; omarchy-shell idle debug; printf '\\nCommand exited. Press Enter to close...'; read -r _", "Omarchy Idle Debug", false)
   }
 
+  function reapplyBarSizeCommand() {
+    return "bar_size_state=\"${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/lacuna.bar-size-pill/scripts/bar-size-state\"; [ ! -x \"$bar_size_state\" ] || \"$bar_size_state\" reapply"
+  }
+
   function switchThemeCommand() {
-    return "theme=$(omarchy theme switcher); [ -n \"$theme\" ] && omarchy theme set \"$theme\""
+    return "theme=$(omarchy theme switcher); [ -n \"$theme\" ] && omarchy theme set \"$theme\" && " + reapplyBarSizeCommand()
   }
 
   function switchBackgroundCommand() {

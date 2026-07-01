@@ -294,6 +294,8 @@ class YoutubeMusicScriptTests(unittest.TestCase):
     CHECK_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-check"
     SEARCH_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-search"
     CONTROL_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-control"
+    INFO_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-info"
+    REFRESH_FAVORITES_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-refresh-favorites"
     PREVIEW_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-preview"
     JELLYFIN_SEARCH_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-jellyfin-search"
     JELLYFIN_STREAM_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-jellyfin-stream"
@@ -452,6 +454,103 @@ class YoutubeMusicScriptTests(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(payload["results"], [])
         self.assertIn("yt-dlp", payload["error"])
+
+    def test_info_normalizes_direct_youtube_url_metadata(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            write_exec(
+                bin_dir / "yt-dlp",
+                "#!/usr/bin/env python3\n"
+                "import json, pathlib, sys\n"
+                f"pathlib.Path({str(tmp / 'argv.json')!r}).write_text(json.dumps(sys.argv))\n"
+                "print(json.dumps({\n"
+                "  'id': 'url123',\n"
+                "  'title': 'Direct URL Title',\n"
+                "  'uploader': 'Direct Artist',\n"
+                "  'duration': 215,\n"
+                "  'webpage_url': 'https://www.youtube.com/watch?v=url123'\n"
+                "}))\n",
+            )
+            result = run(
+                [sys.executable, str(self.INFO_SCRIPT), "https://youtu.be/url123"],
+                {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+            )
+            argv = json.loads((tmp / "argv.json").read_text())
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--dump-single-json", argv)
+        self.assertIn("--no-playlist", argv)
+        self.assertIn("https://youtu.be/url123", argv)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["error"], "")
+        item = payload["track"]
+        self.assertEqual(item["id"], "url123")
+        self.assertEqual(item["title"], "Direct URL Title")
+        self.assertEqual(item["uploader"], "Direct Artist")
+        self.assertEqual(item["durationText"], "3:35")
+        self.assertEqual(item["thumbnail"], "https://i.ytimg.com/vi/url123/hqdefault.jpg")
+        self.assertEqual(item["url"], "https://www.youtube.com/watch?v=url123")
+        self.assertEqual(item["source"], "YouTube")
+
+    def test_refresh_favorites_repairs_placeholder_youtube_titles(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            state_file = tmp / "youtube-music.json"
+            state_file.write_text(json.dumps({
+                "version": 3,
+                "favorites": [{
+                    "id": "url123",
+                    "provider": "youtube",
+                    "mediaType": "video",
+                    "streamKind": "video",
+                    "title": "YouTube video url123",
+                    "uploader": "",
+                    "duration": "",
+                    "thumbnail": "old.jpg",
+                    "source": "YouTube",
+                    "url": "https://www.youtube.com/watch?v=url123",
+                }, {
+                    "id": "keep",
+                    "provider": "youtube",
+                    "title": "Already Real",
+                    "url": "https://www.youtube.com/watch?v=keep",
+                }],
+            }), encoding="utf-8")
+            info_script = tmp / "youtube-music-info"
+            write_exec(
+                info_script,
+                "#!/usr/bin/env python3\n"
+                "import json\n"
+                "print(json.dumps({'track': {\n"
+                "  'id': 'url123',\n"
+                "  'title': 'Resolved Favorite Title',\n"
+                "  'uploader': 'Resolved Artist',\n"
+                "  'durationText': '3:35',\n"
+                "  'thumbnail': 'new.jpg',\n"
+                "  'source': 'YouTube',\n"
+                "  'url': 'https://www.youtube.com/watch?v=url123'\n"
+                "}, 'error': ''}))\n",
+            )
+
+            result = run([
+                sys.executable,
+                str(self.REFRESH_FAVORITES_SCRIPT),
+                str(state_file),
+                str(info_script),
+            ], {})
+            state = json.loads(state_file.read_text(encoding="utf-8"))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["checked"], 1)
+        self.assertEqual(payload["changed"], 1)
+        self.assertEqual(state["favorites"][0]["title"], "Resolved Favorite Title")
+        self.assertEqual(state["favorites"][0]["uploader"], "Resolved Artist")
+        self.assertEqual(state["favorites"][0]["duration"], "3:35")
+        self.assertEqual(state["favorites"][0]["thumbnail"], "new.jpg")
+        self.assertEqual(state["favorites"][1]["title"], "Already Real")
 
     def test_jellyfin_search_normalizes_playable_media(self):
         module = load_script(self.JELLYFIN_SEARCH_SCRIPT, "youtube_music_jellyfin_search_test")

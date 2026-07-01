@@ -265,6 +265,8 @@ def main():
     if action == "toggle":
         next_mode = "compact" if data.get("barSizeMode") == "full" else "full"
         data = apply_mode(data, next_mode)
+    elif action == "reapply":
+        data = apply_mode(data, data.get("barSizeMode") if data.get("barSizeMode") in ("theme", "compact", "full") else "full")
     elif action in ("theme", "compact", "full"):
         data = apply_mode(data, action)
 

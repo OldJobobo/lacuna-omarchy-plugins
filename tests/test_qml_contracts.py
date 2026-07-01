@@ -1198,6 +1198,8 @@ class QmlContractTests(unittest.TestCase):
 
         self.assertIn("omarchy theme switcher", theme)
         self.assertIn("omarchy theme set", theme)
+        self.assertIn("bar-size-state", theme)
+        self.assertIn("reapply", theme)
         self.assertIn("omarchy theme current", theme)
         self.assertIn("omarchy theme list", theme)
         self.assertIn("function nextBackgroundCommand()", widget)
@@ -2255,6 +2257,8 @@ class QmlContractTests(unittest.TestCase):
             "readonly property bool jellyfinConfigured",
             "readonly property string jellyfinSearchScript",
             "readonly property string jellyfinStreamScript",
+            "readonly property string infoScript",
+            "readonly property string refreshFavoritesScript",
             "function jellyfinProviderSettings()",
             "function providerFor(track)",
             "function streamKindFor(track)",
@@ -2268,12 +2272,20 @@ class QmlContractTests(unittest.TestCase):
             "function isYoutubeUrl(value)",
             "function normalizeYoutubeUrl(value)",
             "function playUrl(url)",
+            "function resolveTrackInfo(track)",
+            "property bool resolvingTrackInfo",
+            "property bool refreshingFavorites",
+            "property string trackInfoRequestUrl",
             "readonly property string defaultSuggestionsQuery",
             "property bool pendingDefaultSuggestions: false",
             "function loadDefaultSuggestions()",
             "pendingDefaultSuggestions = true",
             "if (root.pendingDefaultSuggestions && (root.ytdlpAvailable || root.jellyfinConfigured)) root.loadDefaultSuggestions()",
             "videoIdFromUrl(normalizedUrl)",
+            "resolveTrackInfo(currentTrack)",
+            "id: trackInfoProc",
+            "trackInfoProc.command = [infoScript, root.trackInfoRequestUrl]",
+            "root.currentTrack = resolved",
             "Paste a YouTube URL",
             "function favoriteIndex(track)",
             "function isFavorite(track)",
@@ -2282,7 +2294,10 @@ class QmlContractTests(unittest.TestCase):
             "function toggleFavorite(track)",
             "function removeFavorite(index)",
             "function playFavorite(index)",
+            "function playFavoriteIndex(index: string): string",
+            "function playUrl(url: string): string",
             "function clearFavorites()",
+            "function refreshFavoriteMetadata()",
             "function setRepeatMode(mode)",
             "function cycleRepeatMode()",
             "function handlePlaybackEnded()",
@@ -2292,6 +2307,8 @@ class QmlContractTests(unittest.TestCase):
             "onRepeatModeChanged: scheduleStateSave()",
             "playbackProbeFailures >= 2",
             "property int backgroundRequestRevision: 0",
+            "property var previewTelemetry",
+            "function updatePreviewTelemetry(payload)",
             "backgroundRequestRevision += 1",
             "if (hasTrack && (backgroundVideoEnabled || backgroundStreamUrl === \"\")) resolveBackground(currentTrack)",
             "resolvingBackground = false",
@@ -2299,6 +2316,9 @@ class QmlContractTests(unittest.TestCase):
             "backgroundRequestUrl = \"\"",
             "Background video is unavailable for audio-only media",
             "if (hasTrack && previewStreamUrl === \"\" && !resolvingPreview) resolvePreview(currentTrack)",
+            "previewTelemetry: root.previewTelemetry",
+            "trackInfoResolving: root.resolvingTrackInfo",
+            "refreshingFavorites: root.refreshingFavorites",
             "backgroundRequestRevision: root.backgroundRequestRevision",
             "repeatMode: root.repeatMode",
             "onFavoritesChanged: {",
@@ -2306,11 +2326,14 @@ class QmlContractTests(unittest.TestCase):
             "favoritesLength: root.favoritesLength",
             "currentFavorite: root.currentFavorite",
             "function toggleFavoriteCurrent(): string",
+            "function refreshFavoriteMetadata(): string",
             "function cycleRepeatMode(): string",
         ]:
             self.assertIn(snippet, service)
         self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-jellyfin-search").exists())
         self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-jellyfin-stream").exists())
+        self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-info").exists())
+        self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-refresh-favorites").exists())
 
     def test_youtube_music_favorites_are_available_in_menu_ui(self):
         flyout = read("lacuna.menu/menu/FlyoutYoutubeMusicContent.qml")
@@ -2370,16 +2393,37 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property real playbackPosition", tile)
         self.assertIn("readonly property bool localPreviewVisible: hasTrack && !sentToBackground", tile)
         self.assertIn("function syncPreviewPosition(force)", tile)
+        self.assertIn("function previewCanSeek()", tile)
+        self.assertIn("function previewStartupSettling()", tile)
+        self.assertIn("function recoverPreviewPlayback()", tile)
+        self.assertIn("function previewDiagnosticPayload()", tile)
+        self.assertIn("function samplePreviewTelemetry(reason)", tile)
+        self.assertIn("service.updatePreviewTelemetry(previewDiagnosticPayload())", tile)
+        self.assertIn("likelyFrozen", tile)
+        self.assertIn("property double previewPlaybackStartedAt", tile)
+        self.assertIn("property int previewStablePositionTicks", tile)
         self.assertIn("if (!localPreviewVisible) {", tile)
         self.assertIn("previewPositionSettleTimer.stop()", tile)
+        self.assertIn("previewRecoveryTimer.stop()", tile)
         self.assertIn("previewPlayer.play()", tile)
         self.assertIn("previewPositionSettleTimer.restart()", tile)
+        self.assertIn("previewRecoveryTimer.restart()", tile)
         self.assertIn("previewPlayer.pause()", tile)
         self.assertIn("previewPlayer.playbackState === MediaPlayer.StoppedState", tile)
+        self.assertIn("previewPlayer.mediaStatus === MediaPlayer.LoadedMedia", tile)
+        self.assertIn("previewPlayer.mediaStatus === MediaPlayer.BufferedMedia", tile)
+        self.assertIn("previewPlayer.mediaStatus === MediaPlayer.LoadingMedia", tile)
+        self.assertIn("previewPlayer.mediaStatus === MediaPlayer.BufferingMedia", tile)
         self.assertIn("previewPlayer.setPosition(target)", tile)
         self.assertIn("id: previewPositionSettleTimer", tile)
-        self.assertIn("onPlaybackStateChanged: if (playbackState === MediaPlayer.PlayingState) previewPositionSettleTimer.restart()", tile)
-        self.assertIn("onPlaybackPositionChanged: syncPreviewPosition(false)", tile)
+        self.assertIn("id: previewRecoveryTimer", tile)
+        self.assertIn("onPlaybackStateChanged", tile)
+        self.assertIn("onMediaStatusChanged", tile)
+        self.assertIn("mediaStatus === MediaPlayer.StalledMedia", tile)
+        self.assertIn("mediaStatus === MediaPlayer.InvalidMedia", tile)
+        self.assertIn("previewPositionSettleTimer.interval = 1800", tile)
+        self.assertIn("interval = 350", tile)
+        self.assertIn("onPlaybackPositionChanged: if (previewPositionPending) syncPreviewPosition(false)", tile)
         self.assertLess(tile.index("previewPlayer.play()"), tile.index("previewPositionSettleTimer.restart()"))
         self.assertLess(tile.index("previewPlayer.play()"), tile.index("previewPlayer.setPosition(target)"))
         self.assertIn('name === "heart-filled"', icons)

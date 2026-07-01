@@ -1,5 +1,6 @@
 import QtQuick
 import QtMultimedia
+import Quickshell
 import Quickshell.Widgets
 import "../components"
 import "../services"
@@ -18,6 +19,14 @@ Item {
   property var designTokens: fallbackDesignTokens
   property string bodyFontFamily: "Hack Nerd Font Propo"
   property bool volumeOpen: false
+  property bool previewPositionPending: false
+  property int previewRecoveryAttempts: 0
+  property double previewPlaybackStartedAt: 0
+  property int previewTelemetrySamples: 0
+  property int previewLastPosition: 0
+  property int previewStablePositionTicks: 0
+  property double previewLastTelemetryAt: 0
+  property string previewLastEvent: "idle"
   property real videoReveal: localPreviewVisible ? 1 : 0
   property real layoutReveal: (localPreviewVisible || videoReveal > 0.01) ? 1 : 0
 
@@ -71,38 +80,168 @@ Item {
     service.setVolume(Math.round(Math.max(0, Math.min(1, localX / railWidth)) * 100))
   }
 
+  function playerStateName(state) {
+    if (state === MediaPlayer.PlayingState) return "playing"
+    if (state === MediaPlayer.PausedState) return "paused"
+    if (state === MediaPlayer.StoppedState) return "stopped"
+    return "unknown"
+  }
+
+  function mediaStatusName(status) {
+    if (status === MediaPlayer.NoMedia) return "no-media"
+    if (status === MediaPlayer.LoadingMedia) return "loading"
+    if (status === MediaPlayer.LoadedMedia) return "loaded"
+    if (status === MediaPlayer.BufferingMedia) return "buffering"
+    if (status === MediaPlayer.StalledMedia) return "stalled"
+    if (status === MediaPlayer.BufferedMedia) return "buffered"
+    if (status === MediaPlayer.EndOfMedia) return "end"
+    if (status === MediaPlayer.InvalidMedia) return "invalid"
+    return "unknown"
+  }
+
+  function resetPreviewTelemetry(reason) {
+    previewTelemetrySamples = 0
+    previewLastPosition = 0
+    previewStablePositionTicks = 0
+    previewLastTelemetryAt = Date.now()
+    previewLastEvent = reason || "reset"
+  }
+
+  function samplePreviewTelemetry(reason) {
+    var position = Math.max(0, Math.round(Number(previewPlayer.position) || 0))
+    if (previewTelemetrySamples > 0 && Math.abs(position - previewLastPosition) < 80 && previewPlayer.playbackState === MediaPlayer.PlayingState)
+      previewStablePositionTicks += 1
+    else
+      previewStablePositionTicks = 0
+
+    previewTelemetrySamples += 1
+    previewLastPosition = position
+    previewLastTelemetryAt = Date.now()
+    previewLastEvent = reason || "sample"
+    if (service && typeof service.updatePreviewTelemetry === "function")
+      service.updatePreviewTelemetry(previewDiagnosticPayload())
+  }
+
+  function previewDiagnosticPayload() {
+    return {
+      loaded: true,
+      available: available,
+      hasTrack: hasTrack,
+      playing: playing,
+      localPreviewVisible: localPreviewVisible,
+      previewActive: previewActive,
+      previewUrlReady: previewUrl !== "",
+      previewUrlPrefix: previewUrl.slice(0, 96),
+      playbackState: playerStateName(previewPlayer.playbackState),
+      mediaStatus: mediaStatusName(previewPlayer.mediaStatus),
+      playerPositionMs: Math.max(0, Math.round(Number(previewPlayer.position) || 0)),
+      servicePositionSeconds: playbackPosition,
+      durationMs: Math.max(0, Math.round(Number(previewPlayer.duration) || 0)),
+      seekable: previewPlayer.seekable,
+      positionPending: previewPositionPending,
+      recoveryAttempts: previewRecoveryAttempts,
+      playbackStartedAgeMs: previewPlaybackStartedAt > 0 ? Math.max(0, Math.round(Date.now() - previewPlaybackStartedAt)) : 0,
+      telemetrySamples: previewTelemetrySamples,
+      stablePositionTicks: previewStablePositionTicks,
+      lastPositionMs: previewLastPosition,
+      lastTelemetryAgeMs: previewLastTelemetryAt > 0 ? Math.max(0, Math.round(Date.now() - previewLastTelemetryAt)) : 0,
+      lastEvent: previewLastEvent,
+      likelyFrozen: previewPlayer.playbackState === MediaPlayer.PlayingState && previewStablePositionTicks >= 4,
+      backgroundVideoEnabled: service && service.backgroundVideoEnabled === true
+    }
+  }
+
   function syncPreviewPlayback() {
     if (!previewActive) {
       previewPositionSettleTimer.stop()
+      previewRecoveryTimer.stop()
+      previewPositionPending = false
+      previewRecoveryAttempts = 0
+      previewPlaybackStartedAt = 0
+      resetPreviewTelemetry("inactive")
       previewPlayer.stop()
       return
     }
     if (!localPreviewVisible) {
       previewPositionSettleTimer.stop()
+      previewRecoveryTimer.stop()
+      previewPositionPending = false
+      previewRecoveryAttempts = 0
+      previewPlaybackStartedAt = 0
+      resetPreviewTelemetry("hidden")
       previewPlayer.pause()
       return
     }
     if (playing) {
       previewPlayer.play()
-      previewPositionSettleTimer.restart()
+      previewPositionPending = true
+      samplePreviewTelemetry("play-request")
+      previewRecoveryTimer.restart()
     } else {
       previewPositionSettleTimer.stop()
+      previewRecoveryTimer.stop()
+      previewPositionPending = false
+      previewRecoveryAttempts = 0
+      previewPlaybackStartedAt = 0
+      samplePreviewTelemetry("pause-request")
       previewPlayer.pause()
     }
   }
 
+  function previewCanSeek() {
+    return previewPlayer.mediaStatus === MediaPlayer.LoadedMedia
+      || previewPlayer.mediaStatus === MediaPlayer.BufferedMedia
+      || previewPlayer.playbackState === MediaPlayer.PlayingState
+  }
+
+  function previewStartupSettling() {
+    return previewPlaybackStartedAt > 0 && Date.now() - previewPlaybackStartedAt < 1800
+  }
+
   function syncPreviewPosition(force) {
     if (!previewActive || previewPlayer.playbackState === MediaPlayer.StoppedState) return
+    if (!previewCanSeek()) {
+      previewPositionPending = true
+      previewPositionSettleTimer.restart()
+      return
+    }
+    if (!force && previewStartupSettling()) {
+      previewPositionPending = true
+      previewPositionSettleTimer.restart()
+      return
+    }
     var target = Math.max(0, Math.round(playbackPosition * 1000))
     if (force || Math.abs(previewPlayer.position - target) > 900) {
       previewPlayer.setPosition(target)
+      samplePreviewTelemetry("seek")
     }
+    previewPositionPending = false
+  }
+
+  function recoverPreviewPlayback() {
+    if (!previewActive || !localPreviewVisible || !playing) {
+      previewRecoveryAttempts = 0
+      return
+    }
+    if (previewPlayer.playbackState === MediaPlayer.PlayingState || previewPlayer.mediaStatus === MediaPlayer.LoadingMedia || previewPlayer.mediaStatus === MediaPlayer.BufferingMedia || previewPlayer.mediaStatus === MediaPlayer.StalledMedia) {
+      previewRecoveryAttempts = 0
+      return
+    }
+    if (previewPlayer.mediaStatus !== MediaPlayer.InvalidMedia && previewPlayer.playbackState !== MediaPlayer.StoppedState) return
+    if (previewRecoveryAttempts >= 3) return
+    previewRecoveryAttempts += 1
+    previewPlayer.stop()
+    previewPlayer.play()
+    previewPositionPending = true
+    samplePreviewTelemetry("recover")
+    previewPositionSettleTimer.restart()
+    previewRecoveryTimer.restart()
   }
 
   onPlayingChanged: syncPreviewPlayback()
   onPreviewActiveChanged: syncPreviewPlayback()
   onLocalPreviewVisibleChanged: syncPreviewPlayback()
-  onPlaybackPositionChanged: syncPreviewPosition(false)
+  onPlaybackPositionChanged: if (previewPositionPending) syncPreviewPosition(false)
 
   width: parent ? parent.width : 260
   height: tileHeight
@@ -180,8 +319,34 @@ Item {
           volume: 0
         }
         loops: MediaPlayer.Infinite
-        onSourceChanged: root.syncPreviewPlayback()
-        onPlaybackStateChanged: if (playbackState === MediaPlayer.PlayingState) previewPositionSettleTimer.restart()
+        onSourceChanged: {
+          root.resetPreviewTelemetry("source")
+          root.syncPreviewPlayback()
+        }
+        onPlaybackStateChanged: {
+          root.samplePreviewTelemetry("playback-" + root.playerStateName(playbackState))
+          if (playbackState === MediaPlayer.PlayingState) {
+            root.previewRecoveryAttempts = 0
+            root.previewPlaybackStartedAt = Date.now()
+            previewRecoveryTimer.stop()
+            previewPositionSettleTimer.interval = 1800
+            previewPositionSettleTimer.restart()
+          } else if (root.previewActive && root.localPreviewVisible && root.playing) {
+            previewRecoveryTimer.restart()
+          }
+        }
+        onMediaStatusChanged: {
+          root.samplePreviewTelemetry("media-" + root.mediaStatusName(mediaStatus))
+          if (mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia) {
+            if (root.playing && root.localPreviewVisible) previewPlayer.play()
+            if (root.previewPositionPending && !root.previewStartupSettling()) {
+              previewPositionSettleTimer.interval = 350
+              previewPositionSettleTimer.restart()
+            }
+          } else if (mediaStatus === MediaPlayer.InvalidMedia && root.previewActive && root.localPreviewVisible && root.playing) {
+            previewRecoveryTimer.restart()
+          }
+        }
       }
 
       VideoOutput {
@@ -196,7 +361,7 @@ Item {
         source: root.thumbnail
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
-        opacity: root.previewActive && previewPlayer.playbackState !== MediaPlayer.StoppedState ? 0 : 1
+        opacity: root.previewActive && previewPlayer.playbackState === MediaPlayer.PlayingState ? 0 : 1
         visible: root.thumbnail !== "" && status !== Image.Error && opacity > 0
 
         Behavior on opacity {
@@ -508,14 +673,24 @@ Item {
       id: previewPositionSettleTimer
       interval: 350
       repeat: false
-      onTriggered: root.syncPreviewPosition(true)
+      onTriggered: {
+        interval = 350
+        root.syncPreviewPosition(true)
+      }
+    }
+
+    Timer {
+      id: previewRecoveryTimer
+      interval: 900
+      repeat: false
+      onTriggered: root.recoverPreviewPlayback()
     }
 
     Timer {
       interval: 1500
       repeat: true
       running: root.previewActive && root.localPreviewVisible && root.playing
-      onTriggered: root.syncPreviewPosition(false)
+      onTriggered: root.samplePreviewTelemetry("periodic")
     }
   }
 

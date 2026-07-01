@@ -141,6 +141,35 @@ class StateScriptTests(unittest.TestCase):
         self.assertIn("size-vertical = 32", shell)
         assert_preserved(self, before, after)
 
+    def test_bar_size_state_reapplies_saved_user_mode_after_theme_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home, omarchy_path, settings_path, before = seed_config(Path(tmp))
+            shell_path = config_home / "omarchy" / "current" / "theme" / "shell.toml"
+            settings = read_json(settings_path)
+            settings["barSizeMode"] = "full"
+            settings["compact"] = False
+            settings["barSizeSnapshot"] = {
+                "themeName": "previous-theme",
+                "sizeHorizontal": 26,
+                "sizeVertical": 28,
+            }
+            write_json(settings_path, settings)
+            (config_home / "omarchy" / "current" / "theme.name").write_text("next-theme\n", encoding="utf-8")
+            shell_path.write_text("[bar]\nsize-horizontal = 26\nsize-vertical = 28\n", encoding="utf-8")
+
+            result = run_script(BAR_SIZE_STATE, "reapply", config_home, omarchy_path)
+            payload = json.loads(result.stdout)
+            after = read_json(settings_path)
+            shell = shell_path.read_text(encoding="utf-8")
+
+        self.assertEqual(payload["mode"], "full")
+        self.assertEqual(after["barSizeMode"], "full")
+        self.assertIs(after["compact"], False)
+        self.assertEqual(after["barSizeSnapshot"]["themeName"], "next-theme")
+        self.assertIn("size-horizontal = 32", shell)
+        self.assertIn("size-vertical = 34", shell)
+        assert_preserved(self, before, after)
+
     def test_compact_state_preserves_user_runtime_state_without_delegate(self):
         with tempfile.TemporaryDirectory() as tmp:
             config_home, omarchy_path, settings_path, before = seed_config(Path(tmp))

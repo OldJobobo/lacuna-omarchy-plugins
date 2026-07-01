@@ -53,12 +53,16 @@ Item {
     return "'" + String(value).replace(/'/g, "'\\''") + "'"
   }
 
+  function reapplyBarSizeCommand() {
+    return "bar_size_state=\"${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/lacuna.bar-size-pill/scripts/bar-size-state\"; [ ! -x \"$bar_size_state\" ] || \"$bar_size_state\" reapply"
+  }
+
   function switchThemeCommand() {
-    return "theme=$(omarchy theme switcher); [ -n \"$theme\" ] && omarchy theme set \"$theme\""
+    return "theme=$(omarchy theme switcher); [ -n \"$theme\" ] && omarchy theme set \"$theme\" && " + reapplyBarSizeCommand()
   }
 
   function randomThemeCommand() {
-    return "current=\"$(omarchy theme current)\"; next=\"$(omarchy theme list | grep -Fvx \"$current\" | shuf -n 1)\"; [ -n \"$next\" ] && omarchy theme set \"$next\""
+    return "current=\"$(omarchy theme current)\"; next=\"$(omarchy theme list | grep -Fvx \"$current\" | shuf -n 1)\"; [ -n \"$next\" ] && omarchy theme set \"$next\" && " + reapplyBarSizeCommand()
   }
 
   function clipped(value) {

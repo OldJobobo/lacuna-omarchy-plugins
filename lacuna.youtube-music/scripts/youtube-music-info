@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+import json
+import shutil
+import subprocess
+import sys
+
+
+def duration_text(value):
+    try:
+        seconds = int(float(value))
+    except (TypeError, ValueError):
+        return ""
+    minutes, second = divmod(seconds, 60)
+    hours, minute = divmod(minutes, 60)
+    if hours:
+        return f"{hours}:{minute:02d}:{second:02d}"
+    return f"{minute}:{second:02d}"
+
+
+def thumbnail(entry):
+    thumbs = entry.get("thumbnails")
+    if isinstance(thumbs, list) and thumbs:
+        for item in reversed(thumbs):
+            url = item.get("url") if isinstance(item, dict) else ""
+            if url:
+                return url
+    return entry.get("thumbnail") or ""
+
+
+def normalize(entry, fallback_url):
+    video_id = str(entry.get("id") or entry.get("display_id") or entry.get("videoId") or "")
+    webpage_url = entry.get("webpage_url") or entry.get("original_url") or entry.get("url") or fallback_url
+    url = webpage_url if str(webpage_url).startswith("http") else fallback_url
+
+    return {
+        "id": video_id,
+        "title": entry.get("title") or (f"YouTube video {video_id}" if video_id else "YouTube video"),
+        "uploader": entry.get("uploader") or entry.get("channel") or "",
+        "durationText": duration_text(entry.get("duration")),
+        "thumbnail": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg" if video_id else thumbnail(entry),
+        "url": url,
+        "source": "YouTube",
+    }
+
+
+def main(argv=None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    url = args[0].strip() if args else ""
+    if not url:
+        print(json.dumps({"track": None, "error": "Missing YouTube URL"}))
+        return 0
+
+    ytdlp = shutil.which("yt-dlp")
+    if not ytdlp:
+        print(json.dumps({"track": None, "error": "yt-dlp is not installed"}))
+        return 0
+
+    cmd = [
+        ytdlp,
+        "--dump-single-json",
+        "--skip-download",
+        "--no-warnings",
+        "--no-playlist",
+        url,
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15, check=False)
+    except subprocess.TimeoutExpired:
+        print(json.dumps({"track": None, "error": "Metadata lookup timed out"}))
+        return 0
+
+    if result.returncode != 0:
+        message = (result.stderr or result.stdout or "Metadata lookup failed").strip().splitlines()
+        print(json.dumps({"track": None, "error": message[-1] if message else "Metadata lookup failed"}))
+        return 0
+
+    try:
+        entry = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        print(json.dumps({"track": None, "error": "Metadata lookup returned invalid JSON"}))
+        return 0
+
+    print(json.dumps({"track": normalize(entry, url), "error": ""}))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -15,6 +15,8 @@ Item {
   property bool commandRunning: false
   property bool resolvingPreview: false
   property bool resolvingBackground: false
+  property bool resolvingTrackInfo: false
+  property bool refreshingFavorites: false
   property bool stateLoaded: false
   property bool loadingState: false
   property bool pendingBackgroundEnable: false
@@ -45,15 +47,19 @@ Item {
   property var currentTrack: null
   property string previewStreamUrl: ""
   property string previewRequestUrl: ""
+  property string trackInfoRequestUrl: ""
   property string backgroundStreamUrl: ""
   property string backgroundRequestUrl: ""
   property string backgroundPlaybackSocket: ""
   property int backgroundRequestRevision: 0
+  property var previewTelemetry: ({ loaded: false })
 
   readonly property bool available: mpvAvailable && (ytdlpAvailable || jellyfinConfigured)
   readonly property string sourceDir: manifest && manifest.__sourceDir ? manifest.__sourceDir : localPath(Qt.resolvedUrl("."))
   readonly property string checkScript: sourceDir + "/scripts/youtube-music-check"
   readonly property string searchScript: sourceDir + "/scripts/youtube-music-search"
+  readonly property string infoScript: sourceDir + "/scripts/youtube-music-info"
+  readonly property string refreshFavoritesScript: sourceDir + "/scripts/youtube-music-refresh-favorites"
   readonly property string controlScript: sourceDir + "/scripts/youtube-music-control"
   readonly property string previewScript: sourceDir + "/scripts/youtube-music-preview"
   readonly property string backgroundScript: sourceDir + "/scripts/youtube-music-background"
@@ -102,6 +108,10 @@ Item {
 
   function clampVolume(value) {
     return boundedInt(value, volume, 0, 100)
+  }
+
+  function updatePreviewTelemetry(payload) {
+    previewTelemetry = payload && typeof payload === "object" ? payload : ({ loaded: false })
   }
 
   function statusText() {
@@ -500,6 +510,15 @@ Item {
       thumbnail: id !== "" ? "https://i.ytimg.com/vi/" + id + "/hqdefault.jpg" : "",
       url: normalizedUrl
     })
+    resolveTrackInfo(currentTrack)
+  }
+
+  function resolveTrackInfo(track) {
+    var url = trackUrl(track)
+    if (url === "" || providerFor(track) !== "youtube") return
+    trackInfoRequestUrl = url
+    resolvingTrackInfo = true
+    trackInfoStartTimer.restart()
   }
 
   function resolvePreview(track) {
@@ -596,6 +615,14 @@ Item {
 
   function clearFavorites() {
     favorites = []
+  }
+
+  function refreshFavoriteMetadata() {
+    if (refreshingFavorites || !ytdlpAvailable) return
+    favoritesRefreshProc.output = ""
+    favoritesRefreshProc.command = [refreshFavoritesScript, stateFile, infoScript]
+    favoritesRefreshProc.running = true
+    refreshingFavorites = true
   }
 
   function setRepeatMode(mode) {
@@ -876,6 +903,24 @@ Item {
   }
 
   Timer {
+    id: trackInfoStartTimer
+    interval: 1
+    repeat: false
+    onTriggered: {
+      if (!root.resolvingTrackInfo || root.trackInfoRequestUrl === "") return
+      if (trackInfoProc.running) {
+        trackInfoProc.running = false
+        restart()
+        return
+      }
+      trackInfoProc.requestUrl = root.trackInfoRequestUrl
+      trackInfoProc.output = ""
+      trackInfoProc.command = [infoScript, root.trackInfoRequestUrl]
+      trackInfoProc.running = true
+    }
+  }
+
+  Timer {
     id: backgroundStartTimer
     interval: 1
     repeat: false
@@ -1018,6 +1063,33 @@ Item {
   }
 
   Process {
+    id: trackInfoProc
+    property string output: ""
+    property string requestUrl: ""
+
+    stdout: SplitParser {
+      onRead: function(data) { trackInfoProc.output += data }
+    }
+
+    onExited: function(exitCode) {
+      if (trackInfoProc.requestUrl !== root.trackInfoRequestUrl) return
+      root.resolvingTrackInfo = false
+      if (trackInfoProc.requestUrl !== root.trackUrl(root.currentTrack)) return
+      if (exitCode !== 0) return
+      try {
+        var payload = JSON.parse(trackInfoProc.output || "{}")
+        var resolved = root.normalizeTrack(payload.track)
+        if (resolved && root.trackUrl(resolved) === root.trackUrl(root.currentTrack)) {
+          root.currentTrack = resolved
+          root.scheduleStateSave()
+        }
+        if (payload.error && String(payload.error) !== "") root.errorText = String(payload.error)
+      } catch (e) {
+      }
+    }
+  }
+
+  Process {
     id: backgroundProc
     property string output: ""
     property string requestUrl: ""
@@ -1096,6 +1168,31 @@ Item {
   }
 
   Process {
+    id: favoritesRefreshProc
+    property string output: ""
+
+    stdout: SplitParser {
+      onRead: function(data) { favoritesRefreshProc.output += data }
+    }
+
+    onExited: function(exitCode) {
+      root.refreshingFavorites = false
+      if (exitCode !== 0) {
+        root.errorText = "Favorite metadata refresh failed"
+        root.status = "error"
+        return
+      }
+      try {
+        var payload = JSON.parse(favoritesRefreshProc.output || "{}")
+        if (payload.error && String(payload.error) !== "") root.errorText = String(payload.error)
+        if (Number(payload.changed || 0) > 0) stateFileView.reload()
+      } catch (e) {
+        root.errorText = "Favorite metadata refresh failed"
+      }
+    }
+  }
+
+  Process {
     id: cleanupProc
   }
 
@@ -1150,15 +1247,18 @@ Item {
         previewReady: root.previewStreamUrl !== "",
         previewResolving: root.resolvingPreview,
         previewUrl: root.previewStreamUrl,
+        trackInfoResolving: root.resolvingTrackInfo,
         currentTrackUrl: root.currentTrackUrl,
         backgroundReady: root.backgroundStreamUrl !== "",
         backgroundResolving: root.resolvingBackground,
         backgroundUrl: root.backgroundStreamUrl,
+        previewTelemetry: root.previewTelemetry,
         backgroundOwnsAudio: root.backgroundOwnsAudio,
         backgroundPlaybackSocket: root.backgroundPlaybackSocket,
         backgroundRequestRevision: root.backgroundRequestRevision,
         queueLength: root.queue.length,
         favoritesLength: root.favoritesLength,
+        refreshingFavorites: root.refreshingFavorites,
         currentFavorite: root.currentFavorite,
         repeatMode: root.repeatMode
       })
@@ -1184,6 +1284,16 @@ Item {
       return status()
     }
 
+    function playFavoriteIndex(index: string): string {
+      root.playFavorite(Math.max(0, Math.round(Number(index) || 0)))
+      return status()
+    }
+
+    function playUrl(url: string): string {
+      root.playUrl(url)
+      return status()
+    }
+
     function toggleFavoriteCurrent(): string {
       root.toggleFavorite(root.currentTrack)
       return status()
@@ -1191,6 +1301,11 @@ Item {
 
     function clearFavorites(): string {
       root.clearFavorites()
+      return status()
+    }
+
+    function refreshFavoriteMetadata(): string {
+      root.refreshFavoriteMetadata()
       return status()
     }
 
