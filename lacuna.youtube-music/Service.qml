@@ -24,6 +24,7 @@ Item {
   property bool backgroundOwnsAudio: false
   property int suppressStateReloads: 0
   property int playbackProbeFailures: 0
+  property double playbackStartedAtMs: 0
   property var lacunaSettings: ({})
   property bool providerSearchActive: false
   property int pendingProviderSearches: 0
@@ -714,6 +715,34 @@ Item {
     status = statusText()
   }
 
+  function markPlaybackFailed(message) {
+    if (!cleanupProc.running) {
+      cleanupProc.command = [controlScript, "cleanup", "--socket", playbackSocket()]
+      cleanupProc.running = true
+    }
+    pendingBackgroundEnable = false
+    backgroundEnableFallback.stop()
+    backgroundOwnsAudio = false
+    backgroundPlaybackSocket = ""
+    playing = false
+    paused = false
+    playbackProbeFailures = 0
+    errorText = message || "Playback stream unavailable"
+    status = "error"
+  }
+
+  function notePlaybackProbeFailure() {
+    if (pendingBackgroundEnable) {
+      backgroundEnableFallback.restart()
+      return
+    }
+    if (Date.now() - playbackStartedAtMs < 10000) return
+    if (playing && !paused && !commandRunning) {
+      playbackProbeFailures += 1
+      if (playbackProbeFailures >= 2) markPlaybackFailed("Playback stream unavailable")
+    }
+  }
+
   function playNextFromQueue(rememberPrevious, recycleCurrent) {
     if (queue.length <= 0) return false
     var nextQueue = queue.slice()
@@ -887,8 +916,8 @@ Item {
     commandProc.output = ""
     var args = [controlScript, "start", "--socket", mpvSocket, "--runtime-dir", runtimeDir, "--url", url, "--volume", String(volume), "--start", String(Math.max(0, Number(startAt) || 0))]
     var youtubeConfig = youtubeProviderSettings()
-    if (youtubeConfig.enabled === true && youtubeConfig.cookiesFromBrowser !== "") args.push("--cookies-from-browser", youtubeConfig.cookiesFromBrowser)
     if (youtubeConfig.enabled === true && youtubeConfig.cookiesFile !== "") args.push("--cookies-file", youtubeConfig.cookiesFile)
+    else if (youtubeConfig.enabled === true && youtubeConfig.cookiesFromBrowser !== "") args.push("--cookies-from-browser", youtubeConfig.cookiesFromBrowser)
     args.push(audioOnly ? "--audio-only" : "--video")
     commandProc.command = args
     commandProc.running = true
@@ -896,6 +925,7 @@ Item {
     playing = true
     paused = false
     playbackPosition = Math.max(0, Number(startAt) || 0)
+    playbackStartedAtMs = Date.now()
     playbackProbeFailures = 0
     status = "playing"
   }
@@ -1226,19 +1256,21 @@ Item {
 
     onExited: function(exitCode) {
       if (exitCode !== 0) {
-        if (root.pendingBackgroundEnable) backgroundEnableFallback.restart()
-        else if (root.playing && !root.paused && !root.commandRunning) {
-          root.playbackProbeFailures += 1
-          if (root.playbackProbeFailures >= 2) root.handlePlaybackEnded()
-        }
+        root.notePlaybackProbeFailure()
         return
       }
-      root.playbackProbeFailures = 0
       try {
         var payload = JSON.parse(positionProc.output || "{}")
         var value = Number(payload.value)
-        if (isFinite(value) && value >= 0) root.playbackPosition = value
+        if (payload.ok !== true || !isFinite(value) || value < 0) {
+          root.notePlaybackProbeFailure()
+          return
+        }
+        root.playbackProbeFailures = 0
+        root.playbackPosition = value
       } catch (e) {
+        root.notePlaybackProbeFailure()
+        return
       }
       if (root.pendingBackgroundEnable) {
         root.pendingBackgroundEnable = false

@@ -2360,6 +2360,15 @@ class QmlContractTests(unittest.TestCase):
             "stop()",
             "onRepeatModeChanged: scheduleStateSave()",
             "playbackProbeFailures >= 2",
+            "property double playbackStartedAtMs: 0",
+            "Date.now() - playbackStartedAtMs < 10000",
+            "playbackStartedAtMs = Date.now()",
+            "function markPlaybackFailed(message)",
+            "function notePlaybackProbeFailure()",
+            "markPlaybackFailed(\"Playback stream unavailable\")",
+            "payload.ok !== true || !isFinite(value) || value < 0",
+            "youtubeConfig.enabled === true && youtubeConfig.cookiesFile !== \"\"",
+            "else if (youtubeConfig.enabled === true && youtubeConfig.cookiesFromBrowser !== \"\")",
             "property int backgroundRequestRevision: 0",
             "property var previewTelemetry",
             "function updatePreviewTelemetry(payload)",
@@ -2467,10 +2476,15 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('icon: root.repeatMode === "one" ? "repeat-once" : "repeat"', tile)
         self.assertIn("readonly property real playbackPosition", tile)
         self.assertIn("readonly property bool localPreviewVisible: hasTrack && !sentToBackground", tile)
+        self.assertIn("property bool previewSuppressed: false", tile)
+        self.assertIn("readonly property bool previewVideoActive: previewActive && !previewSuppressed", tile)
+        self.assertIn("previewSuppressed: previewSuppressed", tile)
         self.assertIn("function syncPreviewPosition(force)", tile)
         self.assertIn("function previewCanSeek()", tile)
+        self.assertIn("function previewBuffering()", tile)
         self.assertIn("function previewStartupSettling()", tile)
         self.assertIn("function recoverPreviewPlayback()", tile)
+        self.assertIn("function maintainPreviewPosition()", tile)
         self.assertIn("function previewDiagnosticPayload()", tile)
         self.assertIn("function samplePreviewTelemetry(reason)", tile)
         self.assertIn("service.updatePreviewTelemetry(previewDiagnosticPayload())", tile)
@@ -2490,6 +2504,18 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("previewPlayer.mediaStatus === MediaPlayer.LoadingMedia", tile)
         self.assertIn("previewPlayer.mediaStatus === MediaPlayer.BufferingMedia", tile)
         self.assertIn("previewPlayer.setPosition(target)", tile)
+        self.assertIn("if (!force && previewBuffering()) return", tile)
+        self.assertIn("Math.abs(previewPlayer.position - target) > 9000", tile)
+        self.assertIn("var drift = Math.abs(previewPlayer.position - target)", tile)
+        self.assertIn("previewStablePositionTicks >= 4 && drift > 5000", tile)
+        self.assertIn("drift > 15000", tile)
+        self.assertIn("previewSuppressed = true", tile)
+        self.assertIn('samplePreviewTelemetry("suppress")', tile)
+        self.assertIn("source: root.previewVideoActive ? root.previewUrl : \"\"", tile)
+        self.assertIn("if (previewStablePositionTicks >= 4)", tile)
+        self.assertIn("syncPreviewPosition(false)", tile)
+        self.assertIn('samplePreviewTelemetry("periodic")', tile)
+        self.assertIn("onTriggered: root.maintainPreviewPosition()", tile)
         self.assertIn("id: previewPositionSettleTimer", tile)
         self.assertIn("id: previewRecoveryTimer", tile)
         self.assertIn("onPlaybackStateChanged", tile)

@@ -141,4 +141,62 @@ providers.pop("youtubeMusic", None)
 settings_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 PY
 
-notify-send "Lacuna YouTube" "Using $browser_name cookies for YouTube search and playback" 2>/dev/null || true
+cookie_source="$("$python_bin" - "$settings_file" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+try:
+    data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8") or "{}")
+except (FileNotFoundError, json.JSONDecodeError):
+    data = {}
+
+youtube = data.get("mediaProviders", {}).get("youtube", {})
+print(str(youtube.get("cookiesFromBrowser") or ""))
+PY
+)"
+
+cookies_file="$auth_dir/cookies.txt"
+if [ -n "$cookie_source" ] && command -v yt-dlp >/dev/null 2>&1; then
+  tmp_cookies="$cookies_file.tmp"
+  if yt-dlp --cookies-from-browser "$cookie_source" --cookies "$tmp_cookies" --skip-download --simulate --no-warnings --no-playlist "https://www.youtube.com" >/dev/null 2>&1 && [ -s "$tmp_cookies" ]; then
+    mv "$tmp_cookies" "$cookies_file"
+    "$python_bin" - "$settings_file" "$cookies_file" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+settings_path = Path(sys.argv[1]).expanduser().resolve()
+cookies_file = str(Path(sys.argv[2]).expanduser().resolve())
+
+try:
+    data = json.loads(settings_path.read_text(encoding="utf-8") or "{}")
+except (FileNotFoundError, json.JSONDecodeError):
+    data = {}
+
+if not isinstance(data, dict):
+    data = {}
+providers = data.setdefault("mediaProviders", {})
+if not isinstance(providers, dict):
+    providers = {}
+    data["mediaProviders"] = providers
+youtube = providers.setdefault("youtube", {})
+if not isinstance(youtube, dict):
+    youtube = {}
+    providers["youtube"] = youtube
+
+youtube["enabled"] = True
+youtube["cookiesFile"] = cookies_file
+youtube["cookiesFromBrowser"] = ""
+settings_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+  else
+    rm -f "$tmp_cookies"
+  fi
+fi
+
+if [ -s "$cookies_file" ]; then
+  notify-send "Lacuna YouTube" "Using saved YouTube cookies for search and playback" 2>/dev/null || true
+else
+  notify-send "Lacuna YouTube" "Using $browser_name cookies for YouTube search and playback" 2>/dev/null || true
+fi

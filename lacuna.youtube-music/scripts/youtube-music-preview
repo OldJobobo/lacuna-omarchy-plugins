@@ -5,6 +5,8 @@ import shutil
 import subprocess
 import sys
 
+YOUTUBE_PLAYER_CLIENT = "web_embedded"
+
 
 def load_config(raw):
     try:
@@ -44,11 +46,13 @@ def main(argv=None):
     cmd = [
         ytdlp,
         *ytdlp_auth_args(config),
+        "--extractor-args",
+        f"youtube:player_client={YOUTUBE_PLAYER_CLIENT}",
         "--no-warnings",
         "--no-playlist",
         "--get-url",
         "-f",
-        "160/worstvideo[ext=mp4][vcodec!=none]/worst[ext=mp4][vcodec!=none]/91/worstvideo",
+        "18/best[height<=360][ext=mp4][vcodec!=none][acodec!=none]/worst[ext=mp4][vcodec!=none][acodec!=none]",
         argv[0],
     ]
     try:

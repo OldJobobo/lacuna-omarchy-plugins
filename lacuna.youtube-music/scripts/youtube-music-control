@@ -6,6 +6,8 @@ import socket
 import subprocess
 import sys
 
+YOUTUBE_PLAYER_CLIENT = "web_embedded"
+
 
 def send(socket_path, payload):
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
@@ -54,6 +56,15 @@ def cleanup_socket(socket_path):
             pass
 
 
+def ytdl_raw_options(args):
+    options = [f"extractor-args=youtube:player_client={YOUTUBE_PLAYER_CLIENT}"]
+    if args.cookies_from_browser:
+        options.append(f"cookies-from-browser={args.cookies_from_browser}")
+    if args.cookies_file:
+        options.append(f"cookies={args.cookies_file}")
+    return ",".join(options)
+
+
 def start(args):
     os.makedirs(args.runtime_dir, mode=0o700, exist_ok=True)
     log_path = os.path.join(args.runtime_dir, "mpv.log")
@@ -79,11 +90,8 @@ def start(args):
         f"--log-file={log_path}",
         "--msg-level=all=warn",
         "--term-playing-msg=",
+        f"--ytdl-raw-options={ytdl_raw_options(args)}",
     ]
-    if args.cookies_from_browser:
-        command.append(f"--ytdl-raw-options=cookies-from-browser={args.cookies_from_browser}")
-    if args.cookies_file:
-        command.append(f"--ytdl-raw-options=cookies={args.cookies_file}")
     if args.audio_only:
         command.append("--no-video")
     command.append(args.url)

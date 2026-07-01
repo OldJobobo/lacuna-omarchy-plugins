@@ -579,15 +579,17 @@ class YoutubeMusicScriptTests(unittest.TestCase):
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
             bin_dir.mkdir()
-            write_exec(bin_dir / "firefox", "#!/usr/bin/env sh\nexit 0\n")
-            write_exec(bin_dir / "notify-send", "#!/usr/bin/env sh\nexit 0\n")
+            for tool in ["dirname", "mkdir", "mv", "rm"]:
+                (bin_dir / tool).symlink_to(shutil.which(tool))
+            write_exec(bin_dir / "firefox", "#!/bin/sh\nexit 0\n")
+            write_exec(bin_dir / "notify-send", "#!/bin/sh\nexit 0\n")
             for terminal in ["foot", "ghostty", "alacritty", "kitty", "wezterm", "xterm"]:
-                write_exec(bin_dir / terminal, "#!/usr/bin/env sh\nexit 0\n")
+                write_exec(bin_dir / terminal, "#!/bin/sh\nexit 0\n")
             auth_dir = tmp / "omarchy" / "lacuna" / "youtube"
             result = run(
-                [str(self.AUTH_SCRIPT), "--auth-dir", str(auth_dir)],
+                ["/bin/bash", str(self.AUTH_SCRIPT), "--auth-dir", str(auth_dir)],
                 {
-                    "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+                    "PATH": str(bin_dir),
                     "HOME": str(tmp),
                     "XDG_CONFIG_HOME": str(tmp / "config"),
                     "PYTHON": sys.executable,
@@ -604,18 +606,20 @@ class YoutubeMusicScriptTests(unittest.TestCase):
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
             bin_dir.mkdir()
-            write_exec(bin_dir / "zen-browser", "#!/usr/bin/env sh\nexit 0\n")
-            write_exec(bin_dir / "notify-send", "#!/usr/bin/env sh\nexit 0\n")
+            for tool in ["dirname", "mkdir", "mv", "rm"]:
+                (bin_dir / tool).symlink_to(shutil.which(tool))
+            write_exec(bin_dir / "zen-browser", "#!/bin/sh\nexit 0\n")
+            write_exec(bin_dir / "notify-send", "#!/bin/sh\nexit 0\n")
             for terminal in ["foot", "ghostty", "alacritty", "kitty", "wezterm", "xterm"]:
-                write_exec(bin_dir / terminal, "#!/usr/bin/env sh\nexit 0\n")
+                write_exec(bin_dir / terminal, "#!/bin/sh\nexit 0\n")
             profile = tmp / ".zen" / "abc.default"
             profile.mkdir(parents=True)
             (profile / "cookies.sqlite").write_text("", encoding="utf-8")
             auth_dir = tmp / "omarchy" / "lacuna" / "youtube"
             result = run(
-                [str(self.AUTH_SCRIPT), "--auth-dir", str(auth_dir)],
+                ["/bin/bash", str(self.AUTH_SCRIPT), "--auth-dir", str(auth_dir)],
                 {
-                    "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+                    "PATH": str(bin_dir),
                     "HOME": str(tmp),
                     "XDG_CONFIG_HOME": str(tmp / "config"),
                     "PYTHON": sys.executable,
@@ -625,6 +629,43 @@ class YoutubeMusicScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFromBrowser"], f"firefox:{profile}")
+
+    def test_auth_helper_exports_browser_cookies_to_file_when_ytdlp_available(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            for tool in ["dirname", "mkdir", "mv", "rm"]:
+                (bin_dir / tool).symlink_to(shutil.which(tool))
+            write_exec(bin_dir / "firefox", "#!/bin/sh\nexit 0\n")
+            write_exec(bin_dir / "notify-send", "#!/bin/sh\nexit 0\n")
+            write_exec(
+                bin_dir / "yt-dlp",
+                f"#!{sys.executable}\n"
+                "import pathlib, sys\n"
+                "path = pathlib.Path(sys.argv[sys.argv.index('--cookies') + 1])\n"
+                "path.write_text('# Netscape HTTP Cookie File\\n.youtube.com\\tTRUE\\t/\\tTRUE\\t0\\tSID\\ttest\\n')\n",
+            )
+            for terminal in ["foot", "ghostty", "alacritty", "kitty", "wezterm", "xterm"]:
+                write_exec(bin_dir / terminal, "#!/bin/sh\nexit 0\n")
+            auth_dir = tmp / "omarchy" / "lacuna" / "youtube"
+            result = run(
+                ["/bin/bash", str(self.AUTH_SCRIPT), "--auth-dir", str(auth_dir)],
+                {
+                    "PATH": str(bin_dir),
+                    "HOME": str(tmp),
+                    "XDG_CONFIG_HOME": str(tmp / "config"),
+                    "PYTHON": sys.executable,
+                },
+            )
+            settings = json.loads((tmp / "omarchy" / "lacuna" / "settings.json").read_text(encoding="utf-8"))
+            cookies_file = auth_dir / "cookies.txt"
+            cookies_file_exists = cookies_file.exists()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(cookies_file_exists)
+        self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFile"], str(cookies_file))
+        self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFromBrowser"], "")
 
     def test_search_handles_missing_ytdlp(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -842,9 +883,37 @@ class YoutubeMusicScriptTests(unittest.TestCase):
             argv = json.loads((tmp / "argv.json").read_text())
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("160/worstvideo[ext=mp4][vcodec!=none]", " ".join(argv))
+        self.assertIn("--extractor-args", argv)
+        self.assertIn("youtube:player_client=web_embedded", argv)
+        self.assertIn("18/best[height<=360][ext=mp4][vcodec!=none][acodec!=none]", " ".join(argv))
         payload = json.loads(result.stdout)
         self.assertEqual(payload["url"], "https://video.example/preview.mp4")
+        self.assertEqual(payload["error"], "")
+
+    def test_background_resolver_uses_youtube_embedded_client(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            write_exec(
+                bin_dir / "yt-dlp",
+                "#!/usr/bin/env python3\n"
+                "import json, pathlib, sys\n"
+                f"pathlib.Path({str(tmp / 'argv.json')!r}).write_text(json.dumps(sys.argv))\n"
+                "print('https://video.example/background.mp4')\n",
+            )
+            result = run(
+                [sys.executable, str(ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-background"), "https://www.youtube.com/watch?v=abc123"],
+                {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+            )
+            argv = json.loads((tmp / "argv.json").read_text())
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--extractor-args", argv)
+        self.assertIn("youtube:player_client=web_embedded", argv)
+        self.assertIn("22/18/best[height<=720][ext=mp4]", " ".join(argv))
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["url"], "https://video.example/background.mp4")
         self.assertEqual(payload["error"], "")
 
     def test_control_command_reports_missing_socket_without_crashing(self):
@@ -870,6 +939,8 @@ class YoutubeMusicScriptTests(unittest.TestCase):
 
     def test_control_start_uses_audio_cache_flags(self):
         text = self.CONTROL_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn('YOUTUBE_PLAYER_CLIENT = "web_embedded"', text)
+        self.assertIn("extractor-args=youtube:player_client={YOUTUBE_PLAYER_CLIENT}", text)
         self.assertIn("--ytdl-format=18/best[height<=360][ext=mp4]/bestaudio[ext=m4a]/best", text)
         self.assertIn("--cache=yes", text)
         self.assertIn("--cache-pause-initial=yes", text)

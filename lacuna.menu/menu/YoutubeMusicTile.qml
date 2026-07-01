@@ -27,6 +27,7 @@ Item {
   property int previewStablePositionTicks: 0
   property double previewLastTelemetryAt: 0
   property string previewLastEvent: "idle"
+  property bool previewSuppressed: false
   property real videoReveal: localPreviewVisible ? 1 : 0
   property real layoutReveal: (localPreviewVisible || videoReveal > 0.01) ? 1 : 0
 
@@ -41,6 +42,7 @@ Item {
   readonly property string thumbnail: service && service.thumbnail ? String(service.thumbnail) : ""
   readonly property string previewUrl: service && service.previewStreamUrl ? String(service.previewStreamUrl) : ""
   readonly property bool previewActive: previewUrl !== ""
+  readonly property bool previewVideoActive: previewActive && !previewSuppressed
   readonly property real playbackPosition: service && service.playbackPosition !== undefined ? Math.max(0, Number(service.playbackPosition) || 0) : 0
   readonly property int favoritesRevision: service && service.favoritesRevision !== undefined ? Number(service.favoritesRevision) : 0
   readonly property bool currentFavorite: favoritesRevision >= 0 && service && service.currentFavorite === true
@@ -130,6 +132,7 @@ Item {
       playing: playing,
       localPreviewVisible: localPreviewVisible,
       previewActive: previewActive,
+      previewSuppressed: previewSuppressed,
       previewUrlReady: previewUrl !== "",
       previewUrlPrefix: previewUrl.slice(0, 96),
       playbackState: playerStateName(previewPlayer.playbackState),
@@ -152,7 +155,7 @@ Item {
   }
 
   function syncPreviewPlayback() {
-    if (!previewActive) {
+    if (!previewVideoActive) {
       previewPositionSettleTimer.stop()
       previewRecoveryTimer.stop()
       previewPositionPending = false
@@ -194,12 +197,17 @@ Item {
       || previewPlayer.playbackState === MediaPlayer.PlayingState
   }
 
+  function previewBuffering() {
+    return previewPlayer.mediaStatus === MediaPlayer.BufferingMedia
+      || previewPlayer.mediaStatus === MediaPlayer.StalledMedia
+  }
+
   function previewStartupSettling() {
     return previewPlaybackStartedAt > 0 && Date.now() - previewPlaybackStartedAt < 1800
   }
 
   function syncPreviewPosition(force) {
-    if (!previewActive || previewPlayer.playbackState === MediaPlayer.StoppedState) return
+    if (!previewVideoActive || previewPlayer.playbackState === MediaPlayer.StoppedState) return
     if (!previewCanSeek()) {
       previewPositionPending = true
       previewPositionSettleTimer.restart()
@@ -210,16 +218,35 @@ Item {
       previewPositionSettleTimer.restart()
       return
     }
+    if (!force && previewBuffering()) return
     var target = Math.max(0, Math.round(playbackPosition * 1000))
-    if (force || Math.abs(previewPlayer.position - target) > 900) {
+    if (force || Math.abs(previewPlayer.position - target) > 9000) {
       previewPlayer.setPosition(target)
       samplePreviewTelemetry("seek")
     }
     previewPositionPending = false
   }
 
+  function maintainPreviewPosition() {
+    samplePreviewTelemetry("periodic")
+    if (!previewVideoActive || !localPreviewVisible || !playing) return
+    var target = Math.max(0, Math.round(playbackPosition * 1000))
+    var drift = Math.abs(previewPlayer.position - target)
+    if ((previewBuffering() && previewStablePositionTicks >= 4 && drift > 5000) || drift > 15000) {
+      previewSuppressed = true
+      previewPlayer.stop()
+      samplePreviewTelemetry("suppress")
+      return
+    }
+    if (previewStablePositionTicks >= 4) {
+      syncPreviewPosition(false)
+      return
+    }
+    syncPreviewPosition(false)
+  }
+
   function recoverPreviewPlayback() {
-    if (!previewActive || !localPreviewVisible || !playing) {
+    if (!previewVideoActive || !localPreviewVisible || !playing) {
       previewRecoveryAttempts = 0
       return
     }
@@ -240,6 +267,10 @@ Item {
 
   onPlayingChanged: syncPreviewPlayback()
   onPreviewActiveChanged: syncPreviewPlayback()
+  onPreviewUrlChanged: {
+    previewSuppressed = false
+    syncPreviewPlayback()
+  }
   onLocalPreviewVisibleChanged: syncPreviewPlayback()
   onPlaybackPositionChanged: if (previewPositionPending) syncPreviewPosition(false)
 
@@ -312,7 +343,7 @@ Item {
 
       MediaPlayer {
         id: previewPlayer
-        source: root.previewActive ? root.previewUrl : ""
+        source: root.previewVideoActive ? root.previewUrl : ""
         videoOutput: previewOutput
         audioOutput: AudioOutput {
           muted: true
@@ -331,7 +362,7 @@ Item {
             previewRecoveryTimer.stop()
             previewPositionSettleTimer.interval = 1800
             previewPositionSettleTimer.restart()
-          } else if (root.previewActive && root.localPreviewVisible && root.playing) {
+          } else if (root.previewVideoActive && root.localPreviewVisible && root.playing) {
             previewRecoveryTimer.restart()
           }
         }
@@ -343,7 +374,7 @@ Item {
               previewPositionSettleTimer.interval = 350
               previewPositionSettleTimer.restart()
             }
-          } else if (mediaStatus === MediaPlayer.InvalidMedia && root.previewActive && root.localPreviewVisible && root.playing) {
+          } else if (mediaStatus === MediaPlayer.InvalidMedia && root.previewVideoActive && root.localPreviewVisible && root.playing) {
             previewRecoveryTimer.restart()
           }
         }
@@ -352,7 +383,7 @@ Item {
       VideoOutput {
         id: previewOutput
         anchors.fill: parent
-        visible: root.previewActive
+        visible: root.previewVideoActive
         fillMode: VideoOutput.PreserveAspectCrop
       }
 
@@ -361,7 +392,7 @@ Item {
         source: root.thumbnail
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
-        opacity: root.previewActive && previewPlayer.playbackState === MediaPlayer.PlayingState ? 0 : 1
+        opacity: root.previewVideoActive && previewPlayer.playbackState === MediaPlayer.PlayingState ? 0 : 1
         visible: root.thumbnail !== "" && status !== Image.Error && opacity > 0
 
         Behavior on opacity {
@@ -371,7 +402,7 @@ Item {
 
       LacunaTablerIcon {
         anchors.centerIn: parent
-        visible: root.thumbnail === "" && !root.previewActive
+        visible: root.thumbnail === "" && !root.previewVideoActive
         name: "music"
         color: root.available ? root.accent : root.muted
         iconSize: root.compact ? 22 : 26
@@ -689,8 +720,8 @@ Item {
     Timer {
       interval: 1500
       repeat: true
-      running: root.previewActive && root.localPreviewVisible && root.playing
-      onTriggered: root.samplePreviewTelemetry("periodic")
+      running: root.previewVideoActive && root.localPreviewVisible && root.playing
+      onTriggered: root.maintainPreviewPosition()
     }
   }
 
