@@ -214,6 +214,10 @@ def youtube_home_results(ytdlp, limit, config=None, music_only=False):
         message = (result.stderr or result.stdout or "YouTube home failed").strip().splitlines()
         return [], message[-1] if message else "YouTube home failed"
 
+    stderr = result.stderr or ""
+    if "could not be decrypted" in stderr or "Extracted 0 cookies" in stderr:
+        return [], "YouTube login cookies could not be read; reconnect YouTube or install the browser keyring support yt-dlp needs"
+
     rows = []
     seen = set()
     for index, line in enumerate(result.stdout.splitlines()):
@@ -265,6 +269,8 @@ def main(argv=None) -> int:
         if rows or error:
             print(json.dumps({"results": rows, "error": error}))
             return 0
+        print(json.dumps({"results": [], "error": "YouTube login did not return a personalized home feed"}))
+        return 0
 
     if args.suggestions:
         fallback_query = str(config.get("defaultSuggestionsQuery") or "official music videos").strip()

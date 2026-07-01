@@ -537,6 +537,32 @@ class YoutubeMusicScriptTests(unittest.TestCase):
         self.assertEqual([item["id"] for item in payload["results"]], ["home1", "home2"])
         self.assertEqual(payload["results"][0]["source"], "YouTube Home")
 
+    def test_default_suggestions_report_unusable_authenticated_home_feed(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            write_exec(
+                bin_dir / "yt-dlp",
+                "#!/usr/bin/env python3\n"
+                "import json, pathlib, sys\n"
+                f"pathlib.Path({str(tmp / 'argv.json')!r}).write_text(json.dumps(sys.argv))\n"
+                "print('Extracted 0 cookies from brave (54 could not be decrypted)', file=sys.stderr)\n",
+            )
+            config = json.dumps({"enabled": True, "cookiesFromBrowser": "brave"})
+            result = run(
+                [sys.executable, str(self.SEARCH_SCRIPT), "--config-json", config, "--filter", "all", "--limit", "5", "--suggestions"],
+                {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+            )
+            argv = json.loads((tmp / "argv.json").read_text())
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("https://www.youtube.com/", argv)
+        self.assertNotIn("ytsearch", " ".join(argv))
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["results"], [])
+        self.assertIn("could not be read", payload["error"])
+
     def test_music_default_suggestions_filter_authenticated_youtube_home_feed(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -600,6 +626,41 @@ class YoutubeMusicScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(settings["mediaProviders"]["youtube"]["enabled"])
         self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFromBrowser"], "firefox")
+        self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFile"], "")
+
+    def test_auth_helper_clears_stale_cookie_file_when_using_browser_source(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            for tool in ["dirname", "mkdir", "mv", "rm"]:
+                (bin_dir / tool).symlink_to(shutil.which(tool))
+            write_exec(bin_dir / "firefox", "#!/bin/sh\nexit 0\n")
+            write_exec(bin_dir / "notify-send", "#!/bin/sh\nexit 0\n")
+            for terminal in ["foot", "ghostty", "alacritty", "kitty", "wezterm", "xterm"]:
+                write_exec(bin_dir / terminal, "#!/bin/sh\nexit 0\n")
+            auth_dir = tmp / "omarchy" / "lacuna" / "youtube"
+            settings_path = tmp / "omarchy" / "lacuna" / "settings.json"
+            settings_path.parent.mkdir(parents=True)
+            stale = auth_dir / "cookies.txt"
+            settings_path.write_text(
+                json.dumps({"mediaProviders": {"youtube": {"enabled": True, "cookiesFromBrowser": "", "cookiesFile": str(stale)}}}),
+                encoding="utf-8",
+            )
+            result = run(
+                ["/bin/bash", str(self.AUTH_SCRIPT), "--auth-dir", str(auth_dir)],
+                {
+                    "PATH": str(bin_dir),
+                    "HOME": str(tmp),
+                    "XDG_CONFIG_HOME": str(tmp / "config"),
+                    "PYTHON": sys.executable,
+                },
+            )
+            settings = json.loads(settings_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFromBrowser"], "firefox")
+        self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFile"], "")
 
     def test_auth_helper_maps_zen_to_firefox_profile_cookie_source(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -629,6 +690,32 @@ class YoutubeMusicScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFromBrowser"], f"firefox:{profile}")
+
+    def test_auth_helper_uses_gnome_keyring_for_chromium_browser_cookies(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            for tool in ["dirname", "mkdir", "mv", "rm"]:
+                (bin_dir / tool).symlink_to(shutil.which(tool))
+            write_exec(bin_dir / "brave-browser", "#!/bin/sh\nexit 0\n")
+            write_exec(bin_dir / "notify-send", "#!/bin/sh\nexit 0\n")
+            for terminal in ["foot", "ghostty", "alacritty", "kitty", "wezterm", "xterm"]:
+                write_exec(bin_dir / terminal, "#!/bin/sh\nexit 0\n")
+            auth_dir = tmp / "omarchy" / "lacuna" / "youtube"
+            result = run(
+                ["/bin/bash", str(self.AUTH_SCRIPT), "--auth-dir", str(auth_dir)],
+                {
+                    "PATH": str(bin_dir),
+                    "HOME": str(tmp),
+                    "XDG_CONFIG_HOME": str(tmp / "config"),
+                    "PYTHON": sys.executable,
+                },
+            )
+            settings = json.loads((tmp / "omarchy" / "lacuna" / "settings.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFromBrowser"], "brave+gnomekeyring")
 
     def test_auth_helper_exports_browser_cookies_to_file_when_ytdlp_available(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -666,6 +753,41 @@ class YoutubeMusicScriptTests(unittest.TestCase):
         self.assertTrue(cookies_file_exists)
         self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFile"], str(cookies_file))
         self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFromBrowser"], "")
+
+    def test_auth_helper_rejects_anonymous_exported_cookie_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            for tool in ["dirname", "mkdir", "mv", "rm"]:
+                (bin_dir / tool).symlink_to(shutil.which(tool))
+            write_exec(bin_dir / "firefox", "#!/bin/sh\nexit 0\n")
+            write_exec(bin_dir / "notify-send", "#!/bin/sh\nexit 0\n")
+            write_exec(
+                bin_dir / "yt-dlp",
+                f"#!{sys.executable}\n"
+                "import pathlib, sys\n"
+                "path = pathlib.Path(sys.argv[sys.argv.index('--cookies') + 1])\n"
+                "path.write_text('# Netscape HTTP Cookie File\\n.youtube.com\\tTRUE\\t/\\tTRUE\\t0\\tVISITOR_INFO1_LIVE\\ttest\\n')\n",
+            )
+            for terminal in ["foot", "ghostty", "alacritty", "kitty", "wezterm", "xterm"]:
+                write_exec(bin_dir / terminal, "#!/bin/sh\nexit 0\n")
+            auth_dir = tmp / "omarchy" / "lacuna" / "youtube"
+            result = run(
+                ["/bin/bash", str(self.AUTH_SCRIPT), "--auth-dir", str(auth_dir)],
+                {
+                    "PATH": str(bin_dir),
+                    "HOME": str(tmp),
+                    "XDG_CONFIG_HOME": str(tmp / "config"),
+                    "PYTHON": sys.executable,
+                },
+            )
+            settings = json.loads((tmp / "omarchy" / "lacuna" / "settings.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((auth_dir / "cookies.txt").exists())
+        self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFile"], "")
+        self.assertEqual(settings["mediaProviders"]["youtube"]["cookiesFromBrowser"], "firefox")
 
     def test_search_handles_missing_ytdlp(self):
         with tempfile.TemporaryDirectory() as tmpdir:

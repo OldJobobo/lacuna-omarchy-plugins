@@ -116,6 +116,8 @@ def cookie_source(name):
     if name == "zen":
         profile = newest_profile(home / ".zen")
         return f"firefox:{profile}" if profile else "firefox"
+    if name in {"brave", "chromium", "chrome", "edge", "vivaldi", "opera"}:
+        return f"{name}+gnomekeyring"
     return name
 
 try:
@@ -136,7 +138,7 @@ if not isinstance(youtube, dict):
 
 youtube["enabled"] = True
 youtube["cookiesFromBrowser"] = cookie_source(browser_name)
-youtube.setdefault("cookiesFile", "")
+youtube["cookiesFile"] = ""
 providers.pop("youtubeMusic", None)
 settings_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 PY
@@ -159,7 +161,35 @@ PY
 cookies_file="$auth_dir/cookies.txt"
 if [ -n "$cookie_source" ] && command -v yt-dlp >/dev/null 2>&1; then
   tmp_cookies="$cookies_file.tmp"
-  if yt-dlp --cookies-from-browser "$cookie_source" --cookies "$tmp_cookies" --skip-download --simulate --no-warnings --no-playlist "https://www.youtube.com" >/dev/null 2>&1 && [ -s "$tmp_cookies" ]; then
+  rm -f "$tmp_cookies"
+  if yt-dlp --cookies-from-browser "$cookie_source" --cookies "$tmp_cookies" --skip-download --simulate --no-warnings --no-playlist "https://www.youtube.com" >/dev/null 2>&1 \
+    && [ -s "$tmp_cookies" ] \
+    && "$python_bin" - "$tmp_cookies" <<'PY'
+import sys
+from pathlib import Path
+
+auth_names = {
+    "APISID",
+    "HSID",
+    "LOGIN_INFO",
+    "SAPISID",
+    "SID",
+    "SSID",
+    "__Secure-1PAPISID",
+    "__Secure-1PSID",
+    "__Secure-3PAPISID",
+    "__Secure-3PSID",
+}
+
+for line in Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace").splitlines():
+    if not line or line.startswith("#"):
+        continue
+    parts = line.split("\t")
+    if len(parts) >= 7 and parts[5] in auth_names:
+        raise SystemExit(0)
+raise SystemExit(1)
+PY
+  then
     mv "$tmp_cookies" "$cookies_file"
     "$python_bin" - "$settings_file" "$cookies_file" <<'PY'
 import json
@@ -192,6 +222,7 @@ settings_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 PY
   else
     rm -f "$tmp_cookies"
+    rm -f "$cookies_file"
   fi
 fi
 
