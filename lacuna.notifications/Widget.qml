@@ -6,6 +6,7 @@ Item {
   property var bar: null
   property string moduleName: "lacuna.notifications"
   property var settings: ({})
+  property bool flyoutOpen: false
 
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property var hostShell: bar && bar.shell ? bar.shell : null
@@ -32,6 +33,14 @@ Item {
     if (dnd) return "Do Not Disturb<br/>Right click to allow notifications"
     if (pendingCount > 0) return pendingCount + " pending notification" + (pendingCount === 1 ? "" : "s")
     return "No notifications<br/>Right click to silence notifications"
+  }
+
+  function close() {
+    flyoutOpen = false
+  }
+
+  function togglePanel() {
+    flyoutOpen = !flyoutOpen
   }
 
   ColorProfile {
@@ -109,9 +118,27 @@ Item {
           if (root.notificationService) root.notificationService.setDoNotDisturb(!root.notificationService.doNotDisturb)
           else root.bar.run("omarchy toggle notification silencing")
         } else {
-          root.bar.run("omarchy-shell notifications showHistory")
+          root.bar.hideTooltip(root)
+          root.togglePanel()
         }
       }
     }
+  }
+
+  Connections {
+    target: root.notificationService
+    ignoreUnknownSignals: true
+    function onHistoryOpenRequested() {
+      root.flyoutOpen = true
+    }
+  }
+
+  NotificationsFlyout {
+    anchorItem: root
+    owner: root
+    bar: root.bar
+    service: root.notificationService
+    accentColor: root.moduleColor
+    open: root.flyoutOpen
   }
 }

@@ -460,6 +460,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.audio/LacunaGeometry.qml",
             "lacuna.bluetooth/LacunaGeometry.qml",
             "lacuna.power/LacunaGeometry.qml",
+            "lacuna.notifications/LacunaGeometry.qml",
         }
         for path in sorted(geometry_files):
             self.assertIn("readonly property real curveKappa: " + literal, read(path), path)
@@ -479,6 +480,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.audio/BarFlyoutSurface.qml",
             "lacuna.bluetooth/BarFlyoutSurface.qml",
             "lacuna.power/BarFlyoutSurface.qml",
+            "lacuna.notifications/BarFlyoutSurface.qml",
         ]
         for path in consumers:
             qml = read(path)
@@ -706,6 +708,36 @@ class QmlContractTests(unittest.TestCase):
             qml = read(path)
             self.assertIn("readonly property bool tooltipHovered", qml, path)
             self.assertIn("clickArea.containsMouse", qml, path)
+
+    def test_lacuna_notifications_widget_owns_history_flyout(self):
+        widget = read("lacuna.notifications/Widget.qml")
+        flyout = read("lacuna.notifications/NotificationsFlyout.qml")
+
+        self.assertIn("property bool flyoutOpen: false", widget)
+        self.assertIn("function togglePanel()", widget)
+        self.assertIn("root.togglePanel()", widget)
+        self.assertIn("NotificationsFlyout {", widget)
+        self.assertIn("function onHistoryOpenRequested()", widget)
+        self.assertNotIn('root.bar.run("omarchy-shell notifications showHistory")', widget)
+
+        for snippet in [
+            "required property Item anchorItem",
+            "required property QtObject bar",
+            "property var service: null",
+            "readonly property int pendingCount",
+            "readonly property int pastCount",
+            "service.pendingModel",
+            "service.pastModel",
+            'activeTab === "pending"',
+            "root.service.markAllSeen()",
+            "root.service.clearPast()",
+            "root.service.dismissPending(rowCard.index)",
+            "root.service.dismissPast(rowCard.index)",
+            "root.service.setDoNotDisturb(!root.service.doNotDisturb)",
+            "BarFlyoutSurface {",
+            "HyprlandFocusGrab {",
+        ]:
+            self.assertIn(snippet, flyout)
 
     def test_lacuna_bar_module_slot_visibility_does_not_depend_on_child_visible(self):
         qml = read("lacuna.bar/OmarchyBar.qml")
