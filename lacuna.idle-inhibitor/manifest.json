@@ -18,7 +18,7 @@
     "category": "Lacuna",
     "allowMultiple": false,
     "defaults": {
-      "showInactive": false,
+      "showInactive": true,
       "interval": 5000,
       "colorProfile": "semantic"
     },
@@ -27,8 +27,8 @@
         "key": "showInactive",
         "type": "boolean",
         "label": "Show when inactive",
-        "default": false,
-        "defaultValue": false
+        "default": true,
+        "defaultValue": true
       },
       {
         "key": "interval",

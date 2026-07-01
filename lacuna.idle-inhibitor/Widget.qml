@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Io
 
 Item {
   id: root
@@ -7,19 +8,23 @@ Item {
   property string moduleName: "lacuna.idle-inhibitor"
   property var settings: ({})
   property var idleService: null
+  property bool polledStayAwake: false
+  property bool polledIdleEnabled: true
 
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property bool serviceLoaded: idleService !== null
-  readonly property bool stayAwake: idleService ? idleService.stayAwake : false
-  readonly property bool idleEnabled: idleService ? idleService.idleEnabled : !stayAwake
+  readonly property bool serviceStateLoaded: idleService && idleService.stayAwakeStateLoaded === true
+  readonly property bool stayAwake: serviceStateLoaded ? idleService.stayAwake === true : polledStayAwake
+  readonly property bool idleEnabled: serviceStateLoaded ? idleService.idleEnabled === true : polledIdleEnabled
   readonly property color moduleColor: colorProfile.statusColor(stayAwake ? "active" : "normal", "idle")
   readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
-  readonly property bool showInactive: boolSetting("showInactive", false)
+  readonly property bool showInactive: boolSetting("showInactive", true)
+  readonly property bool shown: stayAwake || showInactive || mouseArea.containsMouse
 
-  visible: stayAwake || showInactive || mouseArea.containsMouse
-  implicitWidth: visible ? button.implicitWidth : 0
-  implicitHeight: visible ? button.implicitHeight : 0
+  visible: shown
+  implicitWidth: shown ? button.implicitWidth : 0
+  implicitHeight: shown ? button.implicitHeight : 0
   readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {
@@ -30,6 +35,14 @@ Item {
   function boolSetting(name, fallback) {
     var value = setting(name, fallback)
     return value === true || String(value).toLowerCase() === "true"
+  }
+
+  function parseData(raw) {
+    try { return JSON.parse(String(raw || "{}")) } catch (e) { return {} }
+  }
+
+  function refreshStatus() {
+    if (!idleStatusProc.running) idleStatusProc.running = true
   }
 
   function tooltip() {
@@ -54,9 +67,11 @@ Item {
   function toggleIdle() {
     if (idleService && typeof idleService.setIdleEnabled === "function") {
       idleService.setIdleEnabled(!idleEnabled)
+      refreshDelay.restart()
       return
     }
     if (bar) bar.run("omarchy toggle idle")
+    refreshDelay.restart()
   }
 
   ColorProfile {
@@ -70,14 +85,51 @@ Item {
     id: motionTokens
   }
 
-  Component.onCompleted: resolveService()
-  onBarChanged: resolveService()
+  Component.onCompleted: {
+    resolveService()
+    refreshStatus()
+  }
+  onBarChanged: {
+    resolveService()
+    refreshStatus()
+  }
 
   Timer {
     interval: 500
     running: root.idleService === null
     repeat: true
     onTriggered: root.resolveService()
+  }
+
+  Timer {
+    interval: root.setting("interval", 5000)
+    running: true
+    repeat: true
+    onTriggered: root.refreshStatus()
+  }
+
+  Timer {
+    id: refreshDelay
+    interval: 1500
+    onTriggered: root.refreshStatus()
+  }
+
+  Process {
+    id: idleStatusProc
+    command: ["bash", "-c", "omarchy-shell idle status 2>/dev/null"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        var data = root.parseData(text)
+        if (data && typeof data.stayAwake === "boolean") {
+          root.polledStayAwake = data.stayAwake
+          root.polledIdleEnabled = data.enabled !== false
+        } else if (data && typeof data.enabled === "boolean") {
+          root.polledIdleEnabled = data.enabled
+          root.polledStayAwake = data.enabled === false
+        }
+      }
+    }
   }
 
   Item {
