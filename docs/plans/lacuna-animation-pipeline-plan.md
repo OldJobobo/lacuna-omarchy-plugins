@@ -1,6 +1,6 @@
 # TASK: Streamline the desktop ambience animation pipeline to cinematic quality
 
-Status: in progress
+Status: T1/T2 landed; T3/T4 ambience-host consolidation reverted (see 2026-07-02 log)
 
 Executable plan for an LLM or developer. Findings were measured against the
 actual overlay sources on 2026-07-02; do not re-derive them.
@@ -192,6 +192,116 @@ monitor, no frame >20ms during steady state, enable hitch <1 frame.
   current settings; film grain and rainfall were loaded but not visible because
   the current active background effects did not include them. Recent quickshell
   logs showed no shader/qsb/particle errors.
-- Remaining T2 work: CRT, VHS, aurora drift, god rays, cinematic light, and
-  dust motes are not fully GPU-ported yet. CRT/VHS still have item-based
-  scanline/glitch geometry; dust still has Repeater-backed persistent motes.
+- Completion update: `lacuna.ambience-host` now provides hosted GPU/particle
+  render paths for the rest of the ambience set. Aurora drift, god rays,
+  cinematic light, CRT, and VHS render through a shared baked
+  `ambience_effect.frag.qsb` ShaderEffect path in the host. Dust motes render
+  through a hosted `QtQuick.Particles` path with a plugin-local dust sprite.
+  The standalone plugins keep their legacy renderers only as host-disabled
+  fallbacks.
+
+### 2026-07-02 T3 architectural consolidation slice
+
+- Added `lacuna.ambience-host`, a persistent overlay plugin that consolidates
+  every Lacuna ambience effect into shared host surfaces.
+- The host maps three explicit surfaces: `lacuna-ambience-host-background`
+  for vignette ignore-animations mode, `lacuna-ambience-host-bottom` for
+  normal below-window ambience, and `lacuna-ambience-host-overlay` for
+  foreground-overlay film/rain mode.
+- Reused the T2 GPU/particle assets inside the host: film grain and vignette
+  render as `ShaderEffect`s with baked `.qsb` shaders; rainfall renders with
+  `QtQuick.Particles` and the shared raindrop sprite. Added a shared hosted
+  ambience shader for aurora drift, god rays, cinematic light, CRT, and VHS,
+  plus a hosted particle dust path.
+- Kept the per-effect plugins as public settings/install surfaces. When
+  `lacuna.ambience-host` is enabled in shell config, all standalone ambience
+  windows report `hostedByAmbienceHost` and suppress their own painting.
+- Updated the native-replacements example config to load the host before the
+  migrated standalone ambience plugins.
+- Updated `docs/architecture/layer-stacking.md`,
+  `test_layer_stacking_policy`, and overlay-kind contracts for the new host
+  surfaces.
+- Validation: `./scripts/check.sh` passed with `206 passed, 2 skipped`.
+- Live deploy: `./scripts/dev deploy` verified installed copies for
+  `lacuna.ambience-host`, `lacuna.film-grain-overlay`,
+  `lacuna.rainfall-overlay`, and `lacuna.background-vignette`.
+- Runtime smoke: `omarchy plugin enable lacuna.ambience-host` enabled the
+  host in the live shell config. `omarchy-shell lacuna-ambience-host status`
+  reported `bottomVisible: true` with the current vignette settings, and
+  `hyprctl -j layers` showed `lacuna-ambience-host-bottom` mapped on all
+  three monitors. The migrated standalone plugins reported
+  `hostedByAmbienceHost: true` and `visible: false`.
+- Completion update: the host now owns all ambience rendering when enabled,
+  replacing the duplicated watcher/render paths with one FileView set inside
+  the host plus fallback-only standalone plugins.
+
+### 2026-07-02 T4 regression protection
+
+- Replaced the broad ambience-overlay Timer string check with a targeted QML
+  object scan. Ambience overlays may not contain any `Timer` with an explicit
+  interval below 100ms, which protects against wall-clock animation loops
+  without blocking slower debounce or lifecycle timers.
+- Kept the `FrameAnimation` requirement pinned for the ambience effects that
+  currently drive per-frame state: ambience host, dust motes, film grain, CRT,
+  and VHS.
+- Kept shader reference coverage in the normal contract suite: every
+  `ShaderEffect` `.qsb` reference must exist, and `./scripts/check.sh` still
+  validates checked-in `.frag` sources against freshly baked `.qsb` output.
+- Added an opt-in live CPU smoke to `tests/test_live_visual.py`. It is skipped
+  unless both `LACUNA_LIVE_VISUAL=1` and `LACUNA_LIVE_PERF=1` are set, restores
+  Lacuna settings in `tearDown`, toggles each ambience effect one at a time,
+  samples the mapped Omarchy shell PID from `hyprctl -j layers`, and enforces
+  a configurable CPU budget.
+- Validation: focused T4 tests passed with `2 passed, 3 skipped`.
+  `./scripts/check.sh` passed with `207 passed, 3 skipped`.
+
+### 2026-07-02 visual parity correction
+
+- Live feedback showed that the hosted shader approximations preserved the
+  architecture but changed the look too much. Several effects became more
+  saturated and obvious than the legacy ambience renderers.
+- Captured a legacy-vs-hosted screenshot set under `/tmp/lacuna-ambience-parity`
+  by toggling `lacuna.ambience-host` and activating each background effect
+  one at a time, then restored the original live shell/settings state.
+- Fixed the immediate foreground blowout by premultiplying RGB by alpha in
+  the hosted ambience and film-grain shaders, then rebaked the `.qsb` packs.
+- Made a conservative first refinement pass: lowered hosted generic shader
+  opacity, reduced warm/color-shift saturation, and made hosted dust smaller
+  and fainter.
+- Validation: `./scripts/check.sh` passed with `207 passed, 3 skipped`.
+  Live screenshot sanity after deployment reported low near-white coverage.
+- Remaining visual work: tune each hosted effect against its legacy reference
+  individually. Do not treat generic shader similarity as parity.
+
+### 2026-07-02 rollback to standalone visuals
+
+- Disabled `lacuna.ambience-host` in the live shell after feedback that hosted
+  effects were not visually equivalent and did not preserve per-effect
+  subsettings well enough.
+- Removed `lacuna.ambience-host` from the native-replacements example config
+  and the `scripts/lacuna` ambience profile so the host is no longer enabled
+  by default.
+- Current user-facing behavior should come from the standalone ambience
+  plugins. The host remains in the repo only as an experimental consolidation
+  path until each effect has real parity against the captured legacy reference.
+
+### 2026-07-02 repo revert of the ambience-host experiment
+
+- Removed `lacuna.ambience-host/` from the repo and reverted the
+  `hostedByAmbienceHost` suppression gates in all eight standalone ambience
+  overlays, plus the host-specific test and layer-stacking doc changes. The
+  working tree is back to the committed T1/T2 state; the disabled live copy
+  was uninstalled from `~/.config/omarchy/plugins/`.
+- Postmortem: the shared mode-switched `ambience_effect.frag` could not
+  reproduce the bespoke per-effect compositions, and its generic uniform
+  block (time/intensity/speed/density/accentBlend/2 colors) silently dropped
+  most per-effect settings (CRT static/bloom/distortion, cinematic
+  stylePreset/slowDrift/sweeps/shimmer, god-ray rayCount/origin/shimmer, VHS
+  trackingBands/noise/glitch, dust mouse reactivity, aurora blurSoftness).
+  Hosted effects also filled the whole screen instead of clipping to the
+  Lacuna frame content rect, and the first shader pack emitted
+  non-premultiplied alpha, causing the blowout.
+- Any future T3/T4 consolidation must port one effect at a time: a dedicated
+  shader per effect carrying that effect's full settings schema as uniforms,
+  clipped to the frame rect, and verified side-by-side against the legacy
+  reference captures before moving to the next effect.
