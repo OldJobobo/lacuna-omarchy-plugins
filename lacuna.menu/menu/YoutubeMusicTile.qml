@@ -28,6 +28,9 @@ Item {
   property double previewLastTelemetryAt: 0
   property string previewLastEvent: "idle"
   property bool previewSuppressed: false
+  property int previewDriftStrikes: 0
+  property int previewLastSeekTarget: -1
+  property double previewLastSeekAt: 0
   property real videoReveal: localPreviewVisible ? 1 : 0
   property real layoutReveal: (localPreviewVisible || videoReveal > 0.01) ? 1 : 0
 
@@ -105,6 +108,9 @@ Item {
     previewTelemetrySamples = 0
     previewLastPosition = 0
     previewStablePositionTicks = 0
+    previewDriftStrikes = 0
+    previewLastSeekTarget = -1
+    previewLastSeekAt = 0
     previewLastTelemetryAt = Date.now()
     previewLastEvent = reason || "reset"
   }
@@ -143,6 +149,7 @@ Item {
       seekable: previewPlayer.seekable,
       positionPending: previewPositionPending,
       recoveryAttempts: previewRecoveryAttempts,
+      driftStrikes: previewDriftStrikes,
       playbackStartedAgeMs: previewPlaybackStartedAt > 0 ? Math.max(0, Math.round(Date.now() - previewPlaybackStartedAt)) : 0,
       telemetrySamples: previewTelemetrySamples,
       stablePositionTicks: previewStablePositionTicks,
@@ -178,6 +185,10 @@ Item {
     if (playing) {
       previewPlayer.play()
       previewPositionPending = true
+      // Catch up to the live playback position immediately on resume; the
+      // 1800ms settle deferral is for cold source loads, and waiting that
+      // long lets the drift watchdog fire first.
+      syncPreviewPosition(true)
       samplePreviewTelemetry("play-request")
       previewRecoveryTimer.restart()
     } else {
@@ -220,11 +231,25 @@ Item {
     }
     if (!force && previewBuffering()) return
     var target = Math.max(0, Math.round(playbackPosition * 1000))
-    if (force || Math.abs(previewPlayer.position - target) > 9000) {
-      previewPlayer.setPosition(target)
-      samplePreviewTelemetry("seek")
+    if (Math.abs(previewPlayer.position - target) <= 9000) {
+      previewPositionPending = false
+      previewLastSeekAt = 0
+      return
     }
-    previewPositionPending = false
+    // A deep seek into a long stream takes time to materialize; re-issuing
+    // it on every pass restarts the fetch and never converges. Leave the
+    // last seek in flight until it lands or goes stale.
+    if (previewLastSeekAt > 0 && Date.now() - previewLastSeekAt < 2500 && Math.abs(target - previewLastSeekTarget) < 4000) {
+      previewPositionPending = true
+      previewPositionSettleTimer.restart()
+      return
+    }
+    previewPlayer.setPosition(target)
+    previewLastSeekTarget = target
+    previewLastSeekAt = Date.now()
+    previewPositionPending = true
+    previewPositionSettleTimer.restart()
+    samplePreviewTelemetry("seek")
   }
 
   function maintainPreviewPosition() {
@@ -232,10 +257,24 @@ Item {
     if (!previewVideoActive || !localPreviewVisible || !playing) return
     var target = Math.max(0, Math.round(playbackPosition * 1000))
     var drift = Math.abs(previewPlayer.position - target)
-    if ((previewBuffering() && previewStablePositionTicks >= 4 && drift > 5000) || drift > 15000) {
-      previewSuppressed = true
-      previewPlayer.stop()
-      samplePreviewTelemetry("suppress")
+    var correcting = previewPositionPending || previewStartupSettling()
+    if (!correcting && drift <= 9000) {
+      previewDriftStrikes = 0
+      return
+    }
+    if (correcting || (previewBuffering() && previewStablePositionTicks >= 4 && drift > 5000) || drift > 15000) {
+      // The preview is off the live position or a corrective seek is still
+      // in flight. Keep correcting and count strikes; suppression is the
+      // last resort after the stream repeatedly fails to land, not the
+      // first response.
+      previewDriftStrikes += 1
+      if (previewDriftStrikes >= 8) {
+        previewSuppressed = true
+        previewPlayer.stop()
+        samplePreviewTelemetry("suppress")
+        return
+      }
+      syncPreviewPosition(drift > 9000)
       return
     }
     if (previewStablePositionTicks >= 4) {
@@ -271,7 +310,13 @@ Item {
     previewSuppressed = false
     syncPreviewPlayback()
   }
-  onLocalPreviewVisibleChanged: syncPreviewPlayback()
+  onLocalPreviewVisibleChanged: {
+    // Returning from desktop-background mode must give a suppressed preview
+    // another chance: the suppression latch otherwise only clears on a URL
+    // change, leaving the tile on a static thumbnail for the whole track.
+    if (localPreviewVisible) previewSuppressed = false
+    syncPreviewPlayback()
+  }
   onPlaybackPositionChanged: if (previewPositionPending) syncPreviewPosition(false)
 
   width: parent ? parent.width : 260
@@ -343,7 +388,10 @@ Item {
 
       MediaPlayer {
         id: previewPlayer
-        source: root.previewVideoActive ? root.previewUrl : ""
+        // Unload while the video lives on the desktop: resuming a stale
+        // network stream in place and seeking it does not converge; a fresh
+        // load on return (the same path as track start) does.
+        source: root.previewVideoActive && root.localPreviewVisible ? root.previewUrl : ""
         videoOutput: previewOutput
         audioOutput: AudioOutput {
           muted: true
