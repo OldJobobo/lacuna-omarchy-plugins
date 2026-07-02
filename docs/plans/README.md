@@ -14,6 +14,11 @@ superseded design notes.
   decisions.
 - `lacuna-bar-size-mode-plan.md`: implemented bar-size mode notes and smoke
   checklist.
+- `lacuna-youtube-video-transition-plan.md`: active plan to speed up
+  background-video track transitions and eliminate stuck-black-screen states.
+- `lacuna-layer-stacking-plan.md`: completed deterministic layer-stacking
+  rework (frame/bar/sidebar/video-cover) and the rules for adding surfaces;
+  living policy in `docs/architecture/layer-stacking.md`.
 
 ## Completed Or Superseded Plans
 
