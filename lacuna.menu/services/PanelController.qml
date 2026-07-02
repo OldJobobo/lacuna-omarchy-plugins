@@ -204,6 +204,13 @@ Item {
     activeFlyout = next
     visibleFlyout = next
     if (wasVisible && flyoutProgress > 0.98) {
+      // Cancel any in-flight close animation before declaring the swap
+      // done: a running animateFlyout(0) would keep driving progress to 0
+      // and its completion would clear visibleFlyout under the flyout that
+      // was just opened.
+      flyoutAnimationRevision = -1
+      flyoutProgressAnim.stop()
+      flyoutAnimationTarget = 1
       flyoutProgress = 1
       flyoutStateName = "flyoutOpen"
     } else {
