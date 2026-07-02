@@ -79,3 +79,13 @@ This checkout has no readable Git history. Use concise, imperative commits such 
 ## Architecture Notes
 
 Prefer Omarchy-native services and widgets for audio, media, network, Bluetooth, battery, tray, calendar, notifications, idle/update indicators, and other already-rich system surfaces. Keep `script-pill` as the experiment path; promote a script-backed widget only when it proves a durable non-native Lacuna workflow, visual treatment, or sidebar behavior.
+
+## Layer Stacking
+
+Within a wlr-layer-shell level, stacking is map order only and cannot be
+restacked. Follow `docs/architecture/layer-stacking.md` before adding or
+changing any `WlrLayershell.layer`, toggling a window's `visible`, or adding
+a second surface where in-window composition would do. Every layer assignment
+is pinned by `test_layer_stacking_policy` in `tests/test_qml_contracts.py`;
+surfaces that must sit under later same-level UI (frame paint, frame border)
+stay permanently mapped with content-gated paint.

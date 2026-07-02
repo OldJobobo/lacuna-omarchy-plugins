@@ -64,7 +64,10 @@ PanelWindow {
 
   LacunaGeometry { id: lacunaGeometry }
 
-  visible: active
+  // Always mapped (see LacunaFrameWindow): mapping at toggle time would
+  // stack the border above transient Overlay panels opened earlier. The
+  // Shape below gates all paint via isRenderable while inactive.
+  visible: true
   screen: targetScreen
   color: "transparent"
   WlrLayershell.namespace: "lacuna-bar-frame-border"

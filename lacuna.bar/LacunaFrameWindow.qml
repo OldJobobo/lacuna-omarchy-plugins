@@ -38,6 +38,14 @@ PanelWindow {
   readonly property int bottomInset: bottomBar ? Math.max(0, barSize) : t
   readonly property int leftInset: leftBar ? Math.max(0, barSize) : t
   readonly property int rightInset: rightBar ? Math.max(0, barSize) : t
+  // The frame never paints the strip occupied by the bar: the bar itself is
+  // the frame edge on its side. Map order of the vendored bar window is not
+  // ours to control, so bar-over-frame correctness must come from geometry,
+  // not stacking.
+  readonly property real outerX: leftBar ? Math.max(0, barSize) : 0
+  readonly property real outerY: topBar ? Math.max(0, barSize) : 0
+  readonly property real outerRight: rightBar ? Math.max(outerX + 1, width - Math.max(0, barSize)) : width
+  readonly property real outerBottom: bottomBar ? Math.max(outerY + 1, height - Math.max(0, barSize)) : height
   readonly property real holeX: Math.max(0, leftEdgeOccupied ? leftOcclusion : leftInset)
   readonly property real holeY: Math.max(0, topInset)
   readonly property real holeRight: Math.max(holeX + 1, width - (rightEdgeOccupied ? rightOcclusion : rightInset))
@@ -54,7 +62,12 @@ PanelWindow {
 
   LacunaGeometry { id: lacunaGeometry }
 
-  visible: active
+  // Always mapped: within a Wayland layer, stacking is map order only.
+  // Mapping this surface when the user enables the frame would stack it
+  // above the bar and sidebar (mapped at startup) and paint the frame over
+  // them. It stays mapped with fully transparent, click-through content
+  // while inactive; isRenderable gates all paint.
+  visible: true
   screen: targetScreen
   color: "transparent"
   WlrLayershell.namespace: "lacuna-bar-frame"
@@ -98,49 +111,49 @@ PanelWindow {
         strokeWidth: -1
         fillColor: root.effectiveFrameColor
         fillRule: ShapePath.OddEvenFill
-        startX: root.isRenderable ? root.minArcRadius : -0.75
-        startY: root.isRenderable ? 0 : -1
+        startX: root.isRenderable ? (root.outerX + root.minArcRadius) : -0.75
+        startY: root.isRenderable ? root.outerY : -1
 
         PathLine {
-          x: root.isRenderable ? (frameSource.width - root.minArcRadius) : 0
-          y: root.isRenderable ? 0 : -1
+          x: root.isRenderable ? (root.outerRight - root.minArcRadius) : 0
+          y: root.isRenderable ? root.outerY : -1
         }
         PathArc {
-          x: root.isRenderable ? frameSource.width : 0
-          y: root.isRenderable ? root.minArcRadius : -0.75
+          x: root.isRenderable ? root.outerRight : 0
+          y: root.isRenderable ? (root.outerY + root.minArcRadius) : -0.75
           radiusX: root.isRenderable ? root.minArcRadius : 0
           radiusY: root.isRenderable ? root.minArcRadius : 0
           direction: PathArc.Clockwise
         }
         PathLine {
-          x: root.isRenderable ? frameSource.width : 0
-          y: root.isRenderable ? (frameSource.height - root.minArcRadius) : 0
+          x: root.isRenderable ? root.outerRight : 0
+          y: root.isRenderable ? (root.outerBottom - root.minArcRadius) : 0
         }
         PathArc {
-          x: root.isRenderable ? (frameSource.width - root.minArcRadius) : -0.25
-          y: root.isRenderable ? frameSource.height : 0
+          x: root.isRenderable ? (root.outerRight - root.minArcRadius) : -0.25
+          y: root.isRenderable ? root.outerBottom : 0
           radiusX: root.isRenderable ? root.minArcRadius : 0
           radiusY: root.isRenderable ? root.minArcRadius : 0
           direction: PathArc.Clockwise
         }
         PathLine {
-          x: root.isRenderable ? root.minArcRadius : -1
-          y: root.isRenderable ? frameSource.height : 0
+          x: root.isRenderable ? (root.outerX + root.minArcRadius) : -1
+          y: root.isRenderable ? root.outerBottom : 0
         }
         PathArc {
-          x: root.isRenderable ? 0 : -1
-          y: root.isRenderable ? (frameSource.height - root.minArcRadius) : -0.25
+          x: root.isRenderable ? root.outerX : -1
+          y: root.isRenderable ? (root.outerBottom - root.minArcRadius) : -0.25
           radiusX: root.isRenderable ? root.minArcRadius : 0
           radiusY: root.isRenderable ? root.minArcRadius : 0
           direction: PathArc.Clockwise
         }
         PathLine {
-          x: root.isRenderable ? 0 : -1
-          y: root.isRenderable ? root.minArcRadius : -1
+          x: root.isRenderable ? root.outerX : -1
+          y: root.isRenderable ? (root.outerY + root.minArcRadius) : -1
         }
         PathArc {
-          x: root.isRenderable ? root.minArcRadius : -0.75
-          y: root.isRenderable ? 0 : -1
+          x: root.isRenderable ? (root.outerX + root.minArcRadius) : -0.75
+          y: root.isRenderable ? root.outerY : -1
           radiusX: root.isRenderable ? root.minArcRadius : 0
           radiusY: root.isRenderable ? root.minArcRadius : 0
           direction: PathArc.Clockwise

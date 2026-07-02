@@ -169,21 +169,14 @@ Item {
     return true
   }
 
-  OmarchyBarAdapter {
-    id: omarchyBar
-
-    omarchyPath: root.omarchyPath
-    shell: root.shell
-    manifest: root.manifest
-    pluginRegistry: root.pluginRegistry
-    barWidgetRegistry: root.barWidgetRegistry
-    barConfig: root.barConfig
-  }
-
   Theme {
     id: barTheme
   }
 
+  // Declaration order is mapping order, and within a Wayland layer stacking
+  // is mapping order: the always-mapped frame surfaces must be created
+  // before the bar (and the hosted menu below) so the bar and sidebar
+  // render above the frame paint.
   Variants {
     model: Quickshell.screens
 
@@ -230,6 +223,17 @@ Item {
       attachedFlyoutY: hostedMenu.frameBorderAttachedFlyoutY
       attachedFlyoutHeight: hostedMenu.frameBorderAttachedFlyoutHeight
     }
+  }
+
+  OmarchyBarAdapter {
+    id: omarchyBar
+
+    omarchyPath: root.omarchyPath
+    shell: root.shell
+    manifest: root.manifest
+    pluginRegistry: root.pluginRegistry
+    barWidgetRegistry: root.barWidgetRegistry
+    barConfig: root.barConfig
   }
 
   // The full-frame paint surface is intentionally exclusion-ignored because it
