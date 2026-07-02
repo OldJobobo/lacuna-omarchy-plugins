@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 YOUTUBE_PLAYER_CLIENT = "web_embedded"
+BACKGROUND_FORMAT = "18/best[ext=mp4][vcodec!=none][acodec!=none]"
 
 
 def load_config(raw):
@@ -28,6 +29,42 @@ def ytdlp_auth_args(config):
     return []
 
 
+def build_cmd(ytdlp, config, url, embedded_client):
+    cmd = [
+        ytdlp,
+        *ytdlp_auth_args(config),
+        "--no-warnings",
+        "--no-playlist",
+        "--get-url",
+        "-f",
+        BACKGROUND_FORMAT,
+        url,
+    ]
+    if embedded_client:
+        cmd[1:1] = ["--extractor-args", f"youtube:player_client={YOUTUBE_PLAYER_CLIENT}"]
+    return cmd
+
+
+def run_ytdlp(ytdlp, config, url, embedded_client):
+    try:
+        return subprocess.run(
+            build_cmd(ytdlp, config, url, embedded_client),
+            capture_output=True,
+            text=True,
+            timeout=18,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return None
+
+
+def result_error(result, fallback):
+    if result is None:
+        return "background stream timed out"
+    message = (result.stderr or result.stdout or fallback).strip().splitlines()
+    return message[-1] if message else fallback
+
+
 def main(argv=None):
     argv = list(argv or sys.argv[1:])
     config = {}
@@ -43,27 +80,14 @@ def main(argv=None):
         print(json.dumps({"url": "", "error": "yt-dlp is not installed"}))
         return 1
 
-    cmd = [
-        ytdlp,
-        *ytdlp_auth_args(config),
-        "--extractor-args",
-        f"youtube:player_client={YOUTUBE_PLAYER_CLIENT}",
-        "--no-warnings",
-        "--no-playlist",
-        "--get-url",
-        "-f",
-        "22/18/best[height<=720][ext=mp4][vcodec!=none][acodec!=none]/best[ext=mp4][vcodec!=none][acodec!=none]",
-        argv[0],
-    ]
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=18, check=False)
-    except subprocess.TimeoutExpired:
-        print(json.dumps({"url": "", "error": "background stream timed out"}))
-        return 1
+    result = run_ytdlp(ytdlp, config, argv[0], True)
+    if result is None or result.returncode != 0:
+        fallback_result = run_ytdlp(ytdlp, config, argv[0], False)
+        if fallback_result is not None and fallback_result.returncode == 0:
+            result = fallback_result
 
-    if result.returncode != 0:
-        message = (result.stderr or result.stdout or "background stream failed").strip().splitlines()
-        print(json.dumps({"url": "", "error": message[-1] if message else "background stream failed"}))
+    if result is None or result.returncode != 0:
+        print(json.dumps({"url": "", "error": result_error(result, "background stream failed")}))
         return 1
 
     for line in result.stdout.splitlines():

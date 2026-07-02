@@ -1007,10 +1007,38 @@ class YoutubeMusicScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("--extractor-args", argv)
         self.assertIn("youtube:player_client=web_embedded", argv)
-        self.assertIn("18/best[height<=360][ext=mp4][vcodec!=none][acodec!=none]", " ".join(argv))
+        self.assertIn("18/best[ext=mp4][vcodec!=none][acodec!=none]", " ".join(argv))
         payload = json.loads(result.stdout)
         self.assertEqual(payload["url"], "https://video.example/preview.mp4")
         self.assertEqual(payload["error"], "")
+
+    def test_preview_retries_without_embedded_client_on_failure(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            write_exec(
+                bin_dir / "yt-dlp",
+                "#!/usr/bin/env python3\n"
+                "import json, pathlib, sys\n"
+                f"calls = pathlib.Path({str(tmp / 'calls.jsonl')!r})\n"
+                "calls.write_text(calls.read_text() + json.dumps(sys.argv) + '\\n' if calls.exists() else json.dumps(sys.argv) + '\\n')\n"
+                "if any('player_client=web_embedded' in arg for arg in sys.argv):\n"
+                "    print('embedded rejected', file=sys.stderr)\n"
+                "    raise SystemExit(1)\n"
+                "print('https://video.example/fallback.mp4')\n",
+            )
+            result = run(
+                [sys.executable, str(self.PREVIEW_SCRIPT), "https://www.youtube.com/watch?v=abc123"],
+                {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+            )
+            calls = [json.loads(line) for line in (tmp / "calls.jsonl").read_text().splitlines()]
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(any("player_client=web_embedded" in " ".join(call) for call in calls[:1]))
+        self.assertFalse(any("player_client=web_embedded" in arg for arg in calls[1]))
+        self.assertEqual(json.loads(result.stdout)["url"], "https://video.example/fallback.mp4")
 
     def test_background_resolver_uses_youtube_embedded_client(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1033,10 +1061,38 @@ class YoutubeMusicScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("--extractor-args", argv)
         self.assertIn("youtube:player_client=web_embedded", argv)
-        self.assertIn("22/18/best[height<=720][ext=mp4]", " ".join(argv))
+        self.assertIn("18/best[ext=mp4][vcodec!=none][acodec!=none]", " ".join(argv))
         payload = json.loads(result.stdout)
         self.assertEqual(payload["url"], "https://video.example/background.mp4")
         self.assertEqual(payload["error"], "")
+
+    def test_background_resolver_retries_without_embedded_client_on_failure(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            write_exec(
+                bin_dir / "yt-dlp",
+                "#!/usr/bin/env python3\n"
+                "import json, pathlib, sys\n"
+                f"calls = pathlib.Path({str(tmp / 'calls.jsonl')!r})\n"
+                "calls.write_text(calls.read_text() + json.dumps(sys.argv) + '\\n' if calls.exists() else json.dumps(sys.argv) + '\\n')\n"
+                "if any('player_client=web_embedded' in arg for arg in sys.argv):\n"
+                "    print('embedded rejected', file=sys.stderr)\n"
+                "    raise SystemExit(1)\n"
+                "print('https://video.example/background-fallback.mp4')\n",
+            )
+            result = run(
+                [sys.executable, str(ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-background"), "https://www.youtube.com/watch?v=abc123"],
+                {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+            )
+            calls = [json.loads(line) for line in (tmp / "calls.jsonl").read_text().splitlines()]
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(any("player_client=web_embedded" in " ".join(call) for call in calls[:1]))
+        self.assertFalse(any("player_client=web_embedded" in arg for arg in calls[1]))
+        self.assertEqual(json.loads(result.stdout)["url"], "https://video.example/background-fallback.mp4")
 
     def test_control_command_reports_missing_socket_without_crashing(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1064,6 +1120,7 @@ class YoutubeMusicScriptTests(unittest.TestCase):
         self.assertIn('YOUTUBE_PLAYER_CLIENT = "web_embedded"', text)
         self.assertIn("extractor-args=youtube:player_client={YOUTUBE_PLAYER_CLIENT}", text)
         self.assertIn("--ytdl-format=18/best[height<=360][ext=mp4]/bestaudio[ext=m4a]/best", text)
+        self.assertIn("--keep-open=yes", text)
         self.assertIn("--cache=yes", text)
         self.assertIn("--cache-pause-initial=yes", text)
         self.assertIn("--cache-pause-wait=10", text)
@@ -1074,6 +1131,89 @@ class YoutubeMusicScriptTests(unittest.TestCase):
         self.assertIn("--volume={args.volume}", text)
         self.assertIn("mpv.pid", text)
         self.assertIn('sub.add_parser("cleanup")', text)
+
+    def test_control_probe_reports_dead_player(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            socket_path = str(Path(tmpdir) / "missing.sock")
+            result = run(
+                [sys.executable, str(self.CONTROL_SCRIPT), "probe", "--socket", socket_path],
+                {},
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertIs(payload["ok"], False)
+        self.assertIs(payload["running"], False)
+        self.assertIs(payload["eofReached"], False)
+        self.assertIsNone(payload["timePos"])
+        self.assertIsNone(payload["duration"])
+
+    def test_control_probe_reads_eof_state_and_skips_ipc_events(self):
+        import socket as socket_module
+        import threading
+
+        properties = {
+            "eof-reached": True,
+            "idle-active": False,
+            "pause": True,
+            "time-pos": 187.2,
+            "duration": 190.0,
+        }
+
+        def serve(server):
+            connection, _addr = server.accept()
+            with connection:
+                # mpv broadcasts event lines to every IPC client; the probe
+                # must skip them and match replies by request_id.
+                connection.sendall(b'{"event":"file-loaded"}\n')
+                buffer = b""
+                handled = 0
+                while handled < len(properties):
+                    chunk = connection.recv(4096)
+                    if not chunk:
+                        break
+                    buffer += chunk
+                    while b"\n" in buffer:
+                        line, buffer = buffer.split(b"\n", 1)
+                        if not line.strip():
+                            continue
+                        message = json.loads(line)
+                        reply = {
+                            "error": "success",
+                            "data": properties[message["command"][1]],
+                            "request_id": message["request_id"],
+                        }
+                        connection.sendall(b'{"event":"property-change"}\n')
+                        connection.sendall((json.dumps(reply) + "\n").encode("utf-8"))
+                        handled += 1
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            socket_path = str(Path(tmpdir) / "mpv.sock")
+            (Path(tmpdir) / "mpv.pid").write_text(str(os.getpid()), encoding="utf-8")
+            server = socket_module.socket(socket_module.AF_UNIX, socket_module.SOCK_STREAM)
+            server.bind(socket_path)
+            server.listen(1)
+            thread = threading.Thread(target=serve, args=(server,), daemon=True)
+            thread.start()
+            try:
+                result = run(
+                    [sys.executable, str(self.CONTROL_SCRIPT), "probe", "--socket", socket_path],
+                    {},
+                )
+            finally:
+                server.close()
+                thread.join(timeout=5)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertIs(payload["ok"], True)
+        self.assertIs(payload["running"], True)
+        self.assertIs(payload["eofReached"], True)
+        self.assertIs(payload["idleActive"], False)
+        self.assertIs(payload["paused"], True)
+        self.assertEqual(payload["timePos"], 187.2)
+        self.assertEqual(payload["duration"], 190.0)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -20,7 +20,7 @@ Item {
   readonly property bool backgroundPlaying: backgroundVisible && service.playing === true && service.paused !== true
   readonly property string highResVideoSource: service ? String(service.backgroundStreamUrl || "") : ""
   readonly property int backgroundRequestRevision: service && service.backgroundRequestRevision !== undefined ? Number(service.backgroundRequestRevision) || 0 : 0
-  readonly property bool usingHighRes: highResVideoSource !== "" && videoSource === highResVideoSource
+  readonly property bool backgroundResolveFailed: service && service.backgroundResolveFailed === true
   readonly property string videoSource: backgroundVisible ? highResVideoSource : ""
   readonly property real startPosition: service && service.playbackPosition !== undefined ? Math.max(0, Number(service.playbackPosition) || 0) : 0
   readonly property bool wallpaperDesired: backgroundVisible && videoSource !== ""
@@ -35,21 +35,23 @@ Item {
   readonly property int exitFadeFromBlackDuration: 1200
   property string activeSource: ""
   property int activeStartPosition: 0
-  property int lastExitCode: 0
-  property int restartAttempts: 0
+  property int mediaRestartAttempts: 0
   property bool fadeCoverVisible: false
   property real fadeCoverOpacity: 0
   property double fadeCoverStartedAt: 0
+  property double activeSourceAssignedAt: 0
   property int fadeRevealDelay: 0
   property bool fadeCoverRising: false
   property int fadeCoverDuration: fadeInDuration
   property bool exitTransitionActive: false
   property bool clearingWallpaperAfterExit: false
   property int wallpaperFadeGateDelay: 0
+  property bool waitingForPlayerReady: false
   property bool wallpaperPositionRefreshPending: false
   property string wallpaperPositionRefreshKey: ""
-  property int backgroundReadyProbeAttempts: 0
-  readonly property bool wallpaperLayerVisible: wallpaperDesired || activeSource !== "" || exitTransitionActive
+  readonly property int mediaReadyMinimumHoldMs: 500
+  readonly property int failureWatchdogDuration: 12000
+  readonly property bool wallpaperLayerVisible: wallpaperDesired || activeSource !== "" || exitTransitionActive || fadeCoverVisible
 
   function outputMatches(screen) {
     if (allOutputs) return true
@@ -97,18 +99,17 @@ Item {
     syncWallpaper()
   }
   onShellChanged: resolveService()
-  onWaitingForHighResChanged: {
-    if (waitingForHighRes) holdFadeCover()
-  }
+  onWaitingForHighResChanged: if (waitingForHighRes) holdFadeCover(exitFadeToBlackDuration)
   onBackgroundRequestRevisionChanged: {
-    if (service && service.backgroundVideoEnabled === true && service.playing === true && service.paused !== true) holdFadeCover()
+    if (service && service.backgroundVideoEnabled === true && service.playing === true && service.paused !== true) holdFadeCover(exitFadeToBlackDuration)
   }
+  onBackgroundResolveFailedChanged: if (backgroundResolveFailed) giveUpWallpaper("resolve-failed")
   onWallpaperDesiredChanged: syncWallpaper()
   onVideoSourceChanged: syncWallpaper()
   onBackgroundPlayingChanged: syncWallpaper()
   onStartPositionChanged: syncVideoPosition(false)
 
-  function holdFadeCover() {
+  function holdFadeCover(duration) {
     exitTransitionActive = false
     clearingWallpaperAfterExit = false
     exitClearTimer.stop()
@@ -117,27 +118,59 @@ Item {
     fadeCoverVisible = true
     fadeCoverStartedAt = Date.now()
     fadeCoverRising = true
-    fadeCoverDuration = fadeInDuration
+    fadeCoverDuration = Math.max(1, Number(duration) || fadeInDuration)
     fadeCoverOpacity = 1
+    failureWatchdog.restart()
   }
 
-  function fadeInRemaining() {
+  function fadeCoverRiseRemaining() {
     if (!fadeCoverRising || fadeCoverStartedAt <= 0) return 0
-    return Math.max(0, fadeInDuration - (Date.now() - fadeCoverStartedAt))
+    return Math.max(0, fadeCoverDuration - (Date.now() - fadeCoverStartedAt))
   }
 
   function releaseFadeCoverSoon() {
-    var elapsed = fadeCoverStartedAt > 0 ? Date.now() - fadeCoverStartedAt : fadeInDuration
-    fadeRevealDelay = Math.max(500, fadeInDuration - elapsed)
+    var elapsed = activeSourceAssignedAt > 0 ? Date.now() - activeSourceAssignedAt : mediaReadyMinimumHoldMs
+    fadeRevealDelay = Math.max(0, mediaReadyMinimumHoldMs - elapsed)
     fadeRevealTimer.restart()
   }
 
   function releaseFadeCoverNow() {
     fadeRevealTimer.stop()
+    failureWatchdog.stop()
+    waitingForPlayerReady = false
     fadeCoverRising = false
     fadeCoverDuration = clearingWallpaperAfterExit ? exitFadeFromBlackDuration : fadeOutDuration
     fadeCoverOpacity = 0
     fadeHideTimer.restart()
+  }
+
+  function notePlayerReady() {
+    if (!waitingForPlayerReady || activeSource === "") return
+    releaseFadeCoverSoon()
+  }
+
+  function notePlayerError(message) {
+    if (activeSource === "") return
+    if (mediaRestartAttempts <= 0 && service && typeof service.refreshBackgroundStream === "function") {
+      mediaRestartAttempts += 1
+      waitingForPlayerReady = true
+      service.refreshBackgroundStream()
+      failureWatchdog.restart()
+      return
+    }
+    giveUpWallpaper(message || "player-error")
+  }
+
+  function giveUpWallpaper(reason) {
+    wallpaperFadeGateTimer.stop()
+    fadeRevealTimer.stop()
+    waitingForPlayerReady = false
+    activeSource = ""
+    activeStartPosition = 0
+    mediaRestartAttempts = 0
+    wallpaperPositionRefreshPending = false
+    wallpaperPositionRefreshKey = ""
+    releaseFadeCoverNow()
   }
 
   function syncWallpaper() {
@@ -157,15 +190,18 @@ Item {
     }
 
     if (activeSource !== videoSource && !fadeCoverRising && fadeCoverOpacity <= 0.001) {
-      holdFadeCover()
-      wallpaperFadeGateDelay = fadeInDuration
+      // Every appearance dips quickly to black and then reveals when the
+      // player is actually ready — enabling the wallpaper feels the same as
+      // a track change.
+      holdFadeCover(exitFadeToBlackDuration)
+      wallpaperFadeGateDelay = fadeCoverDuration
       wallpaperFadeGateTimer.restart()
       return
     }
 
-    var remainingFadeIn = fadeInRemaining()
-    if (remainingFadeIn > 0) {
-      wallpaperFadeGateDelay = Math.max(120, remainingFadeIn)
+    var remainingFadeCoverRise = fadeCoverRiseRemaining()
+    if (remainingFadeCoverRise > 0) {
+      wallpaperFadeGateDelay = Math.max(120, remainingFadeCoverRise)
       wallpaperFadeGateTimer.restart()
       return
     }
@@ -179,9 +215,12 @@ Item {
     }
 
     activeSource = videoSource
+    activeSourceAssignedAt = Date.now()
     activeStartPosition = Math.max(0, Math.floor(startPosition))
+    waitingForPlayerReady = true
+    mediaRestartAttempts = 0
+    failureWatchdog.restart()
     syncVideoPosition(true)
-    if (backgroundPlaying && fadeCoverOpacity > 0.01) releaseFadeCoverSoon()
   }
 
   function beginWallpaperExit() {
@@ -201,10 +240,11 @@ Item {
   function clearWallpaperNow() {
     activeSource = ""
     activeStartPosition = 0
-    restartAttempts = 0
+    activeSourceAssignedAt = 0
+    mediaRestartAttempts = 0
+    waitingForPlayerReady = false
     wallpaperPositionRefreshPending = false
     wallpaperPositionRefreshKey = ""
-    backgroundReadyProbeAttempts = 0
     wallpaperFadeGateTimer.stop()
     if (!waitingForHighRes) releaseFadeCoverNow()
   }
@@ -265,6 +305,15 @@ Item {
     interval: root.wallpaperFadeGateDelay
     repeat: false
     onTriggered: root.syncWallpaper()
+  }
+
+  Timer {
+    id: failureWatchdog
+    interval: root.failureWatchdogDuration
+    repeat: false
+    onTriggered: {
+      if (root.waitingForHighRes || root.waitingForPlayerReady || root.backgroundResolveFailed) root.giveUpWallpaper("watchdog")
+    }
   }
 
   Timer {
@@ -342,7 +391,14 @@ Item {
             if (root.backgroundPlaying) play()
           }
           onPlaybackStateChanged: {
-            if (playbackState !== MediaPlayer.StoppedState && root.fadeCoverOpacity > 0.01) root.releaseFadeCoverSoon()
+            if (playbackState === MediaPlayer.PlayingState) root.notePlayerReady()
+          }
+          onMediaStatusChanged: {
+            if (mediaStatus === MediaPlayer.BufferedMedia) root.notePlayerReady()
+            if (mediaStatus === MediaPlayer.InvalidMedia) root.notePlayerError("invalid-media")
+          }
+          onErrorOccurred: function(error, errorString) {
+            if (error !== MediaPlayer.NoError) root.notePlayerError(errorString)
           }
           Component.onCompleted: root.videoPlayers.push(backgroundPlayer)
           Component.onDestruction: {
@@ -356,6 +412,28 @@ Item {
           anchors.fill: parent
           visible: videoWindow.renderable
           fillMode: VideoOutput.PreserveAspectCrop
+        }
+
+        Rectangle {
+          id: fadeCover
+
+          // The black cover lives inside the video window, above the
+          // VideoOutput: sibling z-order is deterministic, whereas stacking
+          // two separate layer-shell surfaces is map-order dependent and
+          // could leave the video on top of its own cover, turning every
+          // fade into an abrupt pop-in.
+          anchors.fill: parent
+          z: 10
+          color: "#000000"
+          visible: root.fadeCoverVisible
+          opacity: root.fadeCoverOpacity
+
+          Behavior on opacity {
+            NumberAnimation {
+              duration: root.fadeCoverDuration
+              easing.type: Easing.InOutQuad
+            }
+          }
         }
 
         Connections {
@@ -380,61 +458,14 @@ Item {
     }
   }
 
-  Variants {
-    model: Quickshell.screens
-
-    PanelWindow {
-      id: fadeWindow
-
-      required property var modelData
-      readonly property bool targetMatched: root.outputMatches(modelData)
-      readonly property var frameRect: root.resolveFrameRect(modelData)
-
-      screen: modelData
-      visible: targetMatched && root.fadeCoverVisible
-      color: "transparent"
-      implicitWidth: 0
-      implicitHeight: 0
-      WlrLayershell.namespace: "lacuna-youtube-music-video-fade"
-      WlrLayershell.layer: WlrLayer.Background
-      WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-      exclusionMode: ExclusionMode.Ignore
-      mask: Region {}
-
-      anchors {
-        top: true
-        bottom: true
-        left: true
-        right: true
-      }
-
-      Rectangle {
-        x: Math.round(fadeWindow.frameRect.x)
-        y: Math.round(fadeWindow.frameRect.y)
-        width: Math.round(fadeWindow.frameRect.width)
-        height: Math.round(fadeWindow.frameRect.height)
-        radius: Math.max(0, Number(fadeWindow.frameRect.radius || 0))
-        color: "#000000"
-        opacity: root.fadeCoverOpacity
-
-        Behavior on opacity {
-          NumberAnimation {
-            duration: root.fadeCoverDuration
-            easing.type: Easing.InOutQuad
-          }
-        }
-      }
-    }
-  }
-
   Connections {
     target: root.service
 
     function onBackgroundVideoEnabledChanged() { root.syncWallpaper() }
     function onPausedChanged() { root.syncWallpaper() }
     function onPlayingChanged() { root.syncWallpaper() }
-    function onPreviewStreamUrlChanged() { root.syncWallpaper() }
     function onBackgroundStreamUrlChanged() { root.syncWallpaper() }
+    function onBackgroundResolveFailedChanged() { if (root.backgroundResolveFailed) root.giveUpWallpaper("resolve-failed") }
     function onPlaybackPositionChanged() { root.syncVideoPosition(false) }
   }
 
@@ -456,26 +487,26 @@ Item {
         currentTrackUrl: root.service ? String(root.service.currentTrackUrl || "") : "",
         backgroundReady: root.service && String(root.service.backgroundStreamUrl || "") !== "",
         backgroundResolving: root.service && root.service.resolvingBackground === true,
+        backgroundResolveFailed: root.backgroundResolveFailed,
         backgroundRequestRevision: root.backgroundRequestRevision,
         waitingForHighRes: root.waitingForHighRes,
+        waitingForPlayerReady: root.waitingForPlayerReady,
         fadeCoverVisible: root.fadeCoverVisible,
         fadeCoverOpacity: root.fadeCoverOpacity,
         fadeCoverDuration: root.fadeCoverDuration,
         fadeRevealDelay: root.fadeRevealDelay,
         wallpaperLayerVisible: root.wallpaperLayerVisible,
         wallpaperFadeGateDelay: root.wallpaperFadeGateDelay,
+        failureWatchdogDuration: root.failureWatchdogDuration,
         wallpaperPositionRefreshPending: root.wallpaperPositionRefreshPending,
         wallpaperPositionRefreshKey: root.wallpaperPositionRefreshKey,
         exitTransitionActive: root.exitTransitionActive,
         clearingWallpaperAfterExit: root.clearingWallpaperAfterExit,
-        backgroundReadyProbeAttempts: root.backgroundReadyProbeAttempts,
-        usingHighRes: root.usingHighRes,
         source: root.videoSource,
         activeSource: root.activeSource,
         activeStartPosition: root.activeStartPosition,
         targetOutput: root.targetOutput,
-        lastExitCode: root.lastExitCode,
-        restartAttempts: root.restartAttempts,
+        mediaRestartAttempts: root.mediaRestartAttempts,
         backend: "qml-framed-video"
       })
     }

@@ -25,6 +25,15 @@ Item {
   property int suppressStateReloads: 0
   property int playbackProbeFailures: 0
   property double playbackStartedAtMs: 0
+  property real playbackDuration: 0
+  property bool playbackEndHandled: false
+  // Bumped whenever playback is (re)started, stopped, or failed, so probe
+  // results issued against a previous mpv instance are discarded.
+  property int playbackSessionRevision: 0
+  // With --keep-open the eof probe is authoritative; the slack only covers the
+  // fallback path where mpv exited and the last polled position must be judged
+  // against the known duration (poll cadence is 1s).
+  readonly property real endedProbeSlackSeconds: 3
   property var lacunaSettings: ({})
   property bool providerSearchActive: false
   property int pendingProviderSearches: 0
@@ -54,6 +63,9 @@ Item {
   property string backgroundRequestUrl: ""
   property string backgroundPlaybackSocket: ""
   property int backgroundRequestRevision: 0
+  property bool backgroundResolveFailed: false
+  property var streamUrlCache: ({})
+  readonly property int streamUrlCacheTtlMs: 4 * 60 * 60 * 1000
   property var previewTelemetry: ({ loaded: false })
 
   readonly property bool available: mpvAvailable && (ytdlpAvailable || jellyfinConfigured)
@@ -119,6 +131,29 @@ Item {
 
   function updatePreviewTelemetry(payload) {
     previewTelemetry = payload && typeof payload === "object" ? payload : ({ loaded: false })
+  }
+
+  function streamCacheKey(trackOrUrl) {
+    var url = typeof trackOrUrl === "string" ? String(trackOrUrl) : trackUrl(trackOrUrl)
+    var id = videoIdFromUrl(url)
+    return id !== "" ? id : url
+  }
+
+  function cachedStreamUrl(trackOrUrl) {
+    var key = streamCacheKey(trackOrUrl)
+    if (key === "") return ""
+    var entry = streamUrlCache[key]
+    if (!entry || !entry.url || Date.now() - Number(entry.resolvedAtMs || 0) > streamUrlCacheTtlMs) return ""
+    return String(entry.url)
+  }
+
+  function rememberStreamUrl(trackOrUrl, url) {
+    var key = streamCacheKey(trackOrUrl)
+    var value = String(url || "")
+    if (key === "" || value === "") return
+    var next = Object.assign({}, streamUrlCache)
+    next[key] = ({ url: value, resolvedAtMs: Date.now() })
+    streamUrlCache = next
   }
 
   function statusText() {
@@ -418,6 +453,7 @@ Item {
     currentTrack = normalized
     previewStreamUrl = ""
     backgroundStreamUrl = ""
+    backgroundResolveFailed = false
     if (!itemHasVideo(normalized)) {
       backgroundVideoEnabled = false
       pendingBackgroundEnable = false
@@ -597,6 +633,20 @@ Item {
       resolvingPreview = false
       return
     }
+    var cached = cachedStreamUrl(track)
+    if (cached !== "") {
+      previewRequestUrl = url
+      previewStreamUrl = cached
+      resolvingPreview = false
+      if (backgroundVideoEnabled && backgroundStreamUrl === "") {
+        backgroundRequestUrl = url
+        backgroundStreamUrl = cached
+        backgroundResolveFailed = false
+        resolvingBackground = false
+        backgroundRequestRevision += 1
+      }
+      return
+    }
     previewRequestUrl = url
     previewStreamUrl = ""
     resolvingPreview = true
@@ -613,11 +663,53 @@ Item {
       backgroundRequestRevision += 1
       return
     }
+    var cached = cachedStreamUrl(track)
+    if (cached !== "") {
+      backgroundRequestUrl = url
+      backgroundStreamUrl = cached
+      backgroundResolveFailed = false
+      resolvingBackground = false
+      backgroundRequestRevision += 1
+      return
+    }
     backgroundRequestUrl = url
     backgroundStreamUrl = ""
+    backgroundResolveFailed = false
     resolvingBackground = true
     backgroundRequestRevision += 1
+    if (resolvingPreview && previewRequestUrl === url) return
+    if (previewStreamUrl !== "") {
+      rememberStreamUrl(track, previewStreamUrl)
+      backgroundStreamUrl = previewStreamUrl
+      resolvingBackground = false
+      return
+    }
     backgroundStartTimer.restart()
+  }
+
+  function refreshBackgroundStream() {
+    if (!hasTrack) return
+    var key = streamCacheKey(currentTrack)
+    if (key !== "") {
+      var next = Object.assign({}, streamUrlCache)
+      delete next[key]
+      streamUrlCache = next
+    }
+    backgroundStreamUrl = ""
+    resolveBackground(currentTrack)
+  }
+
+  function prefetchNextBackground() {
+    if (!backgroundVideoEnabled || queue.length <= 0) return
+    var nextTrack = normalizeTrack(queue[0])
+    if (!nextTrack || !itemHasVideo(nextTrack) || providerFor(nextTrack) !== "youtube") return
+    if (cachedStreamUrl(nextTrack) !== "") return
+    var url = trackUrl(nextTrack)
+    if (url === "" || url === backgroundRequestUrl || backgroundPrefetchProc.running) return
+    backgroundPrefetchProc.requestUrl = url
+    backgroundPrefetchProc.output = ""
+    backgroundPrefetchProc.command = [backgroundScript, "--config-json", youtubeConfigJson, url]
+    backgroundPrefetchProc.running = true
   }
 
   function addNext(track) {
@@ -711,6 +803,9 @@ Item {
     backgroundOwnsAudio = false
     backgroundPlaybackSocket = ""
     playbackPosition = 0
+    playbackDuration = 0
+    playbackEndHandled = false
+    playbackSessionRevision += 1
     playbackProbeFailures = 0
     status = statusText()
   }
@@ -727,6 +822,7 @@ Item {
     playing = false
     paused = false
     playbackProbeFailures = 0
+    playbackSessionRevision += 1
     errorText = message || "Playback stream unavailable"
     status = "error"
   }
@@ -741,6 +837,20 @@ Item {
       playbackProbeFailures += 1
       if (playbackProbeFailures >= 2) markPlaybackFailed("Playback stream unavailable")
     }
+  }
+
+  function playbackLooksFinished() {
+    if (!playing || paused) return false
+    if (!(playbackDuration > 0)) return false
+    return playbackPosition >= Math.max(0, playbackDuration - endedProbeSlackSeconds)
+  }
+
+  function notePlaybackEnded() {
+    if (playbackEndHandled || !playing || paused) return
+    playbackEndHandled = true
+    playbackProbeFailures = 0
+    if (playbackDuration > 0) playbackPosition = playbackDuration
+    handlePlaybackEnded()
   }
 
   function playNextFromQueue(rememberPrevious, recycleCurrent) {
@@ -837,6 +947,7 @@ Item {
     resolvingBackground = false
     backgroundStreamUrl = ""
     backgroundRequestUrl = ""
+    backgroundResolveFailed = false
     if (hasTrack && previewStreamUrl === "" && !resolvingPreview) resolvePreview(currentTrack)
   }
 
@@ -897,8 +1008,12 @@ Item {
     backgroundPlaybackSocket = ""
     backgroundStreamUrl = ""
     backgroundRequestUrl = ""
+    backgroundResolveFailed = false
     playing = false
     paused = false
+    playbackDuration = 0
+    playbackEndHandled = false
+    playbackSessionRevision += 1
     resolvingPreview = false
     resolvingBackground = false
     status = statusText()
@@ -925,6 +1040,9 @@ Item {
     playing = true
     paused = false
     playbackPosition = Math.max(0, Number(startAt) || 0)
+    playbackDuration = 0
+    playbackEndHandled = false
+    playbackSessionRevision += 1
     playbackStartedAtMs = Date.now()
     playbackProbeFailures = 0
     status = "playing"
@@ -968,7 +1086,8 @@ Item {
   function updatePlaybackPosition() {
     if (!playing || paused || positionProc.running) return false
     positionProc.output = ""
-    positionProc.command = [controlScript, "get-property", "--socket", playbackSocket(), "--name", "time-pos"]
+    positionProc.sessionRevision = playbackSessionRevision
+    positionProc.command = [controlScript, "probe", "--socket", playbackSocket()]
     positionProc.running = true
     return true
   }
@@ -1163,12 +1282,28 @@ Item {
     onExited: function(exitCode) {
       if (previewProc.requestUrl !== root.previewRequestUrl || previewProc.requestUrl !== root.trackUrl(root.currentTrack)) return
       root.resolvingPreview = false
-      if (exitCode !== 0) return
+      if (exitCode !== 0) {
+        if (root.resolvingBackground && root.backgroundRequestUrl === previewProc.requestUrl) {
+          root.resolvingBackground = false
+          root.backgroundResolveFailed = true
+        }
+        return
+      }
       try {
         var payload = JSON.parse(previewProc.output || "{}")
         root.previewStreamUrl = payload.url || ""
+        root.rememberStreamUrl(previewProc.requestUrl, root.previewStreamUrl)
+        if (root.resolvingBackground && root.backgroundRequestUrl === previewProc.requestUrl && root.previewStreamUrl !== "") {
+          root.backgroundStreamUrl = root.previewStreamUrl
+          root.backgroundResolveFailed = false
+          root.resolvingBackground = false
+        }
       } catch (e) {
         root.previewStreamUrl = ""
+        if (root.resolvingBackground && root.backgroundRequestUrl === previewProc.requestUrl) {
+          root.resolvingBackground = false
+          root.backgroundResolveFailed = true
+        }
       }
     }
   }
@@ -1212,12 +1347,45 @@ Item {
     onExited: function(exitCode) {
       if (backgroundProc.requestUrl !== root.backgroundRequestUrl || backgroundProc.requestUrl !== root.trackUrl(root.currentTrack)) return
       root.resolvingBackground = false
-      if (exitCode !== 0) return
+      if (exitCode !== 0) {
+        root.backgroundStreamUrl = ""
+        root.backgroundResolveFailed = true
+        try {
+          var failedPayload = JSON.parse(backgroundProc.output || "{}")
+          if (failedPayload.error && String(failedPayload.error) !== "") root.errorText = String(failedPayload.error)
+        } catch (e) {
+          root.errorText = "Background video stream unavailable"
+        }
+        return
+      }
       try {
         var payload = JSON.parse(backgroundProc.output || "{}")
         root.backgroundStreamUrl = payload.url || ""
+        root.backgroundResolveFailed = root.backgroundStreamUrl === ""
+        root.rememberStreamUrl(backgroundProc.requestUrl, root.backgroundStreamUrl)
+        if (root.previewRequestUrl === backgroundProc.requestUrl && root.previewStreamUrl === "") root.previewStreamUrl = root.backgroundStreamUrl
       } catch (e) {
         root.backgroundStreamUrl = ""
+        root.backgroundResolveFailed = true
+      }
+    }
+  }
+
+  Process {
+    id: backgroundPrefetchProc
+    property string output: ""
+    property string requestUrl: ""
+
+    stdout: SplitParser {
+      onRead: function(data) { backgroundPrefetchProc.output += data }
+    }
+
+    onExited: function(exitCode) {
+      if (exitCode !== 0) return
+      try {
+        var payload = JSON.parse(backgroundPrefetchProc.output || "{}")
+        root.rememberStreamUrl(backgroundPrefetchProc.requestUrl, payload.url || "")
+      } catch (e) {
       }
     }
   }
@@ -1249,34 +1417,62 @@ Item {
   Process {
     id: positionProc
     property string output: ""
+    property int sessionRevision: -1
 
     stdout: SplitParser {
       onRead: function(data) { positionProc.output += data }
     }
 
     onExited: function(exitCode) {
-      if (exitCode !== 0) {
+      if (positionProc.sessionRevision !== root.playbackSessionRevision) return
+
+      var payload = null
+      try {
+        payload = JSON.parse(positionProc.output || "{}")
+      } catch (e) {
+        payload = null
+      }
+      if (!payload || typeof payload !== "object") {
         root.notePlaybackProbeFailure()
         return
       }
-      try {
-        var payload = JSON.parse(positionProc.output || "{}")
-        var value = Number(payload.value)
-        if (payload.ok !== true || !isFinite(value) || value < 0) {
-          root.notePlaybackProbeFailure()
+
+      if (payload.ok === true) {
+        root.playbackProbeFailures = 0
+        var duration = Number(payload.duration)
+        if (isFinite(duration) && duration > 0) root.playbackDuration = duration
+
+        // idle-active alone can be ambiguous while a file is still loading, so
+        // it only counts as an ended track once a duration was ever observed.
+        if (payload.eofReached === true || (payload.idleActive === true && root.playbackDuration > 0)) {
+          root.notePlaybackEnded()
           return
         }
-        root.playbackProbeFailures = 0
-        root.playbackPosition = value
-      } catch (e) {
-        root.notePlaybackProbeFailure()
+
+        var value = Number(payload.timePos)
+        if (isFinite(value) && value >= 0) {
+          root.playbackPosition = value
+          root.prefetchNextBackground()
+          if (root.pendingBackgroundEnable) {
+            root.pendingBackgroundEnable = false
+            backgroundEnableFallback.stop()
+            root.backgroundVideoEnabled = true
+          }
+        } else if (root.pendingBackgroundEnable) {
+          backgroundEnableFallback.restart()
+        }
         return
       }
-      if (root.pendingBackgroundEnable) {
-        root.pendingBackgroundEnable = false
-        backgroundEnableFallback.stop()
-        root.backgroundVideoEnabled = true
+
+      // mpv did not answer. A dead player that had already reached the end of
+      // a known duration is a finished track (covers mpv builds or configs
+      // that exit at EOF despite --keep-open); everything else stays on the
+      // probe-failure path so genuine stream failures still surface.
+      if (payload.running !== true && root.playbackLooksFinished()) {
+        root.notePlaybackEnded()
+        return
       }
+      root.notePlaybackProbeFailure()
     }
   }
 
@@ -1357,6 +1553,8 @@ Item {
         playing: root.playing,
         paused: root.paused,
         playbackPosition: root.playbackPosition,
+        playbackDuration: root.playbackDuration,
+        playbackEndHandled: root.playbackEndHandled,
         previewReady: root.previewStreamUrl !== "",
         previewResolving: root.resolvingPreview,
         previewUrl: root.previewStreamUrl,
@@ -1364,6 +1562,7 @@ Item {
         currentTrackUrl: root.currentTrackUrl,
         backgroundReady: root.backgroundStreamUrl !== "",
         backgroundResolving: root.resolvingBackground,
+        backgroundResolveFailed: root.backgroundResolveFailed,
         backgroundUrl: root.backgroundStreamUrl,
         previewTelemetry: root.previewTelemetry,
         backgroundOwnsAudio: root.backgroundOwnsAudio,
@@ -1387,6 +1586,11 @@ Item {
 
     function toggleBackgroundVideo(): string {
       root.toggleBackgroundVideo()
+      return status()
+    }
+
+    function refreshBackgroundStream(): string {
+      root.refreshBackgroundStream()
       return status()
     }
 

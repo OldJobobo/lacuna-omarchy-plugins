@@ -5,6 +5,7 @@ import os
 import socket
 import subprocess
 import sys
+import time
 
 YOUTUBE_PLAYER_CLIENT = "web_embedded"
 
@@ -16,22 +17,80 @@ def send(socket_path, payload):
         client.sendall((json.dumps(payload) + "\n").encode("utf-8"))
 
 
-def request(socket_path, payload):
+def request_many(socket_path, commands, timeout=1.5):
+    """Send several mpv commands over one IPC connection.
+
+    mpv broadcasts event lines to every IPC client, so replies must be matched
+    by request_id rather than taken as "the next line". Returns a dict of
+    request_id -> reply for every reply that arrived before the deadline.
+    """
+    replies = {}
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
-        client.settimeout(1.5)
+        client.settimeout(timeout)
         client.connect(socket_path)
-        client.sendall((json.dumps(payload) + "\n").encode("utf-8"))
-        data = b""
-        while not data.endswith(b"\n"):
-            chunk = client.recv(4096)
+        wire = b""
+        for request_id, command in commands.items():
+            wire += (json.dumps({"command": command, "request_id": request_id}) + "\n").encode("utf-8")
+        client.sendall(wire)
+
+        deadline = time.monotonic() + timeout
+        buffer = b""
+        while len(replies) < len(commands) and time.monotonic() < deadline:
+            try:
+                chunk = client.recv(4096)
+            except OSError:
+                break
             if not chunk:
                 break
-            data += chunk
-        return json.loads(data.decode("utf-8") or "{}")
+            buffer += chunk
+            while b"\n" in buffer:
+                line, buffer = buffer.split(b"\n", 1)
+                if not line.strip():
+                    continue
+                try:
+                    message = json.loads(line.decode("utf-8", errors="replace"))
+                except ValueError:
+                    continue
+                if not isinstance(message, dict) or "event" in message:
+                    continue
+                request_id = message.get("request_id")
+                if request_id is None:
+                    # Very old mpv builds omit request_id; replies still arrive
+                    # in command order, so match the first unanswered command.
+                    request_id = next((rid for rid in commands if rid not in replies), None)
+                if request_id in commands and request_id not in replies:
+                    replies[request_id] = message
+    return replies
+
+
+def request(socket_path, payload):
+    replies = request_many(socket_path, {1: payload.get("command", [])})
+    return replies.get(1, {})
 
 
 def pid_path(socket_path):
     return os.path.join(os.path.dirname(socket_path), "mpv.pid")
+
+
+def read_pid(socket_path):
+    try:
+        return int(open(pid_path(socket_path), encoding="utf-8").read().strip())
+    except (OSError, ValueError):
+        return 0
+
+
+def pid_alive(pid):
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
 
 
 def cleanup_socket(socket_path):
@@ -73,6 +132,10 @@ def start(args):
     command = [
         "mpv",
         "--idle=no",
+        # Hold the process and IPC socket open at end-of-file so the shell can
+        # observe eof-reached and advance the queue, instead of inferring a
+        # failure from a vanished socket.
+        "--keep-open=yes",
         "--force-window=no",
         f"--input-ipc-server={args.socket}",
         "--ytdl-format=18/best[height<=360][ext=mp4]/bestaudio[ext=m4a]/best",
@@ -125,6 +188,66 @@ def get_property(args):
         return 1
 
 
+def probe(args):
+    """One-shot playback health probe.
+
+    Always prints a JSON object and exits 0, so callers can rely on the
+    payload alone:
+      ok         - mpv answered over IPC (fields below are trustworthy)
+      running    - the recorded mpv pid is alive (mpv may still be starting)
+      eofReached - playback finished (mpv is holding via --keep-open)
+      idleActive - mpv dropped to idle with no file loaded
+      paused     - mpv-side pause state (includes the --keep-open eof hold)
+      timePos    - current position in seconds, or null while loading
+      duration   - track duration in seconds, or null while loading
+    """
+    result = {
+        "ok": False,
+        "running": pid_alive(read_pid(args.socket)),
+        "eofReached": False,
+        "idleActive": False,
+        "paused": False,
+        "timePos": None,
+        "duration": None,
+        "error": "",
+    }
+    commands = {
+        1: ["get_property", "eof-reached"],
+        2: ["get_property", "idle-active"],
+        3: ["get_property", "pause"],
+        4: ["get_property", "time-pos"],
+        5: ["get_property", "duration"],
+    }
+    try:
+        replies = request_many(args.socket, commands)
+    except Exception as exc:
+        result["error"] = str(exc)
+        print(json.dumps(result))
+        return 0
+
+    def value_of(request_id):
+        message = replies.get(request_id) or {}
+        if message.get("error") != "success":
+            return None
+        return message.get("data")
+
+    if replies:
+        result["ok"] = True
+        result["running"] = True
+        result["eofReached"] = value_of(1) is True
+        result["idleActive"] = value_of(2) is True
+        result["paused"] = value_of(3) is True
+        time_pos = value_of(4)
+        duration = value_of(5)
+        result["timePos"] = float(time_pos) if isinstance(time_pos, (int, float)) else None
+        result["duration"] = float(duration) if isinstance(duration, (int, float)) else None
+    else:
+        result["error"] = "no reply from mpv"
+
+    print(json.dumps(result))
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="action", required=True)
@@ -149,6 +272,9 @@ def main(argv=None):
     get_parser.add_argument("--socket", required=True)
     get_parser.add_argument("--name", required=True)
 
+    probe_parser = sub.add_parser("probe")
+    probe_parser.add_argument("--socket", required=True)
+
     cleanup_parser = sub.add_parser("cleanup")
     cleanup_parser.add_argument("--socket", required=True)
 
@@ -161,6 +287,8 @@ def main(argv=None):
         return 0
     if args.action == "get-property":
         return get_property(args)
+    if args.action == "probe":
+        return probe(args)
     return command(args)
 
 
