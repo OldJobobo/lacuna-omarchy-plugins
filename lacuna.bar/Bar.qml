@@ -242,6 +242,23 @@ Item {
   // gaps_out. When the hosted sidebar occupies an edge, that sidebar's own
   // reserve owns the workarea there; keeping an extra frame reserve would leave
   // a visible frameThickness gap at the bar end.
+  // Frame reserve exclusive zones must never be arranged before the bar
+  // windows: at shell start with fullframe already enabled the reserves are
+  // created first (the vendored bar maps on its own schedule) and their
+  // zones inset the bar itself — seen live as a frameThickness-wide
+  // background gap at the bar's outer corner on every monitor. Reserves
+  // therefore activate only after a startup settle window, so they always
+  // arrange after the bars; runtime frame toggles are unaffected.
+  property bool frameReservesReady: false
+
+  Timer {
+    id: frameReserveSettleTimer
+    interval: 1200
+    running: true
+    repeat: false
+    onTriggered: root.frameReservesReady = true
+  }
+
   Variants {
     model: Quickshell.screens
 
@@ -263,6 +280,7 @@ Item {
 
           targetScreen: frameReserveScreen.screenData
           active: root.frameEnabled
+            && root.frameReservesReady
             && edgeName !== root.position
             && !root.hostedSidebarOccupiesEdge(edgeName, frameReserveScreen.screenData)
           edge: edgeName
