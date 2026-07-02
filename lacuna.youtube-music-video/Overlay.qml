@@ -36,6 +36,8 @@ Item {
   property string activeSource: ""
   property int activeStartPosition: 0
   property int mediaRestartAttempts: 0
+  property int resolveRetryAttempts: 0
+  property int wallpaperRecoveryAttempts: 0
   property bool fadeCoverVisible: false
   property real fadeCoverOpacity: 0
   property double fadeCoverStartedAt: 0
@@ -103,7 +105,7 @@ Item {
   onBackgroundRequestRevisionChanged: {
     if (service && service.backgroundVideoEnabled === true && service.playing === true && service.paused !== true) holdFadeCover(exitFadeToBlackDuration)
   }
-  onBackgroundResolveFailedChanged: if (backgroundResolveFailed) giveUpWallpaper("resolve-failed")
+  onBackgroundResolveFailedChanged: if (backgroundResolveFailed) handleResolveFailure()
   onWallpaperDesiredChanged: syncWallpaper()
   onVideoSourceChanged: syncWallpaper()
   onBackgroundPlayingChanged: syncWallpaper()
@@ -144,14 +146,26 @@ Item {
     fadeHideTimer.restart()
   }
 
+  function anyPlayerReadyFor(source) {
+    for (var i = 0; i < videoPlayers.length; i++) {
+      var player = videoPlayers[i]
+      if (!player || String(player.source) !== source) continue
+      if (player.playbackState === MediaPlayer.PlayingState || player.mediaStatus === MediaPlayer.BufferedMedia) return true
+    }
+    return false
+  }
+
   function notePlayerReady() {
     if (!waitingForPlayerReady || activeSource === "") return
+    resolveRetryAttempts = 0
+    wallpaperRecoveryAttempts = 0
     releaseFadeCoverSoon()
   }
 
   function notePlayerError(message) {
     if (activeSource === "") return
-    if (mediaRestartAttempts <= 0 && service && typeof service.refreshBackgroundStream === "function") {
+    console.warn("lacuna.youtube-music-video: player error:", message, "restartAttempts:", mediaRestartAttempts)
+    if (mediaRestartAttempts < 2 && service && typeof service.refreshBackgroundStream === "function") {
       mediaRestartAttempts += 1
       waitingForPlayerReady = true
       service.refreshBackgroundStream()
@@ -161,7 +175,20 @@ Item {
     giveUpWallpaper(message || "player-error")
   }
 
+  function handleResolveFailure() {
+    if (!backgroundResolveFailed) return
+    var wantsVideo = service && service.backgroundVideoEnabled === true && service.playing === true && service.paused !== true
+    if (wantsVideo && resolveRetryAttempts < 2 && service && typeof service.refreshBackgroundStream === "function") {
+      resolveRetryAttempts += 1
+      giveUpWallpaper("resolve-failed-retry-" + resolveRetryAttempts)
+      resolveRetryTimer.restart()
+      return
+    }
+    giveUpWallpaper("resolve-failed")
+  }
+
   function giveUpWallpaper(reason) {
+    console.warn("lacuna.youtube-music-video: wallpaper gave up:", reason)
     wallpaperFadeGateTimer.stop()
     fadeRevealTimer.stop()
     waitingForPlayerReady = false
@@ -171,6 +198,13 @@ Item {
     wallpaperPositionRefreshPending = false
     wallpaperPositionRefreshKey = ""
     releaseFadeCoverNow()
+    // Giving up while the service still wants video used to strand the
+    // static background until the next track; retry a bounded number of
+    // times instead.
+    if (wallpaperDesired && wallpaperRecoveryAttempts < 2) {
+      wallpaperRecoveryAttempts += 1
+      wallpaperRecoveryTimer.restart()
+    }
   }
 
   function syncWallpaper() {
@@ -221,6 +255,10 @@ Item {
     mediaRestartAttempts = 0
     failureWatchdog.restart()
     syncVideoPosition(true)
+    // A track repeat re-resolves to the same cached stream URL, so the
+    // player keeps playing and never emits a fresh ready transition —
+    // release the cover ourselves or the watchdog tears the wallpaper down.
+    if (anyPlayerReadyFor(activeSource)) notePlayerReady()
   }
 
   function beginWallpaperExit() {
@@ -254,7 +292,10 @@ Item {
       var player = videoPlayers[i]
       if (!player || player.source === "") continue
       var target = Math.max(0, Math.round(startPosition * 1000))
-      if (force || Math.abs(player.position - target) > 900) player.setPosition(target)
+      // Tolerance must comfortably exceed the ~1s position-poll cadence plus
+      // report latency: a tighter window (900ms) phase-locked into a
+      // seek-every-second loop on some tracks, which read as stutter.
+      if (force || Math.abs(player.position - target) > 3000) player.setPosition(target)
     }
   }
 
@@ -312,7 +353,35 @@ Item {
     interval: root.failureWatchdogDuration
     repeat: false
     onTriggered: {
+      // yt-dlp resolves can outlast the watchdog window (up to two 18s
+      // attempts); while one is in flight, keep waiting instead of dropping
+      // the wallpaper for a resolve that is about to succeed.
+      if (root.service && root.service.resolvingBackground === true) {
+        restart()
+        return
+      }
       if (root.waitingForHighRes || root.waitingForPlayerReady || root.backgroundResolveFailed) root.giveUpWallpaper("watchdog")
+    }
+  }
+
+  Timer {
+    id: wallpaperRecoveryTimer
+    interval: 6000
+    repeat: false
+    onTriggered: {
+      if (!root.wallpaperDesired || root.activeSource !== "") return
+      root.syncWallpaper()
+    }
+  }
+
+  Timer {
+    id: resolveRetryTimer
+    interval: 8000
+    repeat: false
+    onTriggered: {
+      if (!root.backgroundResolveFailed) return
+      if (!(root.service && root.service.backgroundVideoEnabled === true && root.service.playing === true && root.service.paused !== true)) return
+      root.service.refreshBackgroundStream()
     }
   }
 
@@ -325,13 +394,6 @@ Item {
       root.wallpaperPositionRefreshPending = false
       root.syncWallpaper()
     }
-  }
-
-  Timer {
-    interval: 1000
-    repeat: true
-    running: root.backgroundPlaying
-    onTriggered: root.syncVideoPosition(false)
   }
 
   property var videoPlayers: []
@@ -465,8 +527,12 @@ Item {
     function onPausedChanged() { root.syncWallpaper() }
     function onPlayingChanged() { root.syncWallpaper() }
     function onBackgroundStreamUrlChanged() { root.syncWallpaper() }
-    function onBackgroundResolveFailedChanged() { if (root.backgroundResolveFailed) root.giveUpWallpaper("resolve-failed") }
+    function onBackgroundResolveFailedChanged() { if (root.backgroundResolveFailed) root.handleResolveFailure() }
     function onPlaybackPositionChanged() { root.syncVideoPosition(false) }
+    function onCurrentTrackUrlChanged() {
+      root.resolveRetryAttempts = 0
+      root.wallpaperRecoveryAttempts = 0
+    }
   }
 
   IpcHandler {
@@ -507,6 +573,8 @@ Item {
         activeStartPosition: root.activeStartPosition,
         targetOutput: root.targetOutput,
         mediaRestartAttempts: root.mediaRestartAttempts,
+        resolveRetryAttempts: root.resolveRetryAttempts,
+        wallpaperRecoveryAttempts: root.wallpaperRecoveryAttempts,
         backend: "qml-framed-video"
       })
     }

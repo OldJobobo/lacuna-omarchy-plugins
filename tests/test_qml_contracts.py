@@ -1964,11 +1964,27 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("playbackState === MediaPlayer.PlayingState", overlay)
         self.assertIn("onErrorOccurred", overlay)
         self.assertIn("function syncVideoPosition(force)", overlay)
-        self.assertIn("Math.abs(player.position - target) > 900", overlay)
+        # The drift tolerance must exceed the ~1s playback-position poll
+        # cadence, or the overlay phase-locks into a seek-per-second loop
+        # that reads as stutter; there must also be no repeating timer that
+        # compares against a stale position between polls.
+        self.assertIn("Math.abs(player.position - target) > 3000", overlay)
+        self.assertNotIn("Math.abs(player.position - target) > 900", overlay)
         self.assertIn("backgroundPlayer.play()", overlay)
         self.assertIn("backgroundPlayer.pause()", overlay)
         self.assertIn('if (root.activeSource === "") backgroundPlayer.stop()', overlay)
-        self.assertIn("interval: 1000", overlay)
+        self.assertIn("function handleResolveFailure()", overlay)
+        self.assertIn("id: resolveRetryTimer", overlay)
+        self.assertIn("resolveRetryAttempts: root.resolveRetryAttempts", overlay)
+        # A repeat of the same track re-resolves to the same cached stream
+        # URL, so the already-playing player emits no fresh ready event; the
+        # overlay must self-release the cover and, if it ever gives up while
+        # video is still desired, retry instead of stranding the static
+        # background.
+        self.assertIn("function anyPlayerReadyFor(source)", overlay)
+        self.assertIn("if (anyPlayerReadyFor(activeSource)) notePlayerReady()", overlay)
+        self.assertIn("id: wallpaperRecoveryTimer", overlay)
+        self.assertIn("wallpaperRecoveryAttempts: root.wallpaperRecoveryAttempts", overlay)
         self.assertIn("duration: root.fadeCoverDuration", overlay)
         self.assertIn("fadeCoverDuration: root.fadeCoverDuration", overlay)
         self.assertIn("exitTransitionActive: root.exitTransitionActive", overlay)
