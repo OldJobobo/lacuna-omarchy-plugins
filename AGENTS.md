@@ -72,6 +72,15 @@ Read it before touching any attached flyout. The load-bearing invariants:
 
 For any fix reported against live shell behavior, run `./scripts/dev deploy <plugin-id>` and include its verification result in the final status. Also validate the behavior inside Omarchy shell when the change is visual or stateful. Confirm that each widget appears in Omarchy Settings, can be placed in `bar.layout`, survives shell restart, and uses injected `bar`, `moduleName`, and `settings` properties. Test script paths through `manifest.__sourceDir` or another plugin-relative path.
 
+Visual/UI behavior fixes are not protected by `tests/test_qml_contracts.py`
+string pins alone. Add or extend a runtime behavior test in
+`tests/test_qml_behavior_*.py`, a deterministic geometry test in
+`tests/test_qml_geometry.py`, or an opt-in live probe in
+`tests/test_live_visual.py` when changing QML state machines, layer ordering,
+frame/sidebar geometry, video transitions, or shadow behavior. The live visual
+suite must remain gated behind `LACUNA_LIVE_VISUAL=1` and must restore every
+setting it toggles in `finally`/`tearDown` cleanup.
+
 ## Commit & Pull Request Guidelines
 
 This checkout has no readable Git history. Use concise, imperative commits such as `Add script pill manifest` or `Port temperature widget shell contract`. Pull requests should describe the plugin affected, list manual Omarchy smoke tests, include screenshots for visible UI changes, and call out any remaining standalone Lacuna dependencies.

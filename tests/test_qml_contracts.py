@@ -20,6 +20,38 @@ def plugin_manifest_paths():
 
 
 class QmlContractTests(unittest.TestCase):
+    def test_shader_effect_qsb_references_exist(self):
+        pattern = re.compile(r'fragmentShader:\s*Qt\.resolvedUrl\("([^"]+\.qsb)"\)')
+        for qml_path in sorted(ROOT.glob("lacuna.*/**/*.qml")):
+            qml = qml_path.read_text(encoding="utf-8")
+            for shader in pattern.findall(qml):
+                self.assertTrue((qml_path.parent / shader).exists(), f"{qml_path.relative_to(ROOT)} references missing {shader}")
+
+    def test_ambience_overlays_use_frame_animation_not_wall_clock_timers(self):
+        overlay_paths = [
+            "lacuna.dust-motes-overlay/Overlay.qml",
+            "lacuna.film-grain-overlay/Overlay.qml",
+            "lacuna.crt-overlay/Overlay.qml",
+            "lacuna.vhs-overlay/Overlay.qml",
+            "lacuna.rainfall-overlay/Overlay.qml",
+            "lacuna.aurora-drift/Overlay.qml",
+            "lacuna.god-rays-overlay/Overlay.qml",
+            "lacuna.cinematic-light-overlay/Overlay.qml",
+            "lacuna.background-vignette/Overlay.qml",
+        ]
+        frame_driven_paths = {
+            "lacuna.dust-motes-overlay/Overlay.qml",
+            "lacuna.film-grain-overlay/Overlay.qml",
+            "lacuna.crt-overlay/Overlay.qml",
+            "lacuna.vhs-overlay/Overlay.qml",
+        }
+
+        for path in overlay_paths:
+            qml = read(path)
+            self.assertNotIn("Timer {", qml, path)
+            if path in frame_driven_paths:
+                self.assertIn("FrameAnimation {", qml, path)
+
     def test_bar_seam_widget_contract(self):
         manifest = read_json("lacuna.bar-seam/manifest.json")
         self.assertEqual(["bar-widget"], manifest["kinds"])
@@ -144,9 +176,9 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("control2X: root.connectorVisible ? root.connectorX + root.effectiveConnectorWidth * (1 - root.curveKappa) : root.outlineLeft", panel_border)
         self.assertIn("strokeColor: root.borderColor", panel_border)
         self.assertIn("source: frameSource", overlay)
-        self.assertIn("source: frameSource", frame)
+        self.assertIn("source: frameShadowCaster", frame)
         self.assertIn("shadowEnabled: root.shadowEnabled", overlay)
-        self.assertIn("shadowEnabled: root.active && root.shadowEnabled", frame)
+        self.assertIn("shadowEnabled: root.shadowEnabled && root.width > 0 && root.height > 0", frame)
         self.assertNotIn("id: frameBorderSource", frame)
 
     def test_lacuna_menu_surface_ignores_shell_surface_alpha(self):
@@ -319,7 +351,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertLess(window.index("LacunaPanelUnifiedSurface"), window.index("MenuSurface"))
         self.assertIn("shadowEnabled: root.lacunaEnabled && root.frameShadow && (root.sidebarSurfaceVisible || panelController.flyoutRenderable)", window)
         self.assertIn("shadowBlurMax: root.panelShadowBlurMax", window)
-        self.assertIn('readonly property bool topBarPanelShadowVisible: lacunaEnabled && frameShadow && frameMode === "off" && root.topBar', window)
+        self.assertIn('readonly property bool topBarPanelShadowVisible: lacunaEnabled && !barOwnsLacunaFrame && frameShadow && frameMode === "off" && root.topBar', window)
         self.assertIn("readonly property int topBarPanelShadowVisualWidth", window)
         self.assertIn("visualWidth: Math.max(root.frameOverlayWidth, root.topBarPanelShadowVisualWidth)", window)
         self.assertIn('keepMapped: root.lacunaEnabled && (root.frameMode !== "off" || root.topBarPanelShadowVisible)', window)
@@ -1341,18 +1373,15 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("radius: Math.max(0, Number(vignetteWindow.frameRect.radius || 0))", vignette)
         self.assertIn('color: "transparent"', vignette)
         self.assertIn("clip: true", vignette)
-        self.assertIn('source: Qt.resolvedUrl("assets/vignette.svg")', vignette)
-        self.assertIn("sourceSize.width: width", vignette)
-        self.assertIn("sourceSize.height: height", vignette)
-        self.assertIn("fillMode: Image.Stretch", vignette)
+        self.assertIn("ShaderEffect {", vignette)
+        self.assertIn('fragmentShader: Qt.resolvedUrl("shaders/background_vignette.frag.qsb")', vignette)
+        self.assertIn("property vector2d resolution", vignette)
+        self.assertNotIn('source: Qt.resolvedUrl("assets/vignette.svg")', vignette)
         self.assertNotIn("LacunaVignette", vignette)
         self.assertNotIn("Canvas {", vignette)
         self.assertNotIn("gradient: Gradient", vignette)
-        self.assertNotIn("ShaderEffect", vignette)
-        self.assertTrue((ROOT / "lacuna.background-vignette/assets/vignette.svg").exists())
-        vignette_asset = read("lacuna.background-vignette/assets/vignette.svg")
-        self.assertIn('id="left-edge"', vignette_asset)
-        self.assertIn('id="right-edge"', vignette_asset)
+        self.assertTrue((ROOT / "lacuna.background-vignette/shaders/background_vignette.frag").exists())
+        self.assertTrue((ROOT / "lacuna.background-vignette/shaders/background_vignette.frag.qsb").exists())
 
         self.assertIn("stylePreset", [entry["key"] for entry in cinematic_manifest["schema"]])
         self.assertIn("slowDrift", [entry["key"] for entry in cinematic_manifest["schema"]])
@@ -1428,8 +1457,13 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("function effectNumberSetting", film)
         self.assertIn("function backgroundEffectSettings", film)
         self.assertIn("animationOpacity: root.backgroundAnimationOpacity()", film)
-        self.assertIn("Timer {", film)
-        self.assertIn("grainTick++", film)
+        self.assertIn("FrameAnimation {", film)
+        self.assertIn("ShaderEffect {", film)
+        self.assertIn('fragmentShader: Qt.resolvedUrl("shaders/film_grain.frag.qsb")', film)
+        self.assertIn("property real time: grainFrameClock.elapsedTime * root.speed", film)
+        self.assertNotIn("Repeater {", film)
+        self.assertTrue((ROOT / "lacuna.film-grain-overlay/shaders/film_grain.frag").exists())
+        self.assertTrue((ROOT / "lacuna.film-grain-overlay/shaders/film_grain.frag.qsb").exists())
         self.assertIn('target: "lacuna-dust-motes-overlay"', dust)
         self.assertIn('WlrLayershell.namespace: "lacuna-dust-motes-overlay"', dust)
         self.assertIn('readonly property var dustMotesSettings: backgroundEffectSettings("dustMotes")', dust)
@@ -1437,11 +1471,17 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('readonly property real mouseInfluence: clamp(effectNumberSetting("mouseInfluence", "mouseInfluence", 0.28), 0, 1)', dust)
         self.assertIn("function effectBoolSetting", dust)
         self.assertIn("function backgroundEffectSettings", dust)
-        self.assertIn('cursorProc.command = ["hyprctl", "cursorpos", "-j"]', dust)
+        self.assertIn("import Quickshell.Hyprland", dust)
+        self.assertIn("Socket {", dust)
+        self.assertIn("cursorSocket.path = Hyprland.requestSocketPath", dust)
+        self.assertIn('write("j/cursorpos")', dust)
+        self.assertNotIn('cursorProc.command = ["hyprctl", "cursorpos", "-j"]', dust)
+        self.assertNotIn("Process {", dust)
         self.assertIn("function applyCursorPayload", dust)
-        self.assertIn("cursorDecayTimer.restart()", dust)
+        self.assertIn("cursorDecayAccumulator = 0", dust)
         self.assertIn("readonly property real cursorInfluenceRadiusSquared", dust)
         self.assertIn("readonly property real cursorSpeed", dust)
+        self.assertIn("readonly property int maxTransientMotes", dust)
         self.assertIn("property real airOffsetX: 0", dust)
         self.assertIn("property real airVelocityX: 0", dust)
         self.assertIn("function updatePersistentMotes", dust)
@@ -1450,25 +1490,28 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("var distanceSquared = cursorDx * cursorDx + cursorDy * cursorDy", dust)
         self.assertIn("root.cursorVelocityX * wakeStrength", dust)
         self.assertIn("airVelocityX = root.clamp", dust)
-        self.assertIn("onTriggered: dustLayer.updatePersistentMotes()", dust)
-        self.assertIn("ListModel {", dust)
-        self.assertIn("id: transientMotes", dust)
+        self.assertIn("FrameAnimation {", dust)
+        self.assertIn("dustLayer.updatePersistentMotes(deltaMs)", dust)
+        self.assertNotIn("ListModel {", dust)
         self.assertIn("function updateTransientMotes", dust)
         self.assertIn("transientMoteRepeater.itemAt(i)", dust)
+        self.assertIn("function firstReusableTransientMote", dust)
         self.assertIn("function spawnTransientMote", dust)
-        self.assertIn("while (transientMotes.count >= maxTransient) transientMotes.remove(0)", dust)
-        self.assertIn("transientMotes.append({", dust)
+        self.assertIn("var mote = firstReusableTransientMote()", dust)
+        self.assertIn("mote.spawn(", dust)
+        self.assertNotIn("transientMotes.append({", dust)
         self.assertIn("var radius = Math.sqrt(Math.random()) * (14 + root.moteSize * 3.4)", dust)
         self.assertIn("var sideX = -outwardY", dust)
-        self.assertIn("vx: outwardX * lift + sideX * (Math.random() - 0.5) * 0.7 + root.cursorVelocityX * (0.0015 + Math.random() * 0.0035)", dust)
-        self.assertIn("life: 5000 + Math.random() * 4000", dust)
-        self.assertIn("transientMotes.remove(transientMote.index)", dust)
+        self.assertIn("outwardX * lift + sideX * (Math.random() - 0.5) * 0.7 + root.cursorVelocityX * (0.0015 + Math.random() * 0.0035)", dust)
+        self.assertIn("5000 + Math.random() * 4000", dust)
+        self.assertIn("transientMote.active = false", dust)
+        self.assertNotIn("transientMotes.remove(transientMote.index)", dust)
         self.assertIn("opacity: alpha * Math.min(1, age / 220) * Math.pow(Math.max(0, 1 - age / life), 0.95)", dust)
         self.assertIn("function applyCursorInfluence", dust)
         self.assertIn("if (distanceSquared >= root.cursorInfluenceRadiusSquared) return", dust)
         self.assertIn("var radialForce = (0.20 + root.cursorSpeed * 0.0025) * root.mouseInfluence * falloff", dust)
         self.assertIn("transientMote.applyCursorInfluence()", dust)
-        self.assertIn("transientMote.vx = root.clamp(transientMote.vx * 0.968, -7.5, 7.5)", dust)
+        self.assertIn("transientMote.vx = root.clamp(transientMote.vx * Math.pow(0.968, deltaScale), -7.5, 7.5)", dust)
         self.assertIn("readonly property real wakeVariance", dust)
         self.assertIn("readonly property real damping", dust)
         self.assertIn("readonly property real spring", dust)
@@ -1485,6 +1528,13 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('WlrLayershell.namespace: "lacuna-aurora-drift"', qml)
         self.assertIn('target: "lacuna-rainfall-overlay"', rain)
         self.assertIn('WlrLayershell.namespace: "lacuna-rainfall-overlay"', rain)
+        self.assertIn("import QtQuick.Particles", rain)
+        self.assertIn("ParticleSystem {", rain)
+        self.assertIn("ImageParticle {", rain)
+        self.assertIn('source: Qt.resolvedUrl("assets/raindrop.svg")', rain)
+        self.assertIn("AngleDirection {", rain)
+        self.assertIn("Wander {", rain)
+        self.assertTrue((ROOT / "lacuna.rainfall-overlay/assets/raindrop.svg").exists())
         self.assertIn('target: "lacuna-cinematic-light-overlay"', cinematic)
         self.assertIn('WlrLayershell.namespace: "lacuna-cinematic-light-overlay"', cinematic)
         self.assertIn('target: "lacuna-crt-overlay"', crt)
@@ -1722,6 +1772,55 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("lacuna.crt-overlay", [entry["id"] for entry in example["plugins"]])
         self.assertIn("lacuna.background-vignette", [entry["id"] for entry in example["plugins"]])
 
+    def test_frame_shadow_mode_contract(self):
+        # The complete frame/shadow mode spec in one place. If any assertion
+        # here fails, one of these behaviors regressed:
+        #   frame ON:  paint = rails/molding only (never under the bar, never
+        #              over the sidebar); shadow = one contiguous ring around
+        #              the content area cast from every chrome edge.
+        #   frame OFF: no paint; the bar still casts its shadow, flush at the
+        #              bar's inner edge, without needing the menu open.
+        #   both:      shadow never draws over the bar; toggling the mode
+        #              changes paint only, never window mapping.
+        frame = read("lacuna.bar/LacunaFrameWindow.qml")
+        bar = read("lacuna.bar/Bar.qml")
+        window = read("lacuna.menu/menu/MenuWindow.qml")
+
+        # Paint is gated on `active` (frame mode); the shadow is not, so the
+        # bar shadow survives frame OFF. The old active-gated form is banned.
+        self.assertIn("readonly property bool isRenderable: active", frame)
+        self.assertIn("shadowEnabled: root.shadowEnabled && root.width > 0 && root.height > 0", frame)
+        self.assertNotIn("shadowEnabled: root.active && root.shadowEnabled", frame)
+        self.assertIn("active: root.frameEnabled", bar)
+        self.assertIn("shadowEnabled: root.frameShadow", bar)
+        self.assertNotIn("shadowEnabled: root.frameEnabled && root.frameShadow", bar)
+
+        # The shadow is cast by the hidden caster, never by the painted
+        # shape, and the caster hole collapses to the bar edge on frame OFF.
+        self.assertIn("source: frameShadowCaster", frame)
+        self.assertNotIn("source: frameSource", frame)
+        self.assertIn("readonly property real casterHoleX: isRenderable ? holeX : (leftBar ? Math.max(0, barSize) : 0)", frame)
+        self.assertIn("readonly property real casterHoleY: isRenderable ? holeY : (topBar ? Math.max(0, barSize) : 0)", frame)
+        self.assertIn("readonly property real casterHoleRight: isRenderable ? holeRight : (rightBar ? Math.max(casterHoleX + 1, width - Math.max(0, barSize)) : width)", frame)
+        self.assertIn("readonly property real casterHoleBottom: isRenderable ? holeBottom : (bottomBar ? Math.max(casterHoleY + 1, height - Math.max(0, barSize)) : height)", frame)
+        self.assertIn("readonly property real casterHoleRadius: isRenderable ? holeRadius : minArcRadius", frame)
+
+        # The rendered shadow is clipped to the content side of the chrome,
+        # and neither paint nor shadow may cover the bar strip.
+        self.assertIn("id: shadowClip", frame)
+        self.assertIn("x: root.outerX", frame)
+        self.assertIn("y: root.outerY", frame)
+        self.assertIn("width: Math.max(0, root.outerRight - root.outerX)", frame)
+        self.assertIn("height: Math.max(0, root.outerBottom - root.outerY)", frame)
+        self.assertIn("clip: true", frame)
+
+        # The menu window's gradient strip is a standalone-menu fallback
+        # only; in bar-hosted mode the frame window owns the bar shadow.
+        self.assertIn(
+            'readonly property bool topBarPanelShadowVisible: lacunaEnabled && !barOwnsLacunaFrame && frameShadow && frameMode === "off" && root.topBar',
+            window,
+        )
+
     def test_layer_stacking_policy(self):
         # Within a Wayland layer, stacking is map order only, so every
         # surface's layer assignment is architecture, not styling. This table
@@ -1774,6 +1873,13 @@ class QmlContractTests(unittest.TestCase):
         self.assertLess(bar.index("LacunaFrameWindow {"), bar.index("OmarchyBarAdapter {"))
         self.assertLess(bar.index("LacunaFrameBorderWindow {"), bar.index("OmarchyBarAdapter {"))
         self.assertLess(bar.index("OmarchyBarAdapter {"), bar.index("MenuWindow {"))
+        # Frame reserve exclusive zones must never arrange before the bar at
+        # shell start (they would inset the bar by frameThickness, leaving a
+        # background gap at the bar's outer corner): reserves are gated on a
+        # startup settle window.
+        self.assertIn("property bool frameReservesReady: false", bar)
+        self.assertIn("&& root.frameReservesReady", bar)
+        self.assertIn("id: frameReserveSettleTimer", bar)
 
     def test_youtube_music_video_waits_for_high_res_background_stream(self):
         overlay = read("lacuna.youtube-music-video/Overlay.qml")
@@ -2817,8 +2923,15 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("startY: root.isRenderable ? root.outerY : -1", frame)
         self.assertIn("readonly property color effectiveFrameColor", frame)
         self.assertIn("LacunaDropShadow", frame)
-        self.assertIn("source: frameSource", frame)
-        self.assertIn("shadowEnabled: root.active && root.shadowEnabled", frame)
+        # The shadow is cast by a hidden full-coverage silhouette (bar strip
+        # included, hole collapsing to the bar edge when the frame is off) and
+        # clipped to the content side of the chrome, so the bar's shadow hugs
+        # the bar in every frame mode without painting over the bar.
+        self.assertIn("id: frameShadowCaster", frame)
+        self.assertIn("source: frameShadowCaster", frame)
+        self.assertIn("readonly property real casterHoleY: isRenderable ? holeY : (topBar ? Math.max(0, barSize) : 0)", frame)
+        self.assertIn("shadowEnabled: root.shadowEnabled && root.width > 0 && root.height > 0", frame)
+        self.assertIn("id: shadowClip", frame)
         self.assertIn("Shape {", frame)
         self.assertIn("id: frameSource", frame)
         self.assertIn("fillRule: ShapePath.OddEvenFill", frame)
