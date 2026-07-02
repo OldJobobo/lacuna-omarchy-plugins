@@ -44,12 +44,15 @@ class QmlVideoBehaviorContractTests(unittest.TestCase):
         overlay = read("lacuna.youtube-music-video/Overlay.qml")
 
         self.assertIn("readonly property bool waitingForHighRes", overlay)
-        self.assertIn("onBackgroundResolveFailedChanged: if (backgroundResolveFailed) giveUpWallpaper(\"resolve-failed\")", overlay)
+        self.assertIn("onBackgroundResolveFailedChanged: if (backgroundResolveFailed) handleResolveFailure()", overlay)
         self.assertIn("id: failureWatchdog", overlay)
         self.assertIn(
             'if (root.waitingForHighRes || root.waitingForPlayerReady || root.backgroundResolveFailed) root.giveUpWallpaper("watchdog")',
             overlay,
         )
+        # The watchdog must not tear the wallpaper down while a stream
+        # resolve is still in flight (yt-dlp can outlast the watchdog window).
+        self.assertIn("if (root.service && root.service.resolvingBackground === true)", overlay)
         give_up = overlay[overlay.index("function giveUpWallpaper(reason)") : overlay.index("function syncWallpaper()")]
         self.assertIn('activeSource = ""', give_up)
         self.assertIn("waitingForPlayerReady = false", give_up)
