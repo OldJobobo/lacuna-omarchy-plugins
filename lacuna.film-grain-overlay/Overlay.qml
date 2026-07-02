@@ -11,6 +11,8 @@ Item {
   property var manifest: null
   property bool runtimeEnabled: true
   property real runtimeIntensity: -1
+  property int grainTick: 0
+  property real grainAccumulator: 0
   property var lacunaSettings: ({})
   property var palette: ({})
 
@@ -169,6 +171,11 @@ Item {
     )
   }
 
+  function seededNoise(seed) {
+    var value = Math.sin(seed * 12.9898 + grainTick * 78.233) * 43758.5453
+    return value - Math.floor(value)
+  }
+
   function parsePayload(payloadJson) {
     try {
       return payloadJson ? JSON.parse(payloadJson) : {}
@@ -219,6 +226,14 @@ Item {
     id: grainFrameClock
 
     running: root.effectVisible
+    onTriggered: {
+      root.grainAccumulator += frameTime * 1000
+      var interval = Math.max(28, Math.round(88 / root.speed))
+      while (root.grainAccumulator >= interval) {
+        root.grainTick += 1
+        root.grainAccumulator -= interval
+      }
+    }
   }
 
   Variants {
@@ -250,18 +265,23 @@ Item {
       Item {
         anchors.fill: parent
         enabled: false
-        opacity: 1
+        opacity: root.effectiveIntensity
 
-        ShaderEffect {
-          anchors.fill: parent
-          blending: true
-          fragmentShader: Qt.resolvedUrl("shaders/film_grain.frag.qsb")
-          property real time: grainFrameClock.elapsedTime * root.speed
-          property real intensity: Math.min(1, 0.34 + root.grainCount / 520) * root.effectiveIntensity
-          property real grainSize: root.grainSize
-          property real accentBlend: root.accentBlend
-          property color grainColor: root.grainColor
-          property vector2d resolution: Qt.vector2d(Math.max(1, width), Math.max(1, height))
+        Repeater {
+          model: root.grainCount
+
+          Rectangle {
+            required property int index
+
+            readonly property real sizeNoise: root.seededNoise(index + 31)
+            x: Math.round(root.seededNoise(index + 3) * Math.max(1, grainWindow.width))
+            y: Math.round(root.seededNoise(index + 7) * Math.max(1, grainWindow.height))
+            width: Math.max(1, Math.round(root.grainSize + sizeNoise * root.grainSize))
+            height: width
+            radius: width > 1 ? width / 2 : 0
+            color: root.grainColor
+            opacity: 0.12 + root.seededNoise(index + 13) * 0.58
+          }
         }
       }
     }
