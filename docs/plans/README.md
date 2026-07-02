@@ -19,6 +19,12 @@ superseded design notes.
 - `lacuna-layer-stacking-plan.md`: completed deterministic layer-stacking
   rework (frame/bar/sidebar/video-cover) and the rules for adding surfaces;
   living policy in `docs/architecture/layer-stacking.md`.
+- `lacuna-visual-regression-test-plan.md`: planned test-gap closure for
+  visual/UI regressions — runtime QML behavior harness, geometry math tests,
+  and opt-in live pixel/stacking probes.
+- `lacuna-animation-pipeline-plan.md`: planned ambience-overlay performance
+  rework — vsync-aligned frame driving, GPU shader/particle migration, and
+  per-monitor ambience host consolidation.
 
 ## Completed Or Superseded Plans
 
