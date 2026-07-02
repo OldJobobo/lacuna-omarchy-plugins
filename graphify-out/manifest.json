@@ -1,802 +1,897 @@
 {
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/config/settings.example.json": {
-    "mtime": 1781984431.3301013,
-    "ast_hash": "5890c89cb69bf001c2e8acf9b554636b",
-    "semantic_hash": "5890c89cb69bf001c2e8acf9b554636b"
+  "config/settings.example.json": {
+    "mtime": 1782884948.089055,
+    "ast_hash": "d1ca7fe52b16f2741fd20050a39b2388",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/config/shell.lacuna-native-replacements.example.json": {
-    "mtime": 1782020846.8863976,
-    "ast_hash": "dbd7fe324eba788059d6a6f6d003aa29",
-    "semantic_hash": "dbd7fe324eba788059d6a6f6d003aa29"
+  "config/shell.lacuna-native-replacements.example.json": {
+    "mtime": 1782441151.498877,
+    "ast_hash": "8c206f84e44ee81ca061502fbfd8b777",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/config/shell.phase1.example.json": {
+  "config/shell.phase1.example.json": {
     "mtime": 1780982163.4248252,
     "ast_hash": "0cbadbd4d818f35b1e90bfea0b88d63f",
     "semantic_hash": "0cbadbd4d818f35b1e90bfea0b88d63f"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/config/shell.phase2-menu.example.json": {
+  "config/shell.phase2-menu.example.json": {
     "mtime": 1780982217.4038548,
     "ast_hash": "360782ef1a21c9225847a641d3ab63b2",
     "semantic_hash": "360782ef1a21c9225847a641d3ab63b2"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/screenshots/reference/07-lacuna-reference-layout-geometry.json": {
+  "docs/screenshots/reference/07-lacuna-reference-layout-geometry.json": {
     "mtime": 1781984431.3631015,
     "ast_hash": "7017dbf24816683fd261eb7e0a961ef1",
     "semantic_hash": "7017dbf24816683fd261eb7e0a961ef1"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.audio/manifest.json": {
-    "mtime": 1781271526.81213,
-    "ast_hash": "a2915616f9762e9068d4915ede79c8ba",
-    "semantic_hash": "a2915616f9762e9068d4915ede79c8ba"
+  "lacuna.audio/manifest.json": {
+    "mtime": 1782399128.0095925,
+    "ast_hash": "b273820da6b251182a74d336e4def1ea",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.aurora-drift/manifest.json": {
+  "lacuna.aurora-drift/manifest.json": {
     "mtime": 1781271526.8122802,
     "ast_hash": "0857fa08b21af0b972293271a0434a15",
     "semantic_hash": "0857fa08b21af0b972293271a0434a15"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.background-vignette/manifest.json": {
+  "lacuna.background-vignette/manifest.json": {
     "mtime": 1780164128.9430156,
     "ast_hash": "5f2480ba4964905ea463043c1b71a310",
     "semantic_hash": "5f2480ba4964905ea463043c1b71a310"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.bar-seam/manifest.json": {
+  "lacuna.bar-seam/manifest.json": {
     "mtime": 1781984431.370517,
     "ast_hash": "b03f73b1550f89d168ab7e852a67d4db",
     "semantic_hash": "b03f73b1550f89d168ab7e852a67d4db"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.bar-size-pill/manifest.json": {
+  "lacuna.bar-size-pill/manifest.json": {
     "mtime": 1781271526.8124354,
     "ast_hash": "809cd33aaed43231fe1e0cb9e5a48c84",
     "semantic_hash": "809cd33aaed43231fe1e0cb9e5a48c84"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.bar-size-pill/scripts/bar-size-state": {
-    "mtime": 1781625301.0362246,
-    "ast_hash": "dac74ef9fac7fba4dbcd03772d9cc632",
-    "semantic_hash": "dac74ef9fac7fba4dbcd03772d9cc632"
+  "lacuna.bar-size-pill/scripts/bar-size-state": {
+    "mtime": 1782849986.841255,
+    "ast_hash": "93520091728a99631a062cb95a150c3a",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.bar/BarModel.js": {
-    "mtime": 1782020915.7650766,
+  "lacuna.bar/BarModel.js": {
+    "mtime": 1782240859.0,
     "ast_hash": "dbdc898d0f1f7e847b1d05cf89d86394",
     "semantic_hash": "dbdc898d0f1f7e847b1d05cf89d86394"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.bar/manifest.json": {
+  "lacuna.bar/manifest.json": {
     "mtime": 1781504860.747712,
     "ast_hash": "226efc92b187f9dae3772900c706d2ca",
     "semantic_hash": "226efc92b187f9dae3772900c706d2ca"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.bluetooth/manifest.json": {
-    "mtime": 1781271526.8125505,
-    "ast_hash": "293f20efb12070102475f0011f22e654",
-    "semantic_hash": "293f20efb12070102475f0011f22e654"
+  "lacuna.bluetooth/manifest.json": {
+    "mtime": 1782399557.1144762,
+    "ast_hash": "b4d093a5f93c21870eca233bba963c58",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.cinematic-light-overlay/manifest.json": {
+  "lacuna.cinematic-light-overlay/manifest.json": {
     "mtime": 1781271526.8127024,
     "ast_hash": "fa6bf188f0041d1708af3ddaa7c4cf22",
     "semantic_hash": "fa6bf188f0041d1708af3ddaa7c4cf22"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.claude-usage/manifest.json": {
-    "mtime": 1781984431.3721015,
-    "ast_hash": "d4fcde2e36ff5d55771818b5698901da",
-    "semantic_hash": "d4fcde2e36ff5d55771818b5698901da"
+  "lacuna.claude-usage/manifest.json": {
+    "mtime": 1782170405.284781,
+    "ast_hash": "66786fb2cd14ce04e023dd96ef35fe4e",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.claude-usage/scripts/claude-code-status.sh": {
+  "lacuna.claude-usage/scripts/claude-code-status.sh": {
     "mtime": 1781984431.3721015,
     "ast_hash": "9a565182b541e1e39337722285170b55",
     "semantic_hash": "9a565182b541e1e39337722285170b55"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.clock/manifest.json": {
+  "lacuna.clock/manifest.json": {
     "mtime": 1781271526.8130193,
     "ast_hash": "8043fb72925a55ac49bd2fe920c2d79e",
     "semantic_hash": "8043fb72925a55ac49bd2fe920c2d79e"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.codex-usage/manifest.json": {
+  "lacuna.codex-usage/manifest.json": {
     "mtime": 1781984431.3731015,
     "ast_hash": "d0a0ea7681b74a315e44b9289068be69",
     "semantic_hash": "d0a0ea7681b74a315e44b9289068be69"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.codex-usage/scripts/codex-weekly-left": {
+  "lacuna.codex-usage/scripts/codex-weekly-left": {
     "mtime": 1782057923.5836806,
     "ast_hash": "60bf4b3bbfa3925351ef4873f5b66e94",
     "semantic_hash": "60bf4b3bbfa3925351ef4873f5b66e94"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.codex-usage/scripts/codex-weekly-status.sh": {
+  "lacuna.codex-usage/scripts/codex-weekly-status.sh": {
     "mtime": 1782064583.5971243,
     "ast_hash": "aae91117c678ad515dbeaf66708b0404",
     "semantic_hash": "aae91117c678ad515dbeaf66708b0404"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.compact-pill/manifest.json": {
+  "lacuna.compact-pill/manifest.json": {
     "mtime": 1781504860.747712,
     "ast_hash": "894dd6b5511287850c5c601feb5fbc82",
     "semantic_hash": "894dd6b5511287850c5c601feb5fbc82"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.compact-pill/scripts/compact-state": {
+  "lacuna.compact-pill/scripts/compact-state": {
     "mtime": 1781363514.6198752,
     "ast_hash": "2e8e0b7d5ac62646650e2d7660ef2bdf",
     "semantic_hash": "2e8e0b7d5ac62646650e2d7660ef2bdf"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.crt-overlay/manifest.json": {
+  "lacuna.crt-overlay/manifest.json": {
     "mtime": 1781271526.8134923,
     "ast_hash": "95b7e3478e16c3db5d0357d6cb8afd0c",
     "semantic_hash": "95b7e3478e16c3db5d0357d6cb8afd0c"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.desktop-clock/manifest.json": {
+  "lacuna.desktop-clock/manifest.json": {
     "mtime": 1781271526.8136237,
     "ast_hash": "017b52233032b126227fc39c9a858f5c",
     "semantic_hash": "017b52233032b126227fc39c9a858f5c"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.desktop-clock/scripts/wallpaper-contrast-sample": {
+  "lacuna.desktop-clock/scripts/wallpaper-contrast-sample": {
     "mtime": 1780982191.3494895,
     "ast_hash": "e6d0f48921dd8737ca0e640efe2b45b7",
     "semantic_hash": "e6d0f48921dd8737ca0e640efe2b45b7"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.god-rays-overlay/manifest.json": {
+  "lacuna.god-rays-overlay/manifest.json": {
     "mtime": 1781984431.3739166,
     "ast_hash": "56b7a0e1a08b59b7fb6461e5f68ff9ec",
     "semantic_hash": "56b7a0e1a08b59b7fb6461e5f68ff9ec"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.idle-inhibitor/manifest.json": {
-    "mtime": 1781271526.8137298,
-    "ast_hash": "0f2cb39199cc14de586133dd68f58068",
-    "semantic_hash": "0f2cb39199cc14de586133dd68f58068"
+  "lacuna.idle-inhibitor/manifest.json": {
+    "mtime": 1782894211.4548311,
+    "ast_hash": "5b1070b8c3db97ce05f71bea58acc7c9",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.indicators/manifest.json": {
+  "lacuna.indicators/manifest.json": {
     "mtime": 1781271526.8138502,
     "ast_hash": "6860f2ea0acd4340a150ddf2531336df",
     "semantic_hash": "6860f2ea0acd4340a150ddf2531336df"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.menu-button/manifest.json": {
+  "lacuna.menu-button/manifest.json": {
     "mtime": 1781271526.8140118,
     "ast_hash": "a37f055496c4b93837484df57a5edc29",
     "semantic_hash": "a37f055496c4b93837484df57a5edc29"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.menu/manifest.json": {
+  "lacuna.menu/manifest.json": {
     "mtime": 1781984431.3751016,
     "ast_hash": "d0a20301d8e1b9d46a37749614ebc12e",
     "semantic_hash": "d0a20301d8e1b9d46a37749614ebc12e"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.menu/scripts/desktop-app-catalog.py": {
+  "lacuna.menu/scripts/desktop-app-catalog.py": {
     "mtime": 1780982191.3623831,
     "ast_hash": "b83517fd8d42246408a83449c0daed96",
     "semantic_hash": "b83517fd8d42246408a83449c0daed96"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.menu/scripts/omarchy-shell-settings-state.py": {
-    "mtime": 1781321897.7525802,
-    "ast_hash": "4bc851e4207fdd873adefe8dd152d30a",
-    "semantic_hash": "4bc851e4207fdd873adefe8dd152d30a"
+  "lacuna.menu/scripts/omarchy-shell-settings-state.py": {
+    "mtime": 1782258331.7847385,
+    "ast_hash": "fcbd438aa2321b9fc4c6770bed323c6f",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.mpris/manifest.json": {
+  "lacuna.mpris/manifest.json": {
     "mtime": 1781504860.749712,
     "ast_hash": "2895136cdc6791833af110301424380a",
     "semantic_hash": "2895136cdc6791833af110301424380a"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.network/manifest.json": {
-    "mtime": 1781271526.8142452,
-    "ast_hash": "ffdf02913ca3be4f84c38f4811b59d0d",
-    "semantic_hash": "ffdf02913ca3be4f84c38f4811b59d0d"
+  "lacuna.network/manifest.json": {
+    "mtime": 1782365432.5758922,
+    "ast_hash": "902b486fc86886bba63717d154ba7bdb",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.nightlight/manifest.json": {
+  "lacuna.nightlight/manifest.json": {
     "mtime": 1781271526.8143961,
     "ast_hash": "5cc71c915fdc1935420c46d0f80def7a",
     "semantic_hash": "5cc71c915fdc1935420c46d0f80def7a"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.notifications/manifest.json": {
+  "lacuna.notifications/manifest.json": {
     "mtime": 1781271526.8145378,
     "ast_hash": "ef122a57f07dbdb22a2d14a012502c41",
     "semantic_hash": "ef122a57f07dbdb22a2d14a012502c41"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.power/manifest.json": {
-    "mtime": 1781271526.8146589,
-    "ast_hash": "4ebf20abe108c78dee71b0f8c409268f",
-    "semantic_hash": "4ebf20abe108c78dee71b0f8c409268f"
+  "lacuna.power/manifest.json": {
+    "mtime": 1782399745.777106,
+    "ast_hash": "ecf98836d43bde802050af2136fbed46",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.rainfall-overlay/manifest.json": {
-    "mtime": 1781271526.8148036,
-    "ast_hash": "b62340da1fbc2011449990136f44e1d4",
-    "semantic_hash": "b62340da1fbc2011449990136f44e1d4"
+  "lacuna.rainfall-overlay/manifest.json": {
+    "mtime": 1782280796.6459594,
+    "ast_hash": "aea37e73edaf1c35e7f67cedd93e049f",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.screen-recording/manifest.json": {
-    "mtime": 1781271526.8149037,
-    "ast_hash": "447464babe3a79fcd91462e3810a725b",
-    "semantic_hash": "447464babe3a79fcd91462e3810a725b"
+  "lacuna.screen-recording/manifest.json": {
+    "mtime": 1782401486.5505219,
+    "ast_hash": "2e608ddce68741ad0096817babb383ab",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.script-pill/manifest.json": {
+  "lacuna.script-pill/manifest.json": {
     "mtime": 1781504860.749712,
     "ast_hash": "19be921ab1ba1a8743aa60a5ef3ac963",
     "semantic_hash": "19be921ab1ba1a8743aa60a5ef3ac963"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.script-pill/scripts/example-status": {
+  "lacuna.script-pill/scripts/example-status": {
     "mtime": 1780982191.3720925,
     "ast_hash": "9edf04de99c60c9fe16208dc5ecd4e31",
     "semantic_hash": "9edf04de99c60c9fe16208dc5ecd4e31"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.settings-persistence/manifest.json": {
+  "lacuna.settings-persistence/manifest.json": {
     "mtime": 1780164128.9447284,
     "ast_hash": "eb789dc381f473b9fcb5f88b349f16e8",
     "semantic_hash": "eb789dc381f473b9fcb5f88b349f16e8"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.shell-settings/manifest.json": {
+  "lacuna.shell-settings/manifest.json": {
     "mtime": 1781504860.750712,
     "ast_hash": "6b76a1e68425bf56d649938e366f3e2a",
     "semantic_hash": "6b76a1e68425bf56d649938e366f3e2a"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.shell-settings/scripts/omarchy-shell-settings-state.py": {
-    "mtime": 1781321897.7525802,
-    "ast_hash": "4bc851e4207fdd873adefe8dd152d30a",
-    "semantic_hash": "4bc851e4207fdd873adefe8dd152d30a"
+  "lacuna.shell-settings/scripts/omarchy-shell-settings-state.py": {
+    "mtime": 1782258331.7847385,
+    "ast_hash": "fcbd438aa2321b9fc4c6770bed323c6f",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.state/manifest.json": {
+  "lacuna.state/manifest.json": {
     "mtime": 1780164128.9448571,
     "ast_hash": "74abe7c6e085ac86248e1d0a47d97560",
     "semantic_hash": "74abe7c6e085ac86248e1d0a47d97560"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.system-stats/manifest.json": {
+  "lacuna.system-stats/manifest.json": {
     "mtime": 1781271526.8151793,
     "ast_hash": "fe8cde4d4bc92e2d811875aa42933ff8",
     "semantic_hash": "fe8cde4d4bc92e2d811875aa42933ff8"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.system-update/manifest.json": {
+  "lacuna.system-update/manifest.json": {
     "mtime": 1781271526.8153045,
     "ast_hash": "7a13bc07e3fc9f2e11f2be45db115b6e",
     "semantic_hash": "7a13bc07e3fc9f2e11f2be45db115b6e"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.temperature/manifest.json": {
+  "lacuna.temperature/manifest.json": {
     "mtime": 1781271526.8154192,
     "ast_hash": "a3222be78cb1a7853a9f52d77b98f02e",
     "semantic_hash": "a3222be78cb1a7853a9f52d77b98f02e"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.theme-preloader/manifest.json": {
+  "lacuna.theme-preloader/manifest.json": {
     "mtime": 1780164128.9451995,
     "ast_hash": "f5822425a5b6422e14f76185eb01a030",
     "semantic_hash": "f5822425a5b6422e14f76185eb01a030"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.theme-preloader/scripts/preload-theme-switcher.sh": {
+  "lacuna.theme-preloader/scripts/preload-theme-switcher.sh": {
     "mtime": 1781984431.3811016,
     "ast_hash": "7e1c3845a48d15bbe54802b49694b461",
     "semantic_hash": "7e1c3845a48d15bbe54802b49694b461"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.theme-preloader/scripts/refresh-theme-background.sh": {
-    "mtime": 1781221266.6349175,
-    "ast_hash": "60018d5780f3b98693379a30741abc22",
-    "semantic_hash": "60018d5780f3b98693379a30741abc22"
+  "lacuna.theme-preloader/scripts/refresh-theme-background.sh": {
+    "mtime": 1782258332.5647392,
+    "ast_hash": "98ece328406039de263fe31da427c96f",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.theme/manifest.json": {
+  "lacuna.theme/manifest.json": {
     "mtime": 1781504860.750712,
     "ast_hash": "6a3f6f1d9e48bf27ac7260fbda1ef1a4",
     "semantic_hash": "6a3f6f1d9e48bf27ac7260fbda1ef1a4"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.tray/manifest.json": {
+  "lacuna.tray/manifest.json": {
     "mtime": 1780164128.9452639,
     "ast_hash": "7e3849fc89f607b995f47de3f76abc93",
     "semantic_hash": "7e3849fc89f607b995f47de3f76abc93"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.vhs-overlay/manifest.json": {
+  "lacuna.vhs-overlay/manifest.json": {
     "mtime": 1781271526.8156726,
     "ast_hash": "7fa3d96ab5b492f5f6ffc063f83e5168",
     "semantic_hash": "7fa3d96ab5b492f5f6ffc063f83e5168"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.voxtype/manifest.json": {
+  "lacuna.voxtype/manifest.json": {
     "mtime": 1781271526.8157675,
     "ast_hash": "2e222458a9beab376eb824a59725f8be",
     "semantic_hash": "2e222458a9beab376eb824a59725f8be"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.wallpaper/manifest.json": {
+  "lacuna.wallpaper/manifest.json": {
     "mtime": 1781504860.750712,
     "ast_hash": "82e6b84c2a3157e3abbc1545e0b25e52",
     "semantic_hash": "82e6b84c2a3157e3abbc1545e0b25e52"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.weather/manifest.json": {
+  "lacuna.weather/manifest.json": {
     "mtime": 1781271526.816001,
     "ast_hash": "ecf125c3808eeef4eb4704764d771bb8",
     "semantic_hash": "ecf125c3808eeef4eb4704764d771bb8"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.workspaces/manifest.json": {
+  "lacuna.workspaces/manifest.json": {
     "mtime": 1781504860.750712,
     "ast_hash": "73bc473b92c5de164c6565dfc66d20a8",
     "semantic_hash": "73bc473b92c5de164c6565dfc66d20a8"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.youtube-music-video/manifest.json": {
+  "lacuna.youtube-music-video/manifest.json": {
     "mtime": 1781984431.3831017,
     "ast_hash": "1a5b1d36f2934d621bb72bead204fbe6",
     "semantic_hash": "1a5b1d36f2934d621bb72bead204fbe6"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.youtube-music/manifest.json": {
+  "lacuna.youtube-music/manifest.json": {
     "mtime": 1781984431.3831017,
     "ast_hash": "fc1d8fa29ecf1d8e79162e91467f9897",
     "semantic_hash": "fc1d8fa29ecf1d8e79162e91467f9897"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.youtube-music/scripts/youtube-music-background": {
-    "mtime": 1781984431.3831017,
-    "ast_hash": "cea2098cb026acb927b00289e292548d",
-    "semantic_hash": "cea2098cb026acb927b00289e292548d"
+  "lacuna.youtube-music/scripts/youtube-music-background": {
+    "mtime": 1782950444.1812072,
+    "ast_hash": "3f382e67b694943d7762c60dd2bf632f",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.youtube-music/scripts/youtube-music-check": {
+  "lacuna.youtube-music/scripts/youtube-music-check": {
     "mtime": 1781984431.3831017,
     "ast_hash": "c5c12f5c7cf1a4e904a4281113177072",
     "semantic_hash": "c5c12f5c7cf1a4e904a4281113177072"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.youtube-music/scripts/youtube-music-control": {
-    "mtime": 1781984431.3831017,
-    "ast_hash": "78c3abf2cfb1276b4553c389f127bd9e",
-    "semantic_hash": "78c3abf2cfb1276b4553c389f127bd9e"
+  "lacuna.youtube-music/scripts/youtube-music-control": {
+    "mtime": 1782947239.9855397,
+    "ast_hash": "acfab34fc667c8e51b46fd098e95706f",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.youtube-music/scripts/youtube-music-preview": {
-    "mtime": 1781984431.3831017,
-    "ast_hash": "b2101f456121521aafa1c4510820281e",
-    "semantic_hash": "b2101f456121521aafa1c4510820281e"
+  "lacuna.youtube-music/scripts/youtube-music-preview": {
+    "mtime": 1782950444.1812072,
+    "ast_hash": "f6bd94c28c0ef42d6a791b963c67ebad",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.youtube-music/scripts/youtube-music-search": {
-    "mtime": 1781984431.3831017,
-    "ast_hash": "816242220545a0be30b37fe4816867ad",
-    "semantic_hash": "816242220545a0be30b37fe4816867ad"
+  "lacuna.youtube-music/scripts/youtube-music-search": {
+    "mtime": 1782943766.38331,
+    "ast_hash": "7a3b7a46093daf4014734a3be8de57fe",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/scripts/check.sh": {
+  "scripts/check.sh": {
     "mtime": 1781313790.3234346,
     "ast_hash": "2a2dc4f8b17d59f7b1ff56a2df5e4825",
     "semantic_hash": "2a2dc4f8b17d59f7b1ff56a2df5e4825"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/scripts/lacuna": {
-    "mtime": 1782022054.089148,
-    "ast_hash": "1ae1893187847de5766dbf3aa30558f8",
-    "semantic_hash": "1ae1893187847de5766dbf3aa30558f8"
+  "scripts/lacuna": {
+    "mtime": 1782441151.375876,
+    "ast_hash": "47326c7ad9a4d233692136e4d46f5dcd",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/scripts/sync-vendored": {
+  "scripts/sync-vendored": {
     "mtime": 1781984431.3831017,
     "ast_hash": "0355b90fd26deb485d36e7ab8cadaf3b",
     "semantic_hash": "0355b90fd26deb485d36e7ab8cadaf3b"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/tests/fixtures/full-settings.json": {
-    "mtime": 1781984431.3841016,
-    "ast_hash": "bc47770618c75b99ac65b08fffe2c14d",
-    "semantic_hash": "bc47770618c75b99ac65b08fffe2c14d"
+  "tests/fixtures/full-settings.json": {
+    "mtime": 1782884948.089055,
+    "ast_hash": "953f6753569972a7df00e75e5734204f",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/tests/test_bar_model.py": {
+  "tests/test_bar_model.py": {
     "mtime": 1782020916.013079,
     "ast_hash": "d52dc725dc11ec97ff56ebeb980d8a33",
     "semantic_hash": "d52dc725dc11ec97ff56ebeb980d8a33"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/tests/test_desktop_app_catalog.py": {
+  "tests/test_desktop_app_catalog.py": {
     "mtime": 1781504860.750712,
     "ast_hash": "fc9c40e309c1b1dd33f2e6b5ba500bb2",
     "semantic_hash": "fc9c40e309c1b1dd33f2e6b5ba500bb2"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/tests/test_docs_contracts.py": {
+  "tests/test_docs_contracts.py": {
     "mtime": 1781984431.3841016,
     "ast_hash": "5b10b59f8df4354abb5f6faae2cff6e8",
     "semantic_hash": "5b10b59f8df4354abb5f6faae2cff6e8"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/tests/test_lacuna_installer.py": {
-    "mtime": 1782021995.6295226,
-    "ast_hash": "af950e7d463f69e19ec4c0254e03b2b8",
-    "semantic_hash": "af950e7d463f69e19ec4c0254e03b2b8"
+  "tests/test_lacuna_installer.py": {
+    "mtime": 1782441151.627878,
+    "ast_hash": "48099471886acb61ffa84ff6362c64b6",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/tests/test_live_behavior.py": {
-    "mtime": 1781504860.751712,
+  "tests/test_live_behavior.py": {
+    "mtime": 1782228489.2911983,
     "ast_hash": "10b853f75d505dd0e5342739b9dc0479",
     "semantic_hash": "10b853f75d505dd0e5342739b9dc0479"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/tests/test_live_load_smoke.py": {
+  "tests/test_live_load_smoke.py": {
     "mtime": 1781504860.751712,
     "ast_hash": "93123d46f27d3be3abb2fae7628507b2",
     "semantic_hash": "93123d46f27d3be3abb2fae7628507b2"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/tests/test_manifest_contracts.py": {
+  "tests/test_manifest_contracts.py": {
     "mtime": 1781397252.6320012,
     "ast_hash": "93b809885c2eea7b44392ccb142d05ac",
     "semantic_hash": "93b809885c2eea7b44392ccb142d05ac"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/tests/test_plugin_kind_contracts.py": {
+  "tests/test_plugin_kind_contracts.py": {
     "mtime": 1781984431.3841016,
     "ast_hash": "01123fe2495faf652a483087a2848f8d",
     "semantic_hash": "01123fe2495faf652a483087a2848f8d"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/tests/test_plugin_load_smoke.py": {
+  "tests/test_plugin_load_smoke.py": {
     "mtime": 1781504860.751712,
     "ast_hash": "a73e7df686a336042427347027ed9dc1",
     "semantic_hash": "a73e7df686a336042427347027ed9dc1"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/tests/test_qml_contracts.py": {
-    "mtime": 1782028423.7556353,
-    "ast_hash": "18455f00caa4c6ef88500bde60e0a88e",
-    "semantic_hash": "18455f00caa4c6ef88500bde60e0a88e"
+  "tests/test_qml_contracts.py": {
+    "mtime": 1782963557.5468957,
+    "ast_hash": "0fde24befaba0486416fb59148e41ab1",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/tests/test_state_scripts.py": {
-    "mtime": 1781363545.0351706,
-    "ast_hash": "e563048c23cc13d75b0fe7e8e687599c",
-    "semantic_hash": "e563048c23cc13d75b0fe7e8e687599c"
+  "tests/test_state_scripts.py": {
+    "mtime": 1782849986.842255,
+    "ast_hash": "7d2a912b638e0710c8cc5758be79704f",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/tests/test_status_scripts.py": {
-    "mtime": 1782064583.7141254,
-    "ast_hash": "6d8ebebf339158181e65045257f76abe",
-    "semantic_hash": "6d8ebebf339158181e65045257f76abe"
+  "tests/test_status_scripts.py": {
+    "mtime": 1782950668.7229261,
+    "ast_hash": "8af610b734673aa07b358f73d5071d88",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/tests/test_vendored_files.py": {
+  "tests/test_vendored_files.py": {
     "mtime": 1781504860.752712,
     "ast_hash": "230937e9796ad7b0ca7b07ea3ed0ee9b",
     "semantic_hash": "230937e9796ad7b0ca7b07ea3ed0ee9b"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/.github/ISSUE_TEMPLATE/bug_report.md": {
+  ".github/ISSUE_TEMPLATE/bug_report.md": {
     "mtime": 1781504860.7447119,
     "ast_hash": "588e3c08d1d20118cdef69e0d56c0cb4",
     "semantic_hash": "588e3c08d1d20118cdef69e0d56c0cb4"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/.github/ISSUE_TEMPLATE/feature_request.md": {
+  ".github/ISSUE_TEMPLATE/feature_request.md": {
     "mtime": 1781504860.7459333,
     "ast_hash": "e72cde5386d837021688ff3b01f85c87",
     "semantic_hash": "e72cde5386d837021688ff3b01f85c87"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/.github/PULL_REQUEST_TEMPLATE.md": {
+  ".github/PULL_REQUEST_TEMPLATE.md": {
     "mtime": 1781504860.7459333,
     "ast_hash": "6a77edcc2d33a4e188b8c0b0800debe8",
     "semantic_hash": "6a77edcc2d33a4e188b8c0b0800debe8"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/.github/workflows/check.yml": {
+  ".github/workflows/check.yml": {
     "mtime": 1781984431.3291013,
     "ast_hash": "cb090a55d68027b59d88d133b18ff9a6",
     "semantic_hash": "cb090a55d68027b59d88d133b18ff9a6"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/.github/workflows/release.yml": {
+  ".github/workflows/release.yml": {
     "mtime": 1781984431.3291013,
     "ast_hash": "7c09cd4a1b7d934b3aaeb523f000119e",
     "semantic_hash": "7c09cd4a1b7d934b3aaeb523f000119e"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/.pre-commit-config.yaml": {
+  ".pre-commit-config.yaml": {
     "mtime": 1781504860.7459333,
     "ast_hash": "b5a64fe14de91143c1de6ebb6e312ccf",
     "semantic_hash": "b5a64fe14de91143c1de6ebb6e312ccf"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/AGENTS.md": {
-    "mtime": 1781984431.3301013,
-    "ast_hash": "52564cfde6692e060d35c692f42541b4",
-    "semantic_hash": "52564cfde6692e060d35c692f42541b4"
+  "AGENTS.md": {
+    "mtime": 1782963309.337189,
+    "ast_hash": "27d03a657207a9460b8e91f88b2f4882",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/CHANGELOG.md": {
+  "CHANGELOG.md": {
     "mtime": 1781504860.7459333,
     "ast_hash": "7022cc8bdd0d9f9788e613da0fa94c08",
     "semantic_hash": "7022cc8bdd0d9f9788e613da0fa94c08"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/CLAUDE.md": {
-    "mtime": 1781984431.3301013,
-    "ast_hash": "dcb50c094ea363ad510512600d7339db",
-    "semantic_hash": "dcb50c094ea363ad510512600d7339db"
+  "CLAUDE.md": {
+    "mtime": 1782169359.1688607,
+    "ast_hash": "ed24508cff5318b3a79768bba8857204",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/CONTRIBUTING.md": {
+  "CONTRIBUTING.md": {
     "mtime": 1781984431.3301013,
     "ast_hash": "879829c535ceb970bf2f7fe42fd135db",
     "semantic_hash": "879829c535ceb970bf2f7fe42fd135db"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/README.md": {
+  "README.md": {
     "mtime": 1781984431.3301013,
     "ast_hash": "2d6e3ff52e5e35413b2dc369af00d630",
     "semantic_hash": "2d6e3ff52e5e35413b2dc369af00d630"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/README.md": {
+  "docs/README.md": {
     "mtime": 1781984431.3301013,
     "ast_hash": "06b1cdef2d9efbfce5ca622abc434e19",
     "semantic_hash": "06b1cdef2d9efbfce5ca622abc434e19"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/architecture/omarchy-integration.md": {
+  "docs/architecture/omarchy-integration.md": {
     "mtime": 1781984431.3301013,
     "ast_hash": "627d733e11e5a2bf069de4c9e12fc4a1",
     "semantic_hash": "627d733e11e5a2bf069de4c9e12fc4a1"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/architecture/overview.md": {
+  "docs/architecture/overview.md": {
     "mtime": 1781984431.3308372,
     "ast_hash": "dfb98f92921c057cc70daa5913f14b83",
     "semantic_hash": "dfb98f92921c057cc70daa5913f14b83"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/architecture/plugin-contracts.md": {
+  "docs/architecture/plugin-contracts.md": {
     "mtime": 1781984431.3308372,
     "ast_hash": "ac45da4192b45ad2a3cc1d8273cdab71",
     "semantic_hash": "ac45da4192b45ad2a3cc1d8273cdab71"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/architecture/services-and-state.md": {
+  "docs/architecture/services-and-state.md": {
     "mtime": 1781984431.3308372,
     "ast_hash": "734e31a27d7d2f80b56793ad4b4ea38b",
     "semantic_hash": "734e31a27d7d2f80b56793ad4b4ea38b"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/configuration.md": {
+  "docs/configuration.md": {
     "mtime": 1781984431.3308372,
     "ast_hash": "789635cdc95a55ec15156d70d7879d16",
     "semantic_hash": "789635cdc95a55ec15156d70d7879d16"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/development/release.md": {
+  "docs/development/release.md": {
     "mtime": 1781984431.3308372,
     "ast_hash": "4328c3e18b887bca01f3007703ca4e93",
     "semantic_hash": "4328c3e18b887bca01f3007703ca4e93"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/development/setup.md": {
+  "docs/development/setup.md": {
     "mtime": 1781984431.3310664,
     "ast_hash": "d216f3f0a6d09e247d545bbfc4650eae",
     "semantic_hash": "d216f3f0a6d09e247d545bbfc4650eae"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/development/testing.md": {
+  "docs/development/testing.md": {
     "mtime": 1781984431.3310664,
     "ast_hash": "b3e8f2e30aa9bf3ac7fecbf193d5734e",
     "semantic_hash": "b3e8f2e30aa9bf3ac7fecbf193d5734e"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/development/troubleshooting.md": {
+  "docs/development/troubleshooting.md": {
     "mtime": 1781984431.3310664,
     "ast_hash": "042d5f4f50bfd0d6086487f3ed4d3ebc",
     "semantic_hash": "042d5f4f50bfd0d6086487f3ed4d3ebc"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/install.md": {
+  "docs/install.md": {
     "mtime": 1781984431.3311012,
     "ast_hash": "c0aa2c1759e276a53c78ef83757d6f8b",
     "semantic_hash": "c0aa2c1759e276a53c78ef83757d6f8b"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/lacuna-design-system/00-philosophy.md": {
-    "mtime": 1781504860.7459333,
+  "docs/lacuna-design-system/00-philosophy.md": {
+    "mtime": 1782228489.2881982,
     "ast_hash": "5da9ca7f06f1a4a0e1b24b3935f04283",
     "semantic_hash": "5da9ca7f06f1a4a0e1b24b3935f04283"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/lacuna-design-system/01-color.md": {
+  "docs/lacuna-design-system/01-color.md": {
     "mtime": 1781984431.3311012,
     "ast_hash": "ec9ae2fbed22ac216274e4a746051801",
     "semantic_hash": "ec9ae2fbed22ac216274e4a746051801"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/lacuna-design-system/02-geometry.md": {
-    "mtime": 1781984431.3311012,
+  "docs/lacuna-design-system/02-geometry.md": {
+    "mtime": 1782228489.2881982,
     "ast_hash": "3c7e6a7b51f30084a801e05d3795189a",
     "semantic_hash": "3c7e6a7b51f30084a801e05d3795189a"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/lacuna-design-system/03-motion.md": {
+  "docs/lacuna-design-system/03-motion.md": {
     "mtime": 1781984431.3311012,
     "ast_hash": "9a5d081d40ded8f4b4bdb15edd6784dc",
     "semantic_hash": "9a5d081d40ded8f4b4bdb15edd6784dc"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/lacuna-design-system/04-typography.md": {
+  "docs/lacuna-design-system/04-typography.md": {
     "mtime": 1781984431.3311012,
     "ast_hash": "c354a7fed692b41212844abe445b7cf3",
     "semantic_hash": "c354a7fed692b41212844abe445b7cf3"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/lacuna-design-system/05-components.md": {
-    "mtime": 1781504860.7469962,
+  "docs/lacuna-design-system/05-components.md": {
+    "mtime": 1782228489.2881982,
     "ast_hash": "cb4c8287a9cb61eb12a89854c5f6ae85",
     "semantic_hash": "cb4c8287a9cb61eb12a89854c5f6ae85"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/lacuna-design-system/06-roadmap.md": {
+  "docs/lacuna-design-system/06-roadmap.md": {
     "mtime": 1781984431.3311012,
     "ast_hash": "a842ea291ac4f87263acd4dc5b28929f",
     "semantic_hash": "a842ea291ac4f87263acd4dc5b28929f"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/lacuna-design-system/README.md": {
+  "docs/lacuna-design-system/README.md": {
     "mtime": 1781504860.7469962,
     "ast_hash": "8e49c9d333c8d1bafcd68d0dcee88221",
     "semantic_hash": "8e49c9d333c8d1bafcd68d0dcee88221"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plans/README.md": {
-    "mtime": 1781984431.3311012,
-    "ast_hash": "b74993a82768cf098286d059f03dbe22",
-    "semantic_hash": "b74993a82768cf098286d059f03dbe22"
+  "docs/plans/README.md": {
+    "mtime": 1782964123.2307508,
+    "ast_hash": "636a658bbdbbbff871ebb3b5a343677f",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plans/lacuna-bar-refactor-plan.md": {
+  "docs/plans/lacuna-bar-refactor-plan.md": {
     "mtime": 1781984431.3317232,
     "ast_hash": "05fcd3bc749bd718756ac9371d05a1ff",
     "semantic_hash": "05fcd3bc749bd718756ac9371d05a1ff"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plans/lacuna-bar-size-mode-plan.md": {
+  "docs/plans/lacuna-bar-size-mode-plan.md": {
     "mtime": 1781984431.3317232,
     "ast_hash": "bc721c8160e94903170d20edde158e45",
     "semantic_hash": "bc721c8160e94903170d20edde158e45"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plans/lacuna-fake-fullscreen-frame-plan.md": {
+  "docs/plans/lacuna-fake-fullscreen-frame-plan.md": {
     "mtime": 1781984431.3317232,
     "ast_hash": "e9969e22bb2d4d08c5b0d1a0f5beed0b",
     "semantic_hash": "e9969e22bb2d4d08c5b0d1a0f5beed0b"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plans/lacuna-menu-unified-color-model.md": {
+  "docs/plans/lacuna-menu-unified-color-model.md": {
     "mtime": 1781984431.3317232,
     "ast_hash": "88d9d681140166e4c2157197b9683876",
     "semantic_hash": "88d9d681140166e4c2157197b9683876"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plans/lacuna-noctalia-inspired-refactor-plan.md": {
+  "docs/plans/lacuna-noctalia-inspired-refactor-plan.md": {
     "mtime": 1781984431.3317232,
     "ast_hash": "5e61690cfdf98be3f42199f3536568c6",
     "semantic_hash": "5e61690cfdf98be3f42199f3536568c6"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plans/lacuna-panel-control-refactor-plan.md": {
+  "docs/plans/lacuna-panel-control-refactor-plan.md": {
     "mtime": 1781984431.3317232,
     "ast_hash": "815e67d1aaaaf3a94636b334d4423929",
     "semantic_hash": "815e67d1aaaaf3a94636b334d4423929"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plans/lacuna-panel-ui-overhaul-plan.md": {
+  "docs/plans/lacuna-panel-ui-overhaul-plan.md": {
     "mtime": 1781984431.3317232,
     "ast_hash": "e09144ff8bd7e98374b9d9b03cab99ef",
     "semantic_hash": "e09144ff8bd7e98374b9d9b03cab99ef"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plans/lacuna-settings-panel-plan.md": {
+  "docs/plans/lacuna-settings-panel-plan.md": {
     "mtime": 1781984431.3317232,
     "ast_hash": "5dc59dc4fbfa1d4821cf3190dad59d6e",
     "semantic_hash": "5dc59dc4fbfa1d4821cf3190dad59d6e"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plans/lacuna-suite-improvement-plan.md": {
+  "docs/plans/lacuna-suite-improvement-plan.md": {
     "mtime": 1781984431.3321013,
     "ast_hash": "d3fa27769e0f94154c715326ad8f4c84",
     "semantic_hash": "d3fa27769e0f94154c715326ad8f4c84"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plans/lacuna-theme-preloader-plan.md": {
+  "docs/plans/lacuna-theme-preloader-plan.md": {
     "mtime": 1781984431.3321013,
     "ast_hash": "3ff3d387cd4c102ddb23f09c5c545eee",
     "semantic_hash": "3ff3d387cd4c102ddb23f09c5c545eee"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plans/lacuna-workspaces-plugin-plan.md": {
+  "docs/plans/lacuna-workspaces-plugin-plan.md": {
     "mtime": 1781984431.3321013,
     "ast_hash": "650bf8b110e2b795cae98b6541fc1d50",
     "semantic_hash": "650bf8b110e2b795cae98b6541fc1d50"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plans/omarchy-shell-refactor-plan.md": {
+  "docs/plans/omarchy-shell-refactor-plan.md": {
     "mtime": 1781984431.3321013,
     "ast_hash": "edeedc94657af64130653ef8f48f942c",
     "semantic_hash": "edeedc94657af64130653ef8f48f942c"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plugins/README.md": {
+  "docs/plugins/README.md": {
     "mtime": 1781984431.3321013,
     "ast_hash": "0d348c3071372b2ff2eb9407ec809d8e",
     "semantic_hash": "0d348c3071372b2ff2eb9407ec809d8e"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plugins/bar.md": {
+  "docs/plugins/bar.md": {
     "mtime": 1781984431.3325436,
     "ast_hash": "31d15bdc0cd1245052f62d85ef9cb6f3",
     "semantic_hash": "31d15bdc0cd1245052f62d85ef9cb6f3"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plugins/menu.md": {
+  "docs/plugins/menu.md": {
     "mtime": 1781984431.3325436,
     "ast_hash": "e1fd9a12f8b8728673717916fe07adf6",
     "semantic_hash": "e1fd9a12f8b8728673717916fe07adf6"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plugins/overlays.md": {
+  "docs/plugins/overlays.md": {
     "mtime": 1781984431.3325436,
     "ast_hash": "4d9b10d72522503542f7562f87394e88",
     "semantic_hash": "4d9b10d72522503542f7562f87394e88"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/plugins/widgets.md": {
+  "docs/plugins/widgets.md": {
     "mtime": 1781984431.3325436,
     "ast_hash": "f143cd9742c8a8b486f5f040848f33a0",
     "semantic_hash": "f143cd9742c8a8b486f5f040848f33a0"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/screenshots/reference/README.md": {
-    "mtime": 1781984431.3691015,
+  "docs/screenshots/reference/README.md": {
+    "mtime": 1782228489.2881982,
     "ast_hash": "3dc0b107a08461361926331c7cfee7b3",
     "semantic_hash": "3dc0b107a08461361926331c7cfee7b3"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.menu/components/README.md": {
+  "lacuna.menu/components/README.md": {
     "mtime": 1780982191.351287,
     "ast_hash": "b3b5bd613df7b8869de606329331b755",
     "semantic_hash": "b3b5bd613df7b8869de606329331b755"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/screenshots/reference/01-desktop-bar-overlays.png": {
+  "docs/screenshots/reference/01-desktop-bar-overlays.png": {
     "mtime": 1781984431.3371012,
     "ast_hash": "b62158885108176ca8018a78476bf919",
     "semantic_hash": "b62158885108176ca8018a78476bf919"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/screenshots/reference/02-lacuna-menu-default.png": {
+  "docs/screenshots/reference/02-lacuna-menu-default.png": {
     "mtime": 1781984431.3401012,
     "ast_hash": "8e4bec63c3bf5bb6538591862684a45b",
     "semantic_hash": "8e4bec63c3bf5bb6538591862684a45b"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/screenshots/reference/03-lacuna-menu-settings-flyout.png": {
+  "docs/screenshots/reference/03-lacuna-menu-settings-flyout.png": {
     "mtime": 1781984431.3441014,
     "ast_hash": "fcf2cad0088ad394da7c3350d8aea760",
     "semantic_hash": "fcf2cad0088ad394da7c3350d8aea760"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/screenshots/reference/04-lacuna-menu-shell-settings-flyout.png": {
+  "docs/screenshots/reference/04-lacuna-menu-shell-settings-flyout.png": {
     "mtime": 1781984431.3481014,
     "ast_hash": "f792645e1774ba9dc8c589c5e6c00940",
     "semantic_hash": "f792645e1774ba9dc8c589c5e6c00940"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/screenshots/reference/05-lacuna-menu-app-picker-flyout.png": {
+  "docs/screenshots/reference/05-lacuna-menu-app-picker-flyout.png": {
     "mtime": 1781984431.3531015,
     "ast_hash": "bd2224ed75730aa37b7f98ed844e73e2",
     "semantic_hash": "bd2224ed75730aa37b7f98ed844e73e2"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/screenshots/reference/06-lacuna-shell-settings-panel.png": {
+  "docs/screenshots/reference/06-lacuna-shell-settings-panel.png": {
     "mtime": 1781984431.3581014,
     "ast_hash": "479f5e7daf40db274a8c27ef8348e89a",
     "semantic_hash": "479f5e7daf40db274a8c27ef8348e89a"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/screenshots/reference/07-lacuna-reference-layout-extra-widgets.png": {
+  "docs/screenshots/reference/07-lacuna-reference-layout-extra-widgets.png": {
     "mtime": 1781984431.3631015,
     "ast_hash": "d7688652994e5b3943f454bf026ba164",
     "semantic_hash": "d7688652994e5b3943f454bf026ba164"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/screenshots/reference/08-lacuna-settings-persistence-panel.png": {
+  "docs/screenshots/reference/08-lacuna-settings-persistence-panel.png": {
     "mtime": 1781984431.3671014,
     "ast_hash": "434c42356f7a370f404b6093a2e1eb76",
     "semantic_hash": "434c42356f7a370f404b6093a2e1eb76"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/screenshots/reference/09-lacuna-design-overhaul-concept.png": {
+  "docs/screenshots/reference/09-lacuna-design-overhaul-concept.png": {
     "mtime": 1781984431.3681016,
     "ast_hash": "94ad4dfee051bdef7f7c26db3246e29e",
     "semantic_hash": "94ad4dfee051bdef7f7c26db3246e29e"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/screenshots/reference/09-lacuna-design-overhaul-concept.svg": {
+  "docs/screenshots/reference/09-lacuna-design-overhaul-concept.svg": {
     "mtime": 1781984431.3681016,
     "ast_hash": "3043805fca833288d9577a923cb9dd77",
     "semantic_hash": "3043805fca833288d9577a923cb9dd77"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/docs/screenshots/reference/10-lacuna-imagegen-overhaul-concept.png": {
+  "docs/screenshots/reference/10-lacuna-imagegen-overhaul-concept.png": {
     "mtime": 1781984431.3691015,
     "ast_hash": "2b11e92ad6deae8233e39653110483c8",
     "semantic_hash": "2b11e92ad6deae8233e39653110483c8"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.background-vignette/assets/vignette.svg": {
-    "mtime": 1782029536.0384278,
-    "ast_hash": "9f03cdca688efaf8a8017f6d29cbfc99",
-    "semantic_hash": "9f03cdca688efaf8a8017f6d29cbfc99"
+  "lacuna.background-vignette/assets/vignette.svg": {
+    "mtime": 1782092448.3289132,
+    "ast_hash": "a309cf2c1d79986bb29f43c25a116eff",
+    "semantic_hash": ""
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.bar-size-pill/assets/tabler/arrows-maximize.svg": {
+  "lacuna.bar-size-pill/assets/tabler/arrows-maximize.svg": {
     "mtime": 1780159510.3480978,
     "ast_hash": "638c40f68b0b001e66da8ba4bbd3be5f",
     "semantic_hash": "638c40f68b0b001e66da8ba4bbd3be5f"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.bar-size-pill/assets/tabler/arrows-minimize.svg": {
+  "lacuna.bar-size-pill/assets/tabler/arrows-minimize.svg": {
     "mtime": 1780159510.3480039,
     "ast_hash": "2420fe03a114fdfc4fbda1bdcfcdb3e9",
     "semantic_hash": "2420fe03a114fdfc4fbda1bdcfcdb3e9"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.claude-usage/assets/claude-ai.svg": {
+  "lacuna.claude-usage/assets/claude-ai.svg": {
     "mtime": 1780982191.3475838,
     "ast_hash": "60f9a47eb7eb72ae873b5c224ed680ce",
     "semantic_hash": "60f9a47eb7eb72ae873b5c224ed680ce"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.codex-usage/assets/openai-light.svg": {
+  "lacuna.codex-usage/assets/openai-light.svg": {
     "mtime": 1780982191.3486784,
     "ast_hash": "e04ff34521ff2bb597fd73ba683d5dc4",
     "semantic_hash": "e04ff34521ff2bb597fd73ba683d5dc4"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.codex-usage/assets/tabler/brand-openai.svg": {
+  "lacuna.codex-usage/assets/tabler/brand-openai.svg": {
     "mtime": 1780159510.3250697,
     "ast_hash": "3d96d0e8693dd65347c80ade082c2d16",
     "semantic_hash": "3d96d0e8693dd65347c80ade082c2d16"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.compact-pill/assets/tabler/arrows-maximize.svg": {
+  "lacuna.compact-pill/assets/tabler/arrows-maximize.svg": {
     "mtime": 1780159510.3141901,
     "ast_hash": "e344176cab7c928dc2d07f79585c843a",
     "semantic_hash": "e344176cab7c928dc2d07f79585c843a"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.compact-pill/assets/tabler/arrows-minimize.svg": {
+  "lacuna.compact-pill/assets/tabler/arrows-minimize.svg": {
     "mtime": 1780159510.3144217,
     "ast_hash": "93eecaae7030d4e929e843d34a1036e6",
     "semantic_hash": "93eecaae7030d4e929e843d34a1036e6"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.menu-button/assets/tabler/circle-dotted-letter-l.svg": {
+  "lacuna.menu-button/assets/tabler/circle-dotted-letter-l.svg": {
     "mtime": 1780159510.3230526,
     "ast_hash": "2b275195b910e177208998ed290f2344",
     "semantic_hash": "2b275195b910e177208998ed290f2344"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.menu-button/assets/tabler/layout-sidebar-left-expand-filled.svg": {
+  "lacuna.menu-button/assets/tabler/layout-sidebar-left-expand-filled.svg": {
     "mtime": 1780159510.3233714,
     "ast_hash": "2c017fe960fe8460b36ed8b6dd2fd1d1",
     "semantic_hash": "2c017fe960fe8460b36ed8b6dd2fd1d1"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.menu/assets/tabler/circle-dotted-letter-l.svg": {
+  "lacuna.menu/assets/tabler/circle-dotted-letter-l.svg": {
     "mtime": 1780159510.3333664,
     "ast_hash": "96f672fe2d69252117f20dcdb8a81ad5",
     "semantic_hash": "96f672fe2d69252117f20dcdb8a81ad5"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.system-stats/assets/tabler/assembly-filled.svg": {
+  "lacuna.system-stats/assets/tabler/assembly-filled.svg": {
     "mtime": 1780159510.3471427,
     "ast_hash": "d1239700ddfa27c34c55f3f5eab7476f",
     "semantic_hash": "d1239700ddfa27c34c55f3f5eab7476f"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.system-stats/assets/tabler/cpu.svg": {
+  "lacuna.system-stats/assets/tabler/cpu.svg": {
     "mtime": 1780159510.3476074,
     "ast_hash": "ab51e44baf5f146fb410d128ca3f90bb",
     "semantic_hash": "ab51e44baf5f146fb410d128ca3f90bb"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.system-stats/assets/tabler/database-filled.svg": {
+  "lacuna.system-stats/assets/tabler/database-filled.svg": {
     "mtime": 1780159510.3469527,
     "ast_hash": "8f77c822d3264d52dd4e44a6013fc5a1",
     "semantic_hash": "8f77c822d3264d52dd4e44a6013fc5a1"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.system-stats/assets/tabler/stack-3-filled.svg": {
+  "lacuna.system-stats/assets/tabler/stack-3-filled.svg": {
     "mtime": 1780159510.3470483,
     "ast_hash": "62a13b0d3f581d044db2ce777b799d8a",
     "semantic_hash": "62a13b0d3f581d044db2ce777b799d8a"
   },
-  "/home/oldjobobo/Projects/lacuna-omarchy-plugins/lacuna.temperature/assets/tabler/temperature-plus-filled.svg": {
+  "lacuna.temperature/assets/tabler/temperature-plus-filled.svg": {
     "mtime": 1780159510.3435667,
     "ast_hash": "a7f404308cd82d336b05328913b4ae85",
     "semantic_hash": "a7f404308cd82d336b05328913b4ae85"
+  },
+  "lacuna.audio/AudioModel.js": {
+    "mtime": 1782399128.0095925,
+    "ast_hash": "5e9c2796f766676cc5f664bbdfc99657",
+    "semantic_hash": ""
+  },
+  "lacuna.bluetooth/BluetoothModel.js": {
+    "mtime": 1782399557.1144762,
+    "ast_hash": "266917d9df31df5aff31826e522d2cdf",
+    "semantic_hash": ""
+  },
+  "lacuna.dust-motes-overlay/manifest.json": {
+    "mtime": 1782160068.7905648,
+    "ast_hash": "5192941ed8630991b35f3c2925ea3176",
+    "semantic_hash": ""
+  },
+  "lacuna.film-grain-overlay/manifest.json": {
+    "mtime": 1782155399.373684,
+    "ast_hash": "3c776c82f4b0414afa163aeb1db97bdc",
+    "semantic_hash": ""
+  },
+  "lacuna.network/NetworkModel.js": {
+    "mtime": 1782365432.5758922,
+    "ast_hash": "3050392e4eb86ace08994ebd6bea8bb6",
+    "semantic_hash": ""
+  },
+  "lacuna.power/PowerModel.js": {
+    "mtime": 1782399745.777106,
+    "ast_hash": "50d5feb2397572b3692d69cfbb8d1ae2",
+    "semantic_hash": ""
+  },
+  "lacuna.youtube-music/scripts/youtube-music-auth": {
+    "mtime": 1782943766.3823102,
+    "ast_hash": "0a8c23601c957bdf86026a043444706e",
+    "semantic_hash": ""
+  },
+  "lacuna.youtube-music/scripts/youtube-music-info": {
+    "mtime": 1782884888.0710175,
+    "ast_hash": "3c1c0a83dd8d915531cb3db895e667a5",
+    "semantic_hash": ""
+  },
+  "lacuna.youtube-music/scripts/youtube-music-jellyfin-search": {
+    "mtime": 1782630760.6766946,
+    "ast_hash": "d6e422613924f0817d48876a178e766e",
+    "semantic_hash": ""
+  },
+  "lacuna.youtube-music/scripts/youtube-music-jellyfin-stream": {
+    "mtime": 1782630760.8006957,
+    "ast_hash": "5bf66b365294f571b40c545c939751c3",
+    "semantic_hash": ""
+  },
+  "lacuna.youtube-music/scripts/youtube-music-refresh-favorites": {
+    "mtime": 1782873295.9075806,
+    "ast_hash": "a5579ca3bf89c3dd20e84a4064f03966",
+    "semantic_hash": ""
+  },
+  "scripts/dev": {
+    "mtime": 1782169222.5535474,
+    "ast_hash": "108779df417b5c64113dcaf95b53f217",
+    "semantic_hash": ""
+  },
+  "tests/test_dev_tool.py": {
+    "mtime": 1782169286.28316,
+    "ast_hash": "c945cc2522493869fd237208bc1b2ad3",
+    "semantic_hash": ""
+  },
+  "docs/architecture/layer-stacking.md": {
+    "mtime": 1782963571.266042,
+    "ast_hash": "d06f696919d1aad588f840d0d7f49a00",
+    "semantic_hash": ""
+  },
+  "docs/plans/lacuna-issue-creation-plan.md": {
+    "mtime": 1782199490.063468,
+    "ast_hash": "c00fa41b3d1714d775ca42d9d2871418",
+    "semantic_hash": ""
+  },
+  "docs/plans/lacuna-layer-stacking-plan.md": {
+    "mtime": 1782964114.673664,
+    "ast_hash": "17c37a98995266a8397a5b825d7cdf85",
+    "semantic_hash": ""
+  },
+  "docs/plans/lacuna-media-player-rebrand-plan.md": {
+    "mtime": 1782949869.1361783,
+    "ast_hash": "51d90509fa3afc53d8d75cf023d2552c",
+    "semantic_hash": ""
+  },
+  "docs/plans/lacuna-youtube-video-transition-plan.md": {
+    "mtime": 1782949652.8993976,
+    "ast_hash": "62709bd61d96c895b8390804f7e25823",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/reference/ChatGPT Image Jun 23, 2026, 12_19_01 AM.png": {
+    "mtime": 1782199141.1751146,
+    "ast_hash": "8e10a1d8e294d3d37b64d3586bdfeffb",
+    "semantic_hash": ""
   }
 }
