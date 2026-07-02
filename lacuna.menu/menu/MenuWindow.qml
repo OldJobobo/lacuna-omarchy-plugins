@@ -138,7 +138,10 @@ Item {
   readonly property int frameReserveLeft: frameReserveActive && frameMode === "fullframe" && !root.leftBar && (root.panelOnRight || !root.sidebarSurfaceVisible) ? frameThickness + reservePadding : 0
   readonly property int frameReserveRight: frameReserveActive && frameMode === "fullframe" && !root.panelOnRight && !root.rightBar ? frameThickness + reservePadding : 0
   readonly property int topBarShadowReserve: frameReserveActive && root.topBar ? reservePadding : 0
-  readonly property bool topBarPanelShadowVisible: lacunaEnabled && frameShadow && frameMode === "off" && root.topBar
+  // Fallback for the standalone menu only: when the Lacuna bar hosts the
+  // frame window, that always-mapped surface casts the bar shadow in every
+  // frame mode, and it must not be doubled here.
+  readonly property bool topBarPanelShadowVisible: lacunaEnabled && !barOwnsLacunaFrame && frameShadow && frameMode === "off" && root.topBar
   readonly property int topBarPanelShadowVisualWidth: topBarPanelShadowVisible && root.sidebarScreen ? Math.max(0, Number(root.sidebarScreen.width) || 0) : 0
   readonly property real topBarPanelShadowX: 0
   readonly property real topBarPanelShadowWidth: topBarPanelShadowVisualWidth
