@@ -1,4 +1,5 @@
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
@@ -18,6 +19,8 @@ Item {
   property real cursorVelocityX: 0
   property real cursorVelocityY: 0
   property real cursorKick: 0
+  property real cursorDecayAccumulator: 0
+  property real cursorPollAccumulator: 0
   property var lacunaSettings: ({})
   property var palette: ({})
 
@@ -43,6 +46,7 @@ Item {
   readonly property real cursorInfluenceRadius: 220 + mouseInfluence * 320
   readonly property real cursorInfluenceRadiusSquared: cursorInfluenceRadius * cursorInfluenceRadius
   readonly property real cursorSpeed: Math.sqrt(cursorVelocityX * cursorVelocityX + cursorVelocityY * cursorVelocityY)
+  readonly property int maxTransientMotes: Math.round(22 + mouseInfluence * 52)
   readonly property color themeForeground: themeColor("foreground", "#d8dee9")
   readonly property color themeAccent: themeColor("accent", themeColor("color14", "#88c0d0"))
   readonly property color moteColor: mixColor(themeForeground, themeAccent, accentBlend)
@@ -215,10 +219,9 @@ Item {
   }
 
   function pollCursor() {
-    if (!mouseReactive || !effectVisible || cursorProc.running) return
-    cursorProc.output = ""
-    cursorProc.command = ["hyprctl", "cursorpos", "-j"]
-    cursorProc.running = true
+    if (!mouseReactive || !effectVisible || cursorSocket.connected) return
+    cursorSocket.path = Hyprland.requestSocketPath
+    cursorSocket.connected = true
   }
 
   function applyCursorPayload(raw) {
@@ -236,7 +239,7 @@ Item {
           cursorVelocityX = Math.max(-90, Math.min(90, dx))
           cursorVelocityY = Math.max(-90, Math.min(90, dy))
           cursorKick = Math.max(cursorKick, Math.min(1, 0.35 + distance / 180))
-          cursorDecayTimer.restart()
+          cursorDecayAccumulator = 0
         }
       }
 
@@ -286,53 +289,45 @@ Item {
     onFileChanged: colorsFile.reload()
   }
 
-  Timer {
-    id: cursorPollTimer
+  FrameAnimation {
+    id: cursorFrameClock
 
-    interval: 120
-    repeat: true
     running: root.effectVisible && root.mouseReactive
-    triggeredOnStart: true
-    onTriggered: root.pollCursor()
-  }
-
-  Timer {
-    id: cursorDecayTimer
-
-    interval: 520
-    repeat: false
     onTriggered: {
-      root.cursorVelocityX = 0
-      root.cursorVelocityY = 0
-      root.cursorKick = 0
+      root.cursorPollAccumulator += frameTime * 1000
+      if (root.cursorPollAccumulator >= 120 || currentFrame === 1) {
+        root.cursorPollAccumulator = 0
+        root.pollCursor()
+      }
+
+      if (root.cursorKick > 0 || root.cursorVelocityX !== 0 || root.cursorVelocityY !== 0) {
+        root.cursorDecayAccumulator += frameTime * 1000
+        if (root.cursorDecayAccumulator >= 520) {
+          root.cursorVelocityX = 0
+          root.cursorVelocityY = 0
+          root.cursorKick = 0
+          root.cursorDecayAccumulator = 0
+        }
+      }
     }
   }
 
-  Behavior on cursorVelocityX {
-    NumberAnimation { duration: 360; easing.type: Easing.OutCubic }
-  }
+  Socket {
+    id: cursorSocket
 
-  Behavior on cursorVelocityY {
-    NumberAnimation { duration: 360; easing.type: Easing.OutCubic }
-  }
-
-  Behavior on cursorKick {
-    NumberAnimation { duration: 420; easing.type: Easing.OutCubic }
-  }
-
-  Process {
-    id: cursorProc
-
-    property string output: ""
-
-    stdout: SplitParser {
+    connected: false
+    parser: SplitParser {
       onRead: function(data) {
-        cursorProc.output += data
+        root.applyCursorPayload(data)
+        cursorSocket.connected = false
       }
     }
 
-    onExited: function(exitCode) {
-      if (exitCode === 0) root.applyCursorPayload(cursorProc.output)
+    onConnectionStateChanged: {
+      if (connected) {
+        write("j/cursorpos")
+        flush()
+      }
     }
   }
 
@@ -373,22 +368,29 @@ Item {
         enabled: false
         opacity: root.effectiveIntensity
 
-        ListModel {
-          id: transientMotes
-        }
-
-        function updatePersistentMotes() {
+        function updatePersistentMotes(deltaMs) {
           for (var i = 0; i < persistentMoteRepeater.count; i++) {
             var item = persistentMoteRepeater.itemAt(i)
-            if (item) item.applyAirDisturbance()
+            if (item) item.applyAirDisturbance(deltaMs)
           }
         }
 
-        function updateTransientMotes() {
+        function updateTransientMotes(deltaMs) {
           for (var i = transientMoteRepeater.count - 1; i >= 0; i--) {
             var item = transientMoteRepeater.itemAt(i)
-            if (item) item.advanceFrame(33)
+            if (item && item.active) item.advanceFrame(deltaMs)
           }
+        }
+
+        function firstReusableTransientMote() {
+          var oldestItem = null
+          for (var i = 0; i < transientMoteRepeater.count; i++) {
+            var item = transientMoteRepeater.itemAt(i)
+            if (!item) continue
+            if (!item.active) return item
+            if (!oldestItem || item.age > oldestItem.age) oldestItem = item
+          }
+          return oldestItem
         }
 
         function cursorInsideWindow() {
@@ -408,11 +410,9 @@ Item {
           if (Math.random() > spawnChance) return
 
           var burstCount = 1 + (Math.random() < Math.min(0.42, speed / 430) ? 1 : 0)
-          var maxTransient = Math.round(22 + root.mouseInfluence * 52)
-
           for (var i = 0; i < burstCount; i++) {
-            while (transientMotes.count >= maxTransient) transientMotes.remove(0)
-
+            var mote = firstReusableTransientMote()
+            if (!mote) return
             var angle = Math.random() * Math.PI * 2
             var radius = Math.sqrt(Math.random()) * (14 + root.moteSize * 3.4)
             var originX = Math.cos(angle) * radius
@@ -424,39 +424,38 @@ Item {
             var lift = 0.48 + Math.random() * 1.10
             var size = Math.max(1.5, root.moteSize * (0.72 + Math.random() * 0.58))
 
-            transientMotes.append({
-              px: dustWindow.cursorLocalX - size / 2 + originX,
-              py: dustWindow.cursorLocalY - size / 2 + originY,
-              vx: outwardX * lift + sideX * (Math.random() - 0.5) * 0.7 + root.cursorVelocityX * (0.0015 + Math.random() * 0.0035),
-              vy: outwardY * lift + sideY * (Math.random() - 0.5) * 0.7 + root.cursorVelocityY * (0.0015 + Math.random() * 0.0035),
-              size: size,
-              alpha: 0.46 + Math.random() * 0.28,
-              age: 0,
-              life: 5000 + Math.random() * 4000
-            })
+            mote.spawn(
+              dustWindow.cursorLocalX - size / 2 + originX,
+              dustWindow.cursorLocalY - size / 2 + originY,
+              outwardX * lift + sideX * (Math.random() - 0.5) * 0.7 + root.cursorVelocityX * (0.0015 + Math.random() * 0.0035),
+              outwardY * lift + sideY * (Math.random() - 0.5) * 0.7 + root.cursorVelocityY * (0.0015 + Math.random() * 0.0035),
+              size,
+              0.46 + Math.random() * 0.28,
+              5000 + Math.random() * 4000
+            )
           }
         }
 
-        Timer {
-          interval: 58
-          repeat: true
-          running: root.effectVisible && root.mouseReactive
-          onTriggered: dustLayer.spawnTransientMote()
-        }
+        FrameAnimation {
+          id: dustFrameClock
 
-        Timer {
-          interval: 33
-          repeat: true
+          property real spawnAccumulator: 0
+
           running: root.effectVisible
-          triggeredOnStart: true
-          onTriggered: dustLayer.updatePersistentMotes()
-        }
-
-        Timer {
-          interval: 33
-          repeat: true
-          running: root.effectVisible && transientMotes.count > 0
-          onTriggered: dustLayer.updateTransientMotes()
+          onTriggered: {
+            var deltaMs = Math.min(50, frameTime * 1000)
+            dustLayer.updatePersistentMotes(deltaMs)
+            dustLayer.updateTransientMotes(deltaMs)
+            if (root.mouseReactive) {
+              spawnAccumulator += deltaMs
+              if (spawnAccumulator >= 58) {
+                dustLayer.spawnTransientMote()
+                spawnAccumulator = 0
+              }
+            } else {
+              spawnAccumulator = 0
+            }
+          }
         }
 
         Repeater {
@@ -493,8 +492,9 @@ Item {
               return root.clamp(value, -180, 180)
             }
 
-            function applyAirDisturbance() {
-              airAge += 0.033
+            function applyAirDisturbance(deltaMs) {
+              var deltaScale = Math.max(0.25, Math.min(2.5, deltaMs / 33))
+              airAge += deltaMs / 1000
               if (root.mouseReactive && root.mouseInfluence > 0 && root.cursorX >= 0 && root.cursorKick > 0) {
                 var cursorDx = x + width / 2 + airOffsetX - dustWindow.cursorLocalX
                 var cursorDy = y + height / 2 + airOffsetY - dustWindow.cursorLocalY
@@ -513,8 +513,8 @@ Item {
                   var radialY = cursorDy / cursorDistance
                   var swirlX = -radialY * swirlStrength
                   var swirlY = radialX * swirlStrength
-                  airVelocityX += (radialX * radialStrength + root.cursorVelocityX * wakeStrength + swirlX + noiseX) * forceScale * 0.062
-                  airVelocityY += (radialY * radialStrength + root.cursorVelocityY * wakeStrength + swirlY + noiseY) * forceScale * 0.062
+                  airVelocityX += (radialX * radialStrength + root.cursorVelocityX * wakeStrength + swirlX + noiseX) * forceScale * 0.062 * deltaScale
+                  airVelocityY += (radialY * radialStrength + root.cursorVelocityY * wakeStrength + swirlY + noiseY) * forceScale * 0.062 * deltaScale
                 }
               }
 
@@ -590,28 +590,42 @@ Item {
         Repeater {
           id: transientMoteRepeater
 
-          model: transientMotes
+          model: root.maxTransientMotes
 
           Rectangle {
             id: transientMote
 
             required property int index
-            required property real px
-            required property real py
-            required property real vx
-            required property real vy
-            required property real size
-            required property real alpha
-            required property real age
-            required property real life
+            property bool active: false
+            property real px: 0
+            property real py: 0
+            property real vx: 0
+            property real vy: 0
+            property real particleSize: 1
+            property real alpha: 0
+            property real age: 0
+            property real life: 1
 
-            width: Math.max(1, size)
+            width: Math.max(1, particleSize)
             height: width
             radius: width / 2
             x: px
             y: py
+            visible: active
             color: root.moteColor
             opacity: alpha * Math.min(1, age / 220) * Math.pow(Math.max(0, 1 - age / life), 0.95)
+
+            function spawn(nextX, nextY, nextVx, nextVy, nextSize, nextAlpha, nextLife) {
+              px = nextX
+              py = nextY
+              vx = nextVx
+              vy = nextVy
+              particleSize = nextSize
+              alpha = nextAlpha
+              age = 0
+              life = nextLife
+              active = true
+            }
 
             function applyCursorInfluence() {
               if (!root.mouseReactive || root.mouseInfluence <= 0 || root.cursorX < 0) return
@@ -634,15 +648,16 @@ Item {
             function advanceFrame(deltaMs) {
               transientMote.age += deltaMs
               if (transientMote.age >= transientMote.life) {
-                if (transientMote.index >= 0 && transientMote.index < transientMotes.count) transientMotes.remove(transientMote.index)
+                transientMote.active = false
                 return
               }
 
               transientMote.applyCursorInfluence()
-              transientMote.vx = root.clamp(transientMote.vx * 0.968, -7.5, 7.5)
-              transientMote.vy = root.clamp(transientMote.vy * 0.968, -7.5, 7.5)
-              transientMote.px += transientMote.vx
-              transientMote.py += transientMote.vy
+              var deltaScale = Math.max(0.25, Math.min(2.5, deltaMs / 33))
+              transientMote.vx = root.clamp(transientMote.vx * Math.pow(0.968, deltaScale), -7.5, 7.5)
+              transientMote.vy = root.clamp(transientMote.vy * Math.pow(0.968, deltaScale), -7.5, 7.5)
+              transientMote.px += transientMote.vx * deltaScale
+              transientMote.py += transientMote.vy * deltaScale
             }
           }
         }

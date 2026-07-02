@@ -2,6 +2,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
+import QtQuick.Particles
 
 Item {
   id: root
@@ -306,197 +307,93 @@ Item {
           }
         }
 
-        Repeater {
-          model: root.dropCount
+        ParticleSystem {
+          id: rainParticles
 
-          Item {
-            id: drop
+          anchors.fill: parent
+          running: root.effectVisible
 
-            readonly property real seed: index + 101
-            readonly property int dropLength: Math.round(26 + root.seededNoise(seed + 3) * 56)
-            readonly property int dropWidth: root.seededNoise(seed + 5) > 0.86 ? 2 : 1
-            readonly property int baseX: Math.round(root.seededNoise(seed + 7) * (rainWindow.width + 420)) - 210
-            readonly property int phaseOffset: Math.round(root.seededNoise(seed + 11) * rainWindow.height)
-            readonly property real dropSpeed: 0.72 + root.seededNoise(seed + 13) * 0.72
-            readonly property real dropOpacity: 0.22 + root.seededNoise(seed + 17) * 0.32
+          ImageParticle {
+            groups: ["sheet", "drop", "foreground"]
+            source: Qt.resolvedUrl("assets/raindrop.svg")
+            color: root.rainColor
+            colorVariation: 0.18
+            alpha: 0.46
+            entryEffect: ImageParticle.None
+          }
 
-            x: Math.round(baseX + y * root.windDrift)
-            y: -dropLength - phaseOffset
-            width: dropWidth
-            height: dropLength
-            opacity: dropOpacity
-            rotation: root.dropRotation
-            transformOrigin: Item.Center
+          Emitter {
+            id: rainSheetEmitter
 
-            SequentialAnimation on y {
-              loops: Animation.Infinite
-              running: root.effectVisible
-
-              PauseAnimation {
-                duration: Math.round(root.seededNoise(drop.seed + 19) * 900)
-              }
-
-              NumberAnimation {
-                from: -drop.dropLength - drop.phaseOffset
-                to: rainWindow.height + drop.dropLength
-                duration: Math.max(1500, (2600 + root.seededNoise(drop.seed + 23) * 1200) / (root.speed * drop.dropSpeed))
-                easing.type: Easing.Linear
-              }
-            }
-
-            Rectangle {
-              anchors.fill: parent
-              radius: Math.max(0.5, width / 2)
-              color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.44)
-            }
-
-            Rectangle {
-              x: Math.max(0, parent.width - 1)
-              y: Math.round(parent.height * 0.1)
-              width: 1
-              height: Math.round(parent.height * 0.56)
-              radius: 0.5
-              color: "#d7edf5"
-              opacity: 0.08
-            }
-
-            Rectangle {
-              anchors.fill: parent
-              radius: Math.max(0.5, width / 2)
-              gradient: Gradient {
-                orientation: Gradient.Vertical
-                GradientStop {
-                  position: 0
-                  color: "#00000000"
-                }
-                GradientStop {
-                  position: 0.24
-                  color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.1)
-                }
-                GradientStop {
-                  position: 0.78
-                  color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.46)
-                }
-                GradientStop {
-                  position: 1
-                  color: "#00000000"
-                }
-              }
+            group: "sheet"
+            x: 0
+            y: -height * 0.05
+            width: parent.width
+            height: parent.height * 1.1
+            emitRate: Math.max(16, Math.round(root.dropCount * 0.46))
+            lifeSpan: Math.max(1600, Math.round(4200 / root.speed))
+            lifeSpanVariation: 900
+            size: 34
+            sizeVariation: 20
+            endSize: 52
+            velocity: AngleDirection {
+              angle: 90 - root.slant * 38
+              angleVariation: 3
+              magnitude: 420 * root.speed
+              magnitudeVariation: 120
             }
           }
-        }
 
-        Repeater {
-          model: Math.max(24, Math.round(rainWindow.width / 34))
+          Emitter {
+            id: rainDropEmitter
 
-          Item {
-            id: rainSheet
-
-            readonly property real seed: index + 2201
-            readonly property int sheetLength: Math.round(68 + root.seededNoise(seed + 3) * 104)
-            readonly property int baseX: Math.round(index * 34 + root.seededNoise(seed + 5) * 46) - 80
-            readonly property real sheetSpeed: 0.72 + root.seededNoise(seed + 7) * 0.5
-
-            x: Math.round(baseX + y * root.windDrift * 0.55)
-            y: -sheetLength
-            width: root.seededNoise(seed + 11) > 0.82 ? 2 : 1
-            height: sheetLength
-            opacity: 0.1 + root.seededNoise(seed + 13) * 0.1
-            rotation: root.dropRotation
-            transformOrigin: Item.Center
-
-            NumberAnimation on y {
-              from: -rainSheet.sheetLength
-              to: rainWindow.height + rainSheet.sheetLength
-              duration: Math.max(1900, (3600 + root.seededNoise(rainSheet.seed + 17) * 1500) / (root.speed * rainSheet.sheetSpeed))
-              loops: Animation.Infinite
-              running: root.effectVisible
-              easing.type: Easing.Linear
-            }
-
-            Rectangle {
-              anchors.fill: parent
-              radius: Math.max(0.5, width / 2)
-              color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.36)
+            group: "drop"
+            x: -Math.round(parent.width * 0.16)
+            y: -height * 0.08
+            width: parent.width * 1.32
+            height: parent.height * 1.16
+            emitRate: Math.max(18, Math.round(root.dropCount * 0.64))
+            lifeSpan: Math.max(1200, Math.round(3200 / root.speed))
+            lifeSpanVariation: 720
+            size: 52
+            sizeVariation: 30
+            endSize: 68
+            velocity: AngleDirection {
+              angle: 90 - root.slant * 44
+              angleVariation: 4
+              magnitude: 620 * root.speed
+              magnitudeVariation: 180
             }
           }
-        }
 
-        Repeater {
-          model: Math.max(12, Math.round(root.dropCount * 0.18))
+          Emitter {
+            id: foregroundDropEmitter
 
-          Item {
-            id: foregroundDrop
-
-            readonly property real seed: index + 1301
-            readonly property int dropLength: Math.round(42 + root.seededNoise(seed + 3) * 72)
-            readonly property int baseX: Math.round(root.seededNoise(seed + 7) * (rainWindow.width + 520)) - 260
-            readonly property int phaseOffset: Math.round(root.seededNoise(seed + 11) * rainWindow.height)
-            readonly property real dropSpeed: 1.08 + root.seededNoise(seed + 13) * 0.82
-
-            x: Math.round(baseX + y * root.windDrift)
-            y: -dropLength - phaseOffset
-            width: 2
-            height: dropLength
-            opacity: 0.46
-            rotation: root.dropRotation
-            transformOrigin: Item.Center
-
-            SequentialAnimation on y {
-              loops: Animation.Infinite
-              running: root.effectVisible
-
-              PauseAnimation {
-                duration: Math.round(root.seededNoise(foregroundDrop.seed + 19) * 650)
-              }
-
-              NumberAnimation {
-                from: -foregroundDrop.dropLength - foregroundDrop.phaseOffset
-                to: rainWindow.height + foregroundDrop.dropLength
-                duration: Math.max(1300, (2200 + root.seededNoise(foregroundDrop.seed + 23) * 900) / (root.speed * foregroundDrop.dropSpeed))
-                easing.type: Easing.Linear
-              }
+            group: "foreground"
+            x: -Math.round(parent.width * 0.18)
+            y: -height * 0.08
+            width: parent.width * 1.36
+            height: parent.height * 1.16
+            emitRate: Math.max(8, Math.round(root.dropCount * 0.18))
+            lifeSpan: Math.max(900, Math.round(2300 / root.speed))
+            lifeSpanVariation: 420
+            size: 78
+            sizeVariation: 32
+            endSize: 96
+            velocity: AngleDirection {
+              angle: 90 - root.slant * 48
+              angleVariation: 3
+              magnitude: 820 * root.speed
+              magnitudeVariation: 180
             }
+          }
 
-            Rectangle {
-              anchors.fill: parent
-              radius: 1
-              color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.48)
-            }
-
-            Rectangle {
-              x: parent.width - 1
-              y: Math.round(parent.height * 0.08)
-              width: 1
-              height: Math.round(parent.height * 0.58)
-              radius: 0.5
-              color: "#d7edf5"
-              opacity: 0.1
-            }
-
-            Rectangle {
-              anchors.fill: parent
-              radius: 1
-              gradient: Gradient {
-                orientation: Gradient.Vertical
-                GradientStop {
-                  position: 0
-                  color: "#00000000"
-                }
-                GradientStop {
-                  position: 0.18
-                  color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.14)
-                }
-                GradientStop {
-                  position: 0.82
-                  color: Qt.rgba(root.rainColor.r, root.rainColor.g, root.rainColor.b, 0.64)
-                }
-                GradientStop {
-                  position: 1
-                  color: "#00000000"
-                }
-              }
-            }
+          Wander {
+            groups: ["sheet", "drop", "foreground"]
+            affectedParameter: Wander.Velocity
+            pace: 80
+            xVariance: 18 + Math.abs(root.slant) * 80
+            yVariance: 8
           }
         }
 
