@@ -6,6 +6,15 @@ This folder contains documents that are not primary project references:
 implementation plans, migration outlines, active trackers, completed plans, and
 superseded design notes.
 
+
+## Current Control Surfaces
+
+- `../roadmap.md`: current project priorities and operating cadence.
+- `../issues.md`: GitHub issue grouping, labels, and milestone mapping.
+
+Use this folder for implementation plans and historical notes, not for the
+current short priority queue.
+
 ## Active Or Recently Canonical Trackers
 
 - `lacuna-suite-improvement-plan.md`: repository improvement tracker and

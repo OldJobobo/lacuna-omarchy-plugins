@@ -10,6 +10,7 @@ This directory is split by document intent:
 - Contributor workflow documentation lives in `docs/development/`.
 - Design-language specifications live in `docs/lacuna-design-system/`.
 - UI reference captures live in `docs/screenshots/reference/`.
+- Project roadmap and issue grouping live in `roadmap.md` and `issues.md`.
 - Implementation plans, migration notes, historical trackers, and superseded
   design notes live in `docs/plans/`.
 
@@ -23,11 +24,13 @@ For users:
 
 For maintainers:
 
-1. [Architecture Overview](architecture/overview.md)
-2. [Plugin Contracts](architecture/plugin-contracts.md)
-3. [Services And State](architecture/services-and-state.md)
-4. [Testing](development/testing.md)
-5. [Release Notes](development/release.md)
+1. [Roadmap](roadmap.md)
+2. [Issue Map](issues.md)
+3. [Architecture Overview](architecture/overview.md)
+4. [Plugin Contracts](architecture/plugin-contracts.md)
+5. [Services And State](architecture/services-and-state.md)
+6. [Testing](development/testing.md)
+7. [Release Notes](development/release.md)
 
 For design work:
 
@@ -42,6 +45,8 @@ For historical context:
 
 - `install.md`: install, update, uninstall, and manual source workflows.
 - `configuration.md`: Omarchy shell settings and Lacuna runtime state.
+- `roadmap.md`: current project priorities and operating cadence.
+- `issues.md`: GitHub issue grouping, labels, and milestone mapping.
 - `architecture/`: current architecture, plugin contracts, and Omarchy
   integration policy.
 - `plugins/`: plugin catalog, install groups, and manifest metadata.
