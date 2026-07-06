@@ -137,18 +137,18 @@ Item {
         radius: Math.max(0, Number(vignetteWindow.frameRect.radius || 0))
         color: "transparent"
         enabled: false
-        opacity: 1
+        opacity: root.vignetteIntensity
         clip: true
 
-        ShaderEffect {
+        Image {
           anchors.fill: parent
-          blending: true
-          fragmentShader: Qt.resolvedUrl("shaders/background_vignette.frag.qsb")
-          property real intensity: root.vignetteIntensity
-          property real radius: 0.36
-          property real softness: 0.46
-          property real edgeWeight: 0.9
-          property vector2d resolution: Qt.vector2d(Math.max(1, width), Math.max(1, height))
+          source: Qt.resolvedUrl("assets/vignette.svg")
+          sourceSize.width: width
+          sourceSize.height: height
+          fillMode: Image.Stretch
+          smooth: true
+          asynchronous: true
+          cache: true
         }
       }
     }

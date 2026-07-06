@@ -14,7 +14,6 @@ Item {
   property bool runtimeEnabled: true
   property real runtimeIntensity: -1
   property int noiseTick: 0
-  property real noiseAccumulator: 0
   property real bloomPulse: 0
   property int bloomPulseCycle: 0
   property int bloomPulseDelay: 14000
@@ -171,18 +170,11 @@ Item {
     runtimeEnabled = false
   }
 
-  FrameAnimation {
-    id: noiseFrameClock
-
+  Timer {
+    interval: Math.max(70, 180 / root.speed)
+    repeat: true
     running: root.effectVisible && root.staticAmount > 0
-    onTriggered: {
-      root.noiseAccumulator += frameTime * 1000
-      var interval = Math.max(70, 180 / root.speed)
-      while (root.noiseAccumulator >= interval) {
-        root.noiseTick += 1
-        root.noiseAccumulator -= interval
-      }
-    }
+    onTriggered: root.noiseTick += 1
   }
 
   SequentialAnimation {

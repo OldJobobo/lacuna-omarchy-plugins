@@ -29,10 +29,7 @@ class QmlContractTests(unittest.TestCase):
 
     def test_ambience_overlays_use_frame_animation_not_wall_clock_timers(self):
         overlay_paths = [
-            "lacuna.dust-motes-overlay/Overlay.qml",
             "lacuna.film-grain-overlay/Overlay.qml",
-            "lacuna.crt-overlay/Overlay.qml",
-            "lacuna.vhs-overlay/Overlay.qml",
             "lacuna.rainfall-overlay/Overlay.qml",
             "lacuna.aurora-drift/Overlay.qml",
             "lacuna.god-rays-overlay/Overlay.qml",
@@ -40,10 +37,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.background-vignette/Overlay.qml",
         ]
         frame_driven_paths = {
-            "lacuna.dust-motes-overlay/Overlay.qml",
             "lacuna.film-grain-overlay/Overlay.qml",
-            "lacuna.crt-overlay/Overlay.qml",
-            "lacuna.vhs-overlay/Overlay.qml",
         }
 
         for path in overlay_paths:
@@ -1373,15 +1367,19 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("radius: Math.max(0, Number(vignetteWindow.frameRect.radius || 0))", vignette)
         self.assertIn('color: "transparent"', vignette)
         self.assertIn("clip: true", vignette)
-        self.assertIn("ShaderEffect {", vignette)
-        self.assertIn('fragmentShader: Qt.resolvedUrl("shaders/background_vignette.frag.qsb")', vignette)
-        self.assertIn("property vector2d resolution", vignette)
-        self.assertNotIn('source: Qt.resolvedUrl("assets/vignette.svg")', vignette)
+        self.assertIn('source: Qt.resolvedUrl("assets/vignette.svg")', vignette)
+        self.assertIn("sourceSize.width: width", vignette)
+        self.assertIn("sourceSize.height: height", vignette)
+        self.assertIn("fillMode: Image.Stretch", vignette)
         self.assertNotIn("LacunaVignette", vignette)
         self.assertNotIn("Canvas {", vignette)
         self.assertNotIn("gradient: Gradient", vignette)
-        self.assertTrue((ROOT / "lacuna.background-vignette/shaders/background_vignette.frag").exists())
-        self.assertTrue((ROOT / "lacuna.background-vignette/shaders/background_vignette.frag.qsb").exists())
+        self.assertNotIn("ShaderEffect", vignette)
+        self.assertFalse((ROOT / "lacuna.background-vignette/shaders").exists())
+        self.assertTrue((ROOT / "lacuna.background-vignette/assets/vignette.svg").exists())
+        vignette_asset = read("lacuna.background-vignette/assets/vignette.svg")
+        self.assertIn('id="left-edge"', vignette_asset)
+        self.assertIn('id="right-edge"', vignette_asset)
 
         self.assertIn("stylePreset", [entry["key"] for entry in cinematic_manifest["schema"]])
         self.assertIn("slowDrift", [entry["key"] for entry in cinematic_manifest["schema"]])
@@ -1469,57 +1467,14 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('readonly property real mouseInfluence: clamp(effectNumberSetting("mouseInfluence", "mouseInfluence", 0.28), 0, 1)', dust)
         self.assertIn("function effectBoolSetting", dust)
         self.assertIn("function backgroundEffectSettings", dust)
-        self.assertIn("import Quickshell.Hyprland", dust)
-        self.assertIn("Socket {", dust)
-        self.assertIn("cursorSocket.path = Hyprland.requestSocketPath", dust)
-        self.assertIn('write("j/cursorpos")', dust)
-        self.assertNotIn('cursorProc.command = ["hyprctl", "cursorpos", "-j"]', dust)
-        self.assertNotIn("Process {", dust)
+        self.assertIn('cursorProc.command = ["hyprctl", "cursorpos", "-j"]', dust)
         self.assertIn("function applyCursorPayload", dust)
-        self.assertIn("cursorDecayAccumulator = 0", dust)
-        self.assertIn("readonly property real cursorInfluenceRadiusSquared", dust)
-        self.assertIn("readonly property real cursorSpeed", dust)
-        self.assertIn("readonly property int maxTransientMotes", dust)
-        self.assertIn("property real airOffsetX: 0", dust)
-        self.assertIn("property real airVelocityX: 0", dust)
-        self.assertIn("function updatePersistentMotes", dust)
-        self.assertIn("persistentMoteRepeater.itemAt(i)", dust)
-        self.assertIn("function applyAirDisturbance", dust)
-        self.assertIn("var distanceSquared = cursorDx * cursorDx + cursorDy * cursorDy", dust)
-        self.assertIn("root.cursorVelocityX * wakeStrength", dust)
-        self.assertIn("airVelocityX = root.clamp", dust)
-        self.assertIn("FrameAnimation {", dust)
-        self.assertIn("dustLayer.updatePersistentMotes(deltaMs)", dust)
-        self.assertNotIn("ListModel {", dust)
-        self.assertIn("function updateTransientMotes", dust)
-        self.assertIn("transientMoteRepeater.itemAt(i)", dust)
-        self.assertIn("function firstReusableTransientMote", dust)
-        self.assertIn("function spawnTransientMote", dust)
-        self.assertIn("var mote = firstReusableTransientMote()", dust)
-        self.assertIn("mote.spawn(", dust)
-        self.assertNotIn("transientMotes.append({", dust)
-        self.assertIn("var radius = Math.sqrt(Math.random()) * (14 + root.moteSize * 3.4)", dust)
-        self.assertIn("var sideX = -outwardY", dust)
-        self.assertIn("outwardX * lift + sideX * (Math.random() - 0.5) * 0.7 + root.cursorVelocityX * (0.0015 + Math.random() * 0.0035)", dust)
-        self.assertIn("5000 + Math.random() * 4000", dust)
-        self.assertIn("transientMote.active = false", dust)
-        self.assertNotIn("transientMotes.remove(transientMote.index)", dust)
-        self.assertIn("opacity: alpha * Math.min(1, age / 220) * Math.pow(Math.max(0, 1 - age / life), 0.95)", dust)
-        self.assertIn("function applyCursorInfluence", dust)
-        self.assertIn("if (distanceSquared >= root.cursorInfluenceRadiusSquared) return", dust)
-        self.assertIn("var radialForce = (0.20 + root.cursorSpeed * 0.0025) * root.mouseInfluence * falloff", dust)
-        self.assertIn("transientMote.applyCursorInfluence()", dust)
-        self.assertIn("transientMote.vx = root.clamp(transientMote.vx * Math.pow(0.968, deltaScale), -7.5, 7.5)", dust)
-        self.assertIn("readonly property real wakeVariance", dust)
-        self.assertIn("readonly property real damping", dust)
-        self.assertIn("readonly property real spring", dust)
-        self.assertIn("var swirlStrength", dust)
-        self.assertIn("var noiseX", dust)
+        self.assertIn("cursorDecayTimer.restart()", dust)
+        self.assertIn("ListModel {", dust)
+        self.assertIn("transientMotes.append({", dust)
+        self.assertIn("var cursorFalloff = Math.pow(1 - cursorDistance / root.cursorInfluenceRadius, 1.35)", dust)
         self.assertIn("transform: [", dust)
         self.assertIn("Translate {", dust)
-        self.assertIn("x: mote.airOffsetX", dust)
-        self.assertIn("y: mote.airOffsetY", dust)
-        self.assertNotIn("mote.cursorFalloff * root.cursorKick", dust)
         self.assertIn("SequentialAnimation on x", dust)
         self.assertIn("SequentialAnimation on y", dust)
         self.assertIn('target: "lacuna-aurora-drift"', qml)

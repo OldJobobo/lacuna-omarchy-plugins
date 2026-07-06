@@ -27,33 +27,6 @@ else
   echo "warning: shellcheck not found; skipping shell script lint" >&2
 fi
 
-qsb_bin=""
-if command -v qsb >/dev/null 2>&1; then
-  qsb_bin="$(command -v qsb)"
-elif [ -x /usr/lib/qt6/bin/qsb ]; then
-  qsb_bin="/usr/lib/qt6/bin/qsb"
-fi
-
-if [ -n "$qsb_bin" ]; then
-  while IFS= read -r shader; do
-    baked="${shader}.qsb"
-    if [ ! -f "$baked" ]; then
-      echo "missing baked shader: $baked" >&2
-      exit 1
-    fi
-    tmp="$(mktemp)"
-    "$qsb_bin" --qt6 -O -o "$tmp" "$shader"
-    if ! cmp -s "$tmp" "$baked"; then
-      echo "stale baked shader: $baked" >&2
-      rm -f "$tmp"
-      exit 1
-    fi
-    rm -f "$tmp"
-  done < <(find . -maxdepth 3 -path './lacuna.*/shaders/*.frag' -print | sort)
-else
-  echo "warning: qsb not found; skipping shader bake validation" >&2
-fi
-
 scripts/sync-vendored --check
 
 if python3 -c 'import pytest' >/dev/null 2>&1; then

@@ -12,7 +12,6 @@ Item {
   property bool runtimeEnabled: true
   property real runtimeIntensity: -1
   property int noiseTick: 0
-  property real noiseAccumulator: 0
   property var lacunaSettings: ({})
 
   readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy/lacuna"
@@ -152,18 +151,11 @@ Item {
     runtimeEnabled = false
   }
 
-  FrameAnimation {
-    id: noiseFrameClock
-
+  Timer {
+    interval: Math.max(45, 120 / root.speed)
+    repeat: true
     running: root.effectVisible && root.noiseAmount > 0
-    onTriggered: {
-      root.noiseAccumulator += frameTime * 1000
-      var interval = Math.max(45, 120 / root.speed)
-      while (root.noiseAccumulator >= interval) {
-        root.noiseTick += 1
-        root.noiseAccumulator -= interval
-      }
-    }
+    onTriggered: root.noiseTick += 1
   }
 
   FileView {

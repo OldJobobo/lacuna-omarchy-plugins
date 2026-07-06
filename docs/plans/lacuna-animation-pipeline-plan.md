@@ -1,6 +1,6 @@
 # TASK: Streamline the desktop ambience animation pipeline to cinematic quality
 
-Status: T1/T2 landed; T3/T4 ambience-host consolidation reverted (see 2026-07-02 log)
+Status: fully reverted — T1/T2 optimizations and the T3/T4 ambience-host consolidation are all rolled back to the item-based standalone overlays (see 2026-07-02 and 2026-07-05 logs)
 
 Executable plan for an LLM or developer. Findings were measured against the
 actual overlay sources on 2026-07-02; do not re-derive them.
@@ -305,3 +305,25 @@ monitor, no frame >20ms during steady state, enable hitch <1 frame.
   shader per effect carrying that effect's full settings schema as uniforms,
   clipped to the frame rect, and verified side-by-side against the legacy
   reference captures before moving to the next effect.
+
+### 2026-07-05 full revert of the remaining T1/T2 optimizations
+
+- Film grain and rainfall had already been reverted to item-based rendering
+  after live review. This pass reverts the rest of the T1/T2 work, restoring
+  the remaining optimized overlays to their exact pre-pipeline sources:
+  - `lacuna.dust-motes-overlay`: back to wall-clock Timers, `hyprctl
+    cursorpos` subprocess polling for cursor reactivity, and `ListModel`
+    append/remove transient motes (drops FrameAnimation, the Hyprland IPC
+    cursor socket, and the fixed recycled mote pool).
+  - `lacuna.crt-overlay` / `lacuna.vhs-overlay`: back to Timer-driven
+    animation instead of FrameAnimation.
+  - `lacuna.background-vignette`: back to the stretched `assets/vignette.svg`
+    image; deleted `shaders/background_vignette.frag(.qsb)`.
+  - `scripts/check.sh`: removed the qsb bake-validation block (no `.frag`
+    sources remain in the repo).
+- The item-based designs are authoritative. The film-grain overlay keeps the
+  FrameAnimation driver its item-based revert shipped with; every other
+  ambience overlay is back to its original renderer.
+- Updated `tests/test_qml_contracts.py` to assert the restored contracts
+  (Timer-based dust/CRT/VHS allowed again, SVG vignette, no shader assets).
+- Validation: `./scripts/check.sh` passed with `206 passed, 2 skipped`.
