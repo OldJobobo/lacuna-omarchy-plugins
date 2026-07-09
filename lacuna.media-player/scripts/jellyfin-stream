@@ -15,14 +15,25 @@ def load_config(raw):
         return {}
 
 
+def load_settings(path):
+    try:
+        payload = json.loads(open(path, encoding="utf-8").read() or "{}")
+    except (OSError, json.JSONDecodeError):
+        return {}
+    providers = payload.get("mediaProviders") if isinstance(payload, dict) else {}
+    return providers.get("jellyfin", {}) if isinstance(providers, dict) else {}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config-json", required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--config-json")
+    source.add_argument("--settings-file")
     parser.add_argument("--item-id", required=True)
     parser.add_argument("--media-type", default="video")
     args = parser.parse_args(argv)
 
-    config = load_config(args.config_json)
+    config = load_settings(args.settings_file) if args.settings_file else load_config(args.config_json)
     server_url = clean_server_url(config.get("serverUrl"))
     api_key = str(config.get("apiKey") or "").strip()
     item_id = str(args.item_id or "").strip()

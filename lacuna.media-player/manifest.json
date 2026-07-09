@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "id": "lacuna.youtube-music",
-  "name": "Lacuna YouTube Music",
+  "id": "lacuna.media-player",
+  "name": "Lacuna Media Player",
   "version": "0.1.0",
   "author": "Lacuna",
-  "description": "Experimental Lacuna service for YouTube search, queue, and mpv playback.",
+  "description": "Experimental Lacuna service for media search, queue, and mpv playback.",
   "kinds": [
     "service"
   ],
@@ -53,7 +53,7 @@
     "recommends": [
       "lacuna.menu",
       "lacuna.audio",
-      "lacuna.youtube-music-video"
+      "lacuna.media-player-video"
     ]
   }
 }

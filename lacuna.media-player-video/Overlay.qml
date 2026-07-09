@@ -80,14 +80,14 @@ Item {
   function resolveService() {
     if (root.service) return
     if (root.shell && typeof root.shell.ensureService === "function") {
-      var ensured = root.shell.ensureService("lacuna.youtube-music")
+      var ensured = root.shell.ensureService("lacuna.media-player")
       if (ensured) {
         root.service = ensured
         return
       }
     }
     if (root.shell && typeof root.shell.serviceFor === "function") {
-      var existing = root.shell.serviceFor("lacuna.youtube-music")
+      var existing = root.shell.serviceFor("lacuna.media-player")
       if (existing) root.service = existing
     }
   }
@@ -164,7 +164,7 @@ Item {
 
   function notePlayerError(message) {
     if (activeSource === "") return
-    console.warn("lacuna.youtube-music-video: player error:", message, "restartAttempts:", mediaRestartAttempts)
+    console.warn("lacuna.media-player-video: player error:", message, "restartAttempts:", mediaRestartAttempts)
     if (mediaRestartAttempts < 2 && service && typeof service.refreshBackgroundStream === "function") {
       mediaRestartAttempts += 1
       waitingForPlayerReady = true
@@ -188,7 +188,7 @@ Item {
   }
 
   function giveUpWallpaper(reason) {
-    console.warn("lacuna.youtube-music-video: wallpaper gave up:", reason)
+    console.warn("lacuna.media-player-video: wallpaper gave up:", reason)
     wallpaperFadeGateTimer.stop()
     fadeRevealTimer.stop()
     waitingForPlayerReady = false
@@ -414,7 +414,7 @@ Item {
       color: "transparent"
       implicitWidth: 0
       implicitHeight: 0
-      WlrLayershell.namespace: "lacuna-youtube-music-video"
+      WlrLayershell.namespace: "lacuna-media-player-video"
       WlrLayershell.layer: WlrLayer.Background
       WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
       exclusionMode: ExclusionMode.Ignore
@@ -536,7 +536,9 @@ Item {
   }
 
   IpcHandler {
-    target: "lacuna-youtube-music-video"
+    id: mediaPlayerVideoIpc
+
+    target: "lacuna-media-player-video"
 
     function status(): string {
       return JSON.stringify({
@@ -577,6 +579,14 @@ Item {
         wallpaperRecoveryAttempts: root.wallpaperRecoveryAttempts,
         backend: "qml-framed-video"
       })
+    }
+  }
+
+  IpcHandler {
+    target: "lacuna-youtube-music-video"
+
+    function status(): string {
+      return mediaPlayerVideoIpc.status()
     }
   }
 }

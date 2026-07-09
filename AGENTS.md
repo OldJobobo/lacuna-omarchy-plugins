@@ -60,7 +60,7 @@ Read it before touching any attached flyout. The load-bearing invariants:
 
 ## Background Video Transitions
 
-`lacuna.youtube-music-video/Overlay.qml` owns the YouTube Music background video layer and its black fade cover. Keep startup and shutdown as two-phase transitions:
+`lacuna.media-player-video/Overlay.qml` owns the Media Player background video layer and its black fade cover. Keep startup and shutdown as two-phase transitions:
 
 - When a new background video becomes available, raise the black cover first and delay assigning `activeSource` until the cover has finished fading to black. This prevents the video from appearing abruptly behind the sidebar.
 - When background video is disabled or playback stops, keep the last `activeSource` alive while the black cover fades in, clear the source only after the cover is opaque, then fade the cover back out to reveal the sidebar/frame.

@@ -290,16 +290,16 @@ class PreloadThemeSwitcherTests(unittest.TestCase):
             self.assertEqual(status["changed"], False)
 
 
-class YoutubeMusicScriptTests(unittest.TestCase):
-    CHECK_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-check"
-    SEARCH_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-search"
-    CONTROL_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-control"
-    INFO_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-info"
-    REFRESH_FAVORITES_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-refresh-favorites"
-    PREVIEW_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-preview"
-    JELLYFIN_SEARCH_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-jellyfin-search"
-    JELLYFIN_STREAM_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-jellyfin-stream"
-    AUTH_SCRIPT = ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-auth"
+class MediaPlayerScriptTests(unittest.TestCase):
+    CHECK_SCRIPT = ROOT / "lacuna.media-player" / "scripts" / "media-player-check"
+    SEARCH_SCRIPT = ROOT / "lacuna.media-player" / "scripts" / "media-player-search"
+    CONTROL_SCRIPT = ROOT / "lacuna.media-player" / "scripts" / "media-player-control"
+    INFO_SCRIPT = ROOT / "lacuna.media-player" / "scripts" / "media-player-info"
+    REFRESH_FAVORITES_SCRIPT = ROOT / "lacuna.media-player" / "scripts" / "media-player-refresh-favorites"
+    PREVIEW_SCRIPT = ROOT / "lacuna.media-player" / "scripts" / "media-player-preview"
+    JELLYFIN_SEARCH_SCRIPT = ROOT / "lacuna.media-player" / "scripts" / "jellyfin-search"
+    JELLYFIN_STREAM_SCRIPT = ROOT / "lacuna.media-player" / "scripts" / "jellyfin-stream"
+    AUTH_SCRIPT = ROOT / "lacuna.media-player" / "scripts" / "youtube-auth"
 
     def test_dependency_check_reports_missing_tools(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -840,7 +840,7 @@ class YoutubeMusicScriptTests(unittest.TestCase):
     def test_refresh_favorites_repairs_placeholder_youtube_titles(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            state_file = tmp / "youtube-music.json"
+            state_file = tmp / "media-player.json"
             state_file.write_text(json.dumps({
                 "version": 3,
                 "favorites": [{
@@ -861,7 +861,7 @@ class YoutubeMusicScriptTests(unittest.TestCase):
                     "url": "https://www.youtube.com/watch?v=keep",
                 }],
             }), encoding="utf-8")
-            info_script = tmp / "youtube-music-info"
+            info_script = tmp / "media-player-info"
             write_exec(
                 info_script,
                 "#!/usr/bin/env python3\n"
@@ -944,8 +944,9 @@ class YoutubeMusicScriptTests(unittest.TestCase):
         self.assertEqual(payload["results"][0]["mediaType"], "audio")
         self.assertEqual(payload["results"][0]["streamKind"], "audio")
         self.assertEqual(payload["results"][0]["durationText"], "3:05")
-        self.assertIn("/Items/audio-1/Download?", payload["results"][0]["url"])
-        self.assertIn("/Items/audio-1/Images/Primary?", payload["results"][0]["thumbnail"])
+        self.assertEqual(payload["results"][0]["url"], "jellyfin://item/audio-1")
+        self.assertEqual(payload["results"][0]["thumbnail"], "")
+        self.assertNotIn("secret-token", json.dumps(payload))
         self.assertEqual(payload["results"][1]["mediaType"], "video")
 
     def test_jellyfin_search_missing_config_is_nonfatal(self):
@@ -985,6 +986,42 @@ class YoutubeMusicScriptTests(unittest.TestCase):
         self.assertEqual(payload["mediaType"], "video")
         self.assertEqual(payload["url"], "https://jellyfin.example/base/Items/movie%201/Download?api_key=secret-token")
         self.assertEqual(payload["thumbnail"], "https://jellyfin.example/base/Items/movie%201/Images/Primary?fillWidth=420&quality=90&api_key=secret-token")
+
+    def test_jellyfin_scripts_load_credentials_from_settings_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            settings = Path(tmpdir) / "settings.json"
+            settings.write_text(json.dumps({
+                "mediaProviders": {
+                    "jellyfin": {
+                        "enabled": True,
+                        "serverUrl": "https://jellyfin.example",
+                        "apiKey": "secret-token",
+                    }
+                }
+            }), encoding="utf-8")
+            result = run([
+                sys.executable,
+                str(self.JELLYFIN_STREAM_SCRIPT),
+                "--settings-file",
+                str(settings),
+                "--item-id",
+                "movie-1",
+            ], {})
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("api_key=secret-token", json.loads(result.stdout)["url"])
+
+    def test_cleanup_does_not_signal_unverified_pid(self):
+        module = load_script(self.CONTROL_SCRIPT, "media_player_control_cleanup_test")
+        killed = []
+        with tempfile.TemporaryDirectory() as tmpdir:
+            socket_path = str(Path(tmpdir) / "mpv.sock")
+            Path(module.pid_path(socket_path)).write_text("4242", encoding="utf-8")
+            module.pid_matches_player = lambda pid, path: False
+            module.os.kill = lambda pid, signal: killed.append((pid, signal))
+            module.cleanup_socket(socket_path)
+
+        self.assertEqual(killed, [])
 
     def test_preview_prefers_direct_mp4_format(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1053,7 +1090,7 @@ class YoutubeMusicScriptTests(unittest.TestCase):
                 "print('https://video.example/background.mp4')\n",
             )
             result = run(
-                [sys.executable, str(ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-background"), "https://www.youtube.com/watch?v=abc123"],
+                [sys.executable, str(ROOT / "lacuna.media-player" / "scripts" / "media-player-background"), "https://www.youtube.com/watch?v=abc123"],
                 {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
             )
             argv = json.loads((tmp / "argv.json").read_text())
@@ -1083,7 +1120,7 @@ class YoutubeMusicScriptTests(unittest.TestCase):
                 "print('https://video.example/background-fallback.mp4')\n",
             )
             result = run(
-                [sys.executable, str(ROOT / "lacuna.youtube-music" / "scripts" / "youtube-music-background"), "https://www.youtube.com/watch?v=abc123"],
+                [sys.executable, str(ROOT / "lacuna.media-player" / "scripts" / "media-player-background"), "https://www.youtube.com/watch?v=abc123"],
                 {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
             )
             calls = [json.loads(line) for line in (tmp / "calls.jsonl").read_text().splitlines()]

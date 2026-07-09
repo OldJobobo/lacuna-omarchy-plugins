@@ -125,8 +125,8 @@ Column {
       pressOpacity: root.designTokens.activeOpacity
       iconSize: root.compact ? 13 : 15
       onTriggered: {
-        if (root.service && typeof root.service.openYoutubeMusicLogin === "function")
-          root.service.openYoutubeMusicLogin()
+        if (root.service && typeof root.service.openYoutubeLogin === "function")
+          root.service.openYoutubeLogin()
       }
     }
 

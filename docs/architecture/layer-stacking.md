@@ -42,7 +42,7 @@ toggle time). Hence the rules below.
 
 | Level | Surfaces | Notes |
 | --- | --- | --- |
-| background | `omarchy-background` (Omarchy), `lacuna-youtube-music-video`, `lacuna-background-vignette` (ignore-animations mode) | Video wallpaper carries its own fade cover internally. |
+| background | `omarchy-background` (Omarchy), `lacuna-media-player-video`, `lacuna-background-vignette` (ignore-animations mode) | Video wallpaper carries its own fade cover internally. |
 | bottom | Ambience overlays (`aurora-drift`, `cinematic-light`, `crt`, `dust-motes`, `film-grain`, `god-rays`, `rainfall`, `vhs`), `lacuna-desktop-clock`, `lacuna-background-vignette` (default) | Below windows, above wallpaper. |
 | top | `lacuna-bar-frame` (always mapped, maps first), `omarchy-bar`, frame/sidebar reserve windows, `lacuna-menu` sidebar (exclusive panels) | Required map order: frame → bar → sidebar. |
 | overlay | `lacuna-bar-frame-border` (always mapped, maps first), transient panels (`audio`, `bluetooth`, `network`, `power`), `omarchy-bar-drag-ghost`, non-exclusive Lacuna panels, ambience overlays in `foregroundOverlay` mode | Border is 1px and click-through; transient panels map above it because they map later. |

@@ -41,18 +41,18 @@ Targets and the regressions they would have caught:
    open/close/toggle menu and flyout sequences; assert state names,
    progress endpoints, revision-guarded completion (no stuck
    `openingMenu`/`closingFlyout` states after rapid toggles).
-2. `lacuna.menu/menu/YoutubeMusicTile.qml` preview state machine (stub
+2. `lacuna.menu/menu/MediaPlayerTile.qml` preview state machine (stub
    service; MediaPlayer never gets a real URL): desktop→sidebar handoff must
    clear `previewSuppressed`, re-seek, and never suppress while
    `previewPositionPending`/settling; drift strikes reach suppression only
    after repeated misses. (Would have caught the suppression race.)
-3. `lacuna.youtube-music-video/Overlay.qml` choreography (stub service;
+3. `lacuna.media-player-video/Overlay.qml` choreography (stub service;
    `activeSource` kept empty or file:// stub so windows stay transparent):
    assert ordering — cover opaque BEFORE `activeSource` assigned on switch;
    reveal only after player-ready or watchdog; `waitingForHighRes` +
    resolve-failure releases the cover (no black-forever); exit clears source
    only under opaque cover. (Would have caught pop-in and black-forever.)
-4. `lacuna.youtube-music/Service.qml` beyond load: track-end probe payloads
+4. `lacuna.media-player/Service.qml` beyond load: track-end probe payloads
    drive `handlePlaybackEnded` (feed fake `probe` JSON via a stub
    controlScript on PATH), stale `playbackSessionRevision` results discarded.
 

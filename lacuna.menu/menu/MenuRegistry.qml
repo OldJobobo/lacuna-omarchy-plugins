@@ -28,6 +28,7 @@ Item {
   property string frameReserveMode: "auto"
   property bool frameShadow: false
   property bool frameBorder: false
+  property var mediaProviders: ({})
   property var backgroundEffects: ({})
   property var backgroundVignette: ({})
   property var shellBarConfig: ({})
@@ -796,6 +797,28 @@ Item {
 
   function shellSettingsSurfaceHint() {
     return root.shellSettingsSurface === "window" ? "Open Omarchy shell settings as a separate floating window" : "Attach Omarchy shell settings to the Lacuna sidebar"
+  }
+
+  function jellyfinProviderSettings() {
+    var providers = root.mediaProviders && typeof root.mediaProviders === "object" ? root.mediaProviders : ({})
+    var jellyfin = providers.jellyfin && typeof providers.jellyfin === "object" ? providers.jellyfin : ({})
+    return {
+      enabled: jellyfin.enabled === true,
+      serverUrl: String(jellyfin.serverUrl || ""),
+      apiKey: String(jellyfin.apiKey || ""),
+      userId: String(jellyfin.userId || "")
+    }
+  }
+
+  readonly property bool jellyfinProviderEnabled: jellyfinProviderSettings().enabled
+  readonly property string jellyfinServerUrl: jellyfinProviderSettings().serverUrl
+  readonly property string jellyfinApiKey: jellyfinProviderSettings().apiKey
+  readonly property bool jellyfinApiKeyConfigured: jellyfinApiKey !== ""
+
+  function jellyfinProviderHint() {
+    if (!jellyfinProviderEnabled) return "Jellyfin search is disabled"
+    if (jellyfinServerUrl === "" || jellyfinApiKey === "") return "Jellyfin needs a server URL and API key"
+    return "Jellyfin results are merged into Media Player search"
   }
 
   function layoutOptions() {

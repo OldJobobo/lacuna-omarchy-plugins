@@ -20,6 +20,24 @@ def plugin_manifest_paths():
 
 
 class QmlContractTests(unittest.TestCase):
+    def test_media_player_keeps_jellyfin_credentials_out_of_persistent_tracks_and_ipc(self):
+        service = read("lacuna.media-player/Service.qml")
+        search_script = read("lacuna.media-player/scripts/jellyfin-search")
+        status_body = service[service.index("function status(): string") : service.index("function setBackgroundVideo", service.index("function status(): string"))]
+
+        self.assertIn('return id === "" ? "" : "jellyfin://item/" + encodeURIComponent(id)', service)
+        self.assertIn('thumbnail: provider === "jellyfin" ? "" : trackThumbnail(track)', service)
+        self.assertIn('"url": stable_item_url(item_id)', search_script)
+        self.assertNotIn('"api_key": api_key', search_script)
+        self.assertNotIn("previewUrl:", status_body)
+        self.assertNotIn("backgroundUrl:", status_body)
+
+    def test_lacuna_settings_files_are_restricted_after_load_and_write(self):
+        for path in ("lacuna.state/Service.qml", "lacuna.menu/services/LacunaSettings.qml"):
+            qml = read(path)
+            self.assertIn('["chmod", "600", root.settingsFile, root.settingsFile + ".bak"]', qml, path)
+            self.assertIn("secureSettingsFile()", qml, path)
+
     def test_shader_effect_qsb_references_exist(self):
         pattern = re.compile(r'fragmentShader:\s*Qt\.resolvedUrl\("([^"]+\.qsb)"\)')
         for qml_path in sorted(ROOT.glob("lacuna.*/**/*.qml")):
@@ -1444,6 +1462,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("mediaProviders", read("lacuna.menu/services/LacunaSettings.qml"))
         self.assertIn("function normalizeMediaProviders", read("lacuna.menu/services/LacunaSettings.qml"))
         self.assertIn("function normalizeMediaProviders", read("lacuna.state/Service.qml"))
+        self.assertIn("userId", settings_example["mediaProviders"]["jellyfin"])
+        self.assertEqual("fixture-user", full_settings["mediaProviders"]["jellyfin"]["userId"])
         self.assertIn("backgroundEffects.activeEffect", qml)
         self.assertIn("backgroundEffects.activeEffect", vhs)
         self.assertIn("backgroundEffects.activeEffect", film)
@@ -1807,7 +1827,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.power/Panel.qml": ["WlrLayer.Overlay"],
             "lacuna.rainfall-overlay/Overlay.qml": ["root.foregroundOverlay ? WlrLayer.Overlay : WlrLayer.Bottom"],
             "lacuna.vhs-overlay/Overlay.qml": ["root.foregroundOverlay ? WlrLayer.Overlay : WlrLayer.Bottom"],
-            "lacuna.youtube-music-video/Overlay.qml": ["WlrLayer.Background"],
+            "lacuna.media-player-video/Overlay.qml": ["WlrLayer.Background"],
         }
 
         found = {}
@@ -1842,8 +1862,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("&& root.frameReservesReady", bar)
         self.assertIn("id: frameReserveSettleTimer", bar)
 
-    def test_youtube_music_video_waits_for_high_res_background_stream(self):
-        overlay = read("lacuna.youtube-music-video/Overlay.qml")
+    def test_media_player_video_waits_for_high_res_background_stream(self):
+        overlay = read("lacuna.media-player-video/Overlay.qml")
         bar = read("lacuna.bar/Bar.qml")
 
         self.assertIn("readonly property string highResVideoSource", overlay)
@@ -1878,11 +1898,11 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("muted: true", overlay)
         self.assertIn("fillMode: VideoOutput.PreserveAspectCrop", overlay)
         self.assertIn("source: videoWindow.renderable ? root.activeSource : \"\"", overlay)
-        self.assertIn('WlrLayershell.namespace: "lacuna-youtube-music-video"', overlay)
+        self.assertIn('WlrLayershell.namespace: "lacuna-media-player-video"', overlay)
         # The fade cover must live inside the video window (deterministic
         # sibling z-order), never as a second layer-shell surface whose
         # stacking against the video window is map-order dependent.
-        self.assertNotIn("lacuna-youtube-music-video-fade", overlay)
+        self.assertNotIn("lacuna-media-player-video-fade", overlay)
         self.assertIn("id: fadeCover", overlay)
         self.assertIn("z: 10", overlay)
         self.assertIn("WlrLayershell.layer: WlrLayer.Background", overlay)
@@ -2438,8 +2458,8 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("function drainFailures", qml, path)
             self.assertIn("onExited: root.drainFailures()", qml, path)
 
-    def test_youtube_music_favorites_are_persisted_and_exposed(self):
-        service = read("lacuna.youtube-music/Service.qml")
+    def test_media_player_favorites_are_persisted_and_exposed(self):
+        service = read("lacuna.media-player/Service.qml")
 
         for snippet in [
             "property var favorites: []",
@@ -2450,7 +2470,7 @@ class QmlContractTests(unittest.TestCase):
             "favorites: normalizeUniqueTrackList(source.favorites, 500)",
             "repeatMode: normalizeRepeatMode(source.repeatMode)",
             "provider: provider",
-            "providerId: String(track.providerId || track.itemId || track.id || \"\")",
+            "providerId: providerId",
             "mediaType: mediaType",
             "streamKind: streamKind",
             "libraryName: String(track.libraryName || \"\")",
@@ -2478,9 +2498,9 @@ class QmlContractTests(unittest.TestCase):
             "function streamKindFor(track)",
             "function itemHasVideo(track)",
             "providerSearchActive = true",
-            "startJellyfinSearch(trimmed, providerSearchLimit(\"jellyfin\"))",
-            "jellyfinSearchProc.command = [jellyfinSearchScript, \"--config-json\", jellyfinConfigJson",
-            "completeProviderSearch(\"jellyfin\", rows, error)",
+            "startJellyfinSearch(trimmed, providerSearchLimit(\"jellyfin\"), searchRevision)",
+            "jellyfinSearchProc.pendingCommand = [jellyfinSearchScript, \"--settings-file\", lacunaSettingsFile",
+            "completeProviderSearch(\"jellyfin\", rows, error, requestRevision)",
             "function normalizeUniqueTrackList",
             "function normalizeRepeatMode",
             "function normalizeSearchFilter(value)",
@@ -2498,11 +2518,12 @@ class QmlContractTests(unittest.TestCase):
             "if (youtubeLoginEnabled) refreshYoutubeResultsAfterLogin()",
             "function setSearchFilter(value)",
             "searchFilter = next",
-            "function startYoutubeSuggestions(limit)",
-            "startYoutubeSuggestions(Math.min(maxResults, 24))",
-            "searchProc.command = [searchScript, \"--config-json\", youtubeConfigJson, \"--filter\", searchFilter",
+            "function startYoutubeSuggestions(limit, revision)",
+            "startYoutubeSuggestions(Math.min(maxResults, 24), searchRevision)",
+            "searchProc.pendingCommand = [searchScript, \"--config-json\", youtubeConfigJson, \"--filter\", searchFilter",
             "pendingDefaultSuggestions = true",
-            "if (root.pendingDefaultSuggestions && (root.ytdlpAvailable || root.jellyfinConfigured || root.youtubeLoginEnabled)) root.loadDefaultSuggestions()",
+            "if (root.pendingDefaultSuggestions && (root.ytdlpAvailable || root.jellyfinConfigured)) root.loadDefaultSuggestions()",
+            "function openYoutubeLogin()",
             "function openYoutubeMusicLogin()",
             "authProc.command = [authScript, \"--auth-dir\", youtubeAuthDir]",
             "id: authProc",
@@ -2583,15 +2604,16 @@ class QmlContractTests(unittest.TestCase):
             "function toggleFavoriteCurrent(): string",
             "function refreshFavoriteMetadata(): string",
             "function cycleRepeatMode(): string",
+            "function openYoutubeLogin(): string",
             "function openYoutubeMusicLogin(): string",
         ]:
             self.assertIn(snippet, service)
-        self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-auth").exists())
-        self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-jellyfin-search").exists())
-        self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-jellyfin-stream").exists())
-        self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-info").exists())
-        self.assertTrue((ROOT / "lacuna.youtube-music/scripts/youtube-music-refresh-favorites").exists())
-        search_script = read("lacuna.youtube-music/scripts/youtube-music-search")
+        self.assertTrue((ROOT / "lacuna.media-player/scripts/youtube-auth").exists())
+        self.assertTrue((ROOT / "lacuna.media-player/scripts/jellyfin-search").exists())
+        self.assertTrue((ROOT / "lacuna.media-player/scripts/jellyfin-stream").exists())
+        self.assertTrue((ROOT / "lacuna.media-player/scripts/media-player-info").exists())
+        self.assertTrue((ROOT / "lacuna.media-player/scripts/media-player-refresh-favorites").exists())
+        search_script = read("lacuna.media-player/scripts/media-player-search")
         self.assertIn("def youtube_home_results", search_script)
         self.assertIn("def filtered_home_music_rows", search_script)
         self.assertIn('parser.add_argument("--filter"', search_script)
@@ -2599,15 +2621,15 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('"YouTube Home"', search_script)
         self.assertIn('"YouTube Home Music"', search_script)
 
-    def test_youtube_music_favorites_are_available_in_menu_ui(self):
-        flyout = read("lacuna.menu/menu/FlyoutYoutubeMusicContent.qml")
-        tile = read("lacuna.menu/menu/YoutubeMusicTile.qml")
+    def test_media_player_favorites_are_available_in_menu_ui(self):
+        flyout = read("lacuna.menu/menu/FlyoutMediaPlayerContent.qml")
+        tile = read("lacuna.menu/menu/MediaPlayerTile.qml")
         icons = read("lacuna.menu/components/LacunaTablerIcon.qml")
 
         for snippet in [
             "id: accountButton",
             'icon: "user-circle"',
-            "root.service.openYoutubeMusicLogin()",
+            "root.service.openYoutubeLogin()",
             'id: "favorites"',
             'icon: "heart"',
             'label: "Favorites"',
@@ -2775,8 +2797,8 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.wallpaper",
             "lacuna.weather",
             "lacuna.workspaces",
-            "lacuna.youtube-music",
-            "lacuna.youtube-music-video",
+            "lacuna.media-player",
+            "lacuna.media-player-video",
         }
         bundle_only = set(manifests) - standalone
 
@@ -3106,6 +3128,56 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn('"Wallpaper Catalog"', qml, path)
             self.assertIn('"Restart Shell"', qml, path)
             self.assertIn('"Open Log"', qml, path)
+
+    def test_media_player_provider_settings_expose_jellyfin_v1(self):
+        settings_window = read("lacuna.menu/settings/SettingsWindow.qml")
+        registry = read("lacuna.menu/menu/MenuRegistry.qml")
+        menu = read("lacuna.menu/menu/MenuWindow.qml")
+        text_row = read("lacuna.menu/settings/SettingsTextRow.qml")
+
+        for snippet in [
+            '{ id: "media-player", icon: "music", label: "Media Player"',
+            'navRow("music", "Media Player", "Provider search and playback sources", "media-player"',
+            'section("Providers", "Configure media sources used by search and playback.", "lacuna")',
+            '"toggle-jellyfin-provider"',
+            '"Server URL"',
+            '"set-jellyfin-server-url-"',
+            '"API Key"',
+            '"set-jellyfin-api-key-"',
+            "SettingsTextRow",
+            "entry.control === \"text\"",
+        ]:
+            self.assertIn(snippet, settings_window)
+
+        for snippet in [
+            "property var mediaProviders",
+            "function jellyfinProviderSettings()",
+            "readonly property bool jellyfinProviderEnabled",
+            "readonly property string jellyfinServerUrl",
+            "readonly property string jellyfinApiKey",
+            "function jellyfinProviderHint()",
+            "Jellyfin results are merged into Media Player search",
+        ]:
+            self.assertIn(snippet, registry)
+
+        for snippet in [
+            "readonly property var mediaProvidersSettings",
+            "function cleanJellyfinServerUrl(value)",
+            "function ensureMediaProviders(settings)",
+            "function setJellyfinProviderEnabled(enabled)",
+            "function setJellyfinServerUrl(value)",
+            "function setJellyfinApiKey(value)",
+            "setJellyfinProviderEnabled(desiredChecked(entry, !registry.jellyfinProviderEnabled))",
+            'entry.action.indexOf("set-jellyfin-server-url-") === 0',
+            'entry.action.indexOf("set-jellyfin-api-key-") === 0',
+            "mediaProviders: root.mediaProvidersSettings",
+        ]:
+            self.assertIn(snippet, menu)
+
+        self.assertIn("signal accepted(string value)", text_row)
+        self.assertIn("property bool masked: false", text_row)
+        self.assertIn("echoMode: root.masked ? TextInput.Password : TextInput.Normal", text_row)
+        self.assertIn("onEditingFinished: root.accepted(text)", text_row)
 
     def test_lacuna_settings_windows_use_parent_control_state(self):
         settings_window = read("lacuna.menu/settings/SettingsWindow.qml")

@@ -90,9 +90,9 @@ The largest plugin and the heart of the core bundle: `menu/` (surfaces, flyouts,
 
 Flyout panels attached to the sidebar follow strict geometry rules (square attachment edge, Omarchy-style molding connectors using the `curveKappa` constant from `lacuna.menu/menu/MenuSurface.qml`, fill-only background shapes, no `Rectangle.radius` on attached edges) — see "Flyout Surface Geometry" in `AGENTS.md` before touching them.
 
-### lacuna.youtube-music-video
+### lacuna.media-player-video
 
-`lacuna.youtube-music-video/Overlay.qml` renders the YouTube Music background video and the black fade cover. Treat startup and shutdown as two-phase transitions:
+`lacuna.media-player-video/Overlay.qml` renders the Media Player background video and the black fade cover. Treat startup and shutdown as two-phase transitions:
 
 - Startup: raise the black cover first, wait for the fade gate, then assign `activeSource` so the video appears behind black and fades in with the cover reveal.
 - Shutdown: keep the last `activeSource` alive while the cover fades to black, clear the source only after the cover is opaque, then fade the cover out to reveal the sidebar/frame.

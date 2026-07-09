@@ -93,6 +93,19 @@ def pid_alive(pid):
     return True
 
 
+def pid_matches_player(pid, socket_path):
+    if not pid_alive(pid):
+        return False
+    try:
+        raw = open(f"/proc/{pid}/cmdline", "rb").read()
+    except OSError:
+        return False
+    argv = [part.decode("utf-8", errors="replace") for part in raw.split(b"\0") if part]
+    if not argv or os.path.basename(argv[0]) != "mpv":
+        return False
+    return f"--input-ipc-server={socket_path}" in argv
+
+
 def cleanup_socket(socket_path):
     try:
         if os.path.exists(socket_path):
@@ -103,7 +116,8 @@ def cleanup_socket(socket_path):
     pid_file = pid_path(socket_path)
     try:
         pid = int(open(pid_file, encoding="utf-8").read().strip())
-        os.kill(pid, 15)
+        if pid_matches_player(pid, socket_path):
+            os.kill(pid, 15)
     except (OSError, ValueError):
         pass
 

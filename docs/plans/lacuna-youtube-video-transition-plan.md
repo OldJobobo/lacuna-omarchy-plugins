@@ -1,4 +1,4 @@
-# TASK: Fix slow/black-screen background-video transitions in Lacuna YouTube Music
+# TASK: Fix slow/black-screen background-video transitions in Lacuna Media Player
 
 Status: active
 
@@ -9,10 +9,10 @@ Executable plan for an LLM or developer. Diagnosis was performed and measured on
 
 - Repo: lacuna-omarchy-plugins (Omarchy/Quickshell plugins, QML + Python/shell scripts)
 - Key files:
-  - `lacuna.youtube-music/Service.qml` — playback service (state, yt-dlp resolution procs)
-  - `lacuna.youtube-music/scripts/youtube-music-background` — resolves background stream URL (yt-dlp)
-  - `lacuna.youtube-music/scripts/youtube-music-preview` — resolves preview stream URL (yt-dlp)
-  - `lacuna.youtube-music-video/Overlay.qml` — desktop video wallpaper + black fade cover
+  - `lacuna.media-player/Service.qml` — playback service (state, yt-dlp resolution procs)
+  - `lacuna.media-player/scripts/media-player-background` — resolves background stream URL (yt-dlp)
+  - `lacuna.media-player/scripts/media-player-preview` — resolves preview stream URL (yt-dlp)
+  - `lacuna.media-player-video/Overlay.qml` — desktop video wallpaper + black fade cover
   - `tests/test_qml_contracts.py` — string-contract tests that PIN the fade lifecycle; update deliberately, never delete the two-phase contract
 - Contract that MUST survive (CLAUDE.md): startup = raise black cover first, assign video
   source behind black, fade in; shutdown = fade to black, clear source only when opaque,
@@ -68,7 +68,7 @@ Executable plan for an LLM or developer. Diagnosis was performed and measured on
 
 ### T3. Failure handling: kill both black-forever holes
 
-- Scripts (`youtube-music-background`, `youtube-music-preview`): on failure with
+- Scripts (`media-player-background`, `media-player-preview`): on failure with
   web_embedded, retry once WITHOUT `player_client=web_embedded` (default web client) before
   reporting error. Keep JSON output shape {url, error}.
 - Service.qml `backgroundProc.onExited`: on final failure set a new property
@@ -102,10 +102,10 @@ Executable plan for an LLM or developer. Diagnosis was performed and measured on
 ## DEPLOY NOTE
 
 Repo changes are NOT live. Deploy with
-`./scripts/dev deploy lacuna.youtube-music lacuna.youtube-music-video`
+`./scripts/dev deploy lacuna.media-player lacuna.media-player-video`
 (restarts Omarchy shell). Do not claim fixed until deployed + verified via
 `OMARCHY_PATH="$HOME/.local/share/omarchy" omarchy shell` IPC status
-(`lacuna-youtube-music` and `lacuna-youtube-music-video` targets expose full state JSON).
+(`lacuna-media-player` and `lacuna-media-player-video` targets expose full state JSON).
 
 ## SUCCESS CRITERIA
 

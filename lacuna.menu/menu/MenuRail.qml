@@ -10,7 +10,7 @@ Column {
   signal expandRequested()
   signal settingsRequested()
   signal shellSettingsRequested()
-  signal youtubeMusicRequested()
+  signal mediaPlayerRequested()
 
   required property var menuState
   required property var registry
@@ -28,7 +28,7 @@ Column {
   property string bodyFontFamily: "Hack Nerd Font Propo"
   property int railWidth: 32
   property var panelWindow: null
-  property var youtubeMusicService: null
+  property var mediaPlayerService: null
   property var tooltipTarget: null
   property string tooltipText: ""
   property color tooltipAccent: accent
@@ -122,15 +122,15 @@ Column {
 
   Item {
     width: root.railWidth
-    height: Math.max(0, root.height - y - (youtubeMusicButton.visible ? youtubeMusicButton.height + root.spacing : 0) - expandButton.height - settingsDivider.height - shellSettingsButton.height - settingsButton.height - root.spacing * 4)
+    height: Math.max(0, root.height - y - (mediaPlayerButton.visible ? mediaPlayerButton.height + root.spacing : 0) - expandButton.height - settingsDivider.height - shellSettingsButton.height - settingsButton.height - root.spacing * 4)
   }
 
   MenuRailButton {
-    id: youtubeMusicButton
+    id: mediaPlayerButton
 
-    visible: root.youtubeMusicService !== null
+    visible: root.mediaPlayerService !== null
     height: visible ? implicitHeight : 0
-    shape: root.youtubeMusicService && root.youtubeMusicService.playing && !root.youtubeMusicService.paused ? "player-pause" : "music"
+    shape: root.mediaPlayerService && root.mediaPlayerService.playing && !root.mediaPlayerService.paused ? "player-pause" : "music"
     muted: root.muted
     hoverAccent: root.accent
     buttonSize: root.railWidth
@@ -138,9 +138,9 @@ Column {
     hoverOpacity: root.designTokens.hoverOpacity
     pressOpacity: root.designTokens.activeOpacity
     iconSize: root.compact ? 16 : 18
-    onHoveredChanged: if (hovered) root.showTooltipText(this, root.youtubeMusicService && root.youtubeMusicService.displayTitle ? root.youtubeMusicService.displayTitle : "YouTube Music", root.accent)
+    onHoveredChanged: if (hovered) root.showTooltipText(this, root.mediaPlayerService && root.mediaPlayerService.displayTitle ? root.mediaPlayerService.displayTitle : "Media Player", root.accent)
                     else root.hideTooltip(this)
-    onTriggered: root.youtubeMusicRequested()
+    onTriggered: root.mediaPlayerRequested()
   }
 
   MenuRailButton {

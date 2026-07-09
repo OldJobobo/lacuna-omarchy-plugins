@@ -225,7 +225,7 @@ ShellRoot {{
   }}
 
   Component.onCompleted: {{
-    var c = Qt.createComponent("{qml_url('lacuna.menu/menu/YoutubeMusicTile.qml')}")
+    var c = Qt.createComponent("{qml_url('lacuna.menu/menu/MediaPlayerTile.qml')}")
     if (c.status === Component.Error) {{
       console.log("BEHAVE_ERR " + c.errorString())
       Qt.quit()

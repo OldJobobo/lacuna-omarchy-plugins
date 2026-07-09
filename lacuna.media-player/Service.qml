@@ -23,6 +23,9 @@ Item {
   property bool pendingDefaultSuggestions: false
   property bool backgroundOwnsAudio: false
   property int suppressStateReloads: 0
+  property string lastWrittenStatePayload: ""
+  property bool acceptNextStateReload: false
+  property bool statePermissionChangePending: false
   property int playbackProbeFailures: 0
   property double playbackStartedAtMs: 0
   property real playbackDuration: 0
@@ -36,6 +39,7 @@ Item {
   readonly property real endedProbeSlackSeconds: 3
   property var lacunaSettings: ({})
   property bool providerSearchActive: false
+  property int searchRevision: 0
   property int pendingProviderSearches: 0
   property var providerSearchResults: ({ youtube: [], jellyfin: [] })
   property var providerSearchErrors: []
@@ -67,28 +71,30 @@ Item {
   property var streamUrlCache: ({})
   readonly property int streamUrlCacheTtlMs: 4 * 60 * 60 * 1000
   property var previewTelemetry: ({ loaded: false })
+  property var pendingJellyfinTrack: null
+  property real pendingJellyfinStartAt: 0
 
   readonly property bool available: mpvAvailable && (ytdlpAvailable || jellyfinConfigured)
   readonly property string sourceDir: manifest && manifest.__sourceDir ? manifest.__sourceDir : localPath(Qt.resolvedUrl("."))
-  readonly property string checkScript: sourceDir + "/scripts/youtube-music-check"
-  readonly property string searchScript: sourceDir + "/scripts/youtube-music-search"
-  readonly property string authScript: sourceDir + "/scripts/youtube-music-auth"
-  readonly property string infoScript: sourceDir + "/scripts/youtube-music-info"
-  readonly property string refreshFavoritesScript: sourceDir + "/scripts/youtube-music-refresh-favorites"
-  readonly property string controlScript: sourceDir + "/scripts/youtube-music-control"
-  readonly property string previewScript: sourceDir + "/scripts/youtube-music-preview"
-  readonly property string backgroundScript: sourceDir + "/scripts/youtube-music-background"
-  readonly property string jellyfinSearchScript: sourceDir + "/scripts/youtube-music-jellyfin-search"
-  readonly property string jellyfinStreamScript: sourceDir + "/scripts/youtube-music-jellyfin-stream"
+  readonly property string checkScript: sourceDir + "/scripts/media-player-check"
+  readonly property string searchScript: sourceDir + "/scripts/media-player-search"
+  readonly property string authScript: sourceDir + "/scripts/youtube-auth"
+  readonly property string infoScript: sourceDir + "/scripts/media-player-info"
+  readonly property string refreshFavoritesScript: sourceDir + "/scripts/media-player-refresh-favorites"
+  readonly property string controlScript: sourceDir + "/scripts/media-player-control"
+  readonly property string previewScript: sourceDir + "/scripts/media-player-preview"
+  readonly property string backgroundScript: sourceDir + "/scripts/media-player-background"
+  readonly property string jellyfinSearchScript: sourceDir + "/scripts/jellyfin-search"
+  readonly property string jellyfinStreamScript: sourceDir + "/scripts/jellyfin-stream"
   readonly property string runtimeBase: Quickshell.env("XDG_RUNTIME_DIR") || (Quickshell.env("TMPDIR") || "/tmp")
-  readonly property string runtimeDir: runtimeBase + "/lacuna-youtube-music"
+  readonly property string runtimeDir: runtimeBase + "/lacuna-media-player"
   readonly property string mpvSocket: runtimeDir + "/mpv.sock"
   readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy/lacuna"
-  readonly property string stateFile: configDir + "/youtube-music.json"
+  readonly property string stateFile: configDir + "/media-player.json"
+  readonly property string legacyStateFile: configDir + "/youtube-music.json"
   readonly property string lacunaSettingsFile: configDir + "/settings.json"
   readonly property string youtubeAuthDir: configDir + "/youtube"
   readonly property string youtubeCookiesFile: youtubeAuthDir + "/cookies.txt"
-  readonly property string jellyfinConfigJson: JSON.stringify(jellyfinProviderSettings())
   readonly property string youtubeConfigJson: JSON.stringify(youtubeProviderSettings())
   readonly property int maxResults: boundedInt(setting("maxResults", 60), 60, 12, 80)
   readonly property string defaultSuggestionsQuery: String(setting("defaultSuggestionsQuery", "official music videos"))
@@ -175,6 +181,24 @@ Item {
     return ""
   }
 
+  function jellyfinItemId(track) {
+    if (!track || typeof track !== "object") return ""
+    var direct = String(track.providerId || track.itemId || track.id || "")
+    if (direct !== "") return direct
+    var match = String(track.url || "").match(/\/Items\/([^/]+)\/Download/i)
+    if (!match || !match[1]) return ""
+    try {
+      return decodeURIComponent(match[1])
+    } catch (e) {
+      return match[1]
+    }
+  }
+
+  function stableJellyfinUrl(itemId) {
+    var id = String(itemId || "")
+    return id === "" ? "" : "jellyfin://item/" + encodeURIComponent(id)
+  }
+
   function providerFor(track) {
     return track && track.provider ? String(track.provider) : "youtube"
   }
@@ -232,22 +256,24 @@ Item {
   function normalizeTrack(track) {
     if (!track || typeof track !== "object") return null
     var url = trackUrl(track)
-    if (url === "") return null
     var provider = String(track.provider || (isYoutubeUrl(url) ? "youtube" : "external"))
+    var providerId = provider === "jellyfin" ? jellyfinItemId(track) : String(track.providerId || track.itemId || track.id || "")
+    if (provider === "jellyfin") url = stableJellyfinUrl(providerId)
+    if (url === "") return null
     var mediaType = String(track.mediaType || (provider === "jellyfin" ? "video" : "video"))
     var streamKind = String(track.streamKind || (mediaType === "audio" ? "audio" : "video"))
     var sourceLabel = String(track.source || providerLabel({ provider: provider }))
     return {
       id: String(track.id || ""),
       provider: provider,
-      providerId: String(track.providerId || track.itemId || track.id || ""),
+      providerId: providerId,
       mediaType: mediaType,
       streamKind: streamKind,
       libraryName: String(track.libraryName || ""),
       title: String(track.title || "Untitled video"),
       uploader: String(track.uploader || track.channel || ""),
       duration: String(track.durationText || track.duration_text || ""),
-      thumbnail: trackThumbnail(track),
+      thumbnail: provider === "jellyfin" ? "" : trackThumbnail(track),
       source: sourceLabel,
       url: url
     }
@@ -393,12 +419,19 @@ Item {
     backgroundVideoEnabled = false
     loadingState = false
     stateLoaded = true
+    if (/api_key=|\/Items\/[^/]+\/Download\?/i.test(String(raw || ""))) scheduleStateSave()
   }
 
   function saveStateNow() {
     if (!stateLoaded || loadingState) return
     suppressStateReloads += 1
-    stateFileView.setText(statePayload())
+    lastWrittenStatePayload = statePayload()
+    stateFileView.setText(lastWrittenStatePayload)
+    secureStateFile()
+  }
+
+  function secureStateFile() {
+    statePermissionsTimer.restart()
   }
 
   function scheduleStateSave() {
@@ -479,12 +512,13 @@ Item {
   function search(query) {
     var trimmed = String(query || "").trim()
     if (trimmed === "") return
-    if (!ytdlpAvailable && !jellyfinConfigured && !youtubeLoginEnabled) {
+    if (!ytdlpAvailable && !jellyfinConfigured) {
       errorText = "yt-dlp is required for search"
       status = "unavailable"
       return
     }
     searching = true
+    searchRevision += 1
     errorText = ""
     lastQuery = trimmed
     visibleLimit = 18
@@ -495,33 +529,37 @@ Item {
       pendingProviderSearches = ytdlpAvailable ? 2 : 1
       providerSearchResults = ({ youtube: [], jellyfin: [] })
       providerSearchErrors = []
-      if (ytdlpAvailable) startYoutubeSearch(trimmed, providerSearchLimit("youtube"))
-      startJellyfinSearch(trimmed, providerSearchLimit("jellyfin"))
+      if (ytdlpAvailable) startYoutubeSearch(trimmed, providerSearchLimit("youtube"), searchRevision)
+      startJellyfinSearch(trimmed, providerSearchLimit("jellyfin"), searchRevision)
       return
     }
     providerSearchActive = false
-    startYoutubeSearch(trimmed, maxResults)
+    startYoutubeSearch(trimmed, maxResults, searchRevision)
   }
 
-  function startYoutubeSearch(query, limit) {
-    searchProc.output = ""
-    searchProc.command = [searchScript, "--config-json", youtubeConfigJson, "--filter", searchFilter, "--limit", String(limit), query]
-    searchProc.running = true
+  function startYoutubeSearch(query, limit, revision) {
+    searchProc.pendingCommand = [searchScript, "--config-json", youtubeConfigJson, "--filter", searchFilter, "--limit", String(limit), query]
+    searchProc.pendingRevision = revision
+    if (searchProc.running) searchProc.running = false
+    searchStartTimer.restart()
   }
 
-  function startYoutubeSuggestions(limit) {
-    searchProc.output = ""
-    searchProc.command = [searchScript, "--config-json", youtubeConfigJson, "--filter", searchFilter, "--limit", String(limit), "--suggestions"]
-    searchProc.running = true
+  function startYoutubeSuggestions(limit, revision) {
+    searchProc.pendingCommand = [searchScript, "--config-json", youtubeConfigJson, "--filter", searchFilter, "--limit", String(limit), "--suggestions"]
+    searchProc.pendingRevision = revision
+    if (searchProc.running) searchProc.running = false
+    searchStartTimer.restart()
   }
 
-  function startJellyfinSearch(query, limit) {
-    jellyfinSearchProc.output = ""
-    jellyfinSearchProc.command = [jellyfinSearchScript, "--config-json", jellyfinConfigJson, "--limit", String(limit), query]
-    jellyfinSearchProc.running = true
+  function startJellyfinSearch(query, limit, revision) {
+    jellyfinSearchProc.pendingCommand = [jellyfinSearchScript, "--settings-file", lacunaSettingsFile, "--limit", String(limit), query]
+    jellyfinSearchProc.pendingRevision = revision
+    if (jellyfinSearchProc.running) jellyfinSearchProc.running = false
+    jellyfinSearchStartTimer.restart()
   }
 
-  function completeProviderSearch(provider, rows, error) {
+  function completeProviderSearch(provider, rows, error, revision) {
+    if (revision !== searchRevision) return
     if (providerSearchResults && typeof providerSearchResults === "object") providerSearchResults[provider] = Array.isArray(rows) ? rows : []
     if (error && String(error) !== "") providerSearchErrors = providerSearchErrors.concat([providerLabel({ provider: provider }) + ": " + String(error)])
     pendingProviderSearches = Math.max(0, pendingProviderSearches - 1)
@@ -537,19 +575,28 @@ Item {
 
   function loadDefaultSuggestions() {
     if (searching || allResults.length > 0) return
-    if (!ytdlpAvailable && !jellyfinConfigured && !youtubeLoginEnabled) {
+    if (!ytdlpAvailable && !jellyfinConfigured) {
       pendingDefaultSuggestions = true
       return
     }
     pendingDefaultSuggestions = false
     searching = true
+    searchRevision += 1
     errorText = ""
     lastQuery = ""
     visibleLimit = 18
     allResults = []
     results = []
+    if (!ytdlpAvailable && jellyfinConfigured) {
+      providerSearchActive = true
+      pendingProviderSearches = 1
+      providerSearchResults = ({ youtube: [], jellyfin: [] })
+      providerSearchErrors = []
+      startJellyfinSearch("", Math.min(maxResults, 24), searchRevision)
+      return
+    }
     providerSearchActive = false
-    startYoutubeSuggestions(Math.min(maxResults, 24))
+    startYoutubeSuggestions(Math.min(maxResults, 24), searchRevision)
   }
 
   function refreshYoutubeResultsAfterLogin() {
@@ -574,9 +621,13 @@ Item {
     else loadDefaultSuggestions()
   }
 
-  function openYoutubeMusicLogin() {
+  function openYoutubeLogin() {
     authProc.command = [authScript, "--auth-dir", youtubeAuthDir]
     authProc.running = true
+  }
+
+  function openYoutubeMusicLogin() {
+    openYoutubeLogin()
   }
 
   function visibleSlice(rows) {
@@ -629,8 +680,9 @@ Item {
     var url = trackUrl(track)
     if (url === "") return
     if (providerFor(track) === "jellyfin") {
-      previewStreamUrl = itemHasVideo(track) ? url : ""
-      resolvingPreview = false
+      var jellyfinCached = cachedStreamUrl(track)
+      previewStreamUrl = itemHasVideo(track) ? jellyfinCached : ""
+      resolvingPreview = jellyfinCached === ""
       return
     }
     var cached = cachedStreamUrl(track)
@@ -658,8 +710,10 @@ Item {
     if (url === "") return
     if (providerFor(track) === "jellyfin") {
       backgroundRequestUrl = url
-      backgroundStreamUrl = itemHasVideo(track) ? url : ""
-      resolvingBackground = false
+      var jellyfinCached = cachedStreamUrl(track)
+      backgroundStreamUrl = itemHasVideo(track) ? jellyfinCached : ""
+      resolvingBackground = jellyfinCached === ""
+      backgroundResolveFailed = false
       backgroundRequestRevision += 1
       return
     }
@@ -992,7 +1046,7 @@ Item {
 
   function setVolume(value) {
     volume = clampVolume(value)
-    if (playing) sendCommand(["set_property", "volume", volume])
+    if (playing) volumeCommandTimer.restart()
   }
 
   function adjustVolume(delta) {
@@ -1028,6 +1082,48 @@ Item {
     var url = trackUrl(track)
     if (url === "") return
 
+    if (providerFor(track) === "jellyfin") {
+      var cached = cachedStreamUrl(track)
+      if (cached !== "") {
+        applyJellyfinStream(track, cached)
+        startMpvResolved(track, cached, startAt)
+        return
+      }
+      pendingJellyfinTrack = track
+      pendingJellyfinStartAt = Math.max(0, Number(startAt) || 0)
+      if (!cleanupProc.running) {
+        cleanupProc.command = [controlScript, "cleanup", "--socket", playbackSocket()]
+        cleanupProc.running = true
+      }
+      playing = false
+      paused = false
+      if (jellyfinStreamProc.running) jellyfinStreamProc.running = false
+      jellyfinStreamStartTimer.restart()
+      commandRunning = true
+      status = "loading"
+      return
+    }
+
+    startMpvResolved(track, url, startAt)
+  }
+
+  function applyJellyfinStream(track, url) {
+    if (!track || providerFor(track) !== "jellyfin" || String(url || "") === "") return
+    rememberStreamUrl(track, url)
+    resolvingPreview = false
+    previewStreamUrl = itemHasVideo(track) ? url : ""
+    if (backgroundVideoEnabled && itemHasVideo(track)) {
+      resolvingBackground = false
+      backgroundResolveFailed = false
+      backgroundRequestUrl = trackUrl(track)
+      backgroundStreamUrl = url
+      backgroundRequestRevision += 1
+    }
+  }
+
+  function startMpvResolved(track, url, startAt) {
+    if (String(url || "") === "") return
+
     commandProc.output = ""
     var args = [controlScript, "start", "--socket", mpvSocket, "--runtime-dir", runtimeDir, "--url", url, "--volume", String(volume), "--start", String(Math.max(0, Number(startAt) || 0))]
     var youtubeConfig = youtubeProviderSettings()
@@ -1060,6 +1156,7 @@ Item {
     cleanupPlayback()
     refreshDependencies()
     stateDirProc.running = true
+    secureStateFile()
   }
   Component.onDestruction: stop()
 
@@ -1074,12 +1171,12 @@ Item {
   onLastQueryChanged: scheduleStateSave()
   onBackgroundVideoEnabledChanged: if (backgroundVideoEnabled) updatePlaybackPosition()
   onJellyfinConfiguredChanged: {
-    if (pendingDefaultSuggestions && (ytdlpAvailable || jellyfinConfigured || youtubeLoginEnabled)) loadDefaultSuggestions()
+    if (pendingDefaultSuggestions && (ytdlpAvailable || jellyfinConfigured)) loadDefaultSuggestions()
     status = available ? "ready" : "unavailable"
   }
   onYoutubeLoginEnabledChanged: {
     if (youtubeLoginEnabled) refreshYoutubeResultsAfterLogin()
-    else if (pendingDefaultSuggestions && (ytdlpAvailable || jellyfinConfigured || youtubeLoginEnabled)) loadDefaultSuggestions()
+    else if (pendingDefaultSuggestions && (ytdlpAvailable || jellyfinConfigured)) loadDefaultSuggestions()
     status = available ? "ready" : "unavailable"
   }
 
@@ -1097,6 +1194,78 @@ Item {
     interval: 350
     repeat: false
     onTriggered: root.saveStateNow()
+  }
+
+  Timer {
+    id: volumeCommandTimer
+    interval: 75
+    repeat: false
+    onTriggered: {
+      if (!root.playing) return
+      if (volumeProc.running) {
+        restart()
+        return
+      }
+      volumeProc.command = [root.controlScript, "command", "--socket", root.playbackSocket(), "--payload", JSON.stringify({ command: ["set_property", "volume", root.volume] })]
+      volumeProc.running = true
+    }
+  }
+
+  Timer {
+    id: searchStartTimer
+    interval: 5
+    repeat: false
+    onTriggered: {
+      if (searchProc.running) {
+        restart()
+        return
+      }
+      searchProc.output = ""
+      searchProc.requestRevision = searchProc.pendingRevision
+      searchProc.command = searchProc.pendingCommand
+      searchProc.running = true
+    }
+  }
+
+  Timer {
+    id: jellyfinSearchStartTimer
+    interval: 5
+    repeat: false
+    onTriggered: {
+      if (jellyfinSearchProc.running) {
+        restart()
+        return
+      }
+      jellyfinSearchProc.output = ""
+      jellyfinSearchProc.requestRevision = jellyfinSearchProc.pendingRevision
+      jellyfinSearchProc.command = jellyfinSearchProc.pendingCommand
+      jellyfinSearchProc.running = true
+    }
+  }
+
+  Timer {
+    id: jellyfinStreamStartTimer
+    interval: 5
+    repeat: false
+    onTriggered: {
+      if (jellyfinStreamProc.running) {
+        restart()
+        return
+      }
+      var track = root.normalizeTrack(root.pendingJellyfinTrack)
+      var itemId = root.jellyfinItemId(track)
+      if (!track || itemId === "") {
+        root.commandRunning = false
+        root.errorText = "Jellyfin item is missing its provider ID"
+        root.status = "error"
+        return
+      }
+      jellyfinStreamProc.output = ""
+      jellyfinStreamProc.requestUrl = root.trackUrl(track)
+      jellyfinStreamProc.requestStartAt = root.pendingJellyfinStartAt
+      jellyfinStreamProc.command = [root.jellyfinStreamScript, "--settings-file", root.lacunaSettingsFile, "--item-id", itemId, "--media-type", root.mediaTypeFor(track)]
+      jellyfinStreamProc.running = true
+    }
   }
 
   FileView {
@@ -1165,7 +1334,7 @@ Item {
   }
 
   Timer {
-    interval: 1000
+    interval: root.backgroundVideoEnabled ? 1000 : 2500
     repeat: true
     running: root.playing && !root.paused
     onTriggered: root.updatePlaybackPosition()
@@ -1203,19 +1372,23 @@ Item {
         root.errorText = "Dependency check failed"
       }
       root.status = root.available ? "ready" : "unavailable"
-      if (root.pendingDefaultSuggestions && (root.ytdlpAvailable || root.jellyfinConfigured || root.youtubeLoginEnabled)) root.loadDefaultSuggestions()
+      if (root.pendingDefaultSuggestions && (root.ytdlpAvailable || root.jellyfinConfigured)) root.loadDefaultSuggestions()
     }
   }
 
   Process {
     id: searchProc
     property string output: ""
+    property var pendingCommand: []
+    property int pendingRevision: -1
+    property int requestRevision: -1
 
     stdout: SplitParser {
       onRead: function(data) { searchProc.output += data }
     }
 
     onExited: function(exitCode) {
+      if (requestRevision !== root.searchRevision) return
       if (root.providerSearchActive) {
         var youtubeRows = []
         var youtubeError = ""
@@ -1226,7 +1399,7 @@ Item {
         } catch (e) {
           youtubeError = "Search failed"
         }
-        root.completeProviderSearch("youtube", youtubeRows, youtubeError)
+        root.completeProviderSearch("youtube", youtubeRows, youtubeError, requestRevision)
         return
       }
       root.searching = false
@@ -1247,12 +1420,16 @@ Item {
   Process {
     id: jellyfinSearchProc
     property string output: ""
+    property var pendingCommand: []
+    property int pendingRevision: -1
+    property int requestRevision: -1
 
     stdout: SplitParser {
       onRead: function(data) { jellyfinSearchProc.output += data }
     }
 
     onExited: function(exitCode) {
+      if (requestRevision !== root.searchRevision) return
       var rows = []
       var error = ""
       try {
@@ -1262,12 +1439,49 @@ Item {
       } catch (e) {
         error = "Jellyfin search failed"
       }
-      root.completeProviderSearch("jellyfin", rows, error)
+      root.completeProviderSearch("jellyfin", rows, error, requestRevision)
     }
   }
 
   Process {
     id: authProc
+  }
+
+  Process {
+    id: jellyfinStreamProc
+    property string output: ""
+    property string requestUrl: ""
+    property real requestStartAt: 0
+
+    stdout: SplitParser {
+      onRead: function(data) { jellyfinStreamProc.output += data }
+    }
+
+    onExited: function(exitCode) {
+      if (requestUrl !== root.trackUrl(root.currentTrack)) return
+      root.commandRunning = false
+      if (exitCode !== 0) {
+        root.resolvingPreview = false
+        root.resolvingBackground = false
+        root.backgroundResolveFailed = root.backgroundVideoEnabled
+        root.errorText = "Jellyfin stream unavailable"
+        root.status = "error"
+        return
+      }
+      try {
+        var payload = JSON.parse(output || "{}")
+        var streamUrl = String(payload.url || "")
+        if (streamUrl === "") throw new Error(payload.error || "empty stream URL")
+        root.applyJellyfinStream(root.currentTrack, streamUrl)
+        root.startMpvResolved(root.currentTrack, streamUrl, requestStartAt)
+      } catch (e) {
+        root.resolvingPreview = false
+        root.resolvingBackground = false
+        root.backgroundResolveFailed = root.backgroundVideoEnabled
+        root.errorText = "Jellyfin stream unavailable"
+        root.status = "error"
+      }
+    }
   }
 
   Process {
@@ -1415,6 +1629,10 @@ Item {
   }
 
   Process {
+    id: volumeProc
+  }
+
+  Process {
     id: positionProc
     property string output: ""
     property int sessionRevision: -1
@@ -1494,7 +1712,10 @@ Item {
       try {
         var payload = JSON.parse(favoritesRefreshProc.output || "{}")
         if (payload.error && String(payload.error) !== "") root.errorText = String(payload.error)
-        if (Number(payload.changed || 0) > 0) stateFileView.reload()
+        if (Number(payload.changed || 0) > 0) {
+          root.acceptNextStateReload = true
+          stateFileView.reload()
+        }
       } catch (e) {
         root.errorText = "Favorite metadata refresh failed"
       }
@@ -1516,6 +1737,30 @@ Item {
     onExited: stateFileView.reload()
   }
 
+  Timer {
+    id: statePermissionsTimer
+    interval: 150
+    repeat: false
+    onTriggered: {
+      root.statePermissionChangePending = true
+      statePermissionsProc.running = false
+      statePermissionsProc.command = ["chmod", "600", root.stateFile]
+      statePermissionsProc.running = true
+      statePermissionsResetTimer.restart()
+    }
+  }
+
+  Timer {
+    id: statePermissionsResetTimer
+    interval: 500
+    repeat: false
+    onTriggered: root.statePermissionChangePending = false
+  }
+
+  Process {
+    id: statePermissionsProc
+  }
+
   FileView {
     id: stateFileView
 
@@ -1523,22 +1768,55 @@ Item {
     watchChanges: true
     atomicWrites: true
     printErrors: false
-    onLoaded: root.applyLoadedState(text())
+    onLoaded: {
+      var raw = text()
+      if (root.lastWrittenStatePayload !== "" && raw === root.lastWrittenStatePayload) {
+        root.lastWrittenStatePayload = ""
+        return
+      }
+      if (root.stateLoaded && !root.acceptNextStateReload) return
+      root.acceptNextStateReload = false
+      root.applyLoadedState(raw)
+    }
     onFileChanged: {
+      if (root.statePermissionChangePending) {
+        root.statePermissionChangePending = false
+        return
+      }
       if (root.suppressStateReloads > 0) {
         root.suppressStateReloads -= 1
       } else {
+        root.acceptNextStateReload = true
         reload()
       }
     }
     onLoadFailed: {
+      legacyStateFileView.reload()
+    }
+  }
+
+  FileView {
+    id: legacyStateFileView
+
+    path: root.legacyStateFile
+    watchChanges: false
+    printErrors: false
+    onLoaded: {
+      if (root.stateLoaded) return
+      root.applyLoadedState(text())
+      root.saveStateNow()
+    }
+    onLoadFailed: {
+      if (root.stateLoaded) return
       root.applyLoadedState("{}")
       root.saveStateNow()
     }
   }
 
   IpcHandler {
-    target: "lacuna-youtube-music"
+    id: mediaPlayerIpc
+
+    target: "lacuna-media-player"
 
     function status(): string {
       return JSON.stringify({
@@ -1557,13 +1835,11 @@ Item {
         playbackEndHandled: root.playbackEndHandled,
         previewReady: root.previewStreamUrl !== "",
         previewResolving: root.resolvingPreview,
-        previewUrl: root.previewStreamUrl,
         trackInfoResolving: root.resolvingTrackInfo,
         currentTrackUrl: root.currentTrackUrl,
         backgroundReady: root.backgroundStreamUrl !== "",
         backgroundResolving: root.resolvingBackground,
         backgroundResolveFailed: root.backgroundResolveFailed,
-        backgroundUrl: root.backgroundStreamUrl,
         previewTelemetry: root.previewTelemetry,
         backgroundOwnsAudio: root.backgroundOwnsAudio,
         backgroundPlaybackSocket: root.backgroundPlaybackSocket,
@@ -1574,8 +1850,7 @@ Item {
         currentFavorite: root.currentFavorite,
         repeatMode: root.repeatMode,
         searchFilter: root.searchFilter,
-        youtubeLoginEnabled: root.youtubeLoginEnabled,
-        youtubeCookiesFile: root.youtubeCookiesFile
+        youtubeLoginEnabled: root.youtubeLoginEnabled
       })
     }
 
@@ -1634,9 +1909,33 @@ Item {
       return status()
     }
 
+    function openYoutubeLogin(): string {
+      root.openYoutubeLogin()
+      return status()
+    }
+
     function openYoutubeMusicLogin(): string {
       root.openYoutubeMusicLogin()
       return status()
     }
+  }
+
+  IpcHandler {
+    target: "lacuna-youtube-music"
+
+    function status(): string { return mediaPlayerIpc.status() }
+    function setBackgroundVideo(enabled: string): string { return mediaPlayerIpc.setBackgroundVideo(enabled) }
+    function toggleBackgroundVideo(): string { return mediaPlayerIpc.toggleBackgroundVideo() }
+    function refreshBackgroundStream(): string { return mediaPlayerIpc.refreshBackgroundStream() }
+    function playPause(): string { return mediaPlayerIpc.playPause() }
+    function playNext(): string { return mediaPlayerIpc.playNext() }
+    function playFavoriteIndex(index: string): string { return mediaPlayerIpc.playFavoriteIndex(index) }
+    function playUrl(url: string): string { return mediaPlayerIpc.playUrl(url) }
+    function toggleFavoriteCurrent(): string { return mediaPlayerIpc.toggleFavoriteCurrent() }
+    function clearFavorites(): string { return mediaPlayerIpc.clearFavorites() }
+    function refreshFavoriteMetadata(): string { return mediaPlayerIpc.refreshFavoriteMetadata() }
+    function cycleRepeatMode(): string { return mediaPlayerIpc.cycleRepeatMode() }
+    function openYoutubeLogin(): string { return mediaPlayerIpc.openYoutubeLogin() }
+    function openYoutubeMusicLogin(): string { return mediaPlayerIpc.openYoutubeMusicLogin() }
   }
 }

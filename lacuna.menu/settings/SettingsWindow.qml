@@ -43,6 +43,7 @@ Item {
       { id: "appearance", icon: "palette", label: "Appearance", hint: "Style, colors, theme shortcuts" },
       { id: "animations", icon: "background", label: "Animations", hint: "Background, foreground, and vignette effects" },
       { id: "layout", icon: "density-normal", label: "Layout", hint: "Sidebar and density behavior" },
+      { id: "media-player", icon: "music", label: "Media Player", hint: "Provider search and playback sources" },
       { id: "preferred-apps", icon: "preferred-apps", label: "Preferred Apps", hint: "Role-based app launch targets" },
       { id: "desktop-clock", icon: "clock", label: "Desktop Clock", hint: "Desktop layer clock placement" },
       { id: "runtime", icon: "settings", label: "Lacuna Tools", hint: "Plugin maintenance and menu behavior" },
@@ -102,6 +103,13 @@ Item {
     return item
   }
 
+  function textRow(icon, label, hint, currentValue, actionPrefix, tone, placeholder, masked) {
+    var item = row(icon, label, hint, "", tone || "lacuna", "", "text", false, [], currentValue || "", actionPrefix || "")
+    item.placeholder = placeholder || ""
+    item.masked = masked === true
+    return item
+  }
+
   function stackRow(effectId, enabled, index, count) {
     var item = row("background", root.registry.backgroundEffectName(effectId), root.registry.backgroundEffectHint(effectId), enabled ? "#" + String(index + 1) : "Off", "lacuna", "toggle-background-effect-" + effectId, "stack-effect", enabled)
     item.effectId = effectId
@@ -117,7 +125,7 @@ Item {
     if (entry.control === "toggle" || entry.control === "stack-effect") return "toggle:" + String(entry.action || entry.label || "")
     if (entry.control === "segments" || entry.control === "select" || entry.control === "search-select")
       return "value:" + String(entry.optionActionPrefix || entry.action || entry.label || "")
-    if (entry.control === "slider") return "value:" + String(entry.optionActionPrefix || entry.action || entry.label || "")
+    if (entry.control === "slider" || entry.control === "text") return "value:" + String(entry.optionActionPrefix || entry.action || entry.label || "")
     return ""
   }
 
@@ -297,6 +305,10 @@ Item {
     return root.registry.preferredAppHint("files") + " / " + root.registry.preferredAppHint("editor")
   }
 
+  function mediaPlayerSummary() {
+    return root.registry.jellyfinProviderEnabled ? "Jellyfin on" : "Jellyfin off"
+  }
+
   function navRow(icon, label, hint, sectionId, tone, value) {
     return row(icon, label, hint, value || "", tone || "lacuna", "", "nav", false, [], "", "", sectionId)
   }
@@ -308,6 +320,7 @@ Item {
         navRow("palette", "Appearance", root.registry.designStyleHint(), "appearance", "lacuna", root.registry.designStyleName()),
         navRow("background", "Animations", root.registry.backgroundEffectsHint(), "animations", "lacuna", root.registry.backgroundEffectStackCount() + " active"),
         navRow(root.registry.compact ? "density-compact" : "density-normal", "Layout", sidebarModeName() + " / default " + sidebarDefaultModeName(), "layout", "lacuna", densityName()),
+        navRow("music", "Media Player", "Provider search and playback sources", "media-player", "lacuna", mediaPlayerSummary()),
         navRow("preferred-apps", "Preferred Apps", preferredSummary(), "preferred-apps", "lacuna", "Edit"),
         navRow("clock", "Desktop Clock", clockAnchorName(), "desktop-clock", "lacuna", root.registry.desktopClockEnabled ? "On" : "Off"),
         navRow("settings", "Lacuna Tools", "Plugin source, app catalog, and menu safety", "runtime", "lacuna", "Tools"),
@@ -363,6 +376,15 @@ Item {
           { value: "flyout", label: "Flyout" },
           { value: "window", label: "Window" }
         ], root.registry.shellSettingsSurface, "set-shell-settings-surface-")
+      ]
+    }
+
+    if (sectionId === "media-player") {
+      return [
+        section("Providers", "Configure media sources used by search and playback.", "lacuna"),
+        row("music", "Jellyfin", root.registry.jellyfinProviderHint(), root.registry.jellyfinProviderEnabled ? "On" : "Off", "lacuna", "toggle-jellyfin-provider", "toggle", root.registry.jellyfinProviderEnabled),
+        textRow("world", "Server URL", "Base Jellyfin server address", root.registry.jellyfinServerUrl, "set-jellyfin-server-url-", "lacuna", "https://jellyfin.example", false),
+        textRow("lock", "API Key", root.registry.jellyfinApiKeyConfigured ? "Saved API key is configured" : "Paste a Jellyfin API key", root.registry.jellyfinApiKey, "set-jellyfin-api-key-", "lacuna", "API key", true)
       ]
     }
 
@@ -455,7 +477,7 @@ Item {
       handleEntry(entry, desired)
       return
     }
-    if (entry.control === "segments" || entry.control === "select" || entry.control === "search-select" || entry.control === "slider") {
+    if (entry.control === "segments" || entry.control === "select" || entry.control === "search-select" || entry.control === "slider" || entry.control === "text") {
       setControlOverride(entry, value)
       handleOptionSelected(entry, value)
       return
@@ -598,6 +620,8 @@ Item {
                   ? stackDelegate
                 : entry.control === "select"
                   ? selectDelegate
+                : entry.control === "text"
+                  ? textDelegate
                   : rowDelegate
             }
           }
@@ -697,6 +721,29 @@ Item {
             bodyFontFamily: root.bodyFontFamily
             designTokens: root.designTokens
             onSelected: function(value) { root.activateControl(parent.entry, value) }
+          }
+        }
+
+        Component {
+          id: textDelegate
+
+          SettingsTextRow {
+            width: parent.width
+            icon: parent.entry.icon
+            label: parent.entry.label
+            hint: parent.entry.hint
+            textValue: root.currentControlValue(parent.entry)
+            placeholder: parent.entry.placeholder || ""
+            masked: parent.entry.masked === true
+            compact: root.compact
+            foreground: root.foreground
+            background: root.background
+            muted: root.muted
+            toneAccent: root.toneAccent(parent.entry.tone)
+            titleFontFamily: root.itemFontFamily
+            bodyFontFamily: root.bodyFontFamily
+            designTokens: root.designTokens
+            onAccepted: function(value) { root.activateControl(parent.entry, value) }
           }
         }
       }

@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "id": "lacuna.youtube-music-video",
-  "name": "Lacuna YouTube Music Video",
+  "id": "lacuna.media-player-video",
+  "name": "Lacuna Media Player Video",
   "version": "0.1.0",
   "author": "Lacuna",
-  "description": "Wallpaper-layer video companion for Lacuna YouTube Music.",
+  "description": "Wallpaper-layer video companion for Lacuna Media Player.",
   "kinds": [
     "overlay"
   ],
@@ -23,7 +23,7 @@
     "stability": "experimental",
     "requires": [],
     "recommends": [
-      "lacuna.youtube-music"
+      "lacuna.media-player"
     ]
   }
 }

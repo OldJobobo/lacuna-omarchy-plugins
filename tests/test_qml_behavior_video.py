@@ -1,3 +1,4 @@
+import json
 import unittest
 import tempfile
 from pathlib import Path
@@ -14,7 +15,7 @@ def read(path: str) -> str:
 
 class QmlVideoBehaviorContractTests(unittest.TestCase):
     def test_background_video_startup_is_gated_by_black_cover(self):
-        overlay = read("lacuna.youtube-music-video/Overlay.qml")
+        overlay = read("lacuna.media-player-video/Overlay.qml")
 
         hold = overlay.index("holdFadeCover(exitFadeToBlackDuration)")
         gate_restart = overlay.index("wallpaperFadeGateTimer.restart()", hold)
@@ -28,7 +29,7 @@ class QmlVideoBehaviorContractTests(unittest.TestCase):
         self.assertIn("releaseFadeCoverSoon()", overlay)
 
     def test_background_video_exit_clears_source_under_opaque_cover(self):
-        overlay = read("lacuna.youtube-music-video/Overlay.qml")
+        overlay = read("lacuna.media-player-video/Overlay.qml")
 
         begin_exit = overlay.index("function beginWallpaperExit()")
         clear_timer = overlay.index("id: exitClearTimer")
@@ -41,7 +42,7 @@ class QmlVideoBehaviorContractTests(unittest.TestCase):
         self.assertIn('if (root.activeSource === "") backgroundPlayer.stop()', overlay)
 
     def test_background_video_watchdogs_release_black_cover(self):
-        overlay = read("lacuna.youtube-music-video/Overlay.qml")
+        overlay = read("lacuna.media-player-video/Overlay.qml")
 
         self.assertIn("readonly property bool waitingForHighRes", overlay)
         self.assertIn("onBackgroundResolveFailedChanged: if (backgroundResolveFailed) handleResolveFailure()", overlay)
@@ -58,8 +59,8 @@ class QmlVideoBehaviorContractTests(unittest.TestCase):
         self.assertIn("waitingForPlayerReady = false", give_up)
         self.assertIn("releaseFadeCoverNow()", give_up)
 
-    def test_youtube_music_service_discards_stale_probe_results(self):
-        service = read("lacuna.youtube-music/Service.qml")
+    def test_media_player_service_discards_stale_probe_results(self):
+        service = read("lacuna.media-player/Service.qml")
 
         self.assertIn("property int playbackSessionRevision: 0", service)
         self.assertIn("positionProc.sessionRevision = playbackSessionRevision", service)
@@ -68,15 +69,15 @@ class QmlVideoBehaviorContractTests(unittest.TestCase):
         self.assertIn("function handlePlaybackEnded()", service)
 
 
-def make_youtube_music_source(payload: str, *, probe_sleep: str = "0") -> tuple[tempfile.TemporaryDirectory, Path]:
+def make_media_player_source(payload: str, *, probe_sleep: str = "0") -> tuple[tempfile.TemporaryDirectory, Path]:
     temp = tempfile.TemporaryDirectory()
     root = Path(temp.name)
     scripts = root / "scripts"
     scripts.mkdir()
 
     executable_scripts = {
-        "youtube-music-check": '#!/bin/sh\nprintf %s\\n \'{"mpv":true,"ytdlp":true,"message":""}\'\n',
-        "youtube-music-control": (
+        "media-player-check": '#!/bin/sh\nprintf %s\\n \'{"mpv":true,"ytdlp":true,"message":""}\'\n',
+        "media-player-control": (
             "#!/bin/sh\n"
             "case \"$1\" in\n"
             "  cleanup|start|command) exit 0 ;;\n"
@@ -84,14 +85,14 @@ def make_youtube_music_source(payload: str, *, probe_sleep: str = "0") -> tuple[
             "  *) exit 0 ;;\n"
             "esac\n"
         ),
-        "youtube-music-preview": "#!/bin/sh\nprintf %s\\n '{}'\n",
-        "youtube-music-background": "#!/bin/sh\nprintf %s\\n '{}'\n",
-        "youtube-music-search": "#!/bin/sh\nprintf %s\\n '{\"results\":[]}'\n",
-        "youtube-music-auth": "#!/bin/sh\nprintf %s\\n '{}'\n",
-        "youtube-music-info": "#!/bin/sh\nprintf %s\\n '{}'\n",
-        "youtube-music-refresh-favorites": "#!/bin/sh\nprintf %s\\n '[]'\n",
-        "youtube-music-jellyfin-search": "#!/bin/sh\nprintf %s\\n '{\"results\":[]}'\n",
-        "youtube-music-jellyfin-stream": "#!/bin/sh\nprintf %s\\n '{}'\n",
+        "media-player-preview": "#!/bin/sh\nprintf %s\\n '{}'\n",
+        "media-player-background": "#!/bin/sh\nprintf %s\\n '{}'\n",
+        "media-player-search": "#!/bin/sh\nprintf %s\\n '{\"results\":[]}'\n",
+        "youtube-auth": "#!/bin/sh\nprintf %s\\n '{}'\n",
+        "media-player-info": "#!/bin/sh\nprintf %s\\n '{}'\n",
+        "media-player-refresh-favorites": "#!/bin/sh\nprintf %s\\n '[]'\n",
+        "jellyfin-search": "#!/bin/sh\nprintf %s\\n '{\"results\":[]}'\n",
+        "jellyfin-stream": "#!/bin/sh\nprintf %s\\n '{}'\n",
     }
     for name, content in executable_scripts.items():
         path = scripts / name
@@ -101,9 +102,103 @@ def make_youtube_music_source(payload: str, *, probe_sleep: str = "0") -> tuple[
 
 
 @unittest.skipUnless(HAVE_SESSION, "needs a quickshell binary and a Wayland session")
-class QmlYoutubeMusicServiceBehaviorTests(unittest.TestCase):
+class QmlMediaPlayerServiceBehaviorTests(unittest.TestCase):
+    def test_newer_search_discards_slow_stale_results(self):
+        source_owner, source = make_media_player_source('{}')
+        search_script = source / "scripts" / "media-player-search"
+        search_script.write_text(
+            "#!/usr/bin/env python3\n"
+            "import json, sys, time\n"
+            "query = sys.argv[-1]\n"
+            "if query == 'slow': time.sleep(0.25)\n"
+            "print(json.dumps({'results': [{'title': query, 'url': 'https://example.test/' + query}], 'error': ''}))\n",
+            encoding="utf-8",
+        )
+        search_script.chmod(0o755)
+        with source_owner, tempfile.TemporaryDirectory() as cfg:
+            qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var svc: null
+  Component.onCompleted: {{
+    var c = Qt.createComponent("{qml_url('lacuna.media-player/Service.qml')}", Component.PreferSynchronous)
+    svc = c.createObject(root, {{ manifest: {{ __sourceDir: "{source}" }} }})
+    start.restart()
+  }}
+  Timer {{
+    id: start; interval: 60; onTriggered: {{
+      svc.mpvAvailable = true; svc.ytdlpAvailable = true; svc.search("slow"); newer.restart()
+    }}
+  }}
+  Timer {{ id: newer; interval: 30; onTriggered: {{ svc.search("fast"); finish.restart() }} }}
+  Timer {{
+    id: finish; interval: 450; onTriggered: {{
+      console.log("BEHAVE " + JSON.stringify({{ title: svc.allResults.length ? svc.allResults[0].title : "", searching: svc.searching }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+            output = run_quickshell(qml, config_home=Path(cfg), timeout=8)
+        require_no_qml_errors(output)
+        final = parse_behave(output)[-1]
+        self.assertEqual(final["title"], "fast", output[-2000:])
+        self.assertFalse(final["searching"], output[-2000:])
+
+    def test_jellyfin_only_defaults_do_not_invoke_youtube_search(self):
+        source_owner, source = make_media_player_source('{}')
+        youtube_marker = source / "youtube-invoked"
+        search_script = source / "scripts" / "media-player-search"
+        search_script.write_text(f"#!/bin/sh\ntouch {youtube_marker}\nprintf %s\\n '{{\"results\":[]}}'\n", encoding="utf-8")
+        search_script.chmod(0o755)
+        jellyfin_script = source / "scripts" / "jellyfin-search"
+        jellyfin_script.write_text("#!/bin/sh\necho '{\"results\":[{\"provider\":\"jellyfin\",\"providerId\":\"one\",\"title\":\"Recent\",\"url\":\"jellyfin://item/one\"}],\"error\":\"\"}'\n", encoding="utf-8")
+        jellyfin_script.chmod(0o755)
+        with source_owner, tempfile.TemporaryDirectory() as cfg:
+            settings_dir = Path(cfg) / "omarchy" / "lacuna"
+            settings_dir.mkdir(parents=True)
+            settings_dir.joinpath("settings.json").write_text(json.dumps({
+                "mediaProviders": {"jellyfin": {"enabled": True, "serverUrl": "https://example.test", "apiKey": "secret"}}
+            }), encoding="utf-8")
+            qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var svc: null
+  Component.onCompleted: {{
+    var c = Qt.createComponent("{qml_url('lacuna.media-player/Service.qml')}", Component.PreferSynchronous)
+    svc = c.createObject(root, {{ manifest: {{ __sourceDir: "{source}" }} }})
+    start.restart()
+  }}
+  Timer {{
+    id: start; interval: 100; onTriggered: {{
+      svc.mpvAvailable = true; svc.ytdlpAvailable = false
+      svc.lacunaSettings = {{ mediaProviders: {{ jellyfin: {{ enabled: true, serverUrl: "https://example.test", apiKey: "secret" }} }} }}
+      svc.loadDefaultSuggestions(); finish.restart()
+    }}
+  }}
+  Timer {{
+    id: finish; interval: 250; onTriggered: {{
+      console.log("BEHAVE " + JSON.stringify({{ title: svc.allResults.length ? svc.allResults[0].title : "", error: svc.errorText }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+            output = run_quickshell(qml, config_home=Path(cfg), timeout=8)
+        require_no_qml_errors(output)
+        final = parse_behave(output)[-1]
+        self.assertEqual(final["title"], "Recent", output[-2000:])
+        self.assertEqual(final["error"], "", output[-2000:])
+        self.assertFalse(youtube_marker.exists())
+
     def test_stale_probe_result_is_discarded_at_runtime(self):
-        source_owner, source = make_youtube_music_source('{"ok":true,"timePos":42,"duration":100}', probe_sleep="0.05")
+        source_owner, source = make_media_player_source('{"ok":true,"timePos":42,"duration":100}', probe_sleep="0.05")
         with source_owner, tempfile.TemporaryDirectory() as cfg:
             qml = f"""
 import Quickshell
@@ -124,7 +219,7 @@ ShellRoot {{
   }}
 
   Component.onCompleted: {{
-    var c = Qt.createComponent("{qml_url('lacuna.youtube-music/Service.qml')}", Component.PreferSynchronous)
+    var c = Qt.createComponent("{qml_url('lacuna.media-player/Service.qml')}", Component.PreferSynchronous)
     if (c.status !== Component.Ready) {{
       console.log("BEHAVE_ERR " + c.errorString())
       Qt.quit()
@@ -136,9 +231,11 @@ ShellRoot {{
 
   Timer {{
     id: setup
-    interval: 60
-    repeat: false
+    interval: 20
+    repeat: true
     onTriggered: {{
+      if (!svc.stateLoaded) return
+      stop()
       svc.mpvAvailable = true
       svc.ytdlpAvailable = true
       svc.playing = true
@@ -171,7 +268,7 @@ ShellRoot {{
         self.assertEqual(final["playbackSessionRevision"], 11, output[-2000:])
 
     def test_eof_probe_advances_to_next_queue_track_at_runtime(self):
-        source_owner, source = make_youtube_music_source('{"ok":true,"timePos":100,"duration":100,"eofReached":true}')
+        source_owner, source = make_media_player_source('{"ok":true,"timePos":100,"duration":100,"eofReached":true}')
         with source_owner, tempfile.TemporaryDirectory() as cfg:
             qml = f"""
 import Quickshell
@@ -194,7 +291,7 @@ ShellRoot {{
   }}
 
   Component.onCompleted: {{
-    var c = Qt.createComponent("{qml_url('lacuna.youtube-music/Service.qml')}", Component.PreferSynchronous)
+    var c = Qt.createComponent("{qml_url('lacuna.media-player/Service.qml')}", Component.PreferSynchronous)
     if (c.status !== Component.Ready) {{
       console.log("BEHAVE_ERR " + c.errorString())
       Qt.quit()
@@ -206,9 +303,11 @@ ShellRoot {{
 
   Timer {{
     id: setup
-    interval: 60
-    repeat: false
+    interval: 20
+    repeat: true
     onTriggered: {{
+      if (!svc.stateLoaded) return
+      stop()
       svc.mpvAvailable = true
       svc.ytdlpAvailable = true
       svc.currentTrack = {{ title: "First", url: "https://example.test/first" }}

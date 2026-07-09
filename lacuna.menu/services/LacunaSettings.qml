@@ -10,6 +10,7 @@ Item {
   readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy/lacuna"
   readonly property string settingsFile: configDir + "/settings.json"
   property var data: defaultData()
+  property bool settingsPermissionChangePending: false
   property var lastLoadedData: defaultData()
   property var pendingSave: null
   property bool pendingSaveTouchedQuickLaunch: false
@@ -640,6 +641,7 @@ Item {
     lastWrittenPayload = payload
     suppressFileReloads += 1
     settingsFileView.setText(payload)
+    secureSettingsFile()
     writeInFlight = false
 
     if (queuedSavePayload !== "" && queuedSavePayload !== payload) {
@@ -649,6 +651,10 @@ Item {
     } else {
       queuedSavePayload = ""
     }
+  }
+
+  function secureSettingsFile() {
+    permissionsTimer.restart()
   }
 
   function save(next, touchedQuickLaunch, touchedSidebar) {
@@ -685,7 +691,30 @@ Item {
     return merged
   }
 
-  Component.onCompleted: load()
+  Component.onCompleted: {
+    secureSettingsFile()
+    load()
+  }
+
+  Timer {
+    id: permissionsTimer
+    interval: 150
+    repeat: false
+    onTriggered: {
+      root.settingsPermissionChangePending = true
+      permissionsProc.running = false
+      permissionsProc.command = ["chmod", "600", root.settingsFile, root.settingsFile + ".bak"]
+      permissionsProc.running = true
+      permissionsResetTimer.restart()
+    }
+  }
+
+  Timer {
+    id: permissionsResetTimer
+    interval: 500
+    repeat: false
+    onTriggered: root.settingsPermissionChangePending = false
+  }
 
   FileView {
     id: settingsFileView
@@ -696,6 +725,10 @@ Item {
     printErrors: false
     onLoaded: root.applyLoadedText(text())
     onFileChanged: {
+      if (root.settingsPermissionChangePending) {
+        root.settingsPermissionChangePending = false
+        return
+      }
       if (root.suppressFileReloads > 0) {
         root.suppressFileReloads -= 1
       } else {
@@ -711,5 +744,9 @@ Item {
     path: root.settingsFile + ".bak"
     atomicWrites: true
     printErrors: false
+  }
+
+  Process {
+    id: permissionsProc
   }
 }

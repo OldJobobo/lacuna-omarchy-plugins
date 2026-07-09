@@ -89,16 +89,16 @@ Item {
   property int shellSettingsPanelWidth: Math.round(sizeMix(520, 440))
   readonly property bool appPickerOpen: panelController.isFlyoutOpen("appPicker")
   readonly property bool appPickerVisible: panelController.isFlyoutVisible("appPicker")
-  readonly property bool youtubeMusicOpen: panelController.isFlyoutOpen("youtubeMusic")
-  readonly property bool youtubeMusicVisible: panelController.isFlyoutVisible("youtubeMusic")
+  readonly property bool mediaPlayerOpen: panelController.isFlyoutOpen("mediaPlayer")
+  readonly property bool mediaPlayerVisible: panelController.isFlyoutVisible("mediaPlayer")
   readonly property bool flyoutOpen: panelController.flyoutOpen
   readonly property bool flyoutInteractive: panelController.flyoutInteractive
   property string appPickerMode: "customQuickLaunchApp"
   property string preferredAppPickerRole: ""
   property string shellSettingsSection: "apps"
   property int appPickerWidth: Math.round(sizeMix(300, 260))
-  property int youtubeMusicWidth: Math.round(sizeMix(420, 360))
-  readonly property int maxFlyoutLaneWidth: Math.max(settingsPanelWidth, shellSettingsPanelWidth, appPickerWidth, youtubeMusicWidth)
+  property int mediaPlayerWidth: Math.round(sizeMix(420, 360))
+  readonly property int maxFlyoutLaneWidth: Math.max(settingsPanelWidth, shellSettingsPanelWidth, appPickerWidth, mediaPlayerWidth)
   readonly property int panelShadowBlurMax: 28
   readonly property int panelShadowOutset: frameShadow ? Math.ceil(panelShadowBlurMax + Math.abs(frameShadowOffsetX)) : 0
   readonly property string visibleFlyout: panelController.visibleFlyout
@@ -106,14 +106,14 @@ Item {
   readonly property bool activeFlyoutSettings: visibleFlyout === "settings"
   readonly property bool activeFlyoutShellSettings: visibleFlyout === "shellSettings"
   readonly property bool activeFlyoutAppPicker: visibleFlyout === "appPicker"
-  readonly property bool activeFlyoutYoutubeMusic: visibleFlyout === "youtubeMusic"
+  readonly property bool activeFlyoutMediaPlayer: visibleFlyout === "mediaPlayer"
   readonly property bool renderSettingsContent: settingsPanelVisible || outgoingFlyout === "settings"
   readonly property bool renderShellSettingsContent: shellSettingsPanelVisible || outgoingFlyout === "shellSettings"
   readonly property bool renderAppPickerContent: appPickerVisible || outgoingFlyout === "appPicker"
-  readonly property bool renderYoutubeMusicContent: youtubeMusicVisible || outgoingFlyout === "youtubeMusic"
-  readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutShellSettings ? shellSettingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : activeFlyoutYoutubeMusic ? youtubeMusicWidth : 0
-  readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutShellSettings ? shellSettingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : activeFlyoutYoutubeMusic ? youtubeMusicFlyoutHeight() : 0
-  readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutShellSettings ? shellSettingsFlyoutY(shellSettingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : activeFlyoutYoutubeMusic ? youtubeMusicFlyoutY(youtubeMusicFlyoutHeight()) : 0
+  readonly property bool renderMediaPlayerContent: mediaPlayerVisible || outgoingFlyout === "mediaPlayer"
+  readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutShellSettings ? shellSettingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : activeFlyoutMediaPlayer ? mediaPlayerWidth : 0
+  readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutShellSettings ? shellSettingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : activeFlyoutMediaPlayer ? mediaPlayerFlyoutHeight() : 0
+  readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutShellSettings ? shellSettingsFlyoutY(shellSettingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : activeFlyoutMediaPlayer ? mediaPlayerFlyoutY(mediaPlayerFlyoutHeight()) : 0
   readonly property bool frameBorderAttachedFlyoutVisible: lacunaEnabled && panelController.flyoutRenderable && panelController.flyoutProgress > 0.001
   readonly property bool frameBorderAttachedConnectorVisible: frameBorderAttachedFlyoutVisible && sidebarSurfaceVisible && sidebarState.cornerPieces && settingsConnectorWidth > 0
   readonly property real frameBorderWindowY: visualTopInset
@@ -171,10 +171,11 @@ Item {
   readonly property bool desktopClockUse12Hour: boolSetting(desktopClockSettings.use12Hour, false)
   readonly property var backgroundEffectsSettings: lacunaSettings.data && lacunaSettings.data.backgroundEffects ? lacunaSettings.data.backgroundEffects : ({})
   readonly property var backgroundVignetteSettings: lacunaSettings.data && lacunaSettings.data.backgroundVignette ? lacunaSettings.data.backgroundVignette : ({})
+  readonly property var mediaProvidersSettings: lacunaSettings.data && lacunaSettings.data.mediaProviders ? lacunaSettings.data.mediaProviders : ({})
   readonly property var shellSettingsSettings: lacunaSettings.data && lacunaSettings.data.shellSettings ? lacunaSettings.data.shellSettings : ({})
   readonly property string shellSettingsSurface: validShellSettingsSurface(shellSettingsSettings.surface)
   readonly property var shellSettingsService: resolveShellSettingsService()
-  readonly property var youtubeMusicService: resolveYoutubeMusicService()
+  readonly property var mediaPlayerService: resolveMediaPlayerService()
   readonly property var shellHyprState: shellSettingsService && shellSettingsService.state && shellSettingsService.state.hypr ? shellSettingsService.state.hypr : ({})
   readonly property bool hyprWindowGapsDisabled: shellHyprState.windowGapsEnabled === false || (hyprGapValue(shellHyprState.gapsIn) === 0 && hyprGapValue(shellHyprState.gapsOut) === 0)
   readonly property bool reduceMotionEnabled: lacunaSettings.data && lacunaSettings.data.reduceMotion === true
@@ -246,13 +247,13 @@ Item {
     return localShellSettingsService
   }
 
-  function resolveYoutubeMusicService() {
+  function resolveMediaPlayerService() {
     if (root.shell && typeof root.shell.ensureService === "function") {
-      var ensured = root.shell.ensureService("lacuna.youtube-music")
+      var ensured = root.shell.ensureService("lacuna.media-player")
       if (ensured) return ensured
     }
     if (root.shell && typeof root.shell.serviceFor === "function") {
-      var service = root.shell.serviceFor("lacuna.youtube-music")
+      var service = root.shell.serviceFor("lacuna.media-player")
       if (service) return service
     }
     return null
@@ -361,12 +362,12 @@ Item {
     return Math.min(menuWindow.height - y - designTokens.bottomInset, root.compact ? 430 : 520)
   }
 
-  function youtubeMusicFlyoutHeight() {
+  function mediaPlayerFlyoutHeight() {
     var availableHeight = menuWindow.height - barBottomY - designTokens.topInset - designTokens.bottomInset
     return Math.max(360, Math.min(availableHeight, compact ? 520 : 600))
   }
 
-  function youtubeMusicFlyoutY(panelHeight) {
+  function mediaPlayerFlyoutY(panelHeight) {
     return settingsFlyoutY(panelHeight)
   }
 
@@ -425,8 +426,8 @@ Item {
       return
     }
 
-    if (flyout === "youtubeMusic") {
-      openYoutubeMusicPanel()
+    if (flyout === "mediaPlayer") {
+      openMediaPlayerPanel()
     }
   }
 
@@ -663,11 +664,11 @@ Item {
     requestFlyoutFocus("appPicker")
   }
 
-  function openYoutubeMusicPanel() {
-    if (!lacunaEnabled || !youtubeMusicService) return
-    panelController.openFlyout("youtubeMusic")
+  function openMediaPlayerPanel() {
+    if (!lacunaEnabled || !mediaPlayerService) return
+    panelController.openFlyout("mediaPlayer")
     if (sidebarState.collapsed) sidebarState.expand()
-    requestFlyoutFocus("youtubeMusic")
+    requestFlyoutFocus("mediaPlayer")
   }
 
   function toggleSettingsPanel() {
@@ -744,8 +745,8 @@ Item {
     if (pendingFlyoutFocus === "appPicker" && appPickerOpen) {
       appPickerContent.forceSearchFocus()
       pendingFlyoutFocus = ""
-    } else if (pendingFlyoutFocus === "youtubeMusic" && youtubeMusicOpen) {
-      youtubeMusicContent.forceSearchFocus()
+    } else if (pendingFlyoutFocus === "mediaPlayer" && mediaPlayerOpen) {
+      mediaPlayerContent.forceSearchFocus()
       pendingFlyoutFocus = ""
     } else if (pendingFlyoutFocus === "settings" && settingsPanelOpen) {
       settingsPanel.forceActiveFocus()
@@ -861,6 +862,44 @@ Item {
   function setFrameReserveMode(mode) {
     var next = lacunaSettings.normalize(lacunaSettings.data)
     next.frame.reserveMode = validFrameReserveMode(mode)
+    lacunaSettings.save(next)
+  }
+
+  function cleanJellyfinServerUrl(value) {
+    return String(value || "").trim().replace(/\/+$/, "")
+  }
+
+  function ensureMediaProviders(settings) {
+    if (!settings.mediaProviders || typeof settings.mediaProviders !== "object") settings.mediaProviders = lacunaSettings.normalizeMediaProviders({})
+    if (!settings.mediaProviders.jellyfin || typeof settings.mediaProviders.jellyfin !== "object") {
+      settings.mediaProviders.jellyfin = {
+        enabled: false,
+        serverUrl: "",
+        apiKey: "",
+        userId: ""
+      }
+    }
+    if (settings.mediaProviders.jellyfin.userId === undefined || settings.mediaProviders.jellyfin.userId === null) settings.mediaProviders.jellyfin.userId = ""
+  }
+
+  function setJellyfinProviderEnabled(enabled) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    ensureMediaProviders(next)
+    next.mediaProviders.jellyfin.enabled = enabled === true
+    lacunaSettings.save(next)
+  }
+
+  function setJellyfinServerUrl(value) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    ensureMediaProviders(next)
+    next.mediaProviders.jellyfin.serverUrl = cleanJellyfinServerUrl(value)
+    lacunaSettings.save(next)
+  }
+
+  function setJellyfinApiKey(value) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    ensureMediaProviders(next)
+    next.mediaProviders.jellyfin.apiKey = String(value || "").trim()
     lacunaSettings.save(next)
   }
 
@@ -1344,6 +1383,21 @@ Item {
       return true
     }
 
+    if (entry.action === "toggle-jellyfin-provider") {
+      setJellyfinProviderEnabled(desiredChecked(entry, !registry.jellyfinProviderEnabled))
+      return true
+    }
+
+    if (entry.action.indexOf("set-jellyfin-server-url-") === 0) {
+      setJellyfinServerUrl(entry.action.substring("set-jellyfin-server-url-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-jellyfin-api-key-") === 0) {
+      setJellyfinApiKey(entry.action.substring("set-jellyfin-api-key-".length))
+      return true
+    }
+
     if (entry.action === "toggle-background-effects") {
       setBackgroundEffectsEnabled(desiredChecked(entry, !registry.backgroundEffectsEnabled()))
       return true
@@ -1753,6 +1807,7 @@ Item {
     frameReserveMode: root.frameReserveMode
     frameShadow: root.frameShadow
     frameBorder: root.frameBorder
+    mediaProviders: root.mediaProvidersSettings
     backgroundEffects: root.backgroundEffectsSettings
     backgroundVignette: root.backgroundVignetteSettings
     instantRestart: root.instantRestart
@@ -1999,7 +2054,7 @@ Item {
         navAccent: root.navAccent
         muted: root.muted
         iconRailWidth: root.barControlSize
-        youtubeMusicService: root.youtubeMusicService
+        mediaPlayerService: root.mediaPlayerService
         onActivated: function(entry) {
           root.activate(entry)
         }
@@ -2014,7 +2069,7 @@ Item {
         }
         onSettingsRequested: root.toggleSettingsPanel()
         onShellSettingsRequested: root.toggleShellSettingsPanel()
-        onYoutubeMusicRequested: root.openYoutubeMusicPanel()
+        onMediaPlayerRequested: root.openMediaPlayerPanel()
         onCollapseRequested: sidebarState.toggleCollapsed()
         onCloseRequested: root.close()
       }
@@ -2042,14 +2097,14 @@ Item {
         navAccent: root.navAccent
         muted: root.muted
         railWidth: root.railButtonWidth
-        youtubeMusicService: root.youtubeMusicService
+        mediaPlayerService: root.mediaPlayerService
         onExpandRequested: sidebarState.toggleCollapsed()
         onActivated: function(entry) {
           root.activate(entry)
         }
         onSettingsRequested: root.toggleSettingsPanel()
         onShellSettingsRequested: root.toggleShellSettingsPanel()
-        onYoutubeMusicRequested: root.openYoutubeMusicPanel()
+        onMediaPlayerRequested: root.openMediaPlayerPanel()
       }
     }
 
@@ -2181,21 +2236,21 @@ Item {
         }
       }
 
-      FlyoutYoutubeMusicContent {
-        id: youtubeMusicContent
+      FlyoutMediaPlayerContent {
+        id: mediaPlayerContent
 
         anchors.fill: parent
-        service: root.youtubeMusicService
+        service: root.mediaPlayerService
         compact: root.compact
-        open: root.youtubeMusicOpen
-        contentVisible: root.renderYoutubeMusicContent
+        open: root.mediaPlayerOpen
+        contentVisible: root.renderMediaPlayerContent
         designTokens: designTokens
         foreground: root.foreground
         background: root.background
         accent: root.accent
         muted: root.muted
         bodyFontFamily: root.bodyFontFamily
-        onCloseRequested: panelController.closeFlyout("youtubeMusic")
+        onCloseRequested: panelController.closeFlyout("mediaPlayer")
       }
     }
 

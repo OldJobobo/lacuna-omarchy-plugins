@@ -33,16 +33,8 @@ def item_media_type(item):
     return "video"
 
 
-def stream_url(server_url, api_key, item_id):
-    query = urllib.parse.urlencode({"api_key": api_key})
-    return f"{server_url}/Items/{urllib.parse.quote(item_id)}/Download?{query}"
-
-
-def thumbnail_url(server_url, api_key, item_id, image_tags):
-    if not isinstance(image_tags, dict) or not image_tags.get("Primary"):
-        return ""
-    query = urllib.parse.urlencode({"fillWidth": 420, "quality": 90, "api_key": api_key})
-    return f"{server_url}/Items/{urllib.parse.quote(item_id)}/Images/Primary?{query}"
+def stable_item_url(item_id):
+    return f"jellyfin://item/{urllib.parse.quote(item_id, safe='')}"
 
 
 def artist_text(item):
@@ -56,7 +48,7 @@ def artist_text(item):
     return ""
 
 
-def normalize_item(server_url, api_key, item):
+def normalize_item(item):
     item_id = str(item.get("Id") or "")
     if not item_id:
         return None
@@ -71,8 +63,11 @@ def normalize_item(server_url, api_key, item):
         "title": str(item.get("Name") or "Untitled Jellyfin item"),
         "uploader": artist_text(item),
         "durationText": duration_text(item.get("RunTimeTicks")),
-        "thumbnail": thumbnail_url(server_url, api_key, item_id, item.get("ImageTags")),
-        "url": stream_url(server_url, api_key, item_id),
+        # Persist only stable provider identity. Authenticated stream and image
+        # URLs are resolved just in time and must never enter Lacuna state.
+        "thumbnail": "",
+        "hasThumbnail": isinstance(item.get("ImageTags"), dict) and bool(item["ImageTags"].get("Primary")),
+        "url": stable_item_url(item_id),
         "source": "Jellyfin",
     }
 
@@ -93,14 +88,25 @@ def load_config(raw):
         return {}
 
 
+def load_settings(path):
+    try:
+        payload = json.loads(open(path, encoding="utf-8").read() or "{}")
+    except (OSError, json.JSONDecodeError):
+        return {}
+    providers = payload.get("mediaProviders") if isinstance(payload, dict) else {}
+    return providers.get("jellyfin", {}) if isinstance(providers, dict) else {}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config-json", required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--config-json")
+    source.add_argument("--settings-file")
     parser.add_argument("--limit", type=int, default=30)
     parser.add_argument("query")
     args = parser.parse_args(argv)
 
-    config = load_config(args.config_json)
+    config = load_settings(args.settings_file) if args.settings_file else load_config(args.config_json)
     if config.get("enabled") is not True:
         print(json.dumps({"results": [], "error": ""}))
         return 0
@@ -131,7 +137,7 @@ def main(argv=None):
     rows = []
     for item in payload.get("Items", []):
         if isinstance(item, dict):
-            normalized = normalize_item(server_url, api_key, item)
+            normalized = normalize_item(item)
             if normalized:
                 rows.append(normalized)
 

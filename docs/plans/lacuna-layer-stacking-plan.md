@@ -15,7 +15,7 @@ plan explains why it exists and what was changed.
   - `lacuna.bar/Bar.qml` — bar host; creates frame surfaces, bar adapter, hosted menu
   - `lacuna.bar/LacunaFrameWindow.qml` — full-frame paint surface (Top layer)
   - `lacuna.bar/LacunaFrameBorderWindow.qml` — frame border hairline (Overlay layer)
-  - `lacuna.youtube-music-video/Overlay.qml` — video wallpaper + in-window fade cover
+  - `lacuna.media-player-video/Overlay.qml` — video wallpaper + in-window fade cover
   - `tests/test_qml_contracts.py::test_layer_stacking_policy` — enforcement
   - `docs/architecture/layer-stacking.md` — the policy document
 - Verify with: `./scripts/check.sh`; live truth: `hyprctl layers`.
@@ -43,9 +43,9 @@ can map after B, is a latent regression. Two shipped bugs came from this:
 
 ### F1. In-window composition for the video fade cover (BUG 1)
 
-`lacuna.youtube-music-video/Overlay.qml`: the cover is a `Rectangle` inside
+`lacuna.media-player-video/Overlay.qml`: the cover is a `Rectangle` inside
 the video window above the `VideoOutput` (`id: fadeCover`, `z: 10`); the
-separate `lacuna-youtube-music-video-fade` surface was deleted and the
+separate `lacuna-media-player-video-fade` surface was deleted and the
 contract test asserts it never returns (`assertNotIn`). Sibling z-order is
 deterministic; cross-window order is not.
 
@@ -71,7 +71,7 @@ full-screen outer bounds.
 
 ## LEVEL ASSIGNMENTS (summary; full table in docs/architecture/layer-stacking.md)
 
-- background: omarchy wallpaper, `lacuna-youtube-music-video` (carries its own
+- background: omarchy wallpaper, `lacuna-media-player-video` (carries its own
   fade cover), vignette in ignore-animations mode.
 - bottom: ambience overlays, desktop clock, vignette default.
 - top: `lacuna-bar-frame` (always mapped), `omarchy-bar`, reserve windows,
@@ -113,7 +113,7 @@ Expected in `Layer level 2 (top)`: `lacuna-bar-frame` present even with frame
 mode off (always mapped), `lacuna-menu` listed after it. Toggling
 `frame.mode` in `~/.config/omarchy/lacuna/settings.json` between `off` and
 `fullframe` must not change the layer list at all. Deploy via
-`./scripts/dev deploy lacuna.bar lacuna.youtube-music-video` (restarts shell).
+`./scripts/dev deploy lacuna.bar lacuna.media-player-video` (restarts shell).
 
 ## KNOWN TRADE-OFFS / OPEN FOLLOW-UPS
 
