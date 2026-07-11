@@ -7,6 +7,12 @@ Item {
 
   property var menuState: null
   property bool hostClosing: false
+  // Persistent rail/full sidebars must reject transient host closes before
+  // menuProgress starts animating down. MenuWindow owns the policy decision;
+  // the controller owns making that decision atomic with the state change.
+  property bool retainMenuOnExternalClose: false
+  property bool transitionTraceEnabled: false
+  property int transitionTraceSequence: 0
   property bool panelVisible: false
   property int transitionRevision: 0
   property int menuAnimationRevision: -1
@@ -49,12 +55,43 @@ Item {
 
   MotionTokens { id: defaultMotionTokens }
 
+  function trace(event, extra) {
+    if (!transitionTraceEnabled) return
+    transitionTraceSequence += 1
+    var record = {
+      sequence: transitionTraceSequence,
+      event: String(event || "state"),
+      menuOpen: menuOpen,
+      hostClosing: hostClosing,
+      retainMenuOnExternalClose: retainMenuOnExternalClose,
+      panelVisible: panelVisible,
+      menuStateName: menuStateName,
+      menuProgress: menuProgress,
+      menuAnimationTarget: menuAnimationTarget,
+      menuAnimationRevision: menuAnimationRevision,
+      activeFlyout: activeFlyout,
+      visibleFlyout: visibleFlyout,
+      incomingFlyout: incomingFlyout,
+      outgoingFlyout: outgoingFlyout,
+      closingFlyout: closingFlyout,
+      flyoutStateName: flyoutStateName,
+      flyoutProgress: flyoutProgress,
+      flyoutAnimationTarget: flyoutAnimationTarget,
+      flyoutAnimationRevision: flyoutAnimationRevision
+    }
+    if (extra && typeof extra === "object") {
+      for (var key in extra) record[key] = extra[key]
+    }
+    console.info("LACUNA_TRANSITION " + JSON.stringify(record))
+  }
+
   function nextRevision() {
     transitionRevision += 1
     return transitionRevision
   }
 
   function animateMenu(to) {
+    trace("animateMenu", { requestedTarget: to })
     if (menuAnimationRevision >= 0 && menuAnimationTarget === to) return
     menuAnimationRevision = -1
     menuProgressAnim.stop()
@@ -71,6 +108,7 @@ Item {
   }
 
   function animateFlyout(to) {
+    trace("animateFlyout", { requestedTarget: to })
     if (flyoutAnimationRevision >= 0 && flyoutAnimationTarget === to) return
     flyoutAnimationRevision = -1
     flyoutProgressAnim.stop()
@@ -230,6 +268,7 @@ Item {
   }
 
   function openFlyoutNow(next) {
+    trace("openFlyoutNow", { requestedFlyout: next })
     if (next === "") return
     if (activeFlyout === next && incomingFlyout === "") {
       animateFlyout(1)
@@ -261,6 +300,7 @@ Item {
   function toggleFlyout(id) { if (isFlyoutOpen(id)) closeActiveFlyout(); else openFlyout(id) }
 
   function closeActiveFlyout() {
+    trace("closeActiveFlyout")
     pendingFlyout = ""
     if (activeFlyout === "" && visibleFlyout === "") return
     contentSwitchRevision = -1
@@ -288,7 +328,11 @@ Item {
     animateFlyout(0)
   }
 
-  onMenuProgressChanged: consumePendingFlyout()
+  onMenuProgressChanged: {
+    trace("menuProgressChanged")
+    consumePendingFlyout()
+  }
+  onFlyoutProgressChanged: trace("flyoutProgressChanged")
 
   // This is deliberately only the content-switch blend. The attached shell
   // applies contentProgress once, after geometry has crossed its threshold.
@@ -319,8 +363,14 @@ Item {
     target: root.menuState
     function onOpenChanged() {
       if (!root.menuState) return
+      root.trace("menuStateOpenChanged", { nextOpen: root.menuState.open })
       if (root.menuState.open) root.beginMenuOpening()
       else {
+        if (!root.hostClosing && root.retainMenuOnExternalClose) {
+          if (typeof root.menuState.show === "function") root.menuState.show()
+          root.beginMenuOpening()
+          return
+        }
         root.beginMenuClosing()
         if (!root.hostClosing) root.hostHideRequested()
       }

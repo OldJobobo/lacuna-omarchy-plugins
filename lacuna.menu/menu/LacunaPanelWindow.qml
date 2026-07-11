@@ -51,7 +51,10 @@ PanelWindow {
   // compositor map timing cannot place a primary-output sidebar underneath
   // the frame shadow while other output variants remain above it.
   WlrLayershell.layer: WlrLayer.Overlay
-  WlrLayershell.keyboardFocus: flyoutInteractive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+  // The persistent sidebar and its flyouts share one layer-shell surface.
+  // Keep that surface pointer-driven: changing its keyboard focus policy while
+  // a flyout opens can make the compositor reconfigure the entire sidebar.
+  WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
   margins {
     top: root.visualTopInset
@@ -84,7 +87,9 @@ PanelWindow {
   }
 
   HyprlandFocusGrab {
-    active: root.menuOpen && root.flyoutInteractive
+    // A persistent desktop sidebar must never grab keyboard focus merely
+    // because one of its pointer-operated flyouts is visible.
+    active: false
     windows: [root]
     onCleared: root.focusGrabCleared()
   }

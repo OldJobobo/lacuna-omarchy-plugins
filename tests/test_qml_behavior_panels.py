@@ -1,10 +1,76 @@
 import unittest
+from pathlib import Path
 
 from qml_harness import HAVE_SESSION, parse_behave, qml_url, require_no_qml_errors, run_quickshell
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class SettingsFlyoutTransitionContracts(unittest.TestCase):
+    def test_settings_surfaces_do_not_reanimate_controller_owned_opacity(self):
+        for relative in [
+            "lacuna.menu/settings/SettingsWindow.qml",
+            "lacuna.menu/settings/OmarchyShellSettingsWindow.qml",
+            "lacuna.shell-settings/settings/OmarchyShellSettingsWindow.qml",
+        ]:
+            qml = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertNotIn("Behavior on opacity", qml, relative)
+
+        window = (ROOT / "lacuna.menu/menu/MenuWindow.qml").read_text(encoding="utf-8")
+        self.assertIn('opacity: root.flyoutContentOpacity("settings")', window)
+        self.assertIn('opacity: root.flyoutContentOpacity("shellSettings")', window)
+
+
 @unittest.skipUnless(HAVE_SESSION, "needs a quickshell binary and a Wayland session")
 class QmlPanelBehaviorTests(unittest.TestCase):
+    def test_persistent_sidebar_rejects_external_close_without_hiding(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var controller: null
+
+  QtObject {{
+    id: menuState
+    property bool open: true
+    function show() {{ open = true }}
+    function close() {{ open = false }}
+  }}
+
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.menu/services/PanelController.qml')}")
+    controller = component.createObject(root, {{
+      menuState: menuState,
+      retainMenuOnExternalClose: true,
+      animationDuration: 10000,
+      panelVisible: true,
+      menuProgress: 1
+    }})
+    menuState.open = false
+    console.log("BEHAVE " + JSON.stringify({{
+      open: menuState.open,
+      progress: controller.menuProgress,
+      visible: controller.panelVisible,
+      state: controller.menuStateName,
+      target: controller.menuAnimationTarget
+    }}))
+    quitTimer.start()
+  }}
+
+  Timer {{ id: quitTimer; interval: 20; onTriggered: Qt.quit() }}
+}}
+"""
+        output = run_quickshell(qml)
+        require_no_qml_errors(output)
+        row = parse_behave(output)[0]
+        self.assertTrue(row["open"])
+        self.assertEqual(row["progress"], 1)
+        self.assertTrue(row["visible"])
+        self.assertEqual(row["target"], 1)
+
     def test_panel_controller_threshold_queue_and_reduced_motion_contract(self):
         qml = f"""
 import Quickshell

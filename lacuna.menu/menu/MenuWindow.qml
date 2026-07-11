@@ -171,6 +171,7 @@ Item {
   // Semantic debounce for settings activation; deliberately independent of
   // reduced-motion and animation-speed preferences.
   readonly property int flyoutActivationFocusGuardMs: 900
+  readonly property bool transitionTraceEnabled: Quickshell.env("LACUNA_TRANSITION_TRACE") === "1"
   property bool pendingSystemRestartConfirmation: false
   property int pluginStateRevision: 0
   property int hyprWorkspaceRevision: 0
@@ -265,7 +266,11 @@ Item {
   }
 
   function flyoutLaneWidthFor(screen) {
-    return flyoutVisibleOnScreen(screen) ? flyoutLaneWidth : 0
+    // Keep every mapped sidebar window at its maximum flyout width. Changing
+    // the layer-shell buffer width when a flyout opens makes the compositor
+    // briefly scale the existing sidebar buffer, visibly squeezing every
+    // child before the new buffer arrives.
+    return sidebarVisibleOnScreen(screen) ? flyoutLaneWidth : 0
   }
 
   function frameBorderAttachedFlyoutVisibleOnScreen(screen) {
@@ -648,6 +653,7 @@ Item {
   }
 
   function closeFlyouts() {
+    traceSurface("focusGrabCleared")
     if (flyoutFocusClearHold.running) return
     pendingFlyoutFocus = ""
     panelController.closeActiveFlyout()
@@ -655,6 +661,20 @@ Item {
 
   function holdFlyoutAfterSettingsActivation() {
     flyoutFocusClearHold.restart()
+  }
+
+  function traceSurface(event) {
+    if (!transitionTraceEnabled) return
+    panelController.trace(event, {
+      pendingFlyoutFocus: pendingFlyoutFocus,
+      sidebarSurfaceVisible: sidebarSurfaceVisible,
+      sidebarCollapsed: sidebarState.collapsed,
+      panelWidth: panelWidth,
+      sidebarReserveSize: sidebarReserveSize,
+      focusedMonitor: focusedMonitorName,
+      sidebarScreen: sidebarScreen ? String(sidebarScreen.name || "") : "",
+      flyoutScreen: flyoutScreen ? String(flyoutScreen.name || "") : ""
+    })
   }
 
   // While this one-shot is running, closeFlyouts() is suppressed so a focus
@@ -2116,6 +2136,8 @@ Item {
     id: panelController
     motionTokens: sharedMotion
     menuState: root.menuState
+    retainMenuOnExternalClose: root.sidebarSettingsLoaded() && root.sidebarDefaultKeepsMenuOpen()
+    transitionTraceEnabled: root.transitionTraceEnabled
     onFlyoutOpenChanged: {
       if (!flyoutOpen) root.pendingFlyoutFocus = ""
       else root.applyPendingFlyoutFocus()
@@ -2254,11 +2276,16 @@ Item {
       id: panelUnifiedSurface
 
       anchors.fill: parent
-      sidebarVisible: root.sidebarSurfaceVisible
+      z: 0
+      // The durable sidebar is painted by `surface` below. Do not duplicate
+      // it inside the mutable MultiEffect source: that offscreen source is
+      // rebuilt as flyout geometry changes and intermittently blanks the real
+      // sidebar content for a few compositor frames.
+      sidebarVisible: false
       flyoutOpen: root.flyoutOpenOnScreen(modelData)
       flyoutRenderable: root.flyoutVisibleOnScreen(modelData)
       connectorRenderable: root.sidebarSurfaceVisible && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
-      shadowEnabled: root.lacunaEnabled && root.frameShadow && (root.sidebarSurfaceVisible || root.menuPanelControllerRef.flyoutRenderable)
+      shadowEnabled: root.lacunaEnabled && root.frameShadow && root.menuPanelControllerRef.flyoutRenderable
       menuProgress: root.menuPanelControllerRef.menuProgress
       flyoutProgress: root.menuPanelControllerRef.flyoutProgress
       contentProgress: root.menuPanelControllerRef.contentProgress
@@ -2298,6 +2325,11 @@ Item {
     MenuSurface {
       id: surface
 
+      // Explicitly keep the durable sidebar above the mutable flattened
+      // shadow/source layer. MultiEffect source updates may render outside
+      // ordinary declaration order for a frame; without this pin, that opaque
+      // source covers the sidebar content during flyout geometry changes.
+      z: 10
       visible: root.sidebarSurfaceVisible
       anchors.top: parent.top
       anchors.bottom: parent.bottom
@@ -2317,7 +2349,13 @@ Item {
       panelColor: root.panelColor
       foreground: root.foreground
       designTokens: root.menuDesignTokensRef
-      backgroundVisible: false
+      // Keep the visible sidebar paint independent of the flattened
+      // sidebar+flyout shadow source. The unified source changes geometry on
+      // every flyout frame; relying on it for visible sidebar paint makes the
+      // whole left sidebar flash/twitch when that texture is rebuilt.
+      // This opaque foreground copy covers the identical source silhouette
+      // while the unified surface beneath continues to cast one shadow.
+      backgroundVisible: true
 
       MenuContent {
         visible: root.sidebarSurfaceVisible && !sidebarState.collapsed
@@ -2400,6 +2438,7 @@ Item {
     LacunaPanelConnector {
       id: flyoutConnector
 
+      z: 20
       open: root.flyoutOpenOnScreen(modelData)
       renderable: root.sidebarSurfaceVisible && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
       progress: root.menuPanelControllerRef.flyoutProgress
@@ -2415,6 +2454,7 @@ Item {
     LacunaAttachedFlyout {
       id: attachedFlyout
 
+      z: 20
       open: root.flyoutOpenOnScreen(modelData)
       renderable: root.flyoutVisibleOnScreen(modelData)
       interactive: root.flyoutInteractiveOnScreen(modelData)

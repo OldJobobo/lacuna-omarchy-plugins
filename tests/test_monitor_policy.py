@@ -90,6 +90,7 @@ class MonitorPolicyTests(unittest.TestCase):
         self.assertIn('sidebarMonitorPolicy === "auto" || requestedInteractionMonitorName === ""', menu)
         self.assertIn("? focusedMonitorName : requestedInteractionMonitorName", menu)
         self.assertIn("function flyoutLaneWidthFor(screen)", menu)
+        self.assertIn("return sidebarVisibleOnScreen(screen) ? flyoutLaneWidth : 0", menu)
         self.assertIn("model: root.sidebarScreens", menu)
         self.assertIn("function setSidebarMonitorPolicy", menu)
         self.assertIn("function toggleSidebarMonitor", menu)

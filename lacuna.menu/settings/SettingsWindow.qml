@@ -520,10 +520,6 @@ Item {
   focus: open
   Keys.onEscapePressed: root.closeRequested()
 
-  Behavior on opacity {
-    LacunaAnim { motion: "fast" }
-  }
-
   Timer {
     id: controlResetTimer
     interval: 1600
