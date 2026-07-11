@@ -18,29 +18,29 @@ This directory is split by document intent:
 
 For users:
 
-1. [Install And Update](install.md)
-2. [Configuration](configuration.md)
-3. [Plugin Catalog](plugins/README.md)
+1. [Install And Update](./install.md)
+2. [Configuration](./configuration.md)
+3. [Plugin Catalog](./plugins/README.md)
 
 For maintainers:
 
-1. [Roadmap](roadmap.md)
-2. [Issue Map](issues.md)
-3. [Architecture Overview](architecture/overview.md)
-4. [Plugin Contracts](architecture/plugin-contracts.md)
-5. [Services And State](architecture/services-and-state.md)
-6. [Quattro Compatibility Ledger](architecture/quattro-compatibility.md)
-7. [Testing](development/testing.md)
-8. [Release Notes](development/release.md)
+1. [Roadmap](./roadmap.md)
+2. [Issue Map](./issues.md)
+3. [Architecture Overview](./architecture/overview.md)
+4. [Plugin Contracts](./architecture/plugin-contracts.md)
+5. [Services And State](./architecture/services-and-state.md)
+6. [Quattro Compatibility Ledger](./architecture/quattro-compatibility.md)
+7. [Testing](./development/testing.md)
+8. [Release Notes](./development/release.md)
 
 For design work:
 
-1. [Lacuna Design Language](lacuna-design-system/README.md)
-2. [UI Reference Screenshots](screenshots/reference/README.md)
+1. [Lacuna Design Language](./lacuna-design-system/README.md)
+2. [UI Reference Screenshots](./screenshots/reference/README.md)
 
 For historical context:
 
-1. [Plans And Historical Notes](plans/README.md)
+1. [Plans And Historical Notes](./plans/README.md)
 
 ## Current References
 

@@ -1,6 +1,6 @@
 # Lacuna Media Player Rebrand Plan
 
-Status: planned
+Status: implemented; retained as the compatibility and validation record
 
 ## Goal
 

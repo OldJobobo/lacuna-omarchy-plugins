@@ -1,6 +1,6 @@
 # TASK: Fix slow/black-screen background-video transitions in Lacuna Media Player
 
-Status: active
+Status: implemented; retained as the background-video lifecycle and validation record
 
 Executable plan for an LLM or developer. Diagnosis was performed and measured on
 2026-07-01; timing/format claims below were verified empirically — do not re-litigate them.
