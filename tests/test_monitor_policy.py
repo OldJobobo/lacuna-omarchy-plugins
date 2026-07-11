@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 import textwrap
 import unittest
@@ -9,8 +10,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def run_policy_script(script: str) -> dict:
+    node = shutil.which("node")
+    if not node:
+        raise unittest.SkipTest("node is not installed")
+
     result = subprocess.run(
-        ["node", "-e", script],
+        [node, "-e", script],
         cwd=ROOT,
         check=False,
         text=True,
