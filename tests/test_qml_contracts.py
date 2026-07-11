@@ -2155,6 +2155,32 @@ class QmlContractTests(unittest.TestCase):
         profile = read("shared/qml/simple-bar/ColorProfile.qml")
         self.assertIn("readonly property color ink: foreground", profile)
 
+    def test_color_profiles_read_quattro_theme_state_and_named_hues(self):
+        profile = read("shared/qml/simple-bar/ColorProfile.qml")
+        workspaces = read("lacuna.workspaces/ColorProfile.qml")
+
+        for qml in (profile, workspaces):
+            self.assertIn('Quickshell.env("XDG_STATE_HOME")', qml)
+            self.assertIn('stateHome + "/omarchy/current/theme/colors.toml"', qml)
+            self.assertIn('stateHome + "/omarchy/current/theme.name"', qml)
+            self.assertNotIn('configHome + "/omarchy/current/theme', qml)
+            self.assertIn("if (!next.background && next.bg)", qml)
+            self.assertIn("if (!next.foreground && next.fg)", qml)
+
+        for role, hue in {
+            "codex": "cyan",
+            "claude": "magenta",
+            "memory": "green",
+            "cpu": "yellow",
+            "temperature": "red",
+            "recording": "red",
+        }.items():
+            self.assertIn(f'{role}: "{hue}"', profile)
+
+        self.assertIn('profile === "colorful" ? roleColor(roleName || role, accent) : accent', profile)
+        self.assertIn('occupied: "green"', workspaces)
+        self.assertIn('urgent: "red"', workspaces)
+
     def test_motion_uses_one_named_reveal_scale(self):
         # Phase D: a single named "reveal" scale (03-motion.md) replaces the
         # legacy + noctalia timing sets. animation* survive as same-value

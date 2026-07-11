@@ -13,16 +13,17 @@ Item {
   property var palette: ({})
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
+  readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")
   readonly property string settingsPath: configHome + "/omarchy/lacuna/settings.json"
-  readonly property string colorsPath: configHome + "/omarchy/current/theme/colors.toml"
-  readonly property string themeNamePath: configHome + "/omarchy/current/theme.name"
+  readonly property string colorsPath: stateHome + "/omarchy/current/theme/colors.toml"
+  readonly property string themeNamePath: stateHome + "/omarchy/current/theme.name"
   readonly property string profile: normalizeProfile(widgetSetting("colorProfile", settingsProfile))
   readonly property color themeBackground: themeColor("background", "#101315")
   readonly property color themeForeground: themeColor("foreground", "#d8dee9")
   readonly property color foreground: bar ? bar.foreground : themeColor("foreground", "#d8dee9")
-  readonly property color urgent: bar ? bar.urgent : themeColor("color9", "#d42b5b")
-  readonly property color accent: themeColor("accent", themeColor("color14", "#88c0d0"))
-  readonly property color occupied: themeColor("color10", foreground)
+  readonly property color urgent: bar ? bar.urgent : themeColor("red", "#d42b5b")
+  readonly property color accent: bar && bar.accent ? bar.accent : themeColor("accent", foreground)
+  readonly property color occupied: themeColor("green", foreground)
   readonly property color empty: mix(themeBackground, themeForeground, 0.34)
   readonly property color hover: mix(themeBackground, themeForeground, 0.24)
 
@@ -51,8 +52,8 @@ Item {
 
     var map = {
       active: "accent",
-      occupied: "color10",
-      urgent: "color9",
+      occupied: "green",
+      urgent: "red",
       workspaces: "accent"
     }
 
@@ -75,6 +76,10 @@ Item {
       var match = lines[i].match(/^\s*([A-Za-z0-9_-]+)\s*=\s*["']?([^"'\s]+)["']?/)
       if (match) next[match[1]] = match[2].trim()
     }
+    if (!next.background && next.bg) next.background = next.bg
+    if (!next.foreground && next.fg) next.foreground = next.fg
+    if (!next.red && next.color9) next.red = next.color9
+    if (!next.green && next.color10) next.green = next.color10
     palette = next
   }
 
