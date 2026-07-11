@@ -213,16 +213,30 @@ Item {
   // Omarchy exposes to its shell settings.
   readonly property var sidebarSettingsData: lacunaSettings.data && lacunaSettings.data.sidebar
     ? lacunaSettings.data.sidebar : ({})
-  readonly property string focusedMonitorName: shellSettingsService && shellSettingsService.focusedMonitorName
-    ? String(shellSettingsService.focusedMonitorName) : ""
-  readonly property string activeMonitorName: requestedInteractionMonitorName !== ""
-    ? requestedInteractionMonitorName : focusedMonitorName
   readonly property string sidebarMonitorPolicy: MonitorPolicy.normalizeMonitorPolicy(sidebarSettingsData.monitorPolicy)
+  readonly property string liveFocusedMonitorName: Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.monitor
+    ? String(Hyprland.focusedWorkspace.monitor.name || "")
+    : (Hyprland.focusedMonitor ? String(Hyprland.focusedMonitor.name || "") : "")
+  property string settledFocusedMonitorName: ""
+  readonly property string focusedMonitorName: settledFocusedMonitorName !== ""
+    ? settledFocusedMonitorName
+    : (liveFocusedMonitorName !== "" ? liveFocusedMonitorName
+    : (shellSettingsService && shellSettingsService.focusedMonitorName ? String(shellSettingsService.focusedMonitorName) : "")
+    )
+  // Auto means workspace focus owns the sidebar. A popup's source screen is
+  // useful for choosing an interaction surface in mirrored/pinned modes, but
+  // must never become a sticky override that effectively pins auto mode.
+  readonly property string activeMonitorName: sidebarMonitorPolicy === "auto" || requestedInteractionMonitorName === ""
+    ? focusedMonitorName : requestedInteractionMonitorName
   readonly property var sidebarMonitorNames: MonitorPolicy.normalizeMonitorNames(sidebarSettingsData.monitorNames)
   readonly property var sidebarScreens: MonitorPolicy.chooseSidebarScreens(Quickshell.screens, sidebarMonitorPolicy, activeMonitorName, sidebarMonitorNames)
   readonly property var sidebarScreen: MonitorPolicy.choosePrimarySidebarScreen(Quickshell.screens, sidebarMonitorPolicy, activeMonitorName, sidebarMonitorNames)
   readonly property var flyoutScreen: MonitorPolicy.chooseFlyoutScreen(Quickshell.screens, sidebarMonitorPolicy, activeMonitorName, sidebarMonitorNames)
   readonly property var sidebarMonitorOptions: MonitorPolicy.monitorOptions(Quickshell.screens, sidebarMonitorNames)
+
+  onLiveFocusedMonitorNameChanged: {
+    if (liveFocusedMonitorName !== "") monitorHandoffTimer.restart()
+  }
 
   function sidebarVisibleOnScreen(screen) {
     return sidebarSurfaceVisible && MonitorPolicy.isSidebarScreen(sidebarScreens, screen)
@@ -1904,6 +1918,7 @@ Item {
   }
 
   Component.onCompleted: {
+    settledFocusedMonitorName = liveFocusedMonitorName
     versionFile.reload()
     applyInitialSidebarDefault()
     refreshHyprWorkspaceState()
@@ -1953,6 +1968,17 @@ Item {
     interval: 80
     repeat: false
     onTriggered: root.refreshHyprWorkspaceState()
+  }
+
+  // Let Hyprland finish its workspace animation before moving the layer-shell
+  // sidebar and frame reserve. Reconfiguring those surfaces mid-transition
+  // makes full-screen effects such as the vignette flash and competes with the
+  // compositor animation for a frame.
+  Timer {
+    id: monitorHandoffTimer
+    interval: root.menuMotionTokensRef.reveal
+    repeat: false
+    onTriggered: root.settledFocusedMonitorName = root.liveFocusedMonitorName
   }
 
   Connections {
