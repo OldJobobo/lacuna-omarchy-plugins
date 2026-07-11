@@ -1,6 +1,6 @@
 # Lacuna Quattro Roadmap
 
-Status: active project control (updated 2026-07-10)
+Status: active project control (updated 2026-07-11)
 
 This is the canonical roadmap for turning Lacuna into a first-class desktop
 enhancement for Omarchy Quattro. It is intentionally narrower than the full
@@ -70,6 +70,20 @@ the core shell is stabilized.
    a runtime, geometry, or integration test in addition to source contracts.
 6. Every release must be recoverable to a known-good shell configuration.
 
+## Release Sequence
+
+The repository is already versioned as `0.1.0`. Prereleases therefore use
+SemVer prerelease identifiers instead of moving backward to `0.0.1`:
+
+1. `0.1.0-beta.1` proves the supported product scope in real installs.
+2. Additional `0.1.0-beta.N` builds close defects found during beta.
+3. `0.1.0-rc.1` freezes product scope and proves the release artifact.
+4. `0.1.0` promotes the verified RC lineage without feature additions.
+
+P1 product-readiness work and P2 release-readiness work may proceed in
+parallel. Beta requires the beta gates from both plans. RC begins only after
+all beta blockers are closed or explicitly removed from the supported scope.
+
 ## Delivery Phases
 
 ### P0 — Core foundation
@@ -92,6 +106,8 @@ Plan: [P0 Core Foundation](plans/quattro-p0-core-foundation-plan.md)
 
 ### P1 — Product integration
 
+Status: in progress; beta product-readiness track
+
 Make the core shell feel complete and native to Omarchy without surrendering
 Lacuna's identity.
 
@@ -108,6 +124,8 @@ Plan: [P1 Product Integration](plans/quattro-p1-product-integration-plan.md)
 
 ### P2 — Release and evolution
 
+Status: in progress; beta/RC release-readiness track
+
 Make the suite easy to maintain, diagnose, upgrade, and extend.
 
 Deliverables:
@@ -121,7 +139,40 @@ Deliverables:
 
 Plan: [P2 Release And Evolution](plans/quattro-p2-release-and-evolution-plan.md)
 
-## Cross-Phase Acceptance Gates
+## `0.1.0-beta.1` Acceptance Gates
+
+Beta is ready when:
+
+- P0 remains green on the declared Omarchy/Quickshell pair.
+- Core settings have an inventory and deterministic persistence coverage.
+- Core keyboard, focus, accessible-name, and non-pointer interaction blockers
+  are closed.
+- Media is either covered by its documented failure/recovery contract or
+  explicitly kept outside the core release profile.
+- `core`, `native`, and `advanced` profiles have documented boundaries.
+- A packaged clean install, restart, update failure, rollback, uninstall, and
+  stock-bar recovery rehearsal has been recorded.
+- Known limitations and supported versions are included in beta release notes.
+
+Optional visual-surface work is not a beta gate.
+
+## `0.1.0-rc.1` Acceptance Gates
+
+RC is ready when:
+
+- No open shell-breaking, state-loss, credential-exposure, installer,
+  rollback, or core-accessibility defects remain.
+- Beta feedback has been resolved or explicitly documented as out of scope.
+- Diagnostics distinguish missing, disabled, failed, and stale-installed core
+  plugins and provide recovery actions.
+- The release archive passes clean install, update, rollback, restart, and
+  uninstall validation on the supported environment.
+- Version, manifests, changelog, documentation, inventory, tag, and archive
+  contents agree.
+- RC contains blocker fixes only; feature development moves to the next
+  release.
+
+## Stable Release Acceptance Gates
 
 The suite is ready for a first-class Quattro release when all of these are
 true:
@@ -163,7 +214,9 @@ true:
 - Target environment: Omarchy 4.0.0 alpha/Quattro development builds.
 - Runtime model: one long-running Quickshell process with top-level Lacuna
   plugin directories.
-- The repository check currently reports 244 passing tests and 2 environment
-  skips; rerun the check before using that count for a release decision.
-- The working tree contains media-player rebrand work that should be reviewed
-  and published separately from core shell stabilization.
+- Validation on 2026-07-11 reports 239 passing tests and 3 environment skips.
+  Treat this as a dated observation, not a pinned expected count.
+- `scripts/quattro-compatibility --check` reports compatibility with Omarchy
+  `4.0.0.r1042.gcc64c3e-1` and Quickshell `0.3.0-2` on the current machine.
+- The suite and all manifests currently report `0.1.0`; the next publishable
+  artifact is `0.1.0-beta.1`, not `0.0.1-beta`.

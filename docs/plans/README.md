@@ -7,13 +7,21 @@ plans are proposed, complete, implemented, reverted, or superseded. The
 canonical project priority queue remains the [Quattro roadmap](../roadmap.md);
 an entry here does not make a historical plan active again.
 
-## Active And Proposed Work
+## Active Release Tracks
 
 | Plan | State | Role and next boundary |
 | --- | --- | --- |
-| [Surface Transition Pipeline Repair](./lacuna-surface-transition-pipeline-plan.md) | Proposed; ready for implementation | Repairs menu/sidebar/flyout reveal sequencing, thresholded content disclosure, same-shell switching, reduced motion, and animated mask geometry. |
-| [Quattro P1 — Product Integration](./quattro-p1-product-integration-plan.md) | Proposed | Next Quattro phase: native integrations, settings completeness, accessibility, media recovery, and bundle boundaries. |
-| [Quattro P2 — Release And Evolution](./quattro-p2-release-and-evolution-plan.md) | Proposed; depends on P1 | Release compatibility, diagnostics, documentation integrity, migrations, and bounded cleanup. |
+| [Sidebar And Settings Flyout Stability](./sidebar-settings-flyout-stability-plan.md) | Completed and user-verified | Keeps the shared layer-shell surface at a fixed width so settings flyouts cannot squeeze or redraw the persistent sidebar. |
+| [Quattro P1 — Product Integration](./quattro-p1-product-integration-plan.md) | In progress; beta product readiness | Close settings, accessibility, media recovery, native integration, and bundle acceptance gates. |
+| [Quattro P2 — Release And Evolution](./quattro-p2-release-and-evolution-plan.md) | In progress alongside P1 | Close compatibility, diagnostics, packaging, migration, documentation, beta, and RC gates. |
+
+## Separate Non-Blocking Proposals
+
+These documents are not part of the beta or RC critical path.
+
+| Plan | State | Role and boundary |
+| --- | --- | --- |
+| [Surface Transition Pipeline Repair](./lacuna-surface-transition-pipeline-plan.md) | Proposed; ready for implementation | Optional interaction/transition work tracked separately from release readiness. |
 | [Shell Layout Presets And Agent Orchestration](./lacuna-shell-layout-presets-agent-orchestration-plan.md) | Proposed feature | Built-in per-monitor/workspace layout presets and the first Agent Orchestration shell mode. Not yet represented in runtime settings or QML. |
 | [Issue Creation](./lacuna-issue-creation-plan.md) | Draft operations plan | A prepared GitHub issue-creation batch. It is not an implementation phase and should be revalidated before creating external issues. |
 
@@ -71,3 +79,10 @@ an entry here does not make a historical plan active again.
   stacking rules.
 - [Geometry](../lacuna-design-system/02-geometry.md): frame, seam, connector,
   and attached-flyout rules.
+
+## Release Planning Rule
+
+The suite is already versioned `0.1.0`. The active sequence is
+`0.1.0-beta.N` to `0.1.0-rc.N` to `0.1.0`. P1 and P2 are parallel readiness
+tracks; neither optional visual work nor unrelated proposed features block
+that sequence.

@@ -1,6 +1,6 @@
 # Quattro P2 — Release And Evolution Plan
 
-Status: proposed (updated 2026-07-10)
+Status: in progress; beta/RC release-readiness track (reviewed 2026-07-11)
 
 P2 makes the suite maintainable across Quattro updates and safe to extend
 after the core shell and product integration contracts are stable.
@@ -14,8 +14,23 @@ structural changes do not silently change user behavior.
 ## Dependencies
 
 - P0 core foundation complete
-- P1 product integration complete
-- A clean release candidate with no unresolved state-schema ambiguity
+- P1 beta scope declared before packaging beta
+- P1 complete before entering RC
+- No unresolved state-schema ambiguity before entering RC
+
+P2 runs alongside P1. Compatibility checks, diagnostics, packaging, and
+release rehearsal should not wait for all product work to finish.
+
+## Progress Summary
+
+| Workstream | Status | Current evidence | Remaining release boundary |
+| --- | --- | --- | --- |
+| Compatibility | Mostly complete for one target | Executable ledger check, vendored parity, and plugin checks exist. | Declare minimum/current/release-tested targets and record release results. |
+| Diagnostics | In progress | `scripts/lacuna status` distinguishes staged/enabled versions. | Add core health, active host, migration, monitor policy, failures, and recovery actions. |
+| Release and migration | In progress | Version parity tests, changelog, rollback-capable installer, and tag workflow exist. | Add one bump/rehearsal procedure, inventory, migration notes, and committed-tree archive verification. |
+| Documentation consistency | In progress | Canonical roadmap/index and docs contracts exist. | Remove drift and validate release claims/links/commands. |
+| Structural evolution | Deferred | Existing behavior tests permit later bounded cleanup. | Not a beta/RC gate unless required to fix a blocker. |
+| P2 validation | Pending | Local checks and compatibility pass. | Run beta and RC artifact rehearsals. |
 
 ## Workstream 1 — Quattro compatibility matrix
 
@@ -100,6 +115,10 @@ Acceptance:
 - Upgrade notes describe every user-visible state migration.
 - Rollback can restore the previous core bar and settings state.
 
+The release workflow may remain in `.github/workflows/release.yml`; a new
+`scripts/release*` helper is required only if it removes duplicated or
+error-prone manual steps.
+
 ## Workstream 4 — Documentation consistency
 
 Tasks:
@@ -153,3 +172,28 @@ omarchy-shell shell listShellConfig
 
 P2 is complete when a release can be installed, diagnosed, upgraded, rolled
 back, and understood without relying on private project knowledge.
+
+## Promotion Gates
+
+### Beta
+
+- Version set to `0.1.0-beta.1` in `VERSION` and every manifest.
+- Changelog contains beta scope, migrations, known limitations, and supported
+  Omarchy/Quickshell versions.
+- Archive is built from committed files and its inventory is verified.
+- Clean install, restart, failed update rollback, uninstall, and stock-bar
+  recovery are recorded.
+
+### Release candidate
+
+- P1 beta blockers and beta feedback are closed or removed from supported
+  scope.
+- Diagnostics and every recovery action are release-ready.
+- `0.1.0-rc.1` archive passes the complete rehearsal without manual repair.
+- Only blocker fixes may enter subsequent RC builds.
+
+### Stable
+
+- Promote the verified RC lineage to `0.1.0` without adding features.
+- Re-run version parity, archive inventory, checksum, clean install, and smoke
+  checks before tagging.

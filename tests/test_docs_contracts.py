@@ -87,13 +87,19 @@ class DocsContractTests(unittest.TestCase):
         plans_index = (ROOT / "docs" / "plans" / "README.md").read_text(encoding="utf-8")
         historical_tracker = (ROOT / "docs" / "plans" / "lacuna-suite-improvement-plan.md").read_text(encoding="utf-8")
 
-        self.assertIn("Status: active project control (updated 2026-07-10)", roadmap)
+        self.assertIn("Status: active project control (updated 2026-07-11)", roadmap)
         self.assertIn("`lacuna.bar` is the intentional custom bar host", roadmap)
         self.assertIn("P0 — Core foundation", roadmap)
         self.assertIn("P1 — Product integration", roadmap)
         self.assertIn("P2 — Release and evolution", roadmap)
+        self.assertIn("0.1.0-beta.1", roadmap)
+        self.assertIn("0.1.0-rc.1", roadmap)
+        self.assertIn("Optional visual-surface work is not a beta gate.", roadmap)
+        self.assertIn("## Active Release Tracks", plans_index)
+        self.assertIn("## Separate Non-Blocking Proposals", plans_index)
 
         for name in [
+            "sidebar-settings-flyout-stability-plan.md",
             "quattro-p0-core-foundation-plan.md",
             "quattro-p1-product-integration-plan.md",
             "quattro-p2-release-and-evolution-plan.md",
@@ -101,8 +107,25 @@ class DocsContractTests(unittest.TestCase):
             self.assertIn(name, plans_index)
             self.assertTrue((ROOT / "docs" / "plans" / name).exists(), name)
 
+        stability_plan = (ROOT / "docs" / "plans" / "sidebar-settings-flyout-stability-plan.md").read_text(encoding="utf-8")
+        self.assertIn("Status: completed and user-verified", stability_plan)
+        self.assertIn("flyoutLaneWidthFor(screen)", stability_plan)
+        self.assertIn("the user visually confirmed", stability_plan)
+        self.assertIn("Do not add another timeout, debounce, delayed reopen", stability_plan)
+        self.assertIn("LACUNA_LIVE_VISUAL=1", stability_plan)
+
         self.assertIn("Status: superseded historical tracker (2026-07-10)", historical_tracker)
         self.assertIn("Use [`../roadmap.md`](../roadmap.md)", historical_tracker)
+
+        p1 = (ROOT / "docs" / "plans" / "quattro-p1-product-integration-plan.md").read_text(encoding="utf-8")
+        p2 = (ROOT / "docs" / "plans" / "quattro-p2-release-and-evolution-plan.md").read_text(encoding="utf-8")
+        release = (ROOT / "docs" / "development" / "release.md").read_text(encoding="utf-8")
+        self.assertIn("Status: in progress; beta product-readiness track", p1)
+        self.assertIn("tests/test_qml_behavior_video.py", p1)
+        self.assertNotIn("tests/test_media_player_worker.py", p1)
+        self.assertIn("Status: in progress; beta/RC release-readiness track", p2)
+        self.assertIn("P2 runs alongside P1", p2)
+        self.assertIn("0.1.0-beta.N -> 0.1.0-rc.N -> 0.1.0", release)
 
     def test_distribution_scaffolding_exists(self):
         for name in [

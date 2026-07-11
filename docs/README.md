@@ -31,7 +31,7 @@ For maintainers:
 5. [Services And State](./architecture/services-and-state.md)
 6. [Quattro Compatibility Ledger](./architecture/quattro-compatibility.md)
 7. [Testing](./development/testing.md)
-8. [Release Notes](./development/release.md)
+8. [Release Workflow](./development/release.md)
 
 For design work:
 
