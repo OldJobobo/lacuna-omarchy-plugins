@@ -22,15 +22,28 @@ QtObject {
   property real cachedFlyoutHeight: 0
   property real cachedConnectorWidth: 0
   property bool cachedAnchorRight: false
+  // The controller owns switching; this host owns the one geometry snapshot
+  // consumed by paint, borders, connectors, and input masks.
+  property bool geometrySwitchActive: false
+  property real geometrySwitchProgress: 1
+  property real fromFlyoutY: 0
+  property real fromFlyoutWidth: 0
+  property real fromFlyoutHeight: 0
+  property real fromConnectorWidth: 0
+  property bool fromAnchorRight: false
+  property bool switchSnapshotReady: false
 
   readonly property real clampedFlyoutProgress: Math.max(0, Math.min(1, flyoutProgress))
   readonly property real panelSurfaceWidth: panelWidth + surfaceRightInset
   readonly property bool transitioningFlyout: flyoutRenderable && clampedFlyoutProgress > 0.001 && clampedFlyoutProgress < 0.999
-  readonly property real effectiveFlyoutY: transitioningFlyout ? cachedFlyoutY : flyoutY
-  readonly property real effectiveFlyoutWidth: transitioningFlyout ? cachedFlyoutWidth : flyoutWidth
-  readonly property real effectiveFlyoutHeight: transitioningFlyout ? cachedFlyoutHeight : flyoutHeight
-  readonly property real effectiveConnectorWidth: transitioningFlyout ? cachedConnectorWidth : connectorWidth
-  readonly property bool effectiveAnchorRight: transitioningFlyout ? cachedAnchorRight : anchorRight
+  readonly property real clampedGeometrySwitchProgress: Math.max(0, Math.min(1, geometrySwitchProgress))
+  readonly property real effectiveFlyoutY: geometrySwitchActive ? interpolate(fromFlyoutY, flyoutY) : (transitioningFlyout ? cachedFlyoutY : flyoutY)
+  readonly property real effectiveFlyoutWidth: geometrySwitchActive ? interpolate(fromFlyoutWidth, flyoutWidth) : (transitioningFlyout ? cachedFlyoutWidth : flyoutWidth)
+  readonly property real effectiveFlyoutHeight: geometrySwitchActive ? interpolate(fromFlyoutHeight, flyoutHeight) : (transitioningFlyout ? cachedFlyoutHeight : flyoutHeight)
+  readonly property real effectiveConnectorWidth: geometrySwitchActive ? interpolate(fromConnectorWidth, connectorWidth) : (transitioningFlyout ? cachedConnectorWidth : connectorWidth)
+  readonly property bool effectiveAnchorRight: geometrySwitchActive
+    ? (clampedGeometrySwitchProgress < 0.5 ? fromAnchorRight : anchorRight)
+    : (transitioningFlyout ? cachedAnchorRight : anchorRight)
   readonly property real sidebarX: effectiveAnchorRight ? effectiveFlyoutWidth + effectiveConnectorWidth : 0
 
   readonly property real sidebarMaskX: Math.max(0, surfaceX)
@@ -61,6 +74,24 @@ QtObject {
     cachedConnectorWidth = connectorWidth
     cachedAnchorRight = anchorRight
   }
+
+  function interpolate(from, to) {
+    return Number(from) + (Number(to) - Number(from)) * clampedGeometrySwitchProgress
+  }
+
+  function captureEffectiveGeometryForSwitch() {
+    // The first request has already rebound target dimensions. Use the last
+    // stable cache for that snapshot; subsequent requests capture the live
+    // interpolated silhouette instead.
+    fromFlyoutY = switchSnapshotReady ? effectiveFlyoutY : cachedFlyoutY
+    fromFlyoutWidth = switchSnapshotReady ? effectiveFlyoutWidth : cachedFlyoutWidth
+    fromFlyoutHeight = switchSnapshotReady ? effectiveFlyoutHeight : cachedFlyoutHeight
+    fromConnectorWidth = switchSnapshotReady ? effectiveConnectorWidth : cachedConnectorWidth
+    fromAnchorRight = switchSnapshotReady ? effectiveAnchorRight : cachedAnchorRight
+    switchSnapshotReady = true
+  }
+
+  onGeometrySwitchActiveChanged: if (!geometrySwitchActive) switchSnapshotReady = false
 
   onFlyoutRenderableChanged: {
     if (flyoutRenderable) captureFlyoutGeometry()

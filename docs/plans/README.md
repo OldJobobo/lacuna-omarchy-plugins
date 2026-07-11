@@ -11,6 +11,7 @@ an entry here does not make a historical plan active again.
 
 | Plan | State | Role and next boundary |
 | --- | --- | --- |
+| [Surface Transition Pipeline Repair](./lacuna-surface-transition-pipeline-plan.md) | Proposed; ready for implementation | Repairs menu/sidebar/flyout reveal sequencing, thresholded content disclosure, same-shell switching, reduced motion, and animated mask geometry. |
 | [Quattro P1 — Product Integration](./quattro-p1-product-integration-plan.md) | Proposed | Next Quattro phase: native integrations, settings completeness, accessibility, media recovery, and bundle boundaries. |
 | [Quattro P2 — Release And Evolution](./quattro-p2-release-and-evolution-plan.md) | Proposed; depends on P1 | Release compatibility, diagnostics, documentation integrity, migrations, and bounded cleanup. |
 | [Shell Layout Presets And Agent Orchestration](./lacuna-shell-layout-presets-agent-orchestration-plan.md) | Proposed feature | Built-in per-monitor/workspace layout presets and the first Agent Orchestration shell mode. Not yet represented in runtime settings or QML. |

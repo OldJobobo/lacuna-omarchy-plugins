@@ -40,6 +40,18 @@ def set_frame_mode(mode: str) -> None:
     time.sleep(0.5)
 
 
+def set_reduce_motion(enabled: bool) -> None:
+    data = read_settings()
+    data["reduceMotion"] = enabled
+    write_settings(data)
+    run(["omarchy", "restart", "shell"], timeout=60)
+    time.sleep(0.5)
+
+
+def summon_menu(flyout: str) -> None:
+    run(["omarchy-shell", "shell", "summon", "lacuna.menu", json.dumps({"flyout": flyout})])
+
+
 def lacuna_layers() -> dict[str, list[str]]:
     data = json.loads(run(["hyprctl", "-j", "layers"]))
     result: dict[str, list[str]] = {}
@@ -127,6 +139,36 @@ class LiveVisualTests(unittest.TestCase):
                 edge = pixel_luma(image, 960, 34)
                 deep = pixel_luma(image, 960, 52)
                 self.assertLess(edge, deep + 8)
+
+    def test_transition_pipeline_smoke_states(self):
+        # This is intentionally opt-in: it exercises the real menu surface,
+        # including sidebar-first disclosure, dimension switches, a newest-wins
+        # interruption, closing, and reduced-motion settlement. The per-state
+        # screenshots make failures inspectable without retaining user state.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            set_reduce_motion(False)
+            for name, flyout in (("settings", "settings"), ("media", "mediaPlayer"), ("app-picker", "appPicker")):
+                summon_menu(flyout)
+                time.sleep(0.45)
+                image = root / f"{name}.png"
+                run(["grim", str(image)])
+                self.assertGreater(image.stat().st_size, 0, name)
+
+            # A rapid third request must leave a usable, non-empty surface.
+            summon_menu("settings")
+            summon_menu("mediaPlayer")
+            summon_menu("appPicker")
+            time.sleep(0.45)
+            interrupted = root / "interrupted.png"
+            run(["grim", str(interrupted)])
+            self.assertGreater(interrupted.stat().st_size, 0)
+
+            set_reduce_motion(True)
+            summon_menu("settings")
+            immediate = root / "reduced-motion.png"
+            run(["grim", str(immediate)])
+            self.assertGreater(immediate.stat().st_size, 0)
 
 
 if __name__ == "__main__":

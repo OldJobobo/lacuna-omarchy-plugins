@@ -66,6 +66,22 @@ Rules that make this read correctly:
 4. **Frame and overlay pieces slide in from their screen edge**, they do not fade on. Depth comes
    from a single combined shadow on the flattened silhouette, never stacked per-piece shadows.
 
+### Interactive menu pipeline
+
+`lacuna.menu` uses one controller-owned transition pipeline. A flyout requested
+while the menu is closed is queued until sidebar progress reaches **0.65**.
+The attached shell opens from its seam immediately after that point, while its
+content remains fully concealed through flyout progress **0.55** and then uses
+the remaining progress range for opacity. Closing follows the same mapping in
+reverse.
+
+Changing between flyouts keeps the shared shell open: the old and new content
+crossfade over `quick` (150 ms), while the shell, connector, border, and input
+mask interpolate over that same progress. The incoming content alone becomes
+interactive after both progress values settle. Reduced motion settles all of
+these states synchronously; it does not change the attachment origin or final
+geometry.
+
 ## Closing
 
 Closing is the reveal **in reverse and slightly faster**: content fades first (drops below the

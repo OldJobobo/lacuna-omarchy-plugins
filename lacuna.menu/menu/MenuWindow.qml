@@ -120,14 +120,17 @@ Item {
   readonly property int panelShadowOutset: frameShadow ? Math.ceil(panelShadowBlurMax + Math.abs(frameShadowOffsetX)) : 0
   readonly property string visibleFlyout: panelController.visibleFlyout
   readonly property string outgoingFlyout: panelController.outgoingFlyout
-  readonly property bool activeFlyoutSettings: visibleFlyout === "settings"
-  readonly property bool activeFlyoutShellSettings: visibleFlyout === "shellSettings"
-  readonly property bool activeFlyoutAppPicker: visibleFlyout === "appPicker"
-  readonly property bool activeFlyoutMediaPlayer: visibleFlyout === "mediaPlayer"
-  readonly property bool renderSettingsContent: settingsPanelVisible || outgoingFlyout === "settings"
-  readonly property bool renderShellSettingsContent: shellSettingsPanelVisible || outgoingFlyout === "shellSettings"
-  readonly property bool renderAppPickerContent: appPickerVisible || outgoingFlyout === "appPicker"
-  readonly property bool renderMediaPlayerContent: mediaPlayerVisible || outgoingFlyout === "mediaPlayer"
+  readonly property string retainedFlyout: panelController.retainedFlyout
+  readonly property string closingFlyout: panelController.closingFlyout
+  readonly property string incomingFlyout: panelController.incomingFlyout
+  readonly property bool activeFlyoutSettings: panelController.activeFlyout === "settings"
+  readonly property bool activeFlyoutShellSettings: panelController.activeFlyout === "shellSettings"
+  readonly property bool activeFlyoutAppPicker: panelController.activeFlyout === "appPicker"
+  readonly property bool activeFlyoutMediaPlayer: panelController.activeFlyout === "mediaPlayer"
+  readonly property bool renderSettingsContent: settingsPanelVisible || outgoingFlyout === "settings" || retainedFlyout === "settings" || closingFlyout === "settings"
+  readonly property bool renderShellSettingsContent: shellSettingsPanelVisible || outgoingFlyout === "shellSettings" || retainedFlyout === "shellSettings" || closingFlyout === "shellSettings"
+  readonly property bool renderAppPickerContent: appPickerVisible || outgoingFlyout === "appPicker" || retainedFlyout === "appPicker" || closingFlyout === "appPicker"
+  readonly property bool renderMediaPlayerContent: mediaPlayerVisible || outgoingFlyout === "mediaPlayer" || retainedFlyout === "mediaPlayer" || closingFlyout === "mediaPlayer"
   readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutShellSettings ? shellSettingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : activeFlyoutMediaPlayer ? mediaPlayerWidth : 0
   readonly property int activeFlyoutHeight: activeFlyoutHeightFor(sidebarScreen)
   readonly property int activeFlyoutY: activeFlyoutYFor(sidebarScreen)
@@ -165,6 +168,9 @@ Item {
   readonly property real topBarPanelShadowHeight: Math.max(10, Math.round(barEdgeCasterSize * 0.62))
   readonly property real frameOverlayProgress: !lacunaEnabled ? 0 : frameMode === "fullframe" ? 1 : panelController.menuProgress
   property string pendingFlyoutFocus: ""
+  // Semantic debounce for settings activation; deliberately independent of
+  // reduced-motion and animation-speed preferences.
+  readonly property int flyoutActivationFocusGuardMs: 900
   property bool pendingSystemRestartConfirmation: false
   property int pluginStateRevision: 0
   property int hyprWorkspaceRevision: 0
@@ -340,6 +346,10 @@ Item {
     if (!flyoutScreen) return null
     var screenRefs = flyoutContentRefs[screenNamespace(flyoutScreen)]
     return screenRefs && screenRefs[String(kind)] ? screenRefs[String(kind)] : null
+  }
+
+  function flyoutContentOpacity(kind) {
+    return panelController.contentSwitchOpacity(kind)
   }
 
   function resolvedOmarchyPath() {
@@ -652,7 +662,7 @@ Item {
   // dismiss the flyout it just opened.
   Timer {
     id: flyoutFocusClearHold
-    interval: 900
+    interval: root.flyoutActivationFocusGuardMs
     repeat: false
   }
 
@@ -2188,6 +2198,15 @@ Item {
       flyoutHeight: Math.max(0, root.activeFlyoutHeightFor(modelData))
       flyoutProgress: root.menuPanelControllerRef.flyoutProgress
       flyoutRenderable: root.lacunaEnabled && root.flyoutVisibleOnScreen(modelData)
+      geometrySwitchActive: root.menuPanelControllerRef.incomingFlyout !== ""
+      geometrySwitchProgress: root.menuPanelControllerRef.contentSwitchProgress
+    }
+
+    Connections {
+      target: root.menuPanelControllerRef
+      function onIncomingFlyoutChanged() {
+        if (root.menuPanelControllerRef.incomingFlyout !== "") panelHost.captureEffectiveGeometryForSwitch()
+      }
     }
 
     LacunaFrameOverlay {
@@ -2418,7 +2437,7 @@ Item {
         anchors.fill: parent
         visible: root.renderSettingsContent
         enabled: root.settingsPanelOpen
-        opacity: root.settingsPanelOpen ? 1 : 0
+        opacity: root.flyoutContentOpacity("settings")
         open: root.settingsPanelOpen
         currentSection: root.settingsSection
         compact: root.compact
@@ -2458,7 +2477,7 @@ Item {
         anchors.fill: parent
         active: root.renderShellSettingsContent
         visible: root.renderShellSettingsContent
-        opacity: root.shellSettingsPanelOpen ? 1 : 0
+        opacity: root.flyoutContentOpacity("shellSettings")
         onLoaded: {
           if (!item) return
           item.currentSection = root.shellSettingsSection
@@ -2500,6 +2519,7 @@ Item {
         id: appPickerContent
 
         anchors.fill: parent
+        opacity: root.flyoutContentOpacity("appPicker")
         registry: root.menuRegistryRef
         appCatalog: root.menuAppCatalogRef
         customQuickLaunchApps: lacunaSettings.data && lacunaSettings.data.customQuickLaunchApps ? lacunaSettings.data.customQuickLaunchApps : []
@@ -2529,6 +2549,7 @@ Item {
         id: mediaPlayerContent
 
         anchors.fill: parent
+        opacity: root.flyoutContentOpacity("mediaPlayer")
         service: root.mediaPlayerService
         compact: root.compact
         open: root.mediaPlayerOpen

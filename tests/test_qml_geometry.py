@@ -179,7 +179,51 @@ def clamped_popup_x(
     return round(max(margin, min(point_x, window_width - implicit_width - margin)))
 
 
+def interpolated_flyout_geometry(
+    *,
+    progress: float,
+    from_y: float,
+    from_width: float,
+    from_height: float,
+    from_connector_width: float,
+    to_y: float,
+    to_width: float,
+    to_height: float,
+    to_connector_width: float,
+) -> dict[str, float]:
+    p = max(0.0, min(1.0, progress))
+    blend = lambda start, end: start + (end - start) * p
+    return {
+        "y": blend(from_y, to_y),
+        "width": blend(from_width, to_width),
+        "height": blend(from_height, to_height),
+        "connectorWidth": blend(from_connector_width, to_connector_width),
+    }
+
+
 class QmlGeometryTests(unittest.TestCase):
+    def test_panel_host_switch_geometry_uses_one_interpolated_set(self):
+        host = read("lacuna.menu/menu/LacunaPanelHost.qml")
+        self.assertIn("property bool geometrySwitchActive: false", host)
+        self.assertIn("function captureEffectiveGeometryForSwitch()", host)
+        self.assertIn("readonly property real effectiveFlyoutY: geometrySwitchActive ? interpolate(fromFlyoutY, flyoutY)", host)
+        self.assertIn("readonly property real flyoutMaskWidth: flyoutRenderable ? flyoutCurrentWidth : 0", host)
+
+        start = interpolated_flyout_geometry(
+            progress=0, from_y=80, from_width=560, from_height=620, from_connector_width=18,
+            to_y=160, to_width=420, to_height=440, to_connector_width=0,
+        )
+        middle = interpolated_flyout_geometry(
+            progress=0.5, from_y=80, from_width=560, from_height=620, from_connector_width=18,
+            to_y=160, to_width=420, to_height=440, to_connector_width=0,
+        )
+        end = interpolated_flyout_geometry(
+            progress=1, from_y=80, from_width=560, from_height=620, from_connector_width=18,
+            to_y=160, to_width=420, to_height=440, to_connector_width=0,
+        )
+        self.assertEqual(start, {"y": 80, "width": 560, "height": 620, "connectorWidth": 18})
+        self.assertEqual(middle, {"y": 120, "width": 490, "height": 530, "connectorWidth": 9})
+        self.assertEqual(end, {"y": 160, "width": 420, "height": 440, "connectorWidth": 0})
     def test_frame_geometry_never_paints_under_owning_bar_edge(self):
         frame = read("lacuna.bar/LacunaFrameWindow.qml")
         self.assertIn("readonly property real outerY: topBar ? Math.max(0, barSize) : 0", frame)
