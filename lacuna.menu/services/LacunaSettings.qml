@@ -78,7 +78,9 @@ Item {
         defaultMode: "off",
         collapsed: false,
         exclusive: true,
-        cornerPieces: true
+        cornerPieces: true,
+        monitorPolicy: "auto",
+        monitorNames: []
       },
       backgroundEffects: {
         enabled: true,
@@ -255,11 +257,15 @@ Item {
         next.sidebar.collapsed = source.sidebar.collapsed === true
         next.sidebar.exclusive = source.sidebar.exclusive !== false
         next.sidebar.cornerPieces = source.sidebar.cornerPieces !== false
+        next.sidebar.monitorPolicy = normalizeSidebarMonitorPolicy(source.sidebar.monitorPolicy)
+        next.sidebar.monitorNames = normalizeSidebarMonitorNames(source.sidebar.monitorNames)
         preserveUnknownJson(next.sidebar, source.sidebar, {
           defaultMode: true,
           collapsed: true,
           exclusive: true,
-          cornerPieces: true
+          cornerPieces: true,
+          monitorPolicy: true,
+          monitorNames: true
         })
       }
       next.backgroundEffects = normalizeBackgroundEffects(source.backgroundEffects || source.bgEffects)
@@ -517,6 +523,26 @@ Item {
     var mode = String(value || "").toLowerCase()
     if (mode === "off" || mode === "rail" || mode === "full") return mode
     return "off"
+  }
+
+  function normalizeSidebarMonitorPolicy(value) {
+    var policy = String(value || "").toLowerCase()
+    if (policy === "pinned" || policy === "fixed" || policy === "selected") return "pinned"
+    if (policy === "all" || policy === "everywhere") return "all"
+    return "auto"
+  }
+
+  function normalizeSidebarMonitorNames(value) {
+    var source = Array.isArray(value) ? value : String(value || "").split(",")
+    var names = []
+    var seen = {}
+    for (var i = 0; i < source.length && names.length < 16; i++) {
+      var name = String(source[i] || "").trim()
+      if (name === "" || seen[name]) continue
+      seen[name] = true
+      names.push(name)
+    }
+    return names
   }
 
   function normalizeLayoutMode(value, fallback) {

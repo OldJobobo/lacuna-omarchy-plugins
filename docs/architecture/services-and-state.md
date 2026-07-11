@@ -31,6 +31,20 @@ This includes shared Lacuna preferences such as:
 - `preferredApps`
 - sidebar/frame settings
 
+Sidebar monitor targeting is part of the canonical `sidebar` object:
+
+```json
+{
+  "monitorPolicy": "auto",
+  "monitorNames": []
+}
+```
+
+`monitorPolicy` accepts `auto`, `pinned`, and `all`. `monitorNames` stores
+unique output names for `pinned` mode and can contain one or several names.
+The sidebar may be mirrored to every selected output, but an open flyout is
+kept on the active/focused selected output only.
+
 Scripts that rewrite this file must preserve existing keys.
 
 ### Canonical settings shape

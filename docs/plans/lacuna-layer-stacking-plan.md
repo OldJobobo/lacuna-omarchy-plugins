@@ -74,11 +74,12 @@ full-screen outer bounds.
 - background: omarchy wallpaper, `lacuna-media-player-video` (carries its own
   fade cover), vignette in ignore-animations mode.
 - bottom: ambience overlays, desktop clock, vignette default.
-- top: `lacuna-bar-frame` (always mapped), `omarchy-bar`, reserve windows,
-  `lacuna-menu` sidebar (exclusive panels). Required order: frame → bar → sidebar.
-- overlay: `lacuna-bar-frame-border` (always mapped, maps first), transient
+- top: `lacuna-bar-frame` (always mapped), `omarchy-bar`, reserve windows.
+- overlay: `lacuna-menu` sidebar, above the persistent frame surface on every
+  output, plus `lacuna-bar-frame-border` (always mapped, maps first), transient
   panels (audio/bluetooth/network/power), drag ghost, non-exclusive panels,
-  ambience in foregroundOverlay mode.
+  and ambience in foregroundOverlay mode. The sidebar input mask remains
+  limited to the sidebar and flyout geometry.
 
 ## REGRESSION PROTECTION (already in place — keep it working)
 

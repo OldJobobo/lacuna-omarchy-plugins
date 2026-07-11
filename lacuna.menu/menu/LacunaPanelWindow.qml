@@ -47,7 +47,10 @@ PanelWindow {
   implicitWidth: Math.max(panelWidth + surfaceRightInset + flyoutLaneWidth, visualWidth)
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.namespace: layerNamespace
-  WlrLayershell.layer: exclusive ? WlrLayer.Top : WlrLayer.Overlay
+  // The frame surface is always mapped at Top. Keep the sidebar at Overlay so
+  // compositor map timing cannot place a primary-output sidebar underneath
+  // the frame shadow while other output variants remain above it.
+  WlrLayershell.layer: WlrLayer.Overlay
   WlrLayershell.keyboardFocus: flyoutInteractive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
   margins {

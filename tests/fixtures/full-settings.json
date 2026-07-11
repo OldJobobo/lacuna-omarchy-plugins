@@ -79,7 +79,9 @@
     "defaultMode": "rail",
     "collapsed": true,
     "exclusive": false,
-    "cornerPieces": false
+    "cornerPieces": false,
+    "monitorPolicy": "pinned",
+    "monitorNames": ["DP-1", "DP-2"]
   },
     "backgroundEffects": {
         "enabled": true,

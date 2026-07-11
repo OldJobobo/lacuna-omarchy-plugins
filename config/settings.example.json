@@ -43,7 +43,9 @@
     "defaultMode": "off",
     "collapsed": false,
     "exclusive": true,
-    "cornerPieces": true
+    "cornerPieces": true,
+    "monitorPolicy": "auto",
+    "monitorNames": []
   },
   "backgroundEffects": {
     "enabled": true,

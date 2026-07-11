@@ -90,20 +90,32 @@ This resets the active bar choice while leaving Lacuna runtime state in
 
 ## Multi-monitor policy
 
-The sidebar follows the focused Hyprland monitor. `lacuna.menu` resolves the
-focused monitor name from the Omarchy shell-settings state and selects the
-matching `Quickshell.screens` entry. Focus and monitor add/remove events trigger
-a state refresh. If focus data is unavailable or names a removed output, the
-first currently available screen is used as a deterministic fallback.
+`lacuna.menu` resolves the focused monitor name from the Omarchy shell-settings
+state and selects the matching `Quickshell.screens` entry. The persisted
+`sidebar.monitorPolicy` setting controls the target set:
 
-The bar, frame, border, ambience, and reserve surfaces remain instantiated per
-output. Only the sidebar, its attached flyouts, and its sidebar reserve target
-the selected focused output. The menu does not persist an open state, so a
+- `auto` (default): the focused output, with the first live output as a
+  deterministic fallback when focus data is unavailable or stale.
+- `pinned`: the live outputs named by `sidebar.monitorNames`; selecting one or
+  several outputs is supported. If no pinned name is currently present, the
+  focused-output fallback is used until a valid output is selected.
+- `all`: every live output.
+
+Focus and monitor add/remove events recalculate the target set. The sidebar,
+frame cutout, border attachment, and reserve surfaces are instantiated for
+every selected output. The interactive flyout is different: it is rendered
+only on the active/focused selected output, including when the sidebar policy
+is `all`; its connector, input mask, and attached frame-border gap follow that
+same output. In `pinned` mode, if the focused output is not pinned, the
+flyout falls back to the first valid pinned output. Monitor names are output
+names such as `DP-1`, not Hyprland workspace IDs; the policy therefore pins
+the surface to a physical/logical output while that output's active workspace
+can continue to change normally. The menu does not persist an open state, so a
 restart cannot resurrect it on a stale output.
 
 For the 2026-07-10 live smoke, the outputs were `DP-1`, `DP-2`, and `DP-3`,
-with `DP-3` focused; the policy therefore selected `DP-3` rather than the
-previous `Quickshell.screens[0]` (`DP-1`).
+with `DP-3` focused; `auto` therefore selected `DP-3` rather than the previous
+`Quickshell.screens[0]` (`DP-1`).
 
 ## Layer-order reconciliation
 

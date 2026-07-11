@@ -97,8 +97,24 @@ Item {
   }
 
   function hostedSidebarOccupiesEdge(edge, screen) {
-    if (!hostedSidebarVisible || hostedMenu.sidebarScreen !== screen) return false
+    if (!hostedSidebarVisibleOnScreen(screen)) return false
     return (edge === "left" && hostedSidebarOnLeft) || (edge === "right" && hostedSidebarOnRight)
+  }
+
+  function hostedSidebarVisibleOnScreen(screen) {
+    if (!hostedSidebarVisible) return false
+    if (hostedMenu && typeof hostedMenu.sidebarVisibleOnScreen === "function") {
+      return hostedMenu.sidebarVisibleOnScreen(screen)
+    }
+    return hostedMenu.sidebarScreen === screen
+  }
+
+  function hostedFlyoutVisibleOnScreen(screen) {
+    if (!hostedSidebarVisibleOnScreen(screen)) return false
+    if (hostedMenu && typeof hostedMenu.frameBorderAttachedFlyoutVisibleOnScreen === "function") {
+      return hostedMenu.frameBorderAttachedFlyoutVisibleOnScreen(screen)
+    }
+    return hostedMenu.frameBorderAttachedFlyoutVisible === true
   }
 
   function lacunaFrameContentRect(screen) {
@@ -109,7 +125,7 @@ Item {
     var bottomInset = root.position === "bottom" ? Math.max(0, root.barSize) : t
     var leftInset = root.position === "left" ? Math.max(0, root.barSize) : t
     var rightInset = root.position === "right" ? Math.max(0, root.barSize) : t
-    var sidebarOnThisScreen = root.hostedSidebarVisible && hostedMenu.sidebarScreen === screen
+    var sidebarOnThisScreen = root.hostedSidebarVisibleOnScreen(screen)
     var leftOcclusion = sidebarOnThisScreen && !hostedMenu.panelOnRight ? root.hostedSidebarFrameOcclusionWidth : 0
     var rightOcclusion = sidebarOnThisScreen && hostedMenu.panelOnRight ? root.hostedSidebarFrameOcclusionWidth : 0
     var x = Math.max(0, leftOcclusion > 0 ? leftOcclusion : leftInset)
@@ -194,8 +210,8 @@ Item {
       shadowEnabled: root.frameShadow
       shadowOffsetX: root.frameShadowOffsetX
       shadowOffsetY: root.frameShadowOffsetY
-      leftEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && !hostedMenu.panelOnRight
-      rightEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && hostedMenu.panelOnRight
+      leftEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && !hostedMenu.panelOnRight
+      rightEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && hostedMenu.panelOnRight
       leftOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
       rightOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
     }
@@ -215,13 +231,13 @@ Item {
       frameRadius: root.frameRadius
       cornerPieces: root.cornerPieces
       borderColor: barTheme.seam
-      leftEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && !hostedMenu.panelOnRight
-      rightEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && hostedMenu.panelOnRight
+      leftEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && !hostedMenu.panelOnRight
+      rightEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && hostedMenu.panelOnRight
       leftOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
       rightOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
-      attachedFlyoutVisible: hostedMenu.sidebarScreen === modelData && hostedMenu.frameBorderAttachedFlyoutVisible
-      attachedFlyoutY: hostedMenu.frameBorderAttachedFlyoutY
-      attachedFlyoutHeight: hostedMenu.frameBorderAttachedFlyoutHeight
+      attachedFlyoutVisible: root.hostedFlyoutVisibleOnScreen(modelData)
+      attachedFlyoutY: hostedMenu.frameBorderAttachedFlyoutYFor ? hostedMenu.frameBorderAttachedFlyoutYFor(modelData) : hostedMenu.frameBorderAttachedFlyoutY
+      attachedFlyoutHeight: hostedMenu.frameBorderAttachedFlyoutHeightFor ? hostedMenu.frameBorderAttachedFlyoutHeightFor(modelData) : hostedMenu.frameBorderAttachedFlyoutHeight
     }
   }
 

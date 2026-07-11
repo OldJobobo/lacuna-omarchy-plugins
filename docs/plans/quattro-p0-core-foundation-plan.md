@@ -114,18 +114,25 @@ Acceptance:
 
 Tasks:
 
-- Decide whether the sidebar follows focus, a configured output, or all
-  outputs.
+- Expose `auto`, `pinned`, and `all` sidebar target policies.
+- Persist one or several output names for `pinned` mode.
 - Define frame and reserve behavior for horizontal, vertical, and rotated
   monitors.
-- Define behavior when monitors are added, removed, or reordered.
+- Define behavior when monitors are added, removed, or reordered: recalculate
+  the live target set and fall back to the focused output when no pinned name
+  is currently present.
+- Keep the interactive flyout, connector, input mask, and attached border gap
+  on the active/focused output even when the sidebar target policy is `all`.
 - Record the policy before changing runtime behavior.
 
 Acceptance:
 
-- The policy is documented in architecture docs.
+- The policy is documented in architecture and settings-state docs.
+- Settings UI exposes policy selection and one-or-more pinned outputs.
 - Geometry tests cover at least one multi-monitor matrix.
-- Live smoke confirms the sidebar never opens on an unintended output.
+- Live smoke confirms the sidebar never opens on an unintended output, the
+  flyout is limited to the active output in `all` mode, and the Lacuna sidebar
+  rows remain visible above the media tile.
 
 ## Workstream 5 — Installer, update, and recovery
 
@@ -183,7 +190,12 @@ Implemented on 2026-07-10:
   JSON-safe metadata, normalized string-form layout entries, and exposed
   per-style bar-layout persistence helpers shared by the menu/state services.
 - Recorded the live layer-order reconciliation and added a focused-monitor
-  sidebar policy with deterministic fallback across monitor changes.
+  sidebar policy with deterministic fallback across monitor changes, then
+  exposed `auto`/`pinned`/`all` targeting with one-or-more output selection.
+- Added per-output sidebar/frame/reserve variants and preserved shared menu
+  registry/design-token bindings inside those variants so the sidebar content
+  remains visible above the media tile. Kept the interactive flyout on the
+  active/focused output instead of duplicating it across an `all` sidebar.
 - Added transactional installer/developer-deploy rollback, runtime state
   snapshots, dependency preflight, core bundle checks, and failure-injection
   coverage.
@@ -193,7 +205,7 @@ Implemented on 2026-07-10:
 Validation completed:
 
 ```text
-./scripts/check.sh                         244 passed, 2 skipped
+./scripts/check.sh                         223 passed, 2 skipped
 scripts/quattro-compatibility --check      compatible
 scripts/quattro-p0-smoke                    PASS
 live deploy                                 lacuna.bar, lacuna.menu, lacuna.state verified
