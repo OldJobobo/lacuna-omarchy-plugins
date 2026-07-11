@@ -5,6 +5,7 @@ import QtQuick
 import "../services"
 import "../components"
 import "../settings"
+import "MonitorPolicy.js" as MonitorPolicy
 
 Item {
   id: root
@@ -190,7 +191,14 @@ Item {
   readonly property int frameRadius: Math.max(0, positiveInt(frameSettings.radius, 14))
   readonly property int frameShadowOffsetX: numberSetting(frameSettings.shadowOffsetX, 2)
   readonly property int frameShadowOffsetY: numberSetting(frameSettings.shadowOffsetY, 3)
-  readonly property var sidebarScreen: Quickshell.screens && Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+  // The sidebar follows the focused Hyprland output. The settings-state helper
+  // reads the same focused monitor that Omarchy exposes to its shell settings;
+  // if that state is unavailable or stale, choose the first live output rather
+  // than leaving the panel without a target. Frame, bar, and reserve surfaces
+  // remain per-output, while this one selected output owns the sidebar.
+  readonly property string focusedMonitorName: shellSettingsService && shellSettingsService.focusedMonitorName
+    ? String(shellSettingsService.focusedMonitorName) : ""
+  readonly property var sidebarScreen: MonitorPolicy.chooseSidebarScreen(Quickshell.screens, focusedMonitorName)
 
   Behavior on compactProgress {
     NumberAnimation {
@@ -1729,6 +1737,9 @@ Item {
       var name = event.name
       if (name.indexOf("workspace") >= 0 || name === "focusedmon" || name.indexOf("window") >= 0 || name === "fullscreen") {
         hyprWorkspaceRefreshTimer.restart()
+      }
+      if (name === "focusedmon" || name.indexOf("monitor") >= 0) {
+        if (root.shellSettingsService && typeof root.shellSettingsService.refresh === "function") root.shellSettingsService.refresh()
       }
     }
 

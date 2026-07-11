@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = "lacuna"
 LEGACY_PLUGIN = "lacuna.compact-pill"
 BACKUPS_TO_KEEP = 2
+RUNTIME_BACKUPS_TO_KEEP = 8
 OMARCHY_STOCK_SHELL_CONFIG_PATHS = [
     Path.home() / ".local/share/omarchy/config/omarchy/shell.json",
     Path("/usr/share/omarchy/config/omarchy/shell.json"),
@@ -590,6 +591,64 @@ def write_shell_config(config: dict) -> None:
     tmp.replace(path)
 
 
+def runtime_state_paths() -> list[Path]:
+    return [shell_config_path(), lacuna_state_dir() / "settings.json"]
+
+
+def preserve_runtime_state() -> list[Path]:
+    """Copy mutable shell/runtime state before an install or update."""
+    existing = [path for path in runtime_state_paths() if path.exists() or path.is_symlink()]
+    if not existing:
+        return []
+
+    backup_dir = lacuna_state_dir() / "backups"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    saved: list[Path] = []
+    for path in existing:
+        backup = backup_dir / f"{path.name}.{timestamp}.bak"
+        suffix = 1
+        while backup.exists() or backup.is_symlink():
+            backup = backup_dir / f"{path.name}.{timestamp}-{suffix}.bak"
+            suffix += 1
+        if path.is_symlink():
+            backup.symlink_to(os.readlink(path))
+        else:
+            shutil.copy2(path, backup)
+        saved.append(backup)
+
+    backups = sorted(backup_dir.glob("*.bak"), key=lambda item: (item.stat().st_mtime, item.name), reverse=True)
+    for backup in backups[RUNTIME_BACKUPS_TO_KEEP * len(existing):]:
+        remove_path(backup)
+
+    print("  preserved runtime state:")
+    for backup in saved:
+        print(f"    {backup}")
+    return saved
+
+
+def capture_path_state(path: Path) -> dict[str, object]:
+    if path.is_symlink():
+        return {"kind": "symlink", "target": os.readlink(path)}
+    if path.is_file():
+        return {"kind": "file", "data": path.read_bytes(), "mode": path.stat().st_mode}
+    return {"kind": "missing"}
+
+
+def restore_path_state(path: Path, state: dict[str, object]) -> None:
+    remove_path(path)
+    kind = state.get("kind")
+    if kind == "symlink":
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.symlink_to(str(state["target"]))
+    elif kind == "file":
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(state["data"])
+        mode = state.get("mode")
+        if isinstance(mode, int):
+            path.chmod(mode)
+
+
 def entry_id(entry: object) -> str | None:
     if isinstance(entry, dict) and isinstance(entry.get("id"), str):
         return entry["id"]
@@ -752,7 +811,14 @@ def activation_reload_label(selected: set[str]) -> str:
     return " ".join(command)
 
 
-def activate_plugins(ids: list[str], plugins: dict[str, Plugin], selected: set[str], apply_layout_choice: bool, dry_run: bool) -> int:
+def activate_plugins(
+    ids: list[str],
+    plugins: dict[str, Plugin],
+    selected: set[str],
+    apply_layout_choice: bool,
+    dry_run: bool,
+    changes: list[tuple[Path, Path | None]] | None = None,
+) -> int:
     if not ids:
         return 0
     if dry_run:
@@ -762,17 +828,29 @@ def activate_plugins(ids: list[str], plugins: dict[str, Plugin], selected: set[s
         print(f"  {activation_reload_label(selected)}")
         return 0
 
-    config = ensure_shell_config_shape(read_shell_config())
-    for plugin_id in ids:
-        enable_shell_entry(config, plugins[plugin_id])
-    if "lacuna.bar" in selected or config["bar"].get("id") == "lacuna.bar":
-        available = selected | set(installed_lacuna_plugins(plugins))
-        apply_lacuna_bar_layout_to_config(config, available)
-    if apply_layout_choice:
-        apply_layout_to_config(config, selected)
-    write_shell_config(config)
-    print(f"  updated {shell_config_path()}", flush=True)
-    return run_command(activation_reload_command(selected), dry_run)
+    shell_path = shell_config_path()
+    shell_state = capture_path_state(shell_path)
+    try:
+        config = ensure_shell_config_shape(read_shell_config())
+        for plugin_id in ids:
+            enable_shell_entry(config, plugins[plugin_id])
+        if "lacuna.bar" in selected or config["bar"].get("id") == "lacuna.bar":
+            available = selected | set(installed_lacuna_plugins(plugins))
+            apply_lacuna_bar_layout_to_config(config, available)
+        if apply_layout_choice:
+            apply_layout_to_config(config, selected)
+        write_shell_config(config)
+        print(f"  updated {shell_config_path()}", flush=True)
+        code = run_command(activation_reload_command(selected), dry_run)
+        if code == 0:
+            return 0
+        print("  activation reload failed; restoring the previous shell.json", flush=True)
+        restore_path_state(shell_path, shell_state)
+        return code
+    except (OSError, ValueError, SystemExit) as error:
+        restore_path_state(shell_path, shell_state)
+        print(f"Failed to activate Lacuna plugins: {error}", file=sys.stderr)
+        return 1
 
 
 def deactivate_plugins(ids: list[str], dry_run: bool) -> int:
@@ -782,14 +860,21 @@ def deactivate_plugins(ids: list[str], dry_run: bool) -> int:
         print(f"  update {shell_config_path()} once")
         return 0
 
-    config = ensure_shell_config_shape(read_shell_config())
-    for plugin_id in ids:
-        remove_shell_entries(config, plugin_id)
-    if "lacuna.bar" in ids:
-        restore_stock_bar_config(config)
-    write_shell_config(config)
-    print(f"  updated {shell_config_path()}", flush=True)
-    return 0
+    shell_path = shell_config_path()
+    shell_state = capture_path_state(shell_path)
+    try:
+        config = ensure_shell_config_shape(read_shell_config())
+        for plugin_id in ids:
+            remove_shell_entries(config, plugin_id)
+        if "lacuna.bar" in ids:
+            restore_stock_bar_config(config)
+        write_shell_config(config)
+        print(f"  updated {shell_config_path()}", flush=True)
+        return 0
+    except (OSError, ValueError, SystemExit) as error:
+        restore_path_state(shell_path, shell_state)
+        print(f"Failed to update shell configuration: {error}", file=sys.stderr)
+        return 1
 
 
 def uninstall_reload_command(ids: list[str]) -> list[str]:
@@ -862,9 +947,6 @@ def remove_path(path: Path) -> None:
 def backup_target(target: Path) -> Path | None:
     if not target.exists() and not target.is_symlink():
         return None
-    if target.is_symlink():
-        target.unlink()
-        return None
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
     base = target.parent / f".{target.name}.bak.{timestamp}"
@@ -899,7 +981,12 @@ def validate_plugin(plugin_id: str, source_dir: Path, dry_run: bool) -> int:
     return run_command(command, dry_run=False)
 
 
-def stage_plugin(plugin_id: str, dry_run: bool, reinstall: bool) -> int:
+def stage_plugin(
+    plugin_id: str,
+    dry_run: bool,
+    reinstall: bool,
+    changes: list[tuple[Path, Path | None]] | None = None,
+) -> int:
     source_dir = ROOT / plugin_id
     target = plugins_dir() / plugin_id
     if not source_dir.is_dir():
@@ -929,6 +1016,8 @@ def stage_plugin(plugin_id: str, dry_run: bool, reinstall: bool) -> int:
         )
         backup = backup_target(target)
         shutil.move(str(stage), str(target))
+        if changes is not None:
+            changes.append((target, backup))
     except Exception as error:
         remove_path(stage)
         if backup and backup.exists() and not target.exists():
@@ -940,17 +1029,52 @@ def stage_plugin(plugin_id: str, dry_run: bool, reinstall: bool) -> int:
     return 0
 
 
-def stage_plugins(ids: list[str], dry_run: bool, reinstall: bool, rescan: bool = True) -> int:
+def rollback_staged_changes(changes: list[tuple[Path, Path | None]]) -> None:
+    for target, backup in reversed(changes):
+        remove_path(target)
+        if backup and (backup.exists() or backup.is_symlink()):
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(backup), str(target))
+
+
+def reload_after_rollback(selected: set[str] | None = None) -> int:
+    command = activation_reload_command(selected or set())
+    print(f"  recovery: {' '.join(command)}", flush=True)
+    return run_command(command, dry_run=False)
+
+
+def stage_plugins(
+    ids: list[str],
+    dry_run: bool,
+    reinstall: bool,
+    rescan: bool = True,
+    changes: list[tuple[Path, Path | None]] | None = None,
+) -> int:
+    transaction = changes if changes is not None else []
+    start = len(transaction)
     for plugin_id in ids:
-        code = stage_plugin(plugin_id, dry_run, reinstall)
+        code = stage_plugin(plugin_id, dry_run, reinstall, transaction)
         if code != 0:
+            rollback_staged_changes(transaction[start:])
+            del transaction[start:]
             return code
     if ids and rescan:
-        return run_command(["omarchy", "plugin", "rescan"], dry_run)
+        code = run_command(["omarchy", "plugin", "rescan"], dry_run)
+        if code != 0:
+            print("  plugin rescan failed; restoring the previous staged copies", flush=True)
+            rollback_staged_changes(transaction[start:])
+            del transaction[start:]
+            if not dry_run:
+                reload_after_rollback()
+            return code
     return 0
 
 
-def remove_plugin(plugin_id: str, dry_run: bool) -> int:
+def remove_plugin(
+    plugin_id: str,
+    dry_run: bool,
+    changes: list[tuple[Path, Path | None]] | None = None,
+) -> int:
     target = plugins_dir() / plugin_id
     print(f"  remove {target}", flush=True)
     if dry_run:
@@ -959,6 +1083,8 @@ def remove_plugin(plugin_id: str, dry_run: bool) -> int:
         print(f"    {plugin_id} is not installed")
         return 0
     backup = backup_target(target)
+    if changes is not None:
+        changes.append((target, backup))
     if backup:
         print(f"    backed up to {backup}")
     else:
@@ -967,15 +1093,24 @@ def remove_plugin(plugin_id: str, dry_run: bool) -> int:
 
 
 def uninstall_plugins(ids: list[str], dry_run: bool) -> int:
+    shell_path = shell_config_path()
+    shell_state = capture_path_state(shell_path) if not dry_run else {"kind": "missing"}
     code = deactivate_plugins(ids, dry_run)
     if code != 0:
         return code
+    removed: list[tuple[Path, Path | None]] = []
     for plugin_id in ids:
-        code = remove_plugin(plugin_id, dry_run)
+        code = remove_plugin(plugin_id, dry_run, removed)
         if code != 0:
             return code
     if ids:
-        return run_command(uninstall_reload_command(ids), dry_run)
+        code = run_command(uninstall_reload_command(ids), dry_run)
+        if code != 0 and not dry_run:
+            print("  uninstall reload failed; restoring the previous plugin and shell state", flush=True)
+            restore_path_state(shell_path, shell_state)
+            rollback_staged_changes(removed)
+            reload_after_rollback(set(ids))
+        return code
     return 0
 
 
@@ -1027,6 +1162,44 @@ def resolve_install_selection(args: argparse.Namespace, plugins: dict[str, Plugi
     return selected
 
 
+def preflight_install_selection(
+    ids: list[str],
+    selected: set[str],
+    installed: set[str],
+    plugins: dict[str, Plugin],
+    activate_choice: bool,
+) -> int:
+    """Check the dependency and core-host contract before staging anything."""
+    selected_or_installed = set(selected) | set(installed)
+    missing: set[str] = set()
+    missing_sources: set[str] = set()
+    for plugin_id in ids:
+        plugin = plugins[plugin_id]
+        for required in plugin.requires:
+            if required not in selected_or_installed:
+                missing.add(f"{plugin_id} requires {required}")
+        if not (ROOT / plugin_id / "manifest.json").is_file():
+            missing_sources.add(plugin_id)
+
+    if activate_choice and "lacuna.bar" in selected:
+        core = dependency_closure({"lacuna.bar"}, plugins)
+        missing_core = sorted(core - selected_or_installed)
+        missing.update(f"lacuna.bar core companion missing: {plugin_id}" for plugin_id in missing_core)
+
+    if missing_sources:
+        missing.update(f"source missing: {plugin_id}" for plugin_id in sorted(missing_sources))
+
+    print("\nPreflight")
+    if missing:
+        print("  FAILED")
+        for problem in sorted(missing):
+            print(f"  - {problem}")
+        return 1
+    print("  dependencies and core bundle are satisfied")
+    print("  source manifests are present")
+    return 0
+
+
 def is_default_full_install(args: argparse.Namespace) -> bool:
     return args.profile == "full" and not args.plugins
 
@@ -1062,6 +1235,9 @@ def install(args: argparse.Namespace) -> int:
         )
     elif activate_choice is None:
         activate_choice = False
+
+    if preflight_install_selection(ids, selected, installed, plugins, bool(activate_choice)) != 0:
+        return 1
 
     print_plan("Install plan", ids, plugins)
     if installed and not args.reinstall:
@@ -1102,12 +1278,28 @@ def install(args: argparse.Namespace) -> int:
     code = verify_source_catalog(args.source, ids)
     if code != 0:
         return code
+    if not args.dry_run:
+        preserve_runtime_state()
+
+    code = 0
+    transaction: list[tuple[Path, Path | None]] = []
     if install_ids:
-        code = stage_plugins(install_ids, args.dry_run, args.reinstall, rescan=not activate_choice)
+        code = stage_plugins(
+            install_ids,
+            args.dry_run,
+            args.reinstall,
+            rescan=not activate_choice,
+            changes=transaction,
+        )
         if code != 0:
             return code
     if activate_choice:
-        code = activate_plugins(ids, plugins, selected, apply_layout_choice, args.dry_run)
+        code = activate_plugins(ids, plugins, selected, apply_layout_choice, args.dry_run, transaction)
+        if code != 0 and transaction:
+            print("  rolling back staged plugins after activation failure", flush=True)
+            rollback_staged_changes(transaction)
+            reload_after_rollback(selected)
+            transaction.clear()
     else:
         print("\nInstalled files are staged but disabled.")
         print("Enable a smaller profile first, for example:")
@@ -1149,6 +1341,7 @@ def uninstall(args: argparse.Namespace) -> int:
     if not confirm("Remove selected Lacuna plugins?", args.yes):
         print("Uninstall cancelled.")
         return 1
+    preserve_runtime_state()
     code = uninstall_plugins(ids, args.dry_run)
     if code != 0:
         return code
@@ -1204,9 +1397,14 @@ def update(args: argparse.Namespace) -> int:
     if not confirm("Update changed Lacuna plugins?", args.yes):
         print("Update cancelled.")
         return 1
+    preserve_runtime_state()
     for plugin_id in ids:
         prune_backups(plugin_id)
-    return stage_plugins(update_ids, args.dry_run, reinstall=True, rescan=True)
+    transaction: list[tuple[Path, Path | None]] = []
+    code = stage_plugins(update_ids, args.dry_run, reinstall=True, rescan=True, changes=transaction)
+    if code != 0:
+        return code
+    return 0
 
 
 def status(_args: argparse.Namespace) -> int:

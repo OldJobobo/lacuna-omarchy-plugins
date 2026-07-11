@@ -16,6 +16,7 @@ REFRESH_THEME_BACKGROUND = ROOT / "lacuna.theme-preloader" / "scripts" / "refres
 SHELL_SETTINGS_STATE = ROOT / "lacuna.shell-settings" / "scripts" / "omarchy-shell-settings-state.py"
 
 PRESERVED_KEYS = [
+    "designStyles",
     "customQuickLaunchApps",
     "customQuickLaunchNames",
     "preferredApps",

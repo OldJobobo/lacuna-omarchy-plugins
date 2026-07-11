@@ -15,6 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKUPS_TO_KEEP = 2
+RUNTIME_BACKUPS_TO_KEEP = 8
 
 
 def config_home() -> Path:
@@ -23,6 +24,36 @@ def config_home() -> Path:
 
 def plugins_dir() -> Path:
     return config_home() / "omarchy" / "plugins"
+
+
+def preserve_runtime_state() -> list[Path]:
+    paths = [config_home() / "omarchy" / "shell.json", config_home() / "omarchy" / "lacuna" / "settings.json"]
+    existing = [path for path in paths if path.exists() or path.is_symlink()]
+    if not existing:
+        return []
+
+    backup_dir = config_home() / "omarchy" / "lacuna" / "backups"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    saved: list[Path] = []
+    for path in existing:
+        backup = backup_dir / f"{path.name}.{timestamp}.bak"
+        suffix = 1
+        while backup.exists() or backup.is_symlink():
+            backup = backup_dir / f"{path.name}.{timestamp}-{suffix}.bak"
+            suffix += 1
+        if path.is_symlink():
+            backup.symlink_to(os.readlink(path))
+        else:
+            shutil.copy2(path, backup)
+        saved.append(backup)
+
+    backups = sorted(backup_dir.glob("*.bak"), key=lambda item: (item.stat().st_mtime, item.name), reverse=True)
+    for backup in backups[RUNTIME_BACKUPS_TO_KEEP * len(existing):]:
+        remove_path(backup)
+    for backup in saved:
+        print(f"  preserved runtime state: {backup}")
+    return saved
 
 
 def run_command(command: list[str], dry_run: bool) -> int:
@@ -127,7 +158,11 @@ def validate_plugin(plugin_id: str, dry_run: bool) -> int:
     return run_command(["omarchy", "plugin", "validate", str(ROOT / plugin_id)], dry_run)
 
 
-def deploy_plugin(plugin_id: str, dry_run: bool) -> int:
+def deploy_plugin(
+    plugin_id: str,
+    dry_run: bool,
+    changes: list[tuple[Path, Path | None]] | None = None,
+) -> int:
     source = ROOT / plugin_id
     target = plugins_dir() / plugin_id
     print(f"  deploy {plugin_id} -> {target}", flush=True)
@@ -145,6 +180,8 @@ def deploy_plugin(plugin_id: str, dry_run: bool) -> int:
         shutil.copytree(source, stage, symlinks=True, ignore=shutil.ignore_patterns("__pycache__"))
         backup = backup_target(target)
         shutil.move(str(stage), str(target))
+        if changes is not None:
+            changes.append((target, backup))
     except Exception as error:
         remove_path(stage)
         if backup and backup.exists() and not target.exists():
@@ -154,6 +191,19 @@ def deploy_plugin(plugin_id: str, dry_run: bool) -> int:
     if backup:
         print(f"    previous install backed up to {backup}")
     return 0
+
+
+def rollback_deployments(changes: list[tuple[Path, Path | None]]) -> None:
+    for target, backup in reversed(changes):
+        remove_path(target)
+        if backup and (backup.exists() or backup.is_symlink()):
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(backup), str(target))
+
+
+def recover_deployment() -> int:
+    print("  recovery: omarchy plugin rescan", flush=True)
+    return run_command(["omarchy", "plugin", "rescan"], dry_run=False)
 
 
 def verify_plugins(plugin_ids: list[str], dry_run: bool) -> int:
@@ -209,20 +259,35 @@ def deploy(args: argparse.Namespace) -> int:
     if not deploy_ids:
         return 0
 
+    preserve_runtime_state()
+    changes: list[tuple[Path, Path | None]] = []
     for plugin_id in deploy_ids:
         prune_backups(plugin_id)
-        code = deploy_plugin(plugin_id, args.dry_run)
+        code = deploy_plugin(plugin_id, args.dry_run, changes)
         if code != 0:
+            rollback_deployments(changes)
+            recover_deployment()
             return code
 
     code = run_command(["omarchy", "plugin", "rescan"], args.dry_run)
     if code != 0:
+        print("  plugin rescan failed; restoring the previous deployed copies", flush=True)
+        rollback_deployments(changes)
+        recover_deployment()
         return code
     if args.restart_shell:
         code = run_command(["omarchy", "restart", "shell"], args.dry_run)
         if code != 0:
+            print("  shell restart failed; restoring the previous deployed copies", flush=True)
+            rollback_deployments(changes)
+            recover_deployment()
             return code
-    return verify_plugins(deploy_ids, args.dry_run)
+    code = verify_plugins(deploy_ids, args.dry_run)
+    if code != 0:
+        print("  installed-copy verification failed; restoring the previous deployed copies", flush=True)
+        rollback_deployments(changes)
+        recover_deployment()
+    return code
 
 
 def parser() -> argparse.ArgumentParser:

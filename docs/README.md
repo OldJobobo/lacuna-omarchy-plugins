@@ -29,8 +29,9 @@ For maintainers:
 3. [Architecture Overview](architecture/overview.md)
 4. [Plugin Contracts](architecture/plugin-contracts.md)
 5. [Services And State](architecture/services-and-state.md)
-6. [Testing](development/testing.md)
-7. [Release Notes](development/release.md)
+6. [Quattro Compatibility Ledger](architecture/quattro-compatibility.md)
+7. [Testing](development/testing.md)
+8. [Release Notes](development/release.md)
 
 For design work:
 
@@ -47,8 +48,8 @@ For historical context:
 - `configuration.md`: Omarchy shell settings and Lacuna runtime state.
 - `roadmap.md`: current project priorities and operating cadence.
 - `issues.md`: GitHub issue grouping, labels, and milestone mapping.
-- `architecture/`: current architecture, plugin contracts, and Omarchy
-  integration policy.
+- `architecture/`: current architecture, plugin contracts, Omarchy
+  integration policy, and the Quattro compatibility ledger.
 - `plugins/`: plugin catalog, install groups, and manifest metadata.
 - `development/`: local setup, testing, troubleshooting, and release notes.
 - `lacuna-design-system/`: authored Lacuna design language.

@@ -264,6 +264,32 @@ class QmlGeometryTests(unittest.TestCase):
         self.assertEqual(framed["x"], 222)
         self.assertEqual(framed["y"], 6)
 
+    def test_multi_monitor_matrix_keeps_sidebar_occlusion_on_selected_output(self):
+        outputs = [
+            {"name": "DP-1", "width": 2560, "height": 1440, "transform": 0},
+            {"name": "DP-2", "width": 1920, "height": 1080, "transform": 0},
+            {"name": "DP-3", "width": 2560, "height": 1440, "transform": 1},
+        ]
+
+        for focused_name in ("DP-1", "DP-3"):
+            for output in outputs:
+                selected = output["name"] == focused_name
+                geometry = content_rect(
+                    screen_width=output["width"],
+                    screen_height=output["height"],
+                    frame_enabled=True,
+                    position="top",
+                    bar_size=32,
+                    thickness=8,
+                    radius=14,
+                    sidebar_on_left=310 if selected else 0,
+                )
+
+                self.assertTrue(geometry["framed"], output["name"])
+                self.assertEqual(310 if selected else 8, geometry["innerX"], output["name"])
+                self.assertGreater(geometry["innerWidth"], 0, output["name"])
+                self.assertGreater(geometry["innerHeight"], 0, output["name"])
+
     def test_frame_border_attachment_gap_only_when_flyout_attached_and_renderable(self):
         border = read("lacuna.bar/LacunaFrameBorderWindow.qml")
         self.assertIn("readonly property bool leftAttachmentGapVisible", border)

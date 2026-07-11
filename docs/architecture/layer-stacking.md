@@ -23,9 +23,14 @@ toggle time). Hence the rules below.
    permanently** (`visible: true`) with content-gated paint (`isRenderable`
    or equivalent) and an empty input mask. Toggling `visible` on such a
    surface remaps it to the top of its level.
-3. **Declaration order in the host is mapping order.** In `lacuna.bar/Bar.qml`
+3. **Declaration order in the host is the intended order for Lacuna-owned
+   surfaces, not a guarantee about the Omarchy bar.** In `lacuna.bar/Bar.qml`
    the frame surfaces are declared before `OmarchyBarAdapter`, which is
-   declared before `MenuWindow`. The layer-policy contract test pins this.
+   declared before `MenuWindow`, and the layer-policy contract test pins this.
+   Quattro maps the host-owned `omarchy-bar` on its own schedule; on the
+   current build `hyprctl layers` reports `omarchy-bar` before
+   `lacuna-bar-frame`. The frame therefore excludes the bar strip by geometry
+   so correctness does not depend on controlling the host's map order.
 4. **Compose within one window when elements must stack against each other**
    (deterministic sibling z-order) instead of using a second layer surface —
    e.g. the video wallpaper's black fade cover lives inside the video window.
@@ -44,7 +49,7 @@ toggle time). Hence the rules below.
 | --- | --- | --- |
 | background | `omarchy-background` (Omarchy), `lacuna-media-player-video`, `lacuna-background-vignette` (ignore-animations mode) | Video wallpaper carries its own fade cover internally. |
 | bottom | Ambience overlays (`aurora-drift`, `cinematic-light`, `crt`, `dust-motes`, `film-grain`, `god-rays`, `rainfall`, `vhs`), `lacuna-desktop-clock`, `lacuna-background-vignette` (default) | Below windows, above wallpaper. |
-| top | `lacuna-bar-frame` (always mapped, maps first), `omarchy-bar`, frame/sidebar reserve windows, `lacuna-menu` sidebar (exclusive panels) | Required map order: frame → bar → sidebar. |
+| top | `omarchy-bar`, `lacuna-bar-frame` (always mapped), frame/sidebar reserve windows, `lacuna-menu` sidebar (exclusive panels) | Quattro currently maps the host bar before the frame; the frame's bar-strip exclusion makes the order safe. Lacuna-owned declaration order remains frame → adapter → sidebar. |
 | overlay | `lacuna-bar-frame-border` (always mapped, maps first), transient panels (`audio`, `bluetooth`, `network`, `power`), `omarchy-bar-drag-ghost`, non-exclusive Lacuna panels, ambience overlays in `foregroundOverlay` mode | Border is 1px and click-through; transient panels map above it because they map later. |
 
 ## Verifying live
@@ -53,7 +58,9 @@ toggle time). Hence the rules below.
 hyprctl layers
 ```
 
-Within `Layer level 2 (top)` the list is bottom-to-top and must read
-`lacuna-bar-frame` before `omarchy-bar` before `lacuna-menu`. The frame
-surfaces appear even when frame mode is off — they are intentionally
-always mapped (rule 2).
+Within `Layer level 2 (top)` the current Quattro list is expected to show
+`omarchy-bar` and `lacuna-bar-frame`, with `lacuna-menu` above the bar/frame
+when the sidebar is open. The exact bar/frame order is host-controlled; verify
+that `LacunaFrameWindow.qml` still excludes the bar strip. The frame surfaces
+appear even when frame mode is off — they are intentionally always mapped
+(rule 2).

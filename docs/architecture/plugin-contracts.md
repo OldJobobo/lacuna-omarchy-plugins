@@ -44,4 +44,6 @@ in sync. Runtime plugins should not import from `shared/`.
 
 Every plugin manifest includes a `lacuna` metadata block for Lacuna tests,
 docs, and future tooling. Omarchy ignores this metadata when validating or
-installing plugins. See `docs/plugins/README.md`.
+installing plugins. See `docs/plugins/README.md`. The current host revision and
+the upgrade-sensitive bar contracts are recorded in
+[`quattro-compatibility.md`](quattro-compatibility.md).

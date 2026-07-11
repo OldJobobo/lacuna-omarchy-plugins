@@ -492,6 +492,31 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("settingsBackupFileView.setText(corrupt)", qml, path)
             self.assertIn('path: root.settingsFile + ".bak"', qml, path)
 
+    def test_lacuna_settings_share_versioned_canonical_layout_contract(self):
+        state = read("lacuna.state/Service.qml")
+        menu = read("lacuna.menu/services/LacunaSettings.qml")
+        example = read_json("config/settings.example.json")
+        fixture = read_json("tests/fixtures/full-settings.json")
+
+        self.assertEqual(state, menu)
+        for qml in [state, menu]:
+            self.assertIn("settingsSchemaVersion: 1", qml)
+            self.assertIn("function migrateSettings", qml)
+            self.assertIn("function preserveUnknownJson", qml)
+            self.assertIn("function designStyleBar", qml)
+            self.assertIn("function saveDesignStyleBar", qml)
+            self.assertIn('if (typeof value === "string")', qml)
+            self.assertIn("return stringId === \"\" ? null : { id: stringId }", qml)
+            self.assertIn("next.version = root.settingsSchemaVersion", qml)
+
+        self.assertEqual({"lacuna": {}, "omarchy": {}, "material": {}}, example["designStyles"])
+        self.assertEqual("lacuna.clock", fixture["designStyles"]["lacuna"]["bar"]["centerAnchor"])
+        self.assertEqual("lacuna.menu-button", fixture["designStyles"]["lacuna"]["bar"]["layout"]["left"][0])
+        self.assertEqual(
+            {"role": "time", "weights": [1, 2, 3]},
+            fixture["designStyles"]["lacuna"]["bar"]["layout"]["center"][0]["futureMetadata"],
+        )
+
     def test_curve_kappa_constant_has_single_definition(self):
         # The Bezier circular-arc kappa is defined once in LacunaGeometry and
         # referenced everywhere else, so the molding geometry can never drift.

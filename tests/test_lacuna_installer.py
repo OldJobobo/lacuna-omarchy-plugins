@@ -210,6 +210,91 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertTrue(manifest_staged)
         self.assertFalse(pycache_staged)
 
+    def test_failed_batch_rescan_restores_all_previous_plugin_copies(self):
+        module = load_installer_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            repo = tmp_path / "repo"
+            config_home = tmp_path / "config"
+            for plugin_id in ("lacuna.first", "lacuna.second"):
+                source = repo / plugin_id
+                source.mkdir(parents=True)
+                (source / "manifest.json").write_text(f'{{"id":"{plugin_id}"}}\n', encoding="utf-8")
+                target = config_home / "omarchy" / "plugins" / plugin_id
+                target.mkdir(parents=True)
+                (target / "manifest.json").write_text(f'{{"id":"{plugin_id}","old":true}}\n', encoding="utf-8")
+
+            changes = []
+            with mock.patch.object(module, "ROOT", repo), \
+                mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+                mock.patch.object(module, "validate_plugin", return_value=0), \
+                mock.patch.object(module, "run_command", side_effect=[7, 0]) as run_command:
+                result = module.stage_plugins(
+                    ["lacuna.first", "lacuna.second"],
+                    dry_run=False,
+                    reinstall=True,
+                    rescan=True,
+                    changes=changes,
+                )
+
+            first = (config_home / "omarchy" / "plugins" / "lacuna.first" / "manifest.json").read_text(encoding="utf-8")
+            second = (config_home / "omarchy" / "plugins" / "lacuna.second" / "manifest.json").read_text(encoding="utf-8")
+
+        self.assertEqual(7, result)
+        self.assertIn('"old":true', first)
+        self.assertIn('"old":true', second)
+        self.assertEqual([], changes)
+        self.assertEqual(
+            [["omarchy", "plugin", "rescan"], ["omarchy", "plugin", "rescan"]],
+            [item.args[0] for item in run_command.call_args_list],
+        )
+
+    def test_failed_activation_restores_previous_shell_config(self):
+        module = load_installer_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            shell_json = config_home / "omarchy" / "shell.json"
+            shell_json.parent.mkdir(parents=True)
+            original = '{"version":1,"bar":{"layout":{"left":[],"center":[],"right":[]}},"plugins":[]}\n'
+            shell_json.write_text(original, encoding="utf-8")
+            plugins = module.load_plugins()
+
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+                mock.patch.object(module, "run_command", return_value=9):
+                result = module.activate_plugins(
+                    ["lacuna.state"],
+                    plugins,
+                    {"lacuna.state"},
+                    False,
+                    False,
+                )
+
+            restored = shell_json.read_text(encoding="utf-8")
+
+        self.assertEqual(9, result)
+        self.assertEqual(original, restored)
+
+    def test_runtime_state_snapshot_preserves_shell_and_lacuna_settings(self):
+        module = load_installer_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            shell_json = config_home / "omarchy" / "shell.json"
+            settings_json = config_home / "omarchy" / "lacuna" / "settings.json"
+            shell_json.parent.mkdir(parents=True)
+            settings_json.parent.mkdir(parents=True)
+            shell_json.write_text("shell-state\n", encoding="utf-8")
+            settings_json.write_text("settings-state\n", encoding="utf-8")
+
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}):
+                backups = module.preserve_runtime_state()
+
+            contents = sorted(path.read_text(encoding="utf-8") for path in backups)
+
+        self.assertEqual(["settings-state\n", "shell-state\n"], contents)
+
     def test_gum_wrapper_does_not_hide_interactive_ui(self):
         module = load_installer_module()
 

@@ -55,3 +55,10 @@ omarchy restart shell
 Confirm that each widget appears in Omarchy Settings, can be placed in
 `bar.layout`, survives shell restart, and uses injected `bar`, `moduleName`,
 and `settings` properties.
+
+For the current Quattro core shell, run the read-only P0 smoke matrix from a
+live session:
+
+```bash
+scripts/quattro-p0-smoke
+```

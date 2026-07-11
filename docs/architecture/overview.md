@@ -8,6 +8,8 @@ second Quickshell process.
 
 The older standalone Lacuna shell remains a source reference for behavior,
 styling, and workflow ideas. New Omarchy work should happen here as plugins.
+The tested Quattro host revision and upgrade checklist live in
+[`quattro-compatibility.md`](quattro-compatibility.md).
 
 ## Runtime Shape
 

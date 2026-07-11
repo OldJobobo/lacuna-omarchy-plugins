@@ -84,6 +84,35 @@ class DevToolTests(unittest.TestCase):
             [["omarchy", "plugin", "rescan"], ["omarchy", "restart", "shell"]],
         )
 
+    def test_failed_rescan_restores_previous_deployed_copy(self):
+        module = load_dev_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            installed = config_home / "omarchy" / "plugins" / "lacuna.clock"
+            installed.mkdir(parents=True)
+            (installed / "manifest.json").write_text('{"id":"lacuna.clock","old":true}\n', encoding="utf-8")
+            args = argparse.Namespace(
+                plugins=["lacuna.clock"],
+                all=False,
+                dry_run=False,
+                only_changed=False,
+                restart_shell=True,
+            )
+
+            with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+                mock.patch.object(module, "validate_plugin", return_value=0), \
+                mock.patch.object(module, "run_command", side_effect=[7, 0]) as run_command:
+                result = module.deploy(args)
+                restored = (installed / "manifest.json").read_text(encoding="utf-8")
+
+        self.assertEqual(7, result)
+        self.assertIn('"old":true', restored)
+        self.assertEqual(
+            [["omarchy", "plugin", "rescan"], ["omarchy", "plugin", "rescan"]],
+            [item.args[0] for item in run_command.call_args_list],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
