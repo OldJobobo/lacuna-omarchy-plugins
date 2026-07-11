@@ -1,12 +1,15 @@
 # Lacuna Suite Improvement Plan
 
-Status: active implementation tracker (updated 2026-06-14)
+Status: superseded historical tracker (2026-07-10)
 
-This document started as a full-repository review plan for making Lacuna a
-first-class Omarchy Quickshell plugin suite. It is now the canonical progress
-tracker for that improvement pass: completed items are recorded with the files
-or checks that enforce them, and remaining work is listed as a concrete
-backlog.
+This document is retained as an implementation history for the earlier broad
+repository improvement pass. It is no longer the current project control
+surface. Use [`../roadmap.md`](../roadmap.md) and the three Quattro phase plans
+instead:
+
+- [`quattro-p0-core-foundation-plan.md`](quattro-p0-core-foundation-plan.md)
+- [`quattro-p1-product-integration-plan.md`](quattro-p1-product-integration-plan.md)
+- [`quattro-p2-release-and-evolution-plan.md`](quattro-p2-release-and-evolution-plan.md)
 
 Current validation baseline:
 

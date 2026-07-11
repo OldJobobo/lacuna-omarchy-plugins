@@ -82,12 +82,27 @@ class DocsContractTests(unittest.TestCase):
             self.assertNotIn("Status: active", head, path.name)
             self.assertIn("Completion note 2026-06-14", text, path.name)
 
-    def test_suite_tracker_matches_current_validation_baseline(self):
-        tracker = (ROOT / "docs" / "plans" / "lacuna-suite-improvement-plan.md").read_text(encoding="utf-8")
+    def test_quattro_roadmap_and_phase_plans_are_canonical(self):
+        roadmap = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
+        plans_index = (ROOT / "docs" / "plans" / "README.md").read_text(encoding="utf-8")
+        historical_tracker = (ROOT / "docs" / "plans" / "lacuna-suite-improvement-plan.md").read_text(encoding="utf-8")
 
-        self.assertIn("Status: active implementation tracker (updated 2026-06-14)", tracker)
-        self.assertIn("Current full suite result: 86 Python tests passing.", tracker)
-        self.assertIn("Architecture update 2026-06-14", tracker)
+        self.assertIn("Status: active project control (updated 2026-07-10)", roadmap)
+        self.assertIn("`lacuna.bar` is the intentional custom bar host", roadmap)
+        self.assertIn("P0 — Core foundation", roadmap)
+        self.assertIn("P1 — Product integration", roadmap)
+        self.assertIn("P2 — Release and evolution", roadmap)
+
+        for name in [
+            "quattro-p0-core-foundation-plan.md",
+            "quattro-p1-product-integration-plan.md",
+            "quattro-p2-release-and-evolution-plan.md",
+        ]:
+            self.assertIn(name, plans_index)
+            self.assertTrue((ROOT / "docs" / "plans" / name).exists(), name)
+
+        self.assertIn("Status: superseded historical tracker (2026-07-10)", historical_tracker)
+        self.assertIn("Use [`../roadmap.md`](../roadmap.md)", historical_tracker)
 
     def test_distribution_scaffolding_exists(self):
         for name in [
