@@ -31,8 +31,14 @@
       "enabled": false,
       "serverUrl": "",
       "apiKey": "",
-      "userId": ""
+      "userId": "",
+      "preferredAudioLanguage": "English"
     }
+  },
+  "mediaPlayer": {
+    "presentationMode": "auto",
+    "videoQuality": "adaptive",
+    "providerFilter": "all"
   },
   "sidebar": {
     "defaultMode": "off",

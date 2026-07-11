@@ -1,0 +1,1237 @@
+#!/usr/bin/env python3
+"""Persistent backend for Lacuna Media Player.
+
+The worker speaks newline-delimited JSON on stdin/stdout. It keeps the mpv IPC
+connection warm, streams sampled playback state, and runs provider work away
+from the QML thread. Runtime stream URLs may contain short-lived provider
+tokens; those URLs are sent to mpv over IPC and are never placed in argv.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import queue
+import re
+import shutil
+import signal
+import socket
+import subprocess
+import sys
+import threading
+import time
+import urllib.parse
+import urllib.request
+from pathlib import Path
+from typing import Any, Callable
+
+
+YOUTUBE_PLAYER_CLIENT = "web_embedded"
+OBSERVED_PROPERTIES = (
+    "time-pos",
+    "duration",
+    "pause",
+    "eof-reached",
+    "idle-active",
+    "speed",
+    "cache-buffering-state",
+)
+SEARCH_CACHE_TTL = 15 * 60
+VIDEO_CACHE_TTL = 10 * 60
+SEARCH_CACHE_MAX_ENTRIES = 96
+VIDEO_CACHE_MAX_ENTRIES = 48
+MAX_ERROR_LENGTH = 500
+
+
+def epoch_ms() -> int:
+    return int(time.time() * 1000)
+
+
+def clamp_number(value: Any, low: float, high: float, fallback: float) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    return max(low, min(high, number))
+
+
+def load_json_file(path: str) -> dict[str, Any]:
+    if not path:
+        return {}
+    try:
+        with open(os.path.expanduser(path), encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def provider_config(settings: dict[str, Any], name: str) -> dict[str, Any]:
+    providers = settings.get("mediaProviders")
+    if not isinstance(providers, dict):
+        return {}
+    config = providers.get(name)
+    return config if isinstance(config, dict) else {}
+
+
+def scrub_error(value: Any, secrets: list[str] | None = None) -> str:
+    text = str(value or "Unknown worker error").replace("\n", " ").replace("\r", " ")
+    for secret in secrets or []:
+        if secret:
+            text = text.replace(secret, "[redacted]")
+    text = re.sub(r"(?i)(api[_-]?key|token)=([^&\s]+)", r"\1=[redacted]", text)
+    text = re.sub(r"(?i)(X-Emby-Token\s*[:=]\s*)(\S+)", r"\1[redacted]", text)
+    text = " ".join(text.split())
+    return text[:MAX_ERROR_LENGTH]
+
+
+class Emitter:
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+
+    def __call__(self, event: dict[str, Any]) -> None:
+        with self._lock:
+            try:
+                sys.stdout.write(json.dumps(event, separators=(",", ":"), ensure_ascii=True) + "\n")
+                sys.stdout.flush()
+            except (BrokenPipeError, OSError):
+                pass
+
+
+class MpvConnection:
+    def __init__(self, socket_path: str, emit: Callable[[dict[str, Any]], None]) -> None:
+        self.socket_path = socket_path
+        self.emit = emit
+        self.revision = 0
+        self._stop = threading.Event()
+        self._connected = threading.Event()
+        self._socket_lock = threading.Lock()
+        self._wire_lock = threading.Lock()
+        self._pending_lock = threading.Lock()
+        self._client: socket.socket | None = None
+        self._next_request_id = 100
+        self._pending: dict[int, queue.Queue[dict[str, Any]]] = {}
+        self._state: dict[str, Any] = {
+            "time-pos": None,
+            "duration": None,
+            "pause": False,
+            "eof-reached": False,
+            "idle-active": True,
+            "speed": 1.0,
+            "cache-buffering-state": 100.0,
+        }
+        self._last_emit = 0.0
+        self._last_signature: tuple[Any, ...] | None = None
+        self._awaiting_start_file = False
+        self._thread = threading.Thread(target=self._monitor, name="lacuna-mpv-ipc", daemon=True)
+
+    @property
+    def connected(self) -> bool:
+        return self._connected.is_set()
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        self._close_client()
+        if self._thread.is_alive():
+            self._thread.join(timeout=1.0)
+
+    def wait_connected(self, timeout: float) -> bool:
+        return self._connected.wait(timeout)
+
+    def prepare_playback(self, revision: int, start_at: float) -> None:
+        """Move observation to a new load without inheriting the prior EOF."""
+        self.revision = revision
+        self._state.update({
+            "time-pos": start_at,
+            "duration": None,
+            "pause": False,
+            "eof-reached": False,
+            "idle-active": False,
+            "speed": 1.0,
+            "cache-buffering-state": 0.0,
+        })
+        self._awaiting_start_file = True
+        self._last_signature = None
+
+    def adopt_revision(self, revision: int) -> None:
+        self.revision = revision
+        self._last_signature = None
+
+    def request(self, command: list[Any], timeout: float = 2.0) -> dict[str, Any]:
+        if not isinstance(command, list) or not command:
+            raise ValueError("mpv command must be a non-empty array")
+        if not self._connected.wait(timeout=min(timeout, 1.0)):
+            raise ConnectionError("mpv IPC is not connected")
+        with self._pending_lock:
+            request_id = self._next_request_id
+            self._next_request_id += 1
+            reply_queue: queue.Queue[dict[str, Any]] = queue.Queue(maxsize=1)
+            self._pending[request_id] = reply_queue
+        try:
+            self._send({"command": command, "request_id": request_id})
+            return reply_queue.get(timeout=timeout)
+        except queue.Empty as exc:
+            raise TimeoutError("mpv command timed out") from exc
+        finally:
+            with self._pending_lock:
+                self._pending.pop(request_id, None)
+
+    def _send(self, payload: dict[str, Any]) -> None:
+        wire = (json.dumps(payload, separators=(",", ":")) + "\n").encode("utf-8")
+        with self._wire_lock:
+            with self._socket_lock:
+                client = self._client
+            if client is None:
+                raise ConnectionError("mpv IPC is not connected")
+            client.sendall(wire)
+
+    def _close_client(self) -> None:
+        with self._socket_lock:
+            client, self._client = self._client, None
+        self._connected.clear()
+        if client is not None:
+            try:
+                client.close()
+            except OSError:
+                pass
+        with self._pending_lock:
+            for reply_queue in self._pending.values():
+                try:
+                    reply_queue.put_nowait({"error": "connection-lost"})
+                except queue.Full:
+                    pass
+
+    def _connect(self) -> socket.socket:
+        client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        client.settimeout(0.25)
+        client.connect(self.socket_path)
+        with self._socket_lock:
+            self._client = client
+        self._connected.set()
+        for index, name in enumerate(OBSERVED_PROPERTIES, 1):
+            self._send({"command": ["observe_property", index, name], "request_id": index})
+        self._emit_playback(force=True)
+        return client
+
+    def _monitor(self) -> None:
+        buffer = b""
+        reconnect_delay = 0.05
+        while not self._stop.is_set():
+            try:
+                client = self._connect()
+                reconnect_delay = 0.05
+                while not self._stop.is_set():
+                    try:
+                        chunk = client.recv(65536)
+                    except socket.timeout:
+                        self._emit_playback()
+                        continue
+                    if not chunk:
+                        raise ConnectionError("mpv IPC closed")
+                    buffer += chunk
+                    while b"\n" in buffer:
+                        raw, buffer = buffer.split(b"\n", 1)
+                        self._handle_line(raw)
+                    self._emit_playback()
+            except (OSError, ConnectionError):
+                buffer = b""
+                self._close_client()
+                self._emit_playback(force=True)
+                self._stop.wait(reconnect_delay)
+                reconnect_delay = min(1.0, reconnect_delay * 2)
+            except Exception as exc:
+                self.emit({"type": "error", "scope": "mpv-monitor", "error": scrub_error(exc)})
+                self._close_client()
+                self._stop.wait(0.5)
+
+    def _handle_line(self, raw: bytes) -> None:
+        if not raw.strip():
+            return
+        try:
+            message = json.loads(raw.decode("utf-8", errors="replace"))
+        except ValueError:
+            return
+        if not isinstance(message, dict):
+            return
+        request_id = message.get("request_id")
+        if isinstance(request_id, int):
+            with self._pending_lock:
+                reply_queue = self._pending.get(request_id)
+            if reply_queue is not None:
+                try:
+                    reply_queue.put_nowait(message)
+                except queue.Full:
+                    pass
+        event = message.get("event")
+        if event == "property-change":
+            name = message.get("name")
+            if self._awaiting_start_file and name in ("eof-reached", "idle-active") and message.get("data") is True:
+                return
+            if name in self._state:
+                self._state[name] = message.get("data")
+        elif event == "start-file":
+            self._awaiting_start_file = False
+            self._state["eof-reached"] = False
+            self._state["idle-active"] = False
+        elif event == "file-loaded":
+            self._awaiting_start_file = False
+            self._state["eof-reached"] = False
+            self._state["idle-active"] = False
+        elif event == "end-file":
+            if self._awaiting_start_file:
+                return
+            reason = str(message.get("reason") or "unknown")
+            self._state["eof-reached"] = reason == "eof"
+            if reason not in ("eof", "stop", "quit", "redirect"):
+                self.emit({
+                    "type": "error",
+                    "scope": "playback",
+                    "revision": self.revision,
+                    "error": scrub_error(f"mpv ended the stream: {reason}"),
+                })
+        elif event == "idle":
+            self._state["idle-active"] = True
+        elif event == "shutdown":
+            raise ConnectionError("mpv shutdown")
+
+    def _emit_playback(self, force: bool = False) -> None:
+        now = time.monotonic()
+        time_pos = self._state.get("time-pos")
+        duration = self._state.get("duration")
+        paused = self._state.get("pause") is True
+        eof = self._state.get("eof-reached") is True
+        idle = self._state.get("idle-active") is True
+        buffering = self._state.get("cache-buffering-state")
+        signature = (self.connected, paused, eof, idle, time_pos, duration, buffering, self.revision)
+        changed = signature != self._last_signature
+        if not force and (not changed or now - self._last_emit < 0.20):
+            return
+        self._last_emit = now
+        self._last_signature = signature
+        self.emit({
+            "type": "playback",
+            "revision": self.revision,
+            "running": self.connected,
+            "playing": self.connected and not paused and not eof and not idle,
+            "paused": paused,
+            "eofReached": eof,
+            "idleActive": idle,
+            "position": float(time_pos) if isinstance(time_pos, (int, float)) else None,
+            "duration": float(duration) if isinstance(duration, (int, float)) else None,
+            "speed": float(self._state.get("speed") or 1.0),
+            "bufferingPercent": float(buffering) if isinstance(buffering, (int, float)) else None,
+            "sampledAtMs": epoch_ms(),
+        })
+
+
+class MediaWorker:
+    def __init__(self, args: argparse.Namespace) -> None:
+        self.emit = Emitter()
+        self.stop_event = threading.Event()
+        self.runtime_dir = os.path.abspath(os.path.expanduser(args.runtime_dir))
+        self.socket_path = os.path.abspath(os.path.expanduser(args.socket))
+        self.settings_file = os.path.abspath(os.path.expanduser(args.settings_file)) if args.settings_file else ""
+        self.script_dir = Path(args.script_dir).resolve()
+        self.mpv: MpvConnection | None = None
+        self.mpv_process: subprocess.Popen[bytes] | None = None
+        self.jobs_lock = threading.Lock()
+        self.jobs: dict[str, threading.Event] = {}
+        self.provider_processes_lock = threading.Lock()
+        self.provider_processes: set[subprocess.Popen[str]] = set()
+        self.cache_lock = threading.Lock()
+        self.search_cache: dict[tuple[Any, ...], tuple[float, list[dict[str, Any]], str]] = {}
+        self.video_cache: dict[tuple[Any, ...], tuple[float, dict[str, Any]]] = {}
+        self._latest_search: threading.Event | None = None
+        self._latest_video_resolve: threading.Event | None = None
+        self._start_mpv_monitor()
+
+    def settings(self) -> dict[str, Any]:
+        return load_json_file(self.settings_file)
+
+    def settings_revision(self) -> tuple[int, int]:
+        try:
+            stat_result = os.stat(self.settings_file)
+        except OSError:
+            return (0, 0)
+        return (stat_result.st_mtime_ns, stat_result.st_size)
+
+    def _cache_get(
+        self,
+        cache: dict[tuple[Any, ...], tuple[Any, ...]],
+        key: tuple[Any, ...],
+        ttl: float,
+    ) -> tuple[Any, ...] | None:
+        with self.cache_lock:
+            entry = cache.get(key)
+            if entry is not None and time.monotonic() - float(entry[0]) <= ttl:
+                return entry
+            cache.pop(key, None)
+        return None
+
+    def _cache_put(
+        self,
+        cache: dict[tuple[Any, ...], tuple[Any, ...]],
+        key: tuple[Any, ...],
+        entry: tuple[Any, ...],
+        maximum: int,
+    ) -> None:
+        with self.cache_lock:
+            cache[key] = entry
+            while len(cache) > maximum:
+                oldest = min(cache, key=lambda candidate: float(cache[candidate][0]))
+                cache.pop(oldest, None)
+
+    def secrets(self) -> list[str]:
+        settings = self.settings()
+        result = []
+        for name in ("jellyfin", "youtube"):
+            config = provider_config(settings, name)
+            for key in ("apiKey", "token"):
+                value = str(config.get(key) or "")
+                if value:
+                    result.append(value)
+        return result
+
+    def error(self, scope: str, exc: Any, **fields: Any) -> None:
+        event = {"type": "error", "scope": scope, "error": scrub_error(exc, self.secrets())}
+        event.update(fields)
+        self.emit(event)
+
+    def _start_mpv_monitor(self) -> None:
+        os.makedirs(self.runtime_dir, mode=0o700, exist_ok=True)
+        try:
+            os.chmod(self.runtime_dir, 0o700)
+        except OSError:
+            pass
+        self.mpv = MpvConnection(self.socket_path, self.emit)
+        self.mpv.start()
+
+    def _reconfigure_mpv(self, runtime_dir: str, socket_path: str) -> None:
+        runtime_dir = os.path.abspath(os.path.expanduser(runtime_dir))
+        socket_path = os.path.abspath(os.path.expanduser(socket_path))
+        if socket_path == self.socket_path and runtime_dir == self.runtime_dir:
+            return
+        if self.mpv:
+            self.mpv.stop()
+        self.runtime_dir = runtime_dir
+        self.socket_path = socket_path
+        self._start_mpv_monitor()
+
+    def ready_event(self) -> dict[str, Any]:
+        return {
+            "type": "ready",
+            "protocol": 1,
+            "mpv": bool(shutil.which("mpv")),
+            "ytdlp": bool(shutil.which("yt-dlp")),
+            "socket": self.socket_path,
+        }
+
+    def handle(self, message: Any) -> None:
+        if not isinstance(message, dict):
+            self.error("protocol", "JSON message must be an object")
+            return
+        message_type = message.get("type")
+        if not isinstance(message_type, str) or not message_type:
+            self.error("protocol", "Message is missing a type")
+            return
+        handlers = {
+            "configure": self.configure,
+            "play": self.play,
+            "command": self.command,
+            "search": self.search,
+            "resolve-video": self.resolve_video,
+            "cancel": self.cancel,
+            "shutdown": self.shutdown,
+        }
+        handler = handlers.get(message_type)
+        if handler is None:
+            self.error("protocol", f"Unsupported message type: {message_type}")
+            return
+        try:
+            handler(message)
+        except Exception as exc:
+            scope = "playback" if message_type == "play" else message_type
+            self.error(scope, exc, requestId=message.get("requestId"), revision=message.get("revision"))
+
+    def configure(self, message: dict[str, Any]) -> None:
+        settings_file = str(message.get("settingsFile") or self.settings_file).strip()
+        runtime_dir = str(message.get("runtimeDir") or self.runtime_dir).strip()
+        socket_path = str(message.get("socket") or os.path.join(runtime_dir, "mpv.sock")).strip()
+        source_dir = str(message.get("sourceDir") or "").strip()
+        script_dir = str(
+            message.get("scriptDir")
+            or (os.path.join(source_dir, "scripts") if source_dir else self.script_dir)
+        ).strip()
+        if len(socket_path.encode("utf-8")) > 100:
+            raise ValueError("mpv socket path is too long")
+        self.settings_file = os.path.abspath(os.path.expanduser(settings_file)) if settings_file else ""
+        self.script_dir = Path(script_dir).resolve()
+        self._reconfigure_mpv(runtime_dir, socket_path)
+        if self.mpv and message.get("revision") is not None:
+            self.mpv.adopt_revision(int(clamp_number(message.get("revision"), 0, 2**31 - 1, 0)))
+        self.emit({"type": "configured", "socket": self.socket_path, "settingsLoaded": bool(self.settings())})
+
+    def _pid_path(self) -> str:
+        return os.path.join(self.runtime_dir, "mpv.pid")
+
+    def _read_pid(self) -> int:
+        try:
+            with open(self._pid_path(), encoding="utf-8") as handle:
+                return int(handle.read().strip())
+        except (OSError, ValueError):
+            return 0
+
+    def _owned_pid_alive(self) -> bool:
+        pid = self._read_pid()
+        if pid <= 0:
+            return False
+        try:
+            raw = Path(f"/proc/{pid}/cmdline").read_bytes()
+        except OSError:
+            return False
+        argv = [part.decode("utf-8", errors="replace") for part in raw.split(b"\0") if part]
+        return bool(argv and os.path.basename(argv[0]) == "mpv" and f"--input-ipc-server={self.socket_path}" in argv)
+
+    def _remove_stale_runtime_files(self) -> None:
+        if self.mpv and self.mpv.connected:
+            return
+        if self._owned_pid_alive():
+            return
+        for path in (self.socket_path, self._pid_path()):
+            try:
+                os.unlink(path)
+            except FileNotFoundError:
+                pass
+            except OSError:
+                pass
+
+    def _youtube_auth_args(self, config: dict[str, Any]) -> list[str]:
+        if config.get("enabled") is not True:
+            return []
+        cookies_file = str(config.get("cookiesFile") or "").strip()
+        if cookies_file:
+            return ["--cookies", os.path.expanduser(cookies_file)]
+        cookies_browser = str(config.get("cookiesFromBrowser") or "").strip()
+        return ["--cookies-from-browser", cookies_browser] if cookies_browser else []
+
+    def _mpv_ytdl_options(self) -> str:
+        config = provider_config(self.settings(), "youtube")
+        options = [f"extractor-args=youtube:player_client={YOUTUBE_PLAYER_CLIENT}"]
+        cookies_file = str(config.get("cookiesFile") or "").strip()
+        cookies_browser = str(config.get("cookiesFromBrowser") or "").strip()
+        if config.get("enabled") is True and cookies_file:
+            options.append(f"cookies={os.path.expanduser(cookies_file)}")
+        elif config.get("enabled") is True and cookies_browser:
+            options.append(f"cookies-from-browser={cookies_browser}")
+        return ",".join(options)
+
+    def _launch_mpv(self) -> None:
+        executable = shutil.which("mpv")
+        if not executable:
+            raise RuntimeError("mpv is not installed")
+        self._remove_stale_runtime_files()
+        command = [
+            executable,
+            "--no-config",
+            "--idle=yes",
+            "--keep-open=yes",
+            "--force-window=no",
+            f"--input-ipc-server={self.socket_path}",
+            "--ytdl-format=18/best[height<=360][ext=mp4]/bestaudio[ext=m4a]/best",
+            f"--ytdl-raw-options={self._mpv_ytdl_options()}",
+            "--cache=yes",
+            "--cache-pause=yes",
+            "--cache-pause-initial=yes",
+            "--cache-pause-wait=10",
+            "--cache-secs=300",
+            "--demuxer-readahead-secs=180",
+            "--demuxer-max-bytes=512MiB",
+            "--audio-buffer=1",
+            "--network-timeout=30",
+            "--msg-level=all=warn",
+            "--term-playing-msg=",
+        ]
+        self.mpv_process = subprocess.Popen(
+            command,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        pid_path = self._pid_path()
+        fd = os.open(pid_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(str(self.mpv_process.pid))
+
+    def _ensure_mpv(self) -> MpvConnection:
+        assert self.mpv is not None
+        if self.mpv.connected:
+            return self.mpv
+        # The observer reconnects independently. Give an existing player a
+        # short grace period before treating its socket as stale.
+        if self.mpv.wait_connected(0.5):
+            return self.mpv
+        if self._owned_pid_alive():
+            if self.mpv.wait_connected(2.5):
+                return self.mpv
+            pid = self._read_pid()
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except OSError:
+                pass
+            deadline = time.monotonic() + 1.0
+            while self._owned_pid_alive() and time.monotonic() < deadline:
+                time.sleep(0.05)
+            if self._owned_pid_alive():
+                raise RuntimeError("existing mpv process is not responding")
+        self._launch_mpv()
+        if not self.mpv.wait_connected(4.0):
+            raise RuntimeError("mpv did not open its IPC socket")
+        return self.mpv
+
+    def _resolve_jellyfin(self, track: dict[str, Any]) -> dict[str, Any]:
+        config = provider_config(self.settings(), "jellyfin")
+        server = str(config.get("serverUrl") or "").strip().rstrip("/")
+        api_key = str(config.get("apiKey") or "").strip()
+        item_id = str(track.get("providerId") or track.get("id") or "").strip()
+        media_type = "audio" if str(track.get("mediaType") or "").lower() == "audio" else "video"
+        if config.get("enabled") is not True or not server or not api_key or not item_id:
+            raise ValueError("Jellyfin is not configured")
+        quoted = urllib.parse.quote(item_id, safe="")
+        direct_query = urllib.parse.urlencode({"api_key": api_key})
+        progressive = f"{server}/Items/{quoted}/Download?{direct_query}"
+        preferred_language = str(config.get("preferredAudioLanguage") or "English").strip()
+        audio_stream_index = MediaWorker._jellyfin_audio_stream_index(server, api_key, item_id, preferred_language)
+        if audio_stream_index is not None:
+            progressive_query = urllib.parse.urlencode({
+                "api_key": api_key,
+                "mediaSourceId": item_id,
+                "static": "true",
+                "AudioStreamIndex": audio_stream_index,
+            })
+            progressive = f"{server}/Videos/{quoted}/stream?{progressive_query}"
+        adaptive = ""
+        if media_type == "video":
+            hls_query = urllib.parse.urlencode({
+                "api_key": api_key,
+                # Jellyfin 10.10 validates this even when an item's primary
+                # media source has the same ID. Without it, master.m3u8
+                # returns HTTP 400 and the Qt background surface has no
+                # stream to render.
+                "mediaSourceId": item_id,
+                "VideoCodec": "h264",
+                "AudioCodec": "aac",
+                "MaxHeight": "720",
+                "MaxStreamingBitrate": "8000000",
+                "TranscodingMaxAudioChannels": "2",
+            })
+            if audio_stream_index is not None:
+                hls_query += "&" + urllib.parse.urlencode({"AudioStreamIndex": audio_stream_index})
+            adaptive = f"{server}/Videos/{quoted}/master.m3u8?{hls_query}"
+        image_query = urllib.parse.urlencode({"fillWidth": 720, "quality": 90, "api_key": api_key})
+        return {
+            "adaptiveUrl": adaptive,
+            "progressiveUrl": progressive,
+            "thumbnail": f"{server}/Items/{quoted}/Images/Primary?{image_query}",
+            "mediaType": media_type,
+            "audioStreamIndex": audio_stream_index,
+        }
+
+    @staticmethod
+    def _language_aliases(value: str) -> set[str]:
+        normalized = re.sub(r"[^a-z0-9]+", " ", str(value or "").lower()).strip()
+        if normalized in ("english", "eng", "en"):
+            return {"english", "eng", "en"}
+        if normalized in ("japanese", "jpn", "ja"):
+            return {"japanese", "jpn", "ja"}
+        return {normalized} if normalized else set()
+
+    @staticmethod
+    def _jellyfin_audio_stream_index(
+        server: str,
+        api_key: str,
+        item_id: str,
+        preferred_language: str,
+    ) -> int | None:
+        """Resolve a preferred Jellyfin audio stream without making playback fatal."""
+        preference = str(preferred_language or "").strip().lower()
+        if preference in ("", "default", "original", "auto"):
+            return None
+        endpoint = f"{server}/Items?" + urllib.parse.urlencode({
+            "Ids": item_id,
+            "Fields": "MediaSources,MediaStreams",
+        })
+        request = urllib.request.Request(endpoint, headers={
+            "Accept": "application/json",
+            "X-Emby-Token": api_key,
+        })
+        try:
+            with urllib.request.urlopen(request, timeout=2) as response:
+                payload = json.loads(response.read().decode("utf-8") or "{}")
+        except (OSError, ValueError, TypeError):
+            return None
+        items = payload.get("Items") if isinstance(payload, dict) else []
+        item = items[0] if isinstance(items, list) and items and isinstance(items[0], dict) else {}
+        sources = item.get("MediaSources") if isinstance(item.get("MediaSources"), list) else []
+        source = next((candidate for candidate in sources if str(candidate.get("Id") or "") == item_id), None)
+        if not isinstance(source, dict):
+            source = sources[0] if sources and isinstance(sources[0], dict) else item
+        streams = source.get("MediaStreams") if isinstance(source.get("MediaStreams"), list) else []
+        audio = [stream for stream in streams if isinstance(stream, dict) and str(stream.get("Type") or "").lower() == "audio"]
+        if not audio:
+            return None
+        aliases = MediaWorker._language_aliases(preference)
+        for stream in audio:
+            labels = " ".join(str(stream.get(key) or "").lower() for key in ("Language", "Title", "DisplayTitle"))
+            tokens = set(re.findall(r"[a-z0-9]+", labels))
+            if aliases.intersection(tokens):
+                try:
+                    return int(stream.get("Index"))
+                except (TypeError, ValueError):
+                    pass
+
+        # Some older files (including the Animatrix source) have no language
+        # tags. When English is requested, prefer the sole alternate track
+        # over the library's Japanese/default track; explicit tags always win.
+        has_language_tags = any(stream.get("Language") or stream.get("Title") for stream in audio)
+        if preference in ("english", "eng", "en") and not has_language_tags:
+            non_default = [stream for stream in audio if stream.get("IsDefault") is not True]
+            if len(non_default) == 1:
+                try:
+                    return int(non_default[0].get("Index"))
+                except (TypeError, ValueError):
+                    pass
+        return None
+
+    def _play_url(self, track: dict[str, Any], explicit_url: str) -> str:
+        provider = str(track.get("provider") or "").lower()
+        track_url = explicit_url or str(track.get("url") or "")
+        if provider == "jellyfin" or track_url.startswith("jellyfin://"):
+            return self._resolve_jellyfin(track)["progressiveUrl"]
+        if not track_url:
+            raise ValueError("track has no playable URL")
+        return track_url
+
+    def play(self, message: dict[str, Any]) -> None:
+        track = message.get("track")
+        if not isinstance(track, dict):
+            track = {}
+        revision = int(clamp_number(message.get("revision"), 0, 2**31 - 1, 0))
+        volume = int(clamp_number(message.get("volume"), 0, 100, 70))
+        start_at = clamp_number(message.get("startAt"), 0, 365 * 24 * 3600, 0)
+        audio_only = message.get("audioOnly") is not False
+        url = self._play_url(track, str(message.get("url") or "").strip())
+        mpv = self._ensure_mpv()
+        mpv.prepare_playback(revision, start_at)
+        ytdl_format = "bestaudio[ext=m4a]/bestaudio/best" if audio_only else "18/best[height<=360][ext=mp4]/best"
+        for command in (
+            ["set_property", "volume", volume],
+            ["set_property", "speed", 1.0],
+            ["set_property", "vid", "no" if audio_only else "auto"],
+            ["set_property", "ytdl-format", ytdl_format],
+            ["set_property", "ytdl-raw-options", self._mpv_ytdl_options()],
+            ["set_property", "pause", False],
+        ):
+            reply = mpv.request(command)
+            if reply.get("error") not in (None, "success"):
+                raise RuntimeError(f"mpv rejected {command[1]}")
+        options = f"start={start_at:.3f}" if start_at > 0 else ""
+        command = ["loadfile", url, "replace"]
+        if options:
+            command.extend([-1, options])
+        reply = mpv.request(command, timeout=3.0)
+        if reply.get("error") not in (None, "success"):
+            raise RuntimeError("mpv rejected the media URL")
+        self.emit({"type": "play-result", "revision": revision, "ok": True})
+
+    def command(self, message: dict[str, Any]) -> None:
+        command = message.get("command")
+        if isinstance(command, dict):
+            command = command.get("command")
+        if not isinstance(command, list) or not command or not isinstance(command[0], str):
+            raise ValueError("command must be a non-empty mpv command array")
+        request_id = message.get("requestId")
+        if command[0] == "quit" and self.mpv and not self.mpv.connected and not self._owned_pid_alive():
+            self.emit({"type": "command-result", "requestId": request_id, "ok": True})
+            return
+        mpv = self._ensure_mpv()
+        reply = mpv.request(command)
+        ok = reply.get("error") in (None, "success")
+        event = {"type": "command-result", "requestId": request_id, "ok": ok}
+        if not ok:
+            event["error"] = scrub_error(reply.get("error"), self.secrets())
+        self.emit(event)
+
+    def _job_key(self, request_id: Any) -> str:
+        if request_id is None or isinstance(request_id, (dict, list)):
+            raise ValueError("requestId is required")
+        return str(request_id)
+
+    def _new_job(self, request_id: Any, scope: str) -> tuple[str, threading.Event]:
+        request_key = self._job_key(request_id)
+        key = f"{scope}:{request_key}"
+        event = threading.Event()
+        with self.jobs_lock:
+            previous = self.jobs.get(key)
+            if previous:
+                previous.set()
+            self.jobs[key] = event
+        return key, event
+
+    def _finish_job(self, key: str, event: threading.Event) -> None:
+        with self.jobs_lock:
+            if self.jobs.get(key) is event:
+                self.jobs.pop(key, None)
+
+    def cancel(self, message: dict[str, Any]) -> None:
+        request_key = self._job_key(message.get("requestId"))
+        with self.jobs_lock:
+            matching = [key for key in self.jobs if key.endswith(f":{request_key}")]
+            events = [self.jobs.pop(key) for key in matching]
+        for event in events:
+            event.set()
+        self.emit({"type": "cancelled", "requestId": message.get("requestId"), "active": bool(events)})
+
+    @staticmethod
+    def _terminate_provider_process(process: subprocess.Popen[str], force: bool = False) -> None:
+        if process.poll() is not None:
+            return
+        try:
+            os.killpg(process.pid, signal.SIGKILL if force else signal.SIGTERM)
+        except (OSError, ProcessLookupError):
+            try:
+                process.kill() if force else process.terminate()
+            except OSError:
+                pass
+
+    def _cancel_provider_jobs(self) -> None:
+        with self.jobs_lock:
+            jobs = list(self.jobs.values())
+            self.jobs.clear()
+        for event in jobs:
+            event.set()
+        with self.provider_processes_lock:
+            processes = list(self.provider_processes)
+        for process in processes:
+            self._terminate_provider_process(process)
+        if processes:
+            time.sleep(0.1)
+        for process in processes:
+            self._terminate_provider_process(process, force=True)
+
+    def _run_provider(
+        self,
+        command: list[str],
+        timeout: float,
+        cancelled: threading.Event,
+    ) -> tuple[int, str, str]:
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+        )
+        with self.provider_processes_lock:
+            self.provider_processes.add(process)
+        try:
+            deadline = time.monotonic() + timeout
+            while True:
+                if cancelled.is_set() or self.stop_event.is_set():
+                    self._terminate_provider_process(process)
+                    try:
+                        process.communicate(timeout=0.5)
+                    except subprocess.TimeoutExpired:
+                        self._terminate_provider_process(process, force=True)
+                        process.communicate()
+                    return 0, "", ""
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    self._terminate_provider_process(process)
+                    try:
+                        process.communicate(timeout=0.5)
+                    except subprocess.TimeoutExpired:
+                        self._terminate_provider_process(process, force=True)
+                        process.communicate()
+                    raise TimeoutError("provider timed out")
+                try:
+                    stdout, stderr = process.communicate(timeout=min(0.1, remaining))
+                    return process.returncode or 0, stdout, stderr
+                except subprocess.TimeoutExpired:
+                    continue
+        finally:
+            with self.provider_processes_lock:
+                self.provider_processes.discard(process)
+
+    def _search_youtube(
+        self,
+        query: str,
+        limit: int,
+        content_filter: str,
+        suggestions: bool,
+        cancelled: threading.Event,
+    ) -> tuple[list[dict[str, Any]], str]:
+        config = provider_config(self.settings(), "youtube")
+        safe_config = {
+            "enabled": config.get("enabled") is True,
+            "cookiesFile": str(config.get("cookiesFile") or ""),
+            "cookiesFromBrowser": str(config.get("cookiesFromBrowser") or ""),
+            "defaultSuggestionsQuery": str(config.get("defaultSuggestionsQuery") or ""),
+        }
+        command = [
+            str(self.script_dir / "media-player-search"),
+            "--config-json",
+            json.dumps(safe_config, separators=(",", ":")),
+            "--filter",
+            content_filter,
+            "--limit",
+            str(limit),
+        ]
+        if suggestions:
+            command.append("--suggestions")
+        else:
+            command.append(query)
+        try:
+            return_code, stdout, stderr = self._run_provider(command, 28, cancelled)
+        except TimeoutError:
+            return [], "YouTube search timed out"
+        if cancelled.is_set():
+            return [], ""
+        try:
+            payload = json.loads(stdout or "{}")
+        except ValueError:
+            payload = {}
+        rows = payload.get("results") if isinstance(payload.get("results"), list) else []
+        error = payload.get("error") or (stderr.strip() if return_code else "")
+        return rows, scrub_error(error, self.secrets()) if error else ""
+
+    def _search_jellyfin(
+        self,
+        query: str,
+        limit: int,
+        cancelled: threading.Event,
+    ) -> tuple[list[dict[str, Any]], str]:
+        config = provider_config(self.settings(), "jellyfin")
+        if config.get("enabled") is not True:
+            return [], ""
+        if not self.settings_file:
+            return [], "Jellyfin settings file is unavailable"
+        script = self.script_dir / "jellyfin-search"
+        command = [str(script), "--settings-file", self.settings_file, "--limit", str(limit), query]
+        try:
+            return_code, stdout, stderr = self._run_provider(command, 12, cancelled)
+        except TimeoutError:
+            return [], "Jellyfin search timed out"
+        if cancelled.is_set():
+            return [], ""
+        try:
+            payload = json.loads(stdout or "{}")
+        except ValueError:
+            payload = {}
+        rows = payload.get("results") if isinstance(payload.get("results"), list) else []
+        error = payload.get("error") or (stderr.strip() if return_code else "")
+        return rows, scrub_error(error, self.secrets()) if error else ""
+
+    def search(self, message: dict[str, Any]) -> None:
+        request_id = message.get("requestId")
+        key, cancelled = self._new_job(request_id, "search")
+        if self._latest_search is not None and self._latest_search is not cancelled:
+            self._latest_search.set()
+        self._latest_search = cancelled
+        query = str(message.get("query") or "").strip()
+        limit = int(clamp_number(message.get("limit"), 1, 80, 36))
+        suggestions = message.get("suggestions") is True
+        # Search is intentionally video-wide for both providers. The old
+        # music-only request field is accepted for protocol compatibility but
+        # must not narrow normal media search.
+        content_filter = "all"
+        provider_filter = str(message.get("providerFilter") or "all").lower()
+        explicit = message.get("providers")
+        if isinstance(explicit, list):
+            providers = [str(item).lower() for item in explicit if str(item).lower() in ("youtube", "jellyfin")]
+        elif provider_filter in ("youtube", "jellyfin"):
+            providers = [provider_filter]
+        else:
+            providers = ["youtube", "jellyfin"]
+        providers = list(dict.fromkeys(providers))
+        if not query and not suggestions:
+            for provider in providers:
+                self.emit({
+                    "type": "provider-results",
+                    "requestId": request_id,
+                    "provider": provider,
+                    "results": [],
+                    "error": "",
+                    "complete": True,
+                    "cached": False,
+                })
+            self._finish_job(key, cancelled)
+            return
+
+        def run_provider(provider: str) -> None:
+            provider_limit = max(4, (limit + 1) // 2) if len(providers) > 1 else limit
+            cache_key = (provider, query.lower(), provider_limit, content_filter, suggestions, self.settings_revision())
+            cached = self._cache_get(self.search_cache, cache_key, SEARCH_CACHE_TTL)
+            if cached:
+                rows, error = cached[1], cached[2]
+                from_cache = True
+            else:
+                try:
+                    if provider == "youtube":
+                        rows, error = self._search_youtube(query, provider_limit, content_filter, suggestions, cancelled)
+                    else:
+                        rows, error = self._search_jellyfin("" if suggestions else query, provider_limit, cancelled)
+                except Exception as exc:
+                    rows, error = [], scrub_error(exc, self.secrets())
+                if not cancelled.is_set() and not error:
+                    self._cache_put(
+                        self.search_cache,
+                        cache_key,
+                        (time.monotonic(), rows, error),
+                        SEARCH_CACHE_MAX_ENTRIES,
+                    )
+                from_cache = False
+            if not cancelled.is_set():
+                self.emit({
+                    "type": "provider-results",
+                    "requestId": request_id,
+                    "provider": provider,
+                    "results": rows,
+                    "error": error,
+                    "complete": True,
+                    "cached": from_cache,
+                })
+
+        def coordinator() -> None:
+            threads = []
+            try:
+                for provider in providers:
+                    thread = threading.Thread(
+                        target=run_provider,
+                        args=(provider,),
+                        name=f"lacuna-search-{provider}",
+                        daemon=True,
+                    )
+                    thread.start()
+                    threads.append(thread)
+                for thread in threads:
+                    thread.join()
+            finally:
+                self._finish_job(key, cancelled)
+
+        threading.Thread(target=coordinator, name=f"lacuna-search-{key}", daemon=True).start()
+
+    def _resolve_youtube_video(self, url: str, cancelled: threading.Event) -> dict[str, Any]:
+        ytdlp = shutil.which("yt-dlp")
+        if not ytdlp:
+            raise RuntimeError("yt-dlp is not installed")
+        config = provider_config(self.settings(), "youtube")
+        command = [
+            ytdlp,
+            *self._youtube_auth_args(config),
+            "--extractor-args",
+            f"youtube:player_client={YOUTUBE_PLAYER_CLIENT}",
+            "--no-warnings",
+            "--no-playlist",
+            "--dump-single-json",
+            url,
+        ]
+        try:
+            return_code, stdout, stderr = self._run_provider(command, 18, cancelled)
+        except TimeoutError as exc:
+            raise RuntimeError("video stream resolution timed out") from exc
+        if cancelled.is_set():
+            return {}
+        if return_code != 0:
+            message = (stderr or stdout or "video stream resolution failed").strip().splitlines()
+            raise RuntimeError(message[-1] if message else "video stream resolution failed")
+        try:
+            payload = json.loads(stdout or "{}")
+        except ValueError as exc:
+            raise RuntimeError("yt-dlp returned invalid stream metadata") from exc
+        formats = payload.get("formats") if isinstance(payload.get("formats"), list) else []
+
+        def valid_format(item: Any) -> bool:
+            return isinstance(item, dict) and str(item.get("url") or "").startswith("http") and item.get("vcodec") not in (None, "none")
+
+        video_formats = [item for item in formats if valid_format(item)]
+
+        def height(item: dict[str, Any]) -> int:
+            try:
+                return int(item.get("height") or 0)
+            except (TypeError, ValueError):
+                return 0
+
+        hls = [
+            item for item in video_formats
+            if height(item) <= 720 and ("m3u8" in str(item.get("protocol") or "").lower() or str(item.get("ext") or "").lower() == "m3u8")
+        ]
+        hls.sort(key=lambda item: (height(item), item.get("acodec") not in (None, "none")), reverse=True)
+        progressive = [
+            item for item in video_formats
+            if height(item) <= 360 and item.get("acodec") not in (None, "none")
+            and "m3u8" not in str(item.get("protocol") or "").lower()
+        ]
+        progressive.sort(key=lambda item: (height(item), str(item.get("format_id") or "") == "18"), reverse=True)
+        adaptive = hls[0].get("url") if hls else ""
+        stable = progressive[0].get("url") if progressive else ""
+        if not adaptive:
+            under_720 = [item for item in video_formats if height(item) <= 720]
+            under_720.sort(key=height, reverse=True)
+            adaptive = under_720[0].get("url") if under_720 else ""
+        if not stable:
+            stable = str(payload.get("url") or "")
+        if not stable and not cancelled.is_set():
+            safe_config = {
+                "enabled": config.get("enabled") is True,
+                "cookiesFile": str(config.get("cookiesFile") or ""),
+                "cookiesFromBrowser": str(config.get("cookiesFromBrowser") or ""),
+            }
+            fallback_command = [
+                str(self.script_dir / "media-player-background"),
+                "--config-json",
+                json.dumps(safe_config, separators=(",", ":")),
+                url,
+            ]
+            try:
+                fallback_code, fallback_stdout, _fallback_stderr = self._run_provider(
+                    fallback_command, 20, cancelled
+                )
+                fallback_payload = json.loads(fallback_stdout or "{}")
+                if fallback_code == 0:
+                    stable = str(fallback_payload.get("url") or "")
+            except (TimeoutError, ValueError):
+                pass
+        if not adaptive and not stable:
+            raise RuntimeError("no playable video stream was returned")
+        return {"adaptiveUrl": adaptive, "progressiveUrl": stable, "thumbnail": str(payload.get("thumbnail") or "")}
+
+    def resolve_video(self, message: dict[str, Any]) -> None:
+        request_id = message.get("requestId")
+        key, cancelled = self._new_job(request_id, "video")
+        if self._latest_video_resolve is not None and self._latest_video_resolve is not cancelled:
+            self._latest_video_resolve.set()
+        self._latest_video_resolve = cancelled
+        track = message.get("track") if isinstance(message.get("track"), dict) else {}
+        revision = int(clamp_number(message.get("revision"), 0, 2**31 - 1, 0))
+
+        def task() -> None:
+            try:
+                provider = str(track.get("provider") or "").lower()
+                url = str(track.get("url") or "")
+                identity = str(track.get("providerId") or track.get("id") or url)
+                cache_key = (provider, identity, self.settings_revision())
+                cached = self._cache_get(self.video_cache, cache_key, VIDEO_CACHE_TTL)
+                from_cache = cached is not None
+                if from_cache:
+                    candidates = dict(cached[1])
+                elif provider == "jellyfin" or url.startswith("jellyfin://"):
+                    candidates = self._resolve_jellyfin(track)
+                else:
+                    if not url:
+                        raise ValueError("track has no video URL")
+                    candidates = self._resolve_youtube_video(url, cancelled)
+                if cancelled.is_set():
+                    return
+                if not from_cache:
+                    self._cache_put(
+                        self.video_cache,
+                        cache_key,
+                        (time.monotonic(), dict(candidates)),
+                        VIDEO_CACHE_MAX_ENTRIES,
+                    )
+                self.emit({
+                    "type": "video-candidates",
+                    "requestId": request_id,
+                    "revision": revision,
+                    "provider": provider or "youtube",
+                    "adaptiveUrl": candidates.get("adaptiveUrl") or "",
+                    "progressiveUrl": candidates.get("progressiveUrl") or "",
+                    "thumbnail": candidates.get("thumbnail") or "",
+                    "mediaType": candidates.get("mediaType") or "video",
+                    "expiresAtMs": epoch_ms() + VIDEO_CACHE_TTL * 1000,
+                    "cached": from_cache,
+                    "error": "",
+                })
+            except Exception as exc:
+                if not cancelled.is_set():
+                    self.emit({
+                        "type": "video-candidates",
+                        "requestId": request_id,
+                        "revision": revision,
+                        "adaptiveUrl": "",
+                        "progressiveUrl": "",
+                        "error": scrub_error(exc, self.secrets()),
+                    })
+            finally:
+                self._finish_job(key, cancelled)
+
+        threading.Thread(target=task, name=f"lacuna-video-{key}", daemon=True).start()
+
+    def shutdown(self, message: dict[str, Any]) -> None:
+        self._cancel_provider_jobs()
+        self.emit({"type": "shutdown", "ok": True})
+        self.stop_event.set()
+
+    def close(self) -> None:
+        self.stop_event.set()
+        self._cancel_provider_jobs()
+        if self.mpv:
+            self.mpv.stop()
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    runtime_dir = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "lacuna-media-player")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--runtime-dir", default=runtime_dir)
+    parser.add_argument("--socket", default=os.path.join(runtime_dir, "mpv.sock"))
+    parser.add_argument("--settings-file", default="")
+    parser.add_argument("--script-dir", default=str(Path(__file__).resolve().parent))
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    worker = MediaWorker(args)
+
+    def stop_signal(_signum: int, _frame: Any) -> None:
+        worker.stop_event.set()
+
+    signal.signal(signal.SIGTERM, stop_signal)
+    signal.signal(signal.SIGINT, stop_signal)
+    worker.emit(worker.ready_event())
+    inbox: queue.Queue[str | None] = queue.Queue()
+
+    def read_stdin() -> None:
+        for value in sys.stdin:
+            inbox.put(value)
+        inbox.put(None)
+
+    threading.Thread(target=read_stdin, name="lacuna-worker-stdin", daemon=True).start()
+    try:
+        while not worker.stop_event.is_set():
+            try:
+                line = inbox.get(timeout=0.25)
+            except queue.Empty:
+                continue
+            if line is None:
+                break
+            try:
+                message = json.loads(line)
+            except ValueError as exc:
+                worker.error("protocol", f"Malformed JSON: {exc}")
+                continue
+            worker.handle(message)
+    finally:
+        worker.close()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

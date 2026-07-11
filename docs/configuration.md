@@ -37,7 +37,25 @@ This file stores Lacuna app/runtime state such as:
 - `colorProfile`
 - `customQuickLaunchApps`
 - `preferredApps`
+- `mediaPlayer` presentation, quality, and provider-filter preferences
 - frame/sidebar preferences
+
+Media Player defaults are:
+
+```json
+{
+  "mediaPlayer": {
+    "presentationMode": "auto",
+    "videoQuality": "adaptive",
+    "providerFilter": "all"
+  }
+}
+```
+
+Player queue, history, favorites, repeat mode, and volume are stored separately
+in `~/.config/omarchy/lacuna/media-player.json`. Version 3 state is migrated to
+version 4 on load. See `docs/architecture/media-player.md` for the worker,
+search, synchronization, and handoff contracts.
 
 Use `semantic` for the foreground-first color profile or `colorful` to let
 Lacuna topbar modules draw from active Omarchy theme colors.

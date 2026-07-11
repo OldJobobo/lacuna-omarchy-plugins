@@ -876,10 +876,12 @@ Item {
         enabled: false,
         serverUrl: "",
         apiKey: "",
-        userId: ""
+        userId: "",
+        preferredAudioLanguage: "English"
       }
     }
     if (settings.mediaProviders.jellyfin.userId === undefined || settings.mediaProviders.jellyfin.userId === null) settings.mediaProviders.jellyfin.userId = ""
+    if (settings.mediaProviders.jellyfin.preferredAudioLanguage === undefined || settings.mediaProviders.jellyfin.preferredAudioLanguage === null || String(settings.mediaProviders.jellyfin.preferredAudioLanguage).trim() === "") settings.mediaProviders.jellyfin.preferredAudioLanguage = "English"
   }
 
   function setJellyfinProviderEnabled(enabled) {
@@ -900,6 +902,13 @@ Item {
     var next = lacunaSettings.normalize(lacunaSettings.data)
     ensureMediaProviders(next)
     next.mediaProviders.jellyfin.apiKey = String(value || "").trim()
+    lacunaSettings.save(next)
+  }
+
+  function setJellyfinAudioLanguage(value) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    ensureMediaProviders(next)
+    next.mediaProviders.jellyfin.preferredAudioLanguage = lacunaSettings.normalizeJellyfinAudioLanguage(value)
     lacunaSettings.save(next)
   }
 
@@ -1395,6 +1404,11 @@ Item {
 
     if (entry.action.indexOf("set-jellyfin-api-key-") === 0) {
       setJellyfinApiKey(entry.action.substring("set-jellyfin-api-key-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("set-jellyfin-audio-language-") === 0) {
+      setJellyfinAudioLanguage(entry.action.substring("set-jellyfin-audio-language-".length))
       return true
     }
 

@@ -806,19 +806,26 @@ Item {
       enabled: jellyfin.enabled === true,
       serverUrl: String(jellyfin.serverUrl || ""),
       apiKey: String(jellyfin.apiKey || ""),
-      userId: String(jellyfin.userId || "")
+      userId: String(jellyfin.userId || ""),
+      preferredAudioLanguage: String(jellyfin.preferredAudioLanguage || "English")
     }
   }
 
   readonly property bool jellyfinProviderEnabled: jellyfinProviderSettings().enabled
   readonly property string jellyfinServerUrl: jellyfinProviderSettings().serverUrl
   readonly property string jellyfinApiKey: jellyfinProviderSettings().apiKey
+  readonly property string jellyfinAudioLanguage: jellyfinProviderSettings().preferredAudioLanguage
   readonly property bool jellyfinApiKeyConfigured: jellyfinApiKey !== ""
 
   function jellyfinProviderHint() {
     if (!jellyfinProviderEnabled) return "Jellyfin search is disabled"
     if (jellyfinServerUrl === "" || jellyfinApiKey === "") return "Jellyfin needs a server URL and API key"
     return "Jellyfin results are merged into Media Player search"
+  }
+
+  function jellyfinAudioLanguageHint() {
+    if (jellyfinAudioLanguage === "Default") return "Use Jellyfin’s default audio track"
+    return "Prefer " + jellyfinAudioLanguage + " audio when the item exposes it"
   }
 
   function layoutOptions() {

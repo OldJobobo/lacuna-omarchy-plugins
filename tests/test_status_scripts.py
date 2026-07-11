@@ -342,7 +342,8 @@ class MediaPlayerScriptTests(unittest.TestCase):
         self.assertEqual(payload["error"], "")
         self.assertEqual(len(payload["results"]), 1)
         self.assertIn("--flat-playlist", argv)
-        self.assertIn("ytsearch40:demo query", argv)
+        self.assertIn("--lazy-playlist", argv)
+        self.assertIn("ytsearch3:demo query", argv)
         item = payload["results"][0]
         self.assertEqual(item["id"], "abc123")
         self.assertEqual(item["title"], "Demo Track")
@@ -351,7 +352,7 @@ class MediaPlayerScriptTests(unittest.TestCase):
         self.assertEqual(item["thumbnail"], "https://i.ytimg.com/vi/abc123/hqdefault.jpg")
         self.assertEqual(item["url"], "https://www.youtube.com/watch?v=abc123")
 
-    def test_search_ranks_music_results_above_general_videos(self):
+    def test_search_ignores_legacy_music_filter(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
@@ -373,9 +374,9 @@ class MediaPlayerScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual([item["id"] for item in payload["results"]], ["song1"])
+        self.assertEqual([item["id"] for item in payload["results"]], ["review1", "song1"])
 
-    def test_search_keeps_neutral_music_fallbacks(self):
+    def test_search_keeps_all_video_results_for_legacy_music_filter(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
@@ -398,9 +399,9 @@ class MediaPlayerScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual([item["id"] for item in payload["results"]], ["song1", "song2"])
+        self.assertEqual([item["id"] for item in payload["results"]], ["song1", "song2", "pod1"])
 
-    def test_search_keeps_album_mix_and_live_results(self):
+    def test_search_keeps_all_result_order_for_legacy_music_filter(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
@@ -424,7 +425,7 @@ class MediaPlayerScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual([item["id"] for item in payload["results"]], ["album1", "mix1", "stream1"])
+        self.assertEqual([item["id"] for item in payload["results"]], ["album1", "mix1", "stream1", "review1"])
 
     def test_search_uses_large_candidate_pool_for_scroll_reveal(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -470,12 +471,12 @@ class MediaPlayerScriptTests(unittest.TestCase):
             argv = json.loads((tmp / "argv.json").read_text())
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("ytsearch40:demo track", argv)
-        self.assertNotIn("ytsearch40:demo track music", argv)
+        self.assertIn("ytsearch2:demo track", argv)
+        self.assertNotIn("ytsearch2:demo track music", argv)
         payload = json.loads(result.stdout)
         self.assertEqual([item["id"] for item in payload["results"]], ["general1", "song1"])
 
-    def test_search_uses_general_youtube_browser_cookies(self):
+    def test_public_search_does_not_load_browser_cookies(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
@@ -495,14 +496,14 @@ class MediaPlayerScriptTests(unittest.TestCase):
             argv = json.loads((tmp / "argv.json").read_text())
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("--cookies-from-browser", argv)
-        self.assertIn("firefox", argv)
+        self.assertNotIn("--cookies-from-browser", argv)
+        self.assertNotIn("firefox", argv)
         payload = json.loads(result.stdout)
         self.assertEqual(payload["error"], "")
         self.assertEqual(payload["results"][0]["id"], "general1")
         self.assertEqual(payload["results"][0]["source"], "YouTube")
 
-    def test_default_suggestions_use_authenticated_youtube_home_feed(self):
+    def test_default_suggestions_use_broad_video_search(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
@@ -526,18 +527,14 @@ class MediaPlayerScriptTests(unittest.TestCase):
             argv = json.loads((tmp / "argv.json").read_text())
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("--cookies-from-browser", argv)
-        self.assertIn("firefox", argv)
-        self.assertIn("--playlist-items", argv)
-        self.assertIn("1-5", argv)
-        self.assertIn("https://www.youtube.com/", argv)
-        self.assertNotIn("ytsearch", " ".join(argv))
+        self.assertNotIn("--cookies-from-browser", argv)
+        self.assertIn("ytsearch5:latest videos", argv)
         payload = json.loads(result.stdout)
         self.assertEqual(payload["error"], "")
         self.assertEqual([item["id"] for item in payload["results"]], ["home1", "home2"])
-        self.assertEqual(payload["results"][0]["source"], "YouTube Home")
+        self.assertNotEqual(payload["results"][0]["source"], "YouTube Home Music")
 
-    def test_default_suggestions_report_unusable_authenticated_home_feed(self):
+    def test_default_suggestions_do_not_depend_on_authenticated_home_feed(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
@@ -557,13 +554,12 @@ class MediaPlayerScriptTests(unittest.TestCase):
             argv = json.loads((tmp / "argv.json").read_text())
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("https://www.youtube.com/", argv)
-        self.assertNotIn("ytsearch", " ".join(argv))
+        self.assertIn("ytsearch5:latest videos", argv)
         payload = json.loads(result.stdout)
         self.assertEqual(payload["results"], [])
-        self.assertIn("could not be read", payload["error"])
+        self.assertEqual(payload["error"], "")
 
-    def test_music_default_suggestions_filter_authenticated_youtube_home_feed(self):
+    def test_music_filter_cannot_enable_authenticated_home_feed(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
@@ -589,16 +585,13 @@ class MediaPlayerScriptTests(unittest.TestCase):
             argv = json.loads((tmp / "argv.json").read_text())
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("--cookies-from-browser", argv)
-        self.assertIn("firefox", argv)
-        self.assertIn("--playlist-items", argv)
-        self.assertIn("1-12", argv)
-        self.assertIn("https://www.youtube.com/", argv)
-        self.assertNotIn("ytsearch", " ".join(argv))
+        self.assertNotIn("--cookies-from-browser", argv)
+        self.assertNotIn("firefox", argv)
+        self.assertIn("ytsearch3:latest videos", argv)
         payload = json.loads(result.stdout)
         self.assertEqual(payload["error"], "")
-        self.assertEqual([item["id"] for item in payload["results"]], ["music1", "mix1"])
-        self.assertEqual(payload["results"][0]["source"], "YouTube Home Music")
+        self.assertEqual([item["id"] for item in payload["results"]], ["code1", "music1", "review1"])
+        self.assertEqual(payload["results"][0]["source"], "YouTube")
 
     def test_auth_helper_handles_missing_auth_dir_and_enables_browser_cookies(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -938,16 +931,43 @@ class MediaPlayerScriptTests(unittest.TestCase):
         self.assertEqual(payload["error"], "")
         self.assertTrue(seen["url"].startswith("https://jellyfin.example/base/Users/user-1/Items?"))
         self.assertIn("SearchTerm=jelly", seen["url"])
-        self.assertIn("IncludeItemTypes=Audio%2CMovie%2CEpisode%2CMusicVideo%2CVideo", seen["url"])
+        self.assertIn("IncludeItemTypes=Movie%2CEpisode%2CMusicVideo%2CVideo", seen["url"])
         self.assertEqual(seen["api_key"], "secret-token")
-        self.assertEqual([item["provider"] for item in payload["results"]], ["jellyfin", "jellyfin"])
-        self.assertEqual(payload["results"][0]["mediaType"], "audio")
-        self.assertEqual(payload["results"][0]["streamKind"], "audio")
-        self.assertEqual(payload["results"][0]["durationText"], "3:05")
-        self.assertEqual(payload["results"][0]["url"], "jellyfin://item/audio-1")
-        self.assertEqual(payload["results"][0]["thumbnail"], "")
+        self.assertEqual([item["provider"] for item in payload["results"]], ["jellyfin"])
+        self.assertEqual(payload["results"][0]["mediaType"], "video")
+        self.assertEqual(payload["results"][0]["streamKind"], "video")
+        self.assertEqual(payload["results"][0]["url"], "jellyfin://item/movie-1")
         self.assertNotIn("secret-token", json.dumps(payload))
-        self.assertEqual(payload["results"][1]["mediaType"], "video")
+
+    def test_jellyfin_search_promotes_exact_movie_titles(self):
+        module = load_script(self.JELLYFIN_SEARCH_SCRIPT, "youtube_music_jellyfin_rank_test")
+
+        def fake_request_json(_url, _api_key):
+            return {
+                "Items": [
+                    {"Id": "clip-1", "Type": "Video", "Name": "Matrix Revolutions Disc 2 title 05"},
+                    {"Id": "movie-1", "Type": "Movie", "Name": "The Matrix"},
+                    {"Id": "movie-2", "Type": "Movie", "Name": "The Matrix Revolutions"},
+                ]
+            }
+
+        module.request_json = fake_request_json
+        config = json.dumps({
+            "enabled": True,
+            "serverUrl": "https://jellyfin.example",
+            "apiKey": "secret-token",
+        })
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            code = module.main(["--config-json", config, "matrix"])
+
+        self.assertEqual(code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual([item["title"] for item in payload["results"]], [
+            "The Matrix",
+            "The Matrix Revolutions",
+            "Matrix Revolutions Disc 2 title 05",
+        ])
 
     def test_jellyfin_search_missing_config_is_nonfatal(self):
         result = run([

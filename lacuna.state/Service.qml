@@ -68,8 +68,14 @@ Item {
           enabled: false,
           serverUrl: "",
           apiKey: "",
-          userId: ""
+          userId: "",
+          preferredAudioLanguage: "English"
         }
+      },
+      mediaPlayer: {
+        presentationMode: "auto",
+        videoQuality: "adaptive",
+        providerFilter: "all"
       },
       sidebar: {
         defaultMode: "off",
@@ -165,6 +171,7 @@ Item {
       next.power = normalizePowerSettings(value.power || value.session || value.system)
       next.shellSettings = normalizeShellSettings(value.shellSettings || value.omarchySettings)
       next.mediaProviders = normalizeMediaProviders(value.mediaProviders || value.providers)
+      next.mediaPlayer = normalizeMediaPlayer(value.mediaPlayer || value.player)
       if (value.sidebar && typeof value.sidebar === "object") {
         next.sidebar.defaultMode = normalizeSidebarDefaultMode(value.sidebar.defaultMode)
         next.sidebar.collapsed = value.sidebar.collapsed === true
@@ -245,10 +252,34 @@ Item {
         enabled: jellyfin.enabled === true,
         serverUrl: String(jellyfin.serverUrl || ""),
         apiKey: String(jellyfin.apiKey || ""),
-        userId: String(jellyfin.userId || "")
+        userId: String(jellyfin.userId || ""),
+        preferredAudioLanguage: normalizeJellyfinAudioLanguage(jellyfin.preferredAudioLanguage)
       }
     }
     return next
+  }
+
+  function normalizeJellyfinAudioLanguage(value) {
+    var language = String(value || "English").trim()
+    if (language === "") return "English"
+    var lowered = language.toLowerCase()
+    if (lowered === "default" || lowered === "original" || lowered === "auto") return "Default"
+    if (lowered === "english" || lowered === "eng" || lowered === "en") return "English"
+    if (lowered === "japanese" || lowered === "jpn" || lowered === "ja") return "Japanese"
+    return language
+  }
+
+  function normalizeMediaPlayer(value) {
+    var defaults = defaultData().mediaPlayer
+    var source = value && typeof value === "object" ? value : ({})
+    var presentationMode = String(source.presentationMode || defaults.presentationMode).toLowerCase()
+    var videoQuality = String(source.videoQuality || defaults.videoQuality).toLowerCase()
+    var providerFilter = String(source.providerFilter || defaults.providerFilter).toLowerCase()
+    return {
+      presentationMode: presentationMode === "inline" || presentationMode === "background" ? presentationMode : "auto",
+      videoQuality: videoQuality === "stable" ? "stable" : "adaptive",
+      providerFilter: providerFilter === "youtube" || providerFilter === "jellyfin" ? providerFilter : "all"
+    }
   }
 
   function normalizeBackgroundEffects(value) {

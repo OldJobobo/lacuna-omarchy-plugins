@@ -4,7 +4,7 @@
   "name": "Lacuna Media Player",
   "version": "0.1.0",
   "author": "Lacuna",
-  "description": "Experimental Lacuna service for media search, queue, and mpv playback.",
+  "description": "Responsive multi-provider media search, queue, and synchronized mpv playback for Lacuna.",
   "kinds": [
     "service"
   ],
@@ -14,7 +14,7 @@
     "service": "Service.qml"
   },
   "defaults": {
-    "maxResults": 60,
+    "maxResults": 36,
     "audioOnly": true,
     "volume": 70
   },
@@ -24,15 +24,15 @@
       "type": "integer",
       "label": "Search result limit",
       "min": 12,
-      "max": 80,
+      "max": 60,
       "step": 1,
-      "defaultValue": 60
+      "defaultValue": 36
     },
     {
       "key": "audioOnly",
       "type": "boolean",
       "label": "Audio-only playback",
-      "description": "Keep mpv from opening a separate video window. The sidebar preview uses thumbnails.",
+      "description": "Keep authoritative mpv playback headless while Lacuna renders synchronized video surfaces.",
       "defaultValue": true
     },
     {
@@ -48,7 +48,7 @@
   "lacuna": {
     "standalone": true,
     "bundle": "standalone",
-    "stability": "experimental",
+    "stability": "beta",
     "requires": [],
     "recommends": [
       "lacuna.menu",

@@ -1464,6 +1464,16 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("function normalizeMediaProviders", read("lacuna.state/Service.qml"))
         self.assertIn("userId", settings_example["mediaProviders"]["jellyfin"])
         self.assertEqual("fixture-user", full_settings["mediaProviders"]["jellyfin"]["userId"])
+        self.assertEqual("English", settings_example["mediaProviders"]["jellyfin"]["preferredAudioLanguage"])
+        self.assertEqual("English", full_settings["mediaProviders"]["jellyfin"]["preferredAudioLanguage"])
+        self.assertEqual("auto", settings_example["mediaPlayer"]["presentationMode"])
+        self.assertEqual("adaptive", settings_example["mediaPlayer"]["videoQuality"])
+        self.assertEqual("all", settings_example["mediaPlayer"]["providerFilter"])
+        self.assertEqual("background", full_settings["mediaPlayer"]["presentationMode"])
+        self.assertEqual("stable", full_settings["mediaPlayer"]["videoQuality"])
+        self.assertEqual("jellyfin", full_settings["mediaPlayer"]["providerFilter"])
+        self.assertIn("function normalizeMediaPlayer", read("lacuna.menu/services/LacunaSettings.qml"))
+        self.assertIn("function normalizeMediaPlayer", read("lacuna.state/Service.qml"))
         self.assertIn("backgroundEffects.activeEffect", qml)
         self.assertIn("backgroundEffects.activeEffect", vhs)
         self.assertIn("backgroundEffects.activeEffect", film)
@@ -1883,10 +1893,16 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("property bool waitingForPlayerReady: false", overlay)
         self.assertIn("property bool wallpaperPositionRefreshPending: false", overlay)
         self.assertIn('property string wallpaperPositionRefreshKey: ""', overlay)
-        self.assertIn("readonly property int failureWatchdogDuration: 12000", overlay)
+        self.assertIn("readonly property int failureWatchdogDuration: handoffTimeoutDuration", overlay)
         self.assertIn("readonly property bool wallpaperLayerVisible", overlay)
-        self.assertIn("readonly property int fadeInDuration: 7000", overlay)
-        self.assertIn("readonly property int fadeOutDuration: 7000", overlay)
+        self.assertIn("readonly property int normalFadeCoverRiseDuration: 300", overlay)
+        self.assertIn("readonly property int normalSourceHoldDuration: 150", overlay)
+        self.assertIn("readonly property int normalFadeInDuration: 750", overlay)
+        self.assertIn("readonly property int normalExitFadeToBlackDuration: 350", overlay)
+        self.assertIn("readonly property int normalExitFadeFromBlackDuration: 600", overlay)
+        self.assertIn("readonly property int reducedMotionDuration: 75", overlay)
+        self.assertIn("readonly property int handoffTimeoutDuration: 5000", overlay)
+        self.assertIn("readonly property int adaptiveReadinessTimeoutDuration: 4000", overlay)
         self.assertIn("readonly property int exitFadeToBlackDuration", overlay)
         self.assertIn("readonly property int exitFadeFromBlackDuration", overlay)
         self.assertIn("import QtMultimedia", overlay)
@@ -1910,7 +1926,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("x: Math.round(videoWindow.frameRect.x)", overlay)
         self.assertIn("width: Math.round(videoWindow.frameRect.width)", overlay)
         self.assertIn("radius: Math.max(0, Number(videoWindow.frameRect.radius || 0))", overlay)
-        self.assertIn("if (waitingForHighRes) holdFadeCover(exitFadeToBlackDuration)", overlay)
+        self.assertIn("onWaitingForHighResChanged: syncWallpaper()", overlay)
         self.assertIn("onBackgroundRequestRevisionChanged", overlay)
         self.assertIn("onBackgroundResolveFailedChanged", overlay)
         self.assertIn("fadeCoverStartedAt = Date.now()", overlay)
@@ -1922,7 +1938,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("function clearWallpaperNow()", overlay)
         self.assertIn("exitClearTimer.restart()", overlay)
         self.assertIn("id: exitClearTimer", overlay)
-        self.assertIn("activeSource !== videoSource && !fadeCoverRising", overlay)
+        self.assertIn("activeSource !== videoSource || activeRevisionKey !== sourceRevisionKey", overlay)
         self.assertIn("wallpaperFadeGateDelay = fadeCoverDuration", overlay)
         self.assertIn("function fadeCoverRiseRemaining()", overlay)
         self.assertIn("var remainingFadeCoverRise = fadeCoverRiseRemaining()", overlay)
@@ -1931,11 +1947,11 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("service.refreshBackgroundStream()", overlay)
         self.assertIn("id: wallpaperPositionRefreshTimer", overlay)
         self.assertIn("id: failureWatchdog", overlay)
-        self.assertIn("root.giveUpWallpaper(\"watchdog\")", overlay)
+        self.assertIn("root.giveUpWallpaper(\"handoff-timeout\")", overlay)
         self.assertIn("wallpaperPositionRefreshKey !== refreshKey", overlay)
         self.assertIn("root.wallpaperPositionRefreshKey = root.videoSource + \"#\" + root.backgroundRequestRevision", overlay)
         self.assertIn("fadeRevealDelay = Math.max(0, mediaReadyMinimumHoldMs - elapsed)", overlay)
-        self.assertIn("visible: renderable", overlay)
+        self.assertIn("visible: videoWindow.renderable", overlay)
         self.assertIn("visible: root.fadeCoverVisible", overlay)
         self.assertIn("interval: root.fadeRevealDelay", overlay)
         self.assertIn("id: wallpaperFadeGateTimer", overlay)
@@ -1945,14 +1961,18 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("playbackState === MediaPlayer.PlayingState", overlay)
         self.assertIn("onErrorOccurred", overlay)
         self.assertIn("function syncVideoPosition(force)", overlay)
-        # The drift tolerance must exceed the ~1s playback-position poll
-        # cadence, or the overlay phase-locks into a seek-per-second loop
-        # that reads as stutter; there must also be no repeating timer that
-        # compares against a stale position between polls.
-        self.assertIn("Math.abs(player.position - target) > 3000", overlay)
-        self.assertNotIn("Math.abs(player.position - target) > 900", overlay)
+        # The interpolated service clock supports gentle correction below
+        # 1.5s; hard seeks are rate-limited and validated before fallback.
+        self.assertIn("if (absoluteDrift < 400)", overlay)
+        self.assertIn("if (absoluteDrift <= 1500)", overlay)
+        self.assertIn("player.playbackRate = drift > 0 ? 1.03 : 0.97", overlay)
+        self.assertIn("var hardSeekAllowed = force || now - lastHardSeekAt >= hardSeekCooldownDuration", overlay)
+        self.assertIn("if (!hardSeekAllowed) continue", overlay)
+        self.assertIn("if (hardSeekFailureCount < 2) return", overlay)
         self.assertIn("backgroundPlayer.play()", overlay)
         self.assertIn("backgroundPlayer.pause()", overlay)
+        self.assertIn("root.syncVideoPosition(true)", overlay)
+        self.assertIn("if (mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia)", overlay)
         self.assertIn('if (root.activeSource === "") backgroundPlayer.stop()', overlay)
         self.assertIn("function handleResolveFailure()", overlay)
         self.assertIn("id: resolveRetryTimer", overlay)
@@ -1978,7 +1998,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertNotIn("mpvpaper", overlay)
         self.assertNotIn("input-ipc-server=", overlay)
         self.assertNotIn("adoptBackgroundPlayback", overlay)
-        self.assertNotIn("preferredVideoSource", overlay)
+        self.assertIn("readonly property string preferredVideoSource", overlay)
+        self.assertIn('switchToProgressive("adaptive-readiness-timeout")', overlay)
         self.assertNotIn("previewVideoSource", overlay)
         self.assertNotIn("onPreviewStreamUrlChanged", overlay)
         self.assertNotIn("lastExitCode", overlay)
@@ -2466,7 +2487,7 @@ class QmlContractTests(unittest.TestCase):
             "property int favoritesRevision: 0",
             "readonly property int favoritesLength: favoritesRevision >= 0 ? favorites.length : 0",
             "readonly property bool currentFavorite: favoritesRevision >= 0 && isFavorite(currentTrack)",
-            "version: 3",
+            "version: 4",
             "favorites: normalizeUniqueTrackList(source.favorites, 500)",
             "repeatMode: normalizeRepeatMode(source.repeatMode)",
             "provider: provider",
@@ -2516,11 +2537,9 @@ class QmlContractTests(unittest.TestCase):
             "function loadDefaultSuggestions()",
             "function refreshYoutubeResultsAfterLogin()",
             "if (youtubeLoginEnabled) refreshYoutubeResultsAfterLogin()",
-            "function setSearchFilter(value)",
-            "searchFilter = next",
             "function startYoutubeSuggestions(limit, revision)",
-            "startYoutubeSuggestions(Math.min(maxResults, 24), searchRevision)",
-            "searchProc.pendingCommand = [searchScript, \"--config-json\", youtubeConfigJson, \"--filter\", searchFilter",
+            "startYoutubeSuggestions(Math.min(providerSearchLimit(\"youtube\"), 24), searchRevision)",
+            "searchProc.pendingCommand = [searchScript, \"--config-json\", youtubeConfigJson, \"--filter\", \"all\"",
             "pendingDefaultSuggestions = true",
             "if (root.pendingDefaultSuggestions && (root.ytdlpAvailable || root.jellyfinConfigured)) root.loadDefaultSuggestions()",
             "function openYoutubeLogin()",
@@ -2582,7 +2601,13 @@ class QmlContractTests(unittest.TestCase):
             "backgroundRequestRevision += 1",
             "function refreshBackgroundStream()",
             "function prefetchNextBackground()",
-            "if (hasTrack && (backgroundVideoEnabled || backgroundStreamUrl === \"\")) resolveBackground(currentTrack)",
+            "function setPresentationMode(value)",
+            "function reconcilePresentationState()",
+            "property string presentationMode: \"auto\"",
+            "property string presentationState: \"inline\"",
+            "readonly property bool desiredBackgroundVideo",
+            "function reportVideoReady(surface, revision, position)",
+            "function reportVideoFailure(surface, revision, reason)",
             "resolvingBackground = false",
             "backgroundStreamUrl = \"\"",
             "backgroundRequestUrl = \"\"",
@@ -2590,7 +2615,7 @@ class QmlContractTests(unittest.TestCase):
             "backgroundResolveFailed: root.backgroundResolveFailed",
             "function refreshBackgroundStream(): string",
             "Background video is unavailable for audio-only media",
-            "if (hasTrack && previewStreamUrl === \"\" && !resolvingPreview) resolvePreview(currentTrack)",
+            "if (previewStreamUrl === \"\" && !resolvingPreview) resolvePreview(currentTrack)",
             "previewTelemetry: root.previewTelemetry",
             "trackInfoResolving: root.resolvingTrackInfo",
             "refreshingFavorites: root.refreshingFavorites",
@@ -2613,6 +2638,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertTrue((ROOT / "lacuna.media-player/scripts/jellyfin-stream").exists())
         self.assertTrue((ROOT / "lacuna.media-player/scripts/media-player-info").exists())
         self.assertTrue((ROOT / "lacuna.media-player/scripts/media-player-refresh-favorites").exists())
+        self.assertTrue((ROOT / "lacuna.media-player/scripts/media-player-worker").exists())
         search_script = read("lacuna.media-player/scripts/media-player-search")
         self.assertIn("def youtube_home_results", search_script)
         self.assertIn("def filtered_home_music_rows", search_script)
@@ -2634,8 +2660,6 @@ class QmlContractTests(unittest.TestCase):
             'icon: "heart"',
             'label: "Favorites"',
             "readonly property string repeatMode",
-            "readonly property string currentSearchFilter",
-            "function setSearchFilter(value)",
             "readonly property int favoritesLength",
             "readonly property int favoritesRevision",
             "readonly property bool inputIsYoutubeUrl",
@@ -2650,9 +2674,6 @@ class QmlContractTests(unittest.TestCase):
             'icon: root.inputIsYoutubeUrl ? "player-play" : "search"',
             "id: searchFilterRow",
             'text: "All"',
-            'text: "Music"',
-            'root.setSearchFilter("all")',
-            'root.setSearchFilter("music")',
             "id: transportControls",
             'visible: root.activeTab !== "search"',
             "id: durationBadgeText",
@@ -2718,24 +2739,22 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("previewPlayer.mediaStatus === MediaPlayer.BufferingMedia", tile)
         self.assertIn("previewPlayer.setPosition(target)", tile)
         self.assertIn("if (!force && previewBuffering()) return", tile)
-        self.assertIn("Math.abs(previewPlayer.position - target) <= 9000", tile)
+        self.assertIn("if (drift < 400)", tile)
         self.assertIn("var drift = Math.abs(previewPlayer.position - target)", tile)
-        self.assertIn("previewStablePositionTicks >= 4 && drift > 5000", tile)
-        self.assertIn("drift > 15000", tile)
-        self.assertIn("previewSuppressed = true", tile)
-        self.assertIn('samplePreviewTelemetry("suppress")', tile)
+        self.assertIn("if (drift <= 1500)", tile)
+        self.assertIn("previewPlayer.playbackRate = signedDrift < 0 ? 1.03 : 0.97", tile)
+        self.assertIn("Date.now() - previewLastSeekAt < 1500", tile)
         # Desktop-to-sidebar handoff: the hidden preview unloads and reloads
         # fresh on return, resume clears the suppression latch, in-flight
         # seeks are not re-issued or judged as drift, and the watchdog only
         # suppresses after repeated failed corrections.
         self.assertIn("if (localPreviewVisible) previewSuppressed = false", tile)
         self.assertIn('source: root.previewVideoActive && root.localPreviewVisible ? root.previewUrl : ""', tile)
-        self.assertIn("var correcting = previewPositionPending || previewStartupSettling()", tile)
         self.assertIn("property int previewDriftStrikes: 0", tile)
         self.assertIn("previewDriftStrikes += 1", tile)
-        self.assertIn("if (previewDriftStrikes >= 8) {", tile)
+        self.assertIn("if (previewDriftStrikes === 2)", tile)
+        self.assertIn('reportInlineFailure("seek-correction")', tile)
         self.assertIn("previewLastSeekAt = Date.now()", tile)
-        self.assertIn("if (previewStablePositionTicks >= 4)", tile)
         self.assertIn("syncPreviewPosition(false)", tile)
         self.assertIn('samplePreviewTelemetry("periodic")', tile)
         self.assertIn("onTriggered: root.maintainPreviewPosition()", tile)
@@ -2743,6 +2762,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("id: previewRecoveryTimer", tile)
         self.assertIn("onPlaybackStateChanged", tile)
         self.assertIn("onMediaStatusChanged", tile)
+        self.assertIn("root.syncPreviewPosition(true)", tile)
         self.assertIn("mediaStatus === MediaPlayer.StalledMedia", tile)
         self.assertIn("mediaStatus === MediaPlayer.InvalidMedia", tile)
         self.assertIn("previewPositionSettleTimer.interval = 1800", tile)
@@ -3144,6 +3164,8 @@ class QmlContractTests(unittest.TestCase):
             '"set-jellyfin-server-url-"',
             '"API Key"',
             '"set-jellyfin-api-key-"',
+            '"Preferred Audio Language"',
+            '"set-jellyfin-audio-language-"',
             "SettingsTextRow",
             "entry.control === \"text\"",
         ]:
@@ -3155,7 +3177,9 @@ class QmlContractTests(unittest.TestCase):
             "readonly property bool jellyfinProviderEnabled",
             "readonly property string jellyfinServerUrl",
             "readonly property string jellyfinApiKey",
+            "readonly property string jellyfinAudioLanguage",
             "function jellyfinProviderHint()",
+            "function jellyfinAudioLanguageHint()",
             "Jellyfin results are merged into Media Player search",
         ]:
             self.assertIn(snippet, registry)
@@ -3167,9 +3191,11 @@ class QmlContractTests(unittest.TestCase):
             "function setJellyfinProviderEnabled(enabled)",
             "function setJellyfinServerUrl(value)",
             "function setJellyfinApiKey(value)",
+            "function setJellyfinAudioLanguage(value)",
             "setJellyfinProviderEnabled(desiredChecked(entry, !registry.jellyfinProviderEnabled))",
             'entry.action.indexOf("set-jellyfin-server-url-") === 0',
             'entry.action.indexOf("set-jellyfin-api-key-") === 0',
+            'entry.action.indexOf("set-jellyfin-audio-language-") === 0',
             "mediaProviders: root.mediaProvidersSettings",
         ]:
             self.assertIn(snippet, menu)

@@ -49,8 +49,14 @@
       "enabled": true,
       "serverUrl": "https://jellyfin.example",
       "apiKey": "fixture-api-key",
-      "userId": "fixture-user"
+      "userId": "fixture-user",
+      "preferredAudioLanguage": "English"
     }
+  },
+  "mediaPlayer": {
+    "presentationMode": "background",
+    "videoQuality": "stable",
+    "providerFilter": "jellyfin"
   },
   "sidebar": {
     "defaultMode": "rail",

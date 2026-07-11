@@ -14,13 +14,21 @@
     "overlay": "Overlay.qml"
   },
   "defaults": {
-    "targetOutput": "DP-1"
+    "targetOutput": "ALL"
   },
-  "schema": [],
+  "schema": [
+    {
+      "key": "targetOutput",
+      "type": "string",
+      "label": "Video output",
+      "description": "Monitor name, or ALL to render on every output.",
+      "defaultValue": "ALL"
+    }
+  ],
   "lacuna": {
     "standalone": true,
     "bundle": "standalone",
-    "stability": "experimental",
+    "stability": "beta",
     "requires": [],
     "recommends": [
       "lacuna.media-player"

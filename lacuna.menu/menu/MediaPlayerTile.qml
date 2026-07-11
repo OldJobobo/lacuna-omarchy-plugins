@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls as QQC
 import QtMultimedia
 import Quickshell
 import Quickshell.Widgets
@@ -31,19 +32,48 @@ Item {
   property int previewDriftStrikes: 0
   property int previewLastSeekTarget: -1
   property double previewLastSeekAt: 0
-  property real videoReveal: localPreviewVisible ? 1 : 0
-  property real layoutReveal: (localPreviewVisible || videoReveal > 0.01) ? 1 : 0
+  property real videoReveal: hasTrack ? 1 : 0
+  property real layoutReveal: hasTrack ? 1 : 0
+
+  activeFocusOnTab: true
+  Accessible.role: Accessible.Button
+  Accessible.name: hasTrack ? "Open media player for " + title : "Open media player"
+  Keys.onPressed: function(event) {
+    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+      root.openRequested()
+      event.accepted = true
+    }
+  }
 
   readonly property bool available: service && service.available === true
   readonly property bool hasTrack: service && service.hasTrack === true
   readonly property bool playbackLoaded: service && service.playing === true
-  readonly property bool sentToBackground: service && service.backgroundVideoEnabled === true
+  readonly property bool hasPresentationState: service && service.presentationState !== undefined
+  readonly property string presentationState: hasPresentationState ? String(service.presentationState) : ""
+  readonly property bool presentationTransitioning: presentationState === "promoting"
+    || presentationState === "demoting"
+    || presentationState === "recovering"
+  readonly property bool sentToBackground: hasPresentationState
+    ? presentationState === "background"
+    : service && service.backgroundVideoEnabled === true
   readonly property bool localPreviewVisible: hasTrack && !sentToBackground
   readonly property bool playing: service && service.playing === true && service.paused !== true
   readonly property string title: hasTrack ? service.displayTitle : (available ? "Media" : "Media unavailable")
   readonly property string subtitle: service ? service.statusText() : "Service disabled"
   readonly property string thumbnail: service && service.thumbnail ? String(service.thumbnail) : ""
+  readonly property string thumbnailFallback: service && service.currentTrack && typeof service.thumbnailFallbackUrl === "function"
+    ? String(service.thumbnailFallbackUrl(service.currentTrack)) : ""
   readonly property string previewUrl: service && service.previewStreamUrl ? String(service.previewStreamUrl) : ""
+  readonly property string adaptivePreviewUrl: service && service.adaptivePreviewStreamUrl
+    ? String(service.adaptivePreviewStreamUrl) : ""
+  readonly property string progressivePreviewUrl: service && service.progressivePreviewStreamUrl
+    ? String(service.progressivePreviewStreamUrl) : ""
+  readonly property bool previewUsingAdaptive: adaptivePreviewUrl !== ""
+    && previewUrl === adaptivePreviewUrl
+    && progressivePreviewUrl !== ""
+    && progressivePreviewUrl !== adaptivePreviewUrl
+  readonly property bool reducedMotion: service && service.lacunaSettings
+    && service.lacunaSettings.reduceMotion === true
   readonly property bool previewActive: previewUrl !== ""
   readonly property bool previewVideoActive: previewActive && !previewSuppressed
   readonly property real playbackPosition: service && service.playbackPosition !== undefined ? Math.max(0, Number(service.playbackPosition) || 0) : 0
@@ -51,6 +81,8 @@ Item {
   readonly property bool currentFavorite: favoritesRevision >= 0 && service && service.currentFavorite === true
   readonly property string repeatMode: service && service.repeatMode ? String(service.repeatMode) : "none"
   readonly property int streamVolume: service && service.volume !== undefined ? Number(service.volume) : 70
+  readonly property int playbackRevision: service && service.playbackSessionRevision !== undefined
+    ? Number(service.playbackSessionRevision) : 0
   readonly property int tileInset: compact ? 8 : 10
   readonly property int previewWidth: Math.max(120, width - (tileInset * 2))
   readonly property int previewHeight: Math.round(previewWidth * 0.5625)
@@ -68,14 +100,14 @@ Item {
 
   Behavior on videoReveal {
     NumberAnimation {
-      duration: 1200
+      duration: root.reducedMotion ? 75 : (root.videoReveal > 0 ? 750 : 350)
       easing.type: Easing.OutCubic
     }
   }
 
   Behavior on layoutReveal {
     NumberAnimation {
-      duration: layoutReveal > 0 ? 1200 : 420
+      duration: root.reducedMotion ? 75 : (root.layoutReveal > 0 ? 750 : 350)
       easing.type: Easing.OutCubic
     }
   }
@@ -113,6 +145,29 @@ Item {
     previewLastSeekAt = 0
     previewLastTelemetryAt = Date.now()
     previewLastEvent = reason || "reset"
+    previewPlayer.playbackRate = 1
+  }
+
+  function reportInlineAvailability() {
+    if (service && typeof service.setInlineSurfaceAvailable === "function")
+      service.setInlineSurfaceAvailable(root.visible && root.width > 0 && root.height > 0)
+  }
+
+  function reportInlineReady() {
+    if (!service || typeof service.reportVideoReady !== "function" || !previewVideoActive || !localPreviewVisible)
+      return
+
+    var target = Math.max(0, Math.round(playbackPosition * 1000))
+    if (Math.abs(previewPlayer.position - target) < 400
+        && (previewPlayer.playbackState === MediaPlayer.PlayingState
+          || previewPlayer.mediaStatus === MediaPlayer.LoadedMedia
+          || previewPlayer.mediaStatus === MediaPlayer.BufferedMedia))
+      service.reportVideoReady("inline", playbackRevision, Math.max(0, Number(previewPlayer.position) || 0) / 1000)
+  }
+
+  function reportInlineFailure(reason) {
+    if (service && typeof service.reportVideoFailure === "function")
+      service.reportVideoFailure("inline", playbackRevision, reason || "renderer")
   }
 
   function samplePreviewTelemetry(reason) {
@@ -140,7 +195,7 @@ Item {
       previewActive: previewActive,
       previewSuppressed: previewSuppressed,
       previewUrlReady: previewUrl !== "",
-      previewUrlPrefix: previewUrl.slice(0, 96),
+      previewUsingAdaptive: previewUsingAdaptive,
       playbackState: playerStateName(previewPlayer.playbackState),
       mediaStatus: mediaStatusName(previewPlayer.mediaStatus),
       playerPositionMs: Math.max(0, Math.round(Number(previewPlayer.position) || 0)),
@@ -198,7 +253,9 @@ Item {
       previewRecoveryAttempts = 0
       previewPlaybackStartedAt = 0
       samplePreviewTelemetry("pause-request")
+      previewPlayer.playbackRate = 1
       previewPlayer.pause()
+      reportInlineReady()
     }
   }
 
@@ -231,54 +288,54 @@ Item {
     }
     if (!force && previewBuffering()) return
     var target = Math.max(0, Math.round(playbackPosition * 1000))
-    if (Math.abs(previewPlayer.position - target) <= 9000) {
+    var signedDrift = previewPlayer.position - target
+    var drift = Math.abs(signedDrift)
+    if (drift < 400) {
       previewPositionPending = false
-      previewLastSeekAt = 0
+      previewDriftStrikes = 0
+      previewPlayer.playbackRate = 1
+      reportInlineReady()
       return
     }
-    // A deep seek into a long stream takes time to materialize; re-issuing
-    // it on every pass restarts the fetch and never converges. Leave the
-    // last seek in flight until it lands or goes stale.
-    if (previewLastSeekAt > 0 && Date.now() - previewLastSeekAt < 2500 && Math.abs(target - previewLastSeekTarget) < 4000) {
+
+    if (drift <= 1500) {
       previewPositionPending = true
-      previewPositionSettleTimer.restart()
+      previewDriftStrikes = 0
+      previewPlayer.playbackRate = signedDrift < 0 ? 1.03 : 0.97
+      reportInlineReady()
       return
     }
+
+    previewPlayer.playbackRate = 1
+    if (previewLastSeekAt > 0 && Date.now() - previewLastSeekAt < 1500) {
+      previewPositionPending = true
+      return
+    }
+
     previewPlayer.setPosition(target)
     previewLastSeekTarget = target
     previewLastSeekAt = Date.now()
     previewPositionPending = true
+    previewDriftStrikes += 1
+    if (previewDriftStrikes === 2)
+      reportInlineFailure("seek-correction")
     previewPositionSettleTimer.restart()
     samplePreviewTelemetry("seek")
   }
 
   function maintainPreviewPosition() {
     samplePreviewTelemetry("periodic")
-    if (!previewVideoActive || !localPreviewVisible || !playing) return
+    if (!previewVideoActive || !localPreviewVisible || !playing) {
+      previewPlayer.playbackRate = 1
+      return
+    }
     var target = Math.max(0, Math.round(playbackPosition * 1000))
     var drift = Math.abs(previewPlayer.position - target)
-    var correcting = previewPositionPending || previewStartupSettling()
-    if (!correcting && drift <= 9000) {
+    if (drift < 400) {
       previewDriftStrikes = 0
-      return
-    }
-    if (correcting || (previewBuffering() && previewStablePositionTicks >= 4 && drift > 5000) || drift > 15000) {
-      // The preview is off the live position or a corrective seek is still
-      // in flight. Keep correcting and count strikes; suppression is the
-      // last resort after the stream repeatedly fails to land, not the
-      // first response.
-      previewDriftStrikes += 1
-      if (previewDriftStrikes >= 8) {
-        previewSuppressed = true
-        previewPlayer.stop()
-        samplePreviewTelemetry("suppress")
-        return
-      }
-      syncPreviewPosition(drift > 9000)
-      return
-    }
-    if (previewStablePositionTicks >= 4) {
-      syncPreviewPosition(false)
+      previewPositionPending = false
+      previewPlayer.playbackRate = 1
+      reportInlineReady()
       return
     }
     syncPreviewPosition(false)
@@ -304,10 +361,29 @@ Item {
     previewRecoveryTimer.restart()
   }
 
-  onPlayingChanged: syncPreviewPlayback()
-  onPreviewActiveChanged: syncPreviewPlayback()
+  function syncAdaptiveReadinessTimer() {
+    if (previewUsingAdaptive && previewVideoActive && localPreviewVisible && playing)
+      previewAdaptiveReadinessTimer.restart()
+    else
+      previewAdaptiveReadinessTimer.stop()
+  }
+
+  function handleAdaptiveReadinessTimeout() {
+    if (previewUsingAdaptive && previewVideoActive && localPreviewVisible && playing)
+      reportInlineFailure("adaptive-readiness-timeout")
+  }
+
+  onPlayingChanged: {
+    syncPreviewPlayback()
+    syncAdaptiveReadinessTimer()
+  }
+  onPreviewActiveChanged: {
+    syncPreviewPlayback()
+    syncAdaptiveReadinessTimer()
+  }
   onPreviewUrlChanged: {
     previewSuppressed = false
+    syncAdaptiveReadinessTimer()
     syncPreviewPlayback()
   }
   onLocalPreviewVisibleChanged: {
@@ -315,9 +391,20 @@ Item {
     // another chance: the suppression latch otherwise only clears on a URL
     // change, leaving the tile on a static thumbnail for the whole track.
     if (localPreviewVisible) previewSuppressed = false
+    syncAdaptiveReadinessTimer()
     syncPreviewPlayback()
+    reportInlineAvailability()
   }
   onPlaybackPositionChanged: if (previewPositionPending) syncPreviewPosition(false)
+  onVisibleChanged: reportInlineAvailability()
+  onWidthChanged: reportInlineAvailability()
+  onHeightChanged: reportInlineAvailability()
+
+  Component.onCompleted: reportInlineAvailability()
+  Component.onDestruction: {
+    if (service && typeof service.setInlineSurfaceAvailable === "function")
+      service.setInlineSurfaceAvailable(false)
+  }
 
   width: parent ? parent.width : 260
   height: tileHeight
@@ -346,7 +433,10 @@ Item {
       hoverOpacity: root.designTokens.hoverOpacity
       pressOpacity: root.designTokens.activeOpacity
       showFill: false
-      onTriggered: root.openRequested()
+      onTriggered: {
+        root.forceActiveFocus()
+        root.openRequested()
+      }
     }
 
     LacunaIconButton {
@@ -358,6 +448,7 @@ Item {
       anchors.right: parent.right
       anchors.rightMargin: root.tileInset
       icon: root.currentFavorite ? "heart-filled" : "heart"
+      accessibleName: root.currentFavorite ? "Remove from favorites" : "Add to favorites"
       disabled: !root.hasTrack
       opacity: disabled ? 0.42 : 1
       foreground: root.foreground
@@ -405,11 +496,16 @@ Item {
         onPlaybackStateChanged: {
           root.samplePreviewTelemetry("playback-" + root.playerStateName(playbackState))
           if (playbackState === MediaPlayer.PlayingState) {
+            // Returning from the background can reuse the same source. Lock
+            // immediately instead of waiting for the settle timer.
+            root.syncPreviewPosition(true)
+            previewAdaptiveReadinessTimer.stop()
             root.previewRecoveryAttempts = 0
             root.previewPlaybackStartedAt = Date.now()
             previewRecoveryTimer.stop()
             previewPositionSettleTimer.interval = 1800
             previewPositionSettleTimer.restart()
+            root.reportInlineReady()
           } else if (root.previewVideoActive && root.localPreviewVisible && root.playing) {
             previewRecoveryTimer.restart()
           }
@@ -417,12 +513,16 @@ Item {
         onMediaStatusChanged: {
           root.samplePreviewTelemetry("media-" + root.mediaStatusName(mediaStatus))
           if (mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia) {
+            previewAdaptiveReadinessTimer.stop()
             if (root.playing && root.localPreviewVisible) previewPlayer.play()
+            if (root.playing && root.localPreviewVisible) root.syncPreviewPosition(true)
             if (root.previewPositionPending && !root.previewStartupSettling()) {
               previewPositionSettleTimer.interval = 350
               previewPositionSettleTimer.restart()
             }
+            root.reportInlineReady()
           } else if (mediaStatus === MediaPlayer.InvalidMedia && root.previewVideoActive && root.localPreviewVisible && root.playing) {
+            root.reportInlineFailure("invalid-media")
             previewRecoveryTimer.restart()
           }
         }
@@ -437,11 +537,15 @@ Item {
 
       Image {
         anchors.fill: parent
-        source: root.thumbnail
+        property string primaryThumbnail: root.thumbnail
+        property bool thumbnailFailed: false
+        source: thumbnailFailed && root.thumbnailFallback !== "" ? root.thumbnailFallback : primaryThumbnail
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
         opacity: root.previewVideoActive && previewPlayer.playbackState === MediaPlayer.PlayingState ? 0 : 1
         visible: root.thumbnail !== "" && status !== Image.Error && opacity > 0
+        onPrimaryThumbnailChanged: thumbnailFailed = false
+        onStatusChanged: if (status === Image.Error && root.thumbnailFallback !== "") thumbnailFailed = true
 
         Behavior on opacity {
           LacunaAnim { motion: "fast" }
@@ -504,6 +608,7 @@ Item {
 
           LacunaIconButton {
             icon: "player-skip-back"
+            accessibleName: "Previous track or restart"
             foreground: root.foreground
             muted: root.muted
             accent: root.accent
@@ -519,6 +624,7 @@ Item {
 
           LacunaIconButton {
             icon: root.playing ? "player-pause" : "player-play"
+            accessibleName: root.playing ? "Pause" : "Play"
             foreground: root.foreground
             muted: root.muted
             accent: root.accent
@@ -534,6 +640,7 @@ Item {
 
           LacunaIconButton {
             icon: "player-stop"
+            accessibleName: "Stop"
             foreground: root.foreground
             muted: root.muted
             accent: root.accent
@@ -549,6 +656,7 @@ Item {
 
           LacunaIconButton {
             icon: "player-skip-forward"
+            accessibleName: "Next track"
             foreground: root.foreground
             muted: root.muted
             accent: root.accent
@@ -564,6 +672,7 @@ Item {
 
           LacunaIconButton {
             icon: root.repeatMode === "one" ? "repeat-once" : "repeat"
+            accessibleName: "Change repeat mode"
             foreground: root.foreground
             muted: root.repeatMode === "none" ? root.muted : root.accent
             accent: root.accent
@@ -579,6 +688,7 @@ Item {
 
           LacunaIconButton {
             icon: "background"
+            accessibleName: "Toggle background video"
             foreground: root.service && root.service.backgroundVideoEnabled ? root.accent : root.foreground
             muted: root.service && root.service.backgroundVideoEnabled ? root.accent : root.muted
             accent: root.accent
@@ -590,10 +700,14 @@ Item {
             iconSize: root.compact ? 13 : 14
             iconHoverScale: 1.28
             onTriggered: if (root.service) root.service.toggleBackgroundVideo()
+            QQC.ToolTip.visible: hovered
+            QQC.ToolTip.delay: 450
+            QQC.ToolTip.text: "Background video"
           }
 
           LacunaIconButton {
             icon: "volume"
+            accessibleName: "Volume"
             foreground: root.foreground
             muted: root.muted
             accent: root.accent
@@ -613,6 +727,7 @@ Item {
 
           LacunaIconButton {
             icon: "list"
+            accessibleName: "Open queue"
             foreground: root.foreground
             muted: root.muted
             accent: root.accent
@@ -682,6 +797,21 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width - volumeValue.width - parent.spacing
         height: parent.height
+        activeFocusOnTab: root.volumeOpen
+        Accessible.role: Accessible.Slider
+        Accessible.name: "Volume"
+        Accessible.description: String(root.streamVolume) + " percent"
+        Keys.onPressed: function(event) {
+          if (!root.service) return
+          if (event.key === Qt.Key_Left || event.key === Qt.Key_Down) root.service.adjustVolume(-5)
+          else if (event.key === Qt.Key_Right || event.key === Qt.Key_Up) root.service.adjustVolume(5)
+          else if (event.key === Qt.Key_Home) root.service.setVolume(0)
+          else if (event.key === Qt.Key_End) root.service.setVolume(100)
+          else return
+          root.volumeOpen = true
+          hideVolumeTimer.restart()
+          event.accepted = true
+        }
 
         LacunaRect {
           anchors.left: parent.left
@@ -714,6 +844,7 @@ Item {
           anchors.fill: parent
           hoverEnabled: true
           onPressed: function(mouse) {
+            volumeRail.forceActiveFocus()
             root.volumeOpen = true
             hideVolumeTimer.stop()
             root.setVolumeFromX(mouse.x, volumeRail.width)
@@ -766,7 +897,14 @@ Item {
     }
 
     Timer {
-      interval: 1500
+      id: previewAdaptiveReadinessTimer
+      interval: 4000
+      repeat: false
+      onTriggered: root.handleAdaptiveReadinessTimeout()
+    }
+
+    Timer {
+      interval: 250
       repeat: true
       running: root.previewVideoActive && root.localPreviewVisible && root.playing
       onTriggered: root.maintainPreviewPosition()

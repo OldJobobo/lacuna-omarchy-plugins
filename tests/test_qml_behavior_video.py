@@ -17,9 +17,10 @@ class QmlVideoBehaviorContractTests(unittest.TestCase):
     def test_background_video_startup_is_gated_by_black_cover(self):
         overlay = read("lacuna.media-player-video/Overlay.qml")
 
-        hold = overlay.index("holdFadeCover(exitFadeToBlackDuration)")
+        sync = overlay.index("function syncWallpaper()")
+        hold = overlay.index("holdFadeCover(fadeCoverRiseDuration)", sync)
         gate_restart = overlay.index("wallpaperFadeGateTimer.restart()", hold)
-        assign = overlay.index("activeSource = videoSource")
+        assign = overlay.index("activeSource = videoSource", sync)
         self.assertLess(hold, gate_restart)
         self.assertLess(gate_restart, assign)
         self.assertIn("var remainingFadeCoverRise = fadeCoverRiseRemaining()", overlay)
@@ -45,10 +46,11 @@ class QmlVideoBehaviorContractTests(unittest.TestCase):
         overlay = read("lacuna.media-player-video/Overlay.qml")
 
         self.assertIn("readonly property bool waitingForHighRes", overlay)
-        self.assertIn("onBackgroundResolveFailedChanged: if (backgroundResolveFailed) handleResolveFailure()", overlay)
+        self.assertIn("onBackgroundResolveFailedChanged: {", overlay)
+        self.assertIn("if (backgroundResolveFailed) handleResolveFailure()", overlay)
         self.assertIn("id: failureWatchdog", overlay)
         self.assertIn(
-            'if (root.waitingForHighRes || root.waitingForPlayerReady || root.backgroundResolveFailed) root.giveUpWallpaper("watchdog")',
+            "if (root.waitingForHighRes || root.waitingForPlayerReady || root.backgroundResolveFailed) {",
             overlay,
         )
         # The watchdog must not tear the wallpaper down while a stream
@@ -57,7 +59,8 @@ class QmlVideoBehaviorContractTests(unittest.TestCase):
         give_up = overlay[overlay.index("function giveUpWallpaper(reason)") : overlay.index("function syncWallpaper()")]
         self.assertIn('activeSource = ""', give_up)
         self.assertIn("waitingForPlayerReady = false", give_up)
-        self.assertIn("releaseFadeCoverNow()", give_up)
+        self.assertIn('root.reportFailure("handoff-timeout")', overlay)
+        self.assertIn('root.giveUpWallpaper("handoff-timeout")', overlay)
 
     def test_media_player_service_discards_stale_probe_results(self):
         service = read("lacuna.media-player/Service.qml")

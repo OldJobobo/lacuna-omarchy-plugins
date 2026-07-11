@@ -19,6 +19,9 @@ styling, and workflow ideas. New Omarchy work should happen here as plugins.
 - `lacuna.theme`, `lacuna.wallpaper`, and `lacuna.theme-preloader` provide
   theme and wallpaper controls plus the optional preview/background helper
   service.
+- `lacuna.media-player` owns authoritative mpv playback and provider search;
+  `lacuna.media-player-video` is its muted background renderer. See
+  `media-player.md` for the worker, clock, and handoff contracts.
 - `lacuna.*-overlay`, `lacuna.desktop-clock`, and
   `lacuna.background-vignette` provide desktop ambience overlays.
 - `lacuna.audio`, `lacuna.network`, `lacuna.bluetooth`,

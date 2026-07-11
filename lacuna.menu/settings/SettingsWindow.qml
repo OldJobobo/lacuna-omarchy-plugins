@@ -384,7 +384,12 @@ Item {
         section("Providers", "Configure media sources used by search and playback.", "lacuna"),
         row("music", "Jellyfin", root.registry.jellyfinProviderHint(), root.registry.jellyfinProviderEnabled ? "On" : "Off", "lacuna", "toggle-jellyfin-provider", "toggle", root.registry.jellyfinProviderEnabled),
         textRow("world", "Server URL", "Base Jellyfin server address", root.registry.jellyfinServerUrl, "set-jellyfin-server-url-", "lacuna", "https://jellyfin.example", false),
-        textRow("lock", "API Key", root.registry.jellyfinApiKeyConfigured ? "Saved API key is configured" : "Paste a Jellyfin API key", root.registry.jellyfinApiKey, "set-jellyfin-api-key-", "lacuna", "API key", true)
+        textRow("lock", "API Key", root.registry.jellyfinApiKeyConfigured ? "Saved API key is configured" : "Paste a Jellyfin API key", root.registry.jellyfinApiKey, "set-jellyfin-api-key-", "lacuna", "API key", true),
+        selectRow("music", "Preferred Audio Language", root.registry.jellyfinAudioLanguageHint(), root.registry.jellyfinAudioLanguage, [
+          { value: "English", label: "English" },
+          { value: "Japanese", label: "Japanese" },
+          { value: "Default", label: "Jellyfin default" }
+        ], "set-jellyfin-audio-language-", "lacuna", "Language")
       ]
     }
 

@@ -145,11 +145,18 @@ def filtered_home_music_rows(rows, limit):
 
 
 def ytdlp_results(ytdlp, query, limit, config=None, search_filter="all"):
-    search_limit = max(40, min(80, limit * 3))
+    # The media player is video-wide. Keep the old argument for protocol
+    # compatibility, but never let a stale music value change ranking or
+    # result selection.
+    search_filter = "all"
+    # Flat results already follow YouTube relevance order. Fetch only the
+    # requested window for general search; music mode keeps a small ranking
+    # pool so its heuristics can discard obvious non-music results.
+    search_limit = limit if search_filter == "all" else max(limit, min(48, limit * 2))
     cmd = [
         ytdlp,
-        *ytdlp_auth_args(config or {}),
         "--flat-playlist",
+        "--lazy-playlist",
         "--dump-json",
         "--skip-download",
         "--no-warnings",
@@ -264,23 +271,17 @@ def main(argv=None) -> int:
         print(json.dumps({"results": [], "error": "yt-dlp is not installed"}))
         return 0
 
-    if args.suggestions and config.get("enabled") is True:
-        rows, error = youtube_home_results(ytdlp, limit, config, args.filter == "music")
-        if rows or error:
-            print(json.dumps({"results": rows, "error": error}))
-            return 0
-        print(json.dumps({"results": [], "error": "YouTube login did not return a personalized home feed"}))
-        return 0
-
     if args.suggestions:
-        fallback_query = str(config.get("defaultSuggestionsQuery") or "official music videos").strip()
-        query = fallback_query or "official music videos"
+        fallback_query = str(config.get("defaultSuggestionsQuery") or "latest videos").strip()
+        query = fallback_query or "latest videos"
 
     if not query:
         print(json.dumps({"results": [], "error": ""}))
         return 0
 
-    rows, error = ytdlp_results(ytdlp, query, limit, config, args.filter)
+    # `--filter music` remains accepted for old callers, but is deliberately
+    # ignored so no normal search can become music-only again.
+    rows, error = ytdlp_results(ytdlp, query, limit, config, "all")
     print(json.dumps({"results": rows, "error": error}))
     return 0
 
