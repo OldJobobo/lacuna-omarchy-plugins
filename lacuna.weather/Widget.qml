@@ -24,9 +24,10 @@ Item {
   readonly property string weatherIcon: leadingWeatherIcon(weatherText) || "󰖐"
   readonly property string displayText: textWithoutLeadingWeatherIcon(weatherText)
 
-  visible: weatherText.length > 0
-  implicitWidth: visible ? button.implicitWidth : 0
-  implicitHeight: visible ? button.implicitHeight : 0
+  readonly property bool shown: weatherText.length > 0
+  visible: shown
+  implicitWidth: shown ? button.implicitWidth : 0
+  implicitHeight: shown ? button.implicitHeight : 0
   readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {

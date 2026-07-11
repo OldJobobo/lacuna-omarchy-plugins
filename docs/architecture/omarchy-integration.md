@@ -27,6 +27,19 @@ Lacuna plugin can reach it, the current alignment status, and the standing polic
 `clock`, `active-window`, `workspaces`, `keyboard-layout`, `lock-keys`, `microphone`,
 `system-stats`, `system-update`, `tray`, `indicators`, `spacer`.
 
+Lacuna's indicator parity set covers DND/pending notifications, reminders,
+night light, stay-awake, screen recording, and dictation. Stateful widgets must
+derive intrinsic size from their logical state (`shown`, `active`, availability),
+not from effective `Item.visible`: the Omarchy bar slot also derives its own
+visibility from widget size, so using effective visibility creates a circular
+hide that prevents inactive widgets from revealing when their state changes.
+
+`lacuna.screen-recording` verifies the recorder process locally in addition to
+the long-running service, shows a short `REC` heads-up when recording begins,
+then collapses to a continuously pulsing Lacuna icon. `lacuna.reminders` uses
+the native `omarchy-reminder show --json` state and delegates show/create
+actions back to `omarchy-reminder`.
+
 ## The injection rule (who can reach what)
 
 - **`menu` / `bar` / `service` / `panel`** plugins receive a **`shell`** reference → they can call

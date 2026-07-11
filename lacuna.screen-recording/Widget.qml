@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Io
 
 Item {
   id: root
@@ -7,17 +8,22 @@ Item {
   property string moduleName: "lacuna.screen-recording"
   property var settings: ({})
   property var recordingService: null
+  property bool polledRecording: false
+  property bool headsUp: false
 
+  readonly property bool vertical: bar ? bar.vertical : false
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
-  readonly property bool recording: recordingService ? recordingService.recording : false
+  readonly property bool recording: polledRecording || (recordingService ? recordingService.recording : false)
   readonly property color moduleColor: colorProfile.statusColor(recording ? "active" : "normal", "recording")
   readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
   readonly property bool showInactive: boolSetting("showInactive", false)
+  readonly property bool shown: recording || showInactive
+  readonly property int intervalMs: Math.max(500, Number(setting("interval", 1000)))
 
-  visible: recording || showInactive
-  implicitWidth: visible ? button.implicitWidth : 0
-  implicitHeight: visible ? button.implicitHeight : 0
+  visible: shown
+  implicitWidth: shown ? button.implicitWidth : 0
+  implicitHeight: shown ? button.implicitHeight : 0
   readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {
@@ -47,6 +53,7 @@ Item {
 
   function refresh() {
     if (recordingService && typeof recordingService.refresh === "function") recordingService.refresh()
+    if (!statusProc.running) statusProc.running = true
   }
 
   function tooltip() {
@@ -55,8 +62,20 @@ Item {
   }
 
   function toggleRecording() {
-    if (recordingService && typeof recordingService.toggleRecording === "function")
+    if (recordingService && typeof recordingService.toggleRecording === "function") {
       recordingService.toggleRecording()
+      refreshDelay.restart()
+    }
+  }
+
+  onRecordingChanged: {
+    if (recording) {
+      headsUp = true
+      headsUpTimer.restart()
+    } else {
+      headsUp = false
+      headsUpTimer.stop()
+    }
   }
 
   ColorProfile {
@@ -66,11 +85,12 @@ Item {
     role: "recording"
   }
 
-  MotionTokens {
-    id: motionTokens
-  }
+  MotionTokens { id: motionTokens }
 
-  Component.onCompleted: resolveService()
+  Component.onCompleted: {
+    resolveService()
+    refresh()
+  }
   onBarChanged: resolveService()
 
   Timer {
@@ -78,6 +98,31 @@ Item {
     running: root.recordingService === null
     repeat: true
     onTriggered: root.resolveService()
+  }
+
+  Timer {
+    interval: root.intervalMs
+    running: true
+    repeat: true
+    onTriggered: root.refresh()
+  }
+
+  Timer {
+    id: refreshDelay
+    interval: 350
+    onTriggered: root.refresh()
+  }
+
+  Timer {
+    id: headsUpTimer
+    interval: 2400
+    onTriggered: root.headsUp = false
+  }
+
+  Process {
+    id: statusProc
+    command: ["pgrep", "--quiet", "-f", "^gpu-screen-recorder"]
+    onExited: function(exitCode) { root.polledRecording = exitCode === 0 }
   }
 
   Item {
@@ -92,10 +137,14 @@ Item {
       accent: colorProfile.accent
     }
 
-    width: root.barSize
+    width: root.barSize + (root.headsUp && !root.vertical ? 30 : 0)
     height: root.barSize
     implicitWidth: width
     implicitHeight: height
+
+    Behavior on width {
+      NumberAnimation { duration: motionTokens.quick; easing.type: Easing.OutCubic }
+    }
 
     Rectangle {
       anchors.fill: parent
@@ -103,8 +152,34 @@ Item {
       opacity: button.hoverReveal * 0.07
     }
 
+    Rectangle {
+      visible: root.recording
+      anchors.centerIn: recordingIcon
+      width: root.topbarIconSize + 8
+      height: width
+      radius: width / 2
+      color: "transparent"
+      border.width: 1
+      border.color: root.moduleColor
+
+      SequentialAnimation on scale {
+        running: root.recording
+        loops: Animation.Infinite
+        NumberAnimation { from: 0.72; to: 1.35; duration: 760; easing.type: Easing.OutCubic }
+        PauseAnimation { duration: 140 }
+      }
+      SequentialAnimation on opacity {
+        running: root.recording
+        loops: Animation.Infinite
+        NumberAnimation { from: 0.78; to: 0.08; duration: 760; easing.type: Easing.OutCubic }
+        PauseAnimation { duration: 140 }
+      }
+    }
+
     Text {
-      anchors.centerIn: parent
+      id: recordingIcon
+      anchors.verticalCenter: parent.verticalCenter
+      x: Math.round((root.barSize - width) / 2)
       text: "󰻂"
       color: root.moduleColor
       opacity: root.recording ? 1 : 0.55
@@ -113,11 +188,21 @@ Item {
       renderType: Text.NativeRendering
     }
 
+    Text {
+      visible: root.headsUp && !root.vertical
+      anchors.left: recordingIcon.right
+      anchors.leftMargin: 5
+      anchors.verticalCenter: parent.verticalCenter
+      text: "REC"
+      color: root.moduleColor
+      font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
+      font.pixelSize: Math.max(9, root.topbarIconSize - 3)
+      font.bold: true
+      renderType: Text.NativeRendering
+    }
+
     Behavior on hoverReveal {
-      NumberAnimation {
-        duration: motionTokens.hoverDuration
-        easing.type: Easing.OutCubic
-      }
+      NumberAnimation { duration: motionTokens.hoverDuration; easing.type: Easing.OutCubic }
     }
 
     MouseArea {

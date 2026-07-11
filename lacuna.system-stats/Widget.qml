@@ -14,6 +14,9 @@ Item {
   property string diskText: "--"
   property real previousCpuTotal: 0
   property real previousCpuIdle: 0
+  property var cpuHistory: []
+  property var memoryHistory: []
+  readonly property int historyLimit: 30
 
   readonly property bool vertical: bar ? bar.vertical : false
   readonly property int barSize: bar ? bar.barSize : 26
@@ -60,7 +63,10 @@ Item {
     if (previousCpuTotal > 0) {
       var totalDelta = total - previousCpuTotal
       var idleDelta = idle - previousCpuIdle
-      if (totalDelta > 0) cpuPercent = Math.max(0, Math.min(100, Math.round((1 - idleDelta / totalDelta) * 100)))
+      if (totalDelta > 0) {
+        cpuPercent = Math.max(0, Math.min(100, Math.round((1 - idleDelta / totalDelta) * 100)))
+        cpuHistory = cpuHistory.concat([cpuPercent]).slice(-historyLimit)
+      }
     }
     previousCpuTotal = total
     previousCpuIdle = idle
@@ -75,7 +81,10 @@ Item {
       if (parts[0] === "MemTotal:") total = Number(parts[1] || 0)
       else if (parts[0] === "MemAvailable:") available = Number(parts[1] || 0)
     }
-    if (total > 0) memoryPercent = Math.max(0, Math.min(100, Math.round((1 - available / total) * 100)))
+    if (total > 0) {
+      memoryPercent = Math.max(0, Math.min(100, Math.round((1 - available / total) * 100)))
+      memoryHistory = memoryHistory.concat([memoryPercent]).slice(-historyLimit)
+    }
   }
 
   function parseDisk(raw) {
@@ -137,6 +146,7 @@ Item {
       barSize: root.barSize
       hoverDuration: motionTokens.hoverDuration
       showLabel: root.showLabels
+      history: root.memoryHistory
     }
 
     StatButton {
@@ -150,6 +160,7 @@ Item {
       barSize: root.barSize
       hoverDuration: motionTokens.hoverDuration
       showLabel: root.showLabels
+      history: root.cpuHistory
     }
 
     StatButton {
@@ -176,6 +187,7 @@ Item {
     property int barSize: 26
     property int hoverDuration: 150
     property bool showLabel: true
+    property var history: []
     property bool compact: !vertical && barSize <= 26
     property int topbarIconSize: compact ? 12 : barSize >= 30 ? 16 : 14
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
@@ -204,6 +216,37 @@ Item {
       anchors.centerIn: parent
       rotation: parent.vertical ? -90 : 0
       spacing: content.parent.showLabel ? (content.parent.compact ? 3 : 4) : 0
+
+      Canvas {
+        id: trendCanvas
+        visible: content.parent.history.length > 1 && content.parent.showLabel && !content.parent.vertical
+        anchors.verticalCenter: parent.verticalCenter
+        width: visible ? 18 : 0
+        height: 12
+
+        onPaint: {
+          var ctx = getContext("2d")
+          ctx.reset()
+          var values = content.parent.history
+          if (values.length < 2) return
+          ctx.strokeStyle = content.parent.accent
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          for (var i = 0; i < values.length; i++) {
+            var x = i * (width - 1) / Math.max(1, values.length - 1)
+            var y = height - 1 - Math.max(0, Math.min(100, Number(values[i]))) * (height - 2) / 100
+            if (i === 0) ctx.moveTo(x, y)
+            else ctx.lineTo(x, y)
+          }
+          ctx.stroke()
+        }
+
+        onVisibleChanged: requestPaint()
+        Connections {
+          target: content.parent
+          function onHistoryChanged() { trendCanvas.requestPaint() }
+        }
+      }
 
       Image {
         anchors.verticalCenter: parent.verticalCenter

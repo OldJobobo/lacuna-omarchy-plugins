@@ -29,6 +29,13 @@ Bar widgets should accept the injected properties:
 - `property string moduleName`
 - `property var settings`
 
+When `lacuna.bar` is active, widgets can call `bar.activateInteraction(anchorItem,
+moduleName)` before invoking a menu or native context menu. Lacuna-owned popup
+surfaces call `bar.requestPopout(owner)`; the bar derives and retains an
+additive popup context containing the output name, screen-local anchor rectangle,
+bar edge, orientation, and module ID. Menu `open(payloadJson)` callers may include
+that context as `popupContext`; callers that continue to pass `{}` remain valid.
+
 Simple bar widgets do not receive a `shell` reference. If they need live system
 state, they should read appropriate `Quickshell.Services.*` APIs directly.
 Menu, bar, service, and panel plugins can use the injected `shell` reference

@@ -23,6 +23,7 @@ Item {
   property var menuState: localMenuState
   property var flyoutContentRefs: ({})
   property string settingsSection: "overview"
+  property string requestedInteractionMonitorName: ""
   property bool initialSidebarDefaultApplied: false
   property string lacunaPath: manifest && manifest.__sourceDir ? manifest.__sourceDir : localPath(Qt.resolvedUrl(".."))
   property var sharedCompactState: null
@@ -214,11 +215,13 @@ Item {
     ? lacunaSettings.data.sidebar : ({})
   readonly property string focusedMonitorName: shellSettingsService && shellSettingsService.focusedMonitorName
     ? String(shellSettingsService.focusedMonitorName) : ""
+  readonly property string activeMonitorName: requestedInteractionMonitorName !== ""
+    ? requestedInteractionMonitorName : focusedMonitorName
   readonly property string sidebarMonitorPolicy: MonitorPolicy.normalizeMonitorPolicy(sidebarSettingsData.monitorPolicy)
   readonly property var sidebarMonitorNames: MonitorPolicy.normalizeMonitorNames(sidebarSettingsData.monitorNames)
-  readonly property var sidebarScreens: MonitorPolicy.chooseSidebarScreens(Quickshell.screens, sidebarMonitorPolicy, focusedMonitorName, sidebarMonitorNames)
-  readonly property var sidebarScreen: MonitorPolicy.choosePrimarySidebarScreen(Quickshell.screens, sidebarMonitorPolicy, focusedMonitorName, sidebarMonitorNames)
-  readonly property var flyoutScreen: MonitorPolicy.chooseFlyoutScreen(Quickshell.screens, sidebarMonitorPolicy, focusedMonitorName, sidebarMonitorNames)
+  readonly property var sidebarScreens: MonitorPolicy.chooseSidebarScreens(Quickshell.screens, sidebarMonitorPolicy, activeMonitorName, sidebarMonitorNames)
+  readonly property var sidebarScreen: MonitorPolicy.choosePrimarySidebarScreen(Quickshell.screens, sidebarMonitorPolicy, activeMonitorName, sidebarMonitorNames)
+  readonly property var flyoutScreen: MonitorPolicy.chooseFlyoutScreen(Quickshell.screens, sidebarMonitorPolicy, activeMonitorName, sidebarMonitorNames)
   readonly property var sidebarMonitorOptions: MonitorPolicy.monitorOptions(Quickshell.screens, sidebarMonitorNames)
 
   function sidebarVisibleOnScreen(screen) {
@@ -570,6 +573,8 @@ Item {
   function open(payloadJson) {
     if (!lacunaEnabled) return
     var payload = openPayload(payloadJson)
+    requestedInteractionMonitorName = payload && payload.popupContext && payload.popupContext.screenName
+      ? String(payload.popupContext.screenName) : ""
     panelController.openMenu()
     openPayloadFlyout(payload)
   }

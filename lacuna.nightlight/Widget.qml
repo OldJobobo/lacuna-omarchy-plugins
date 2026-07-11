@@ -15,10 +15,11 @@ Item {
   readonly property int intervalMs: Math.max(500, Number(setting("interval", 5000)))
   readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
   readonly property bool showInactive: boolSetting("showInactive", false)
+  readonly property bool shown: nightlight || showInactive
 
-  visible: nightlight || showInactive
-  implicitWidth: visible ? button.implicitWidth : 0
-  implicitHeight: visible ? button.implicitHeight : 0
+  visible: shown
+  implicitWidth: shown ? button.implicitWidth : 0
+  implicitHeight: shown ? button.implicitHeight : 0
   readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {

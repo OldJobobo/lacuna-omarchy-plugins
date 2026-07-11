@@ -19,7 +19,8 @@
     "allowMultiple": false,
     "defaults": {
       "items": [
-        "Dnd",
+      "Dnd",
+      "Reminder",
         "NightLight",
         "StayAwake",
         "ScreenRecording",
@@ -35,6 +36,7 @@
         "label": "Indicators",
         "options": [
           "Dnd",
+          "Reminder",
           "NightLight",
           "StayAwake",
           "ScreenRecording",
@@ -43,6 +45,7 @@
         "noSelectionText": "None selected",
         "defaultValue": [
           "Dnd",
+          "Reminder",
           "NightLight",
           "StayAwake",
           "ScreenRecording",

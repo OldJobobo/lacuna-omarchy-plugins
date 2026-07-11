@@ -3,6 +3,7 @@ import QtQuick
 import qs.Commons
 import "../lacuna.menu/menu"
 import "../lacuna.menu/services"
+import "ScreenModel.js" as ScreenModel
 
 Item {
   id: root
@@ -61,6 +62,7 @@ Item {
     id: "lacuna.menu",
     __sourceDir: lacunaMenuSourceDir
   })
+  readonly property var validBarScreens: ScreenModel.validScreens(Quickshell.screens)
 
   function resolveLacunaState() {
     if (root.shell && typeof root.shell.ensureService === "function") {
@@ -185,6 +187,17 @@ Item {
     return true
   }
 
+  function contextualMenuPayload(payloadJson, popupContext) {
+    var payload = {}
+    try {
+      var parsed = JSON.parse(String(payloadJson || "{}"))
+      if (parsed && typeof parsed === "object") payload = parsed
+    } catch (e) {
+    }
+    payload.popupContext = popupContext || ({})
+    return JSON.stringify(payload)
+  }
+
   Theme {
     id: barTheme
   }
@@ -194,7 +207,7 @@ Item {
   // before the bar (and the hosted menu below) so the bar and sidebar
   // render above the frame paint.
   Variants {
-    model: Quickshell.screens
+    model: root.validBarScreens
 
     LacunaFrameWindow {
       required property var modelData
@@ -218,7 +231,7 @@ Item {
   }
 
   Variants {
-    model: Quickshell.screens
+    model: root.validBarScreens
 
     LacunaFrameBorderWindow {
       required property var modelData
@@ -250,6 +263,9 @@ Item {
     pluginRegistry: root.pluginRegistry
     barWidgetRegistry: root.barWidgetRegistry
     barConfig: root.barConfig
+    menuToggleHandler: function(payloadJson, popupContext) {
+      return root.toggleMenu(root.contextualMenuPayload(payloadJson, popupContext))
+    }
   }
 
   // The full-frame paint surface is intentionally exclusion-ignored because it

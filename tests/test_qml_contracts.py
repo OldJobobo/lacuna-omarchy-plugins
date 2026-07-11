@@ -1257,11 +1257,47 @@ class QmlContractTests(unittest.TestCase):
             'bar.shell.serviceFor("lacuna.screen-recording")',
             "recordingService.toggleRecording()",
             "recordingService.tooltip",
-            "visible: recording || showInactive",
+            "readonly property bool shown: recording || showInactive",
+            "implicitWidth: shown ? button.implicitWidth : 0",
+            'command: ["pgrep", "--quiet", "-f", "^gpu-screen-recorder"]',
+            'text: "REC"',
+            "SequentialAnimation on scale",
         ]:
             self.assertIn(snippet, widget)
-        self.assertNotIn("pgrep", widget)
         self.assertNotIn("omarchy capture screenrecording", widget)
+
+    def test_lacuna_reminders_match_omarchy_indicator_workflow(self):
+        manifest = read_json("lacuna.reminders/manifest.json")
+        widget = read("lacuna.reminders/Widget.qml")
+        combined = read("lacuna.indicators/Widget.qml")
+
+        self.assertEqual(["bar-widget"], manifest["kinds"])
+        self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
+        for snippet in [
+            'command: ["omarchy-reminder", "show", "--json"]',
+            'Quickshell.execDetached(["omarchy-reminder", "show"])',
+            'Quickshell.execDetached(["omarchy-reminder", "-i"])',
+            'text: root.reminderCount + " DUE"',
+        ]:
+            self.assertIn(snippet, widget)
+        self.assertIn('if (id === "Reminder") return reminderCount > 0', combined)
+        self.assertIn('command: ["omarchy-reminder", "show", "--json"]', combined)
+
+    def test_stateful_widgets_do_not_create_parent_visibility_loops(self):
+        for plugin in [
+            "lacuna.mpris",
+            "lacuna.nightlight",
+            "lacuna.reminders",
+            "lacuna.screen-recording",
+            "lacuna.script-pill",
+            "lacuna.system-update",
+            "lacuna.temperature",
+            "lacuna.voxtype",
+            "lacuna.weather",
+        ]:
+            widget = read(f"{plugin}/Widget.qml")
+            self.assertNotIn("implicitWidth: visible ?", widget, plugin)
+            self.assertNotIn("implicitHeight: visible ?", widget, plugin)
 
     def test_lacuna_tray_dispatches_status_notifier_context_menus(self):
         manifest = read_json("lacuna.tray/manifest.json")
@@ -2357,7 +2393,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("property bool hostManaged: false", window)
         self.assertIn("if (root.hostManaged) return", window)
         self.assertIn("function frameOverlayWidthFor(screen)", window)
-        self.assertIn("readonly property var flyoutScreen: MonitorPolicy.chooseFlyoutScreen(Quickshell.screens, sidebarMonitorPolicy, focusedMonitorName, sidebarMonitorNames)", window)
+        self.assertIn("readonly property var flyoutScreen: MonitorPolicy.chooseFlyoutScreen(Quickshell.screens, sidebarMonitorPolicy, activeMonitorName, sidebarMonitorNames)", window)
         self.assertIn("function flyoutVisibleOnScreen(screen)", window)
         self.assertIn("function flyoutOpenOnScreen(screen)", window)
         self.assertIn("function flyoutInteractiveOnScreen(screen)", window)
@@ -2831,6 +2867,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.notifications",
             "lacuna.power",
             "lacuna.rainfall-overlay",
+            "lacuna.reminders",
             "lacuna.screen-recording",
             "lacuna.script-pill",
             "lacuna.settings-persistence",

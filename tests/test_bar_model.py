@@ -129,6 +129,5 @@ class BarModelTests(unittest.TestCase):
         self.assertEqual("/home/example/Widget.qml", data["sourcePath"])
         self.assertEqual("", data["unsafePath"])
 
-
 if __name__ == "__main__":
     unittest.main()

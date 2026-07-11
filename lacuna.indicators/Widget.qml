@@ -10,6 +10,8 @@ Item {
   property bool nightlight: false
   property bool stayAwake: false
   property bool recording: false
+  property int reminderCount: 0
+  property string reminderTooltip: "Reminders"
   property string dictationState: "idle"
 
   readonly property int barSize: bar ? bar.barSize : 26
@@ -45,12 +47,12 @@ Item {
   }
 
   function configuredItems() {
-    var source = setting("items", ["Dnd", "NightLight", "StayAwake", "ScreenRecording", "Dictation"])
+    var source = setting("items", ["Dnd", "Reminder", "NightLight", "StayAwake", "ScreenRecording", "Dictation"])
     var result = []
     if (source && typeof source.length === "number") {
       for (var i = 0; i < source.length; i++) result.push(String(source[i]))
     }
-    return result.length > 0 ? result : ["Dnd", "NightLight", "StayAwake", "ScreenRecording", "Dictation"]
+    return result.length > 0 ? result : ["Dnd", "Reminder", "NightLight", "StayAwake", "ScreenRecording", "Dictation"]
   }
 
   function parseData(raw) {
@@ -61,6 +63,7 @@ Item {
     if (!nightlightProc.running) nightlightProc.running = true
     if (!idleProc.running) idleProc.running = true
     if (!recordingProc.running) recordingProc.running = true
+    if (!reminderProc.running) reminderProc.running = true
   }
 
   function hasConfiguredActiveIndicator() {
@@ -73,6 +76,7 @@ Item {
 
   function indicatorActive(id) {
     if (id === "Dnd") return dnd || pendingCount > 0
+    if (id === "Reminder") return reminderCount > 0
     if (id === "NightLight") return nightlight
     if (id === "StayAwake") return stayAwake
     if (id === "ScreenRecording") return recording
@@ -82,6 +86,7 @@ Item {
 
   function indicatorIcon(id) {
     if (id === "Dnd") return dnd ? "󰂛" : pendingCount > 0 ? "󱅫" : "󰂚"
+    if (id === "Reminder") return "󰢌"
     if (id === "NightLight") return "󰔎"
     if (id === "StayAwake") return "Zz"
     if (id === "ScreenRecording") return "󰻂"
@@ -91,6 +96,7 @@ Item {
 
   function indicatorRole(id) {
     if (id === "Dnd") return "notifications"
+    if (id === "Reminder") return "reminders"
     if (id === "NightLight") return "nightlight"
     if (id === "StayAwake") return "idle"
     if (id === "ScreenRecording") return "recording"
@@ -100,6 +106,7 @@ Item {
 
   function indicatorColorRole(id) {
     if (id === "Dnd") return "color13"
+    if (id === "Reminder") return "color10"
     if (id === "NightLight") return "color11"
     if (id === "StayAwake") return "color14"
     if (id === "ScreenRecording") return "color9"
@@ -131,6 +138,7 @@ Item {
       if (pendingCount > 0) return pendingCount + " pending notification" + (pendingCount === 1 ? "" : "s")
       return "No notifications<br/>Right click to silence notifications"
     }
+    if (id === "Reminder") return reminderTooltip
     if (id === "NightLight") return nightlight ? "Day Light" : "Night Light"
     if (id === "StayAwake") return stayAwake ? "Allow idle lock & screensaver" : "Stay Awake"
     if (id === "ScreenRecording") return recording ? "Stop recording" : "Screen Recording"
@@ -147,6 +155,10 @@ Item {
       } else {
         bar.run("omarchy-shell notifications showHistory")
       }
+    } else if (id === "Reminder") {
+      if (button === Qt.MiddleButton) root.refresh()
+      else if (reminderCount > 0) bar.run("omarchy-reminder show")
+      else bar.run("omarchy-reminder -i")
     } else if (id === "NightLight") {
       if (button === Qt.MiddleButton) root.refresh()
       else bar.run("omarchy toggle nightlight")
@@ -221,6 +233,25 @@ Item {
     id: recordingProc
     command: ["pgrep", "--quiet", "-f", "^gpu-screen-recorder"]
     onExited: function(exitCode) { root.recording = exitCode === 0 }
+  }
+
+  Process {
+    id: reminderProc
+    command: ["omarchy-reminder", "show", "--json"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        var data = root.parseData(text)
+        root.reminderCount = Math.max(0, Number(data.count || 0))
+        root.reminderTooltip = String(data.tooltip || "Reminders")
+      }
+    }
+    onExited: function(exitCode) {
+      if (exitCode !== 0) {
+        root.reminderCount = 0
+        root.reminderTooltip = "Reminders"
+      }
+    }
   }
 
   Process {

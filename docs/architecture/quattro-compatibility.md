@@ -90,6 +90,16 @@ This resets the active bar choice while leaving Lacuna runtime state in
 
 ## Multi-monitor policy
 
+`lacuna.bar` filters `Quickshell.screens` before creating per-output bar,
+frame, border, reserve, tooltip, or drag surfaces. Nameless, zero-sized, and
+duplicate-name screens are treated as transient QtWayland placeholders. If an
+output owning a tooltip, popout, or drag disappears, the transient interaction
+state is cleared and routing falls back to the first currently valid output.
+
+Bar-originated menu calls carry a screen-local `popupContext`. In `auto` and
+`all` modes the invoking bar output becomes the interactive sidebar/flyout
+output; `pinned` mode still constrains routing to its configured output set.
+
 `lacuna.menu` resolves the focused monitor name from the Omarchy shell-settings
 state and selects the matching `Quickshell.screens` entry. The persisted
 `sidebar.monitorPolicy` setting controls the target set:

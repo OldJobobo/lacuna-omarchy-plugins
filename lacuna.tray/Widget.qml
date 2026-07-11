@@ -41,6 +41,7 @@ BarWidget {
 
   function openTrayMenu(item, anchorItem, mouse) {
     if (!item || !anchorItem) return
+    if (root.bar && typeof root.bar.activateInteraction === "function") root.bar.activateInteraction(anchorItem, root.moduleName)
     if (root.bar) root.bar.hideTooltip(anchorItem)
 
     if (!item.menu) {

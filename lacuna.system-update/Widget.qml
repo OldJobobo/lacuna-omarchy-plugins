@@ -17,8 +17,8 @@ Item {
   readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
 
   visible: updateAvailable
-  implicitWidth: visible ? button.implicitWidth : 0
-  implicitHeight: visible ? button.implicitHeight : 0
+  implicitWidth: updateAvailable ? button.implicitWidth : 0
+  implicitHeight: updateAvailable ? button.implicitHeight : 0
   readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {
