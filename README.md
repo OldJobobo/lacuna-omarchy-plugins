@@ -116,6 +116,7 @@ before publishing changes:
 ```
 
 Start with the [documentation map](docs/README.md),
+[design-system entry point](DESIGN.md),
 [architecture overview](docs/architecture/overview.md), and
 [testing guide](docs/development/testing.md).
 

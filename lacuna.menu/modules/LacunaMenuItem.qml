@@ -264,7 +264,7 @@ LacunaRect {
         fontFamily: root.labelFontFamily
         font.pixelSize: root.compact ? (root.featured ? 13 : root.primary ? 12 : 11) : (root.featured ? 15 : root.primary ? 14 : 13)
         font.weight: root.highlighted || root.primary || root.featured ? Font.DemiBold : Font.Normal
-        font.letterSpacing: root.compact ? 0.6 : 0.9
+        font.letterSpacing: root.compact ? tokens.trackingMenuItemCompact : tokens.trackingMenuItem
       }
     }
   }
@@ -514,6 +514,8 @@ LacunaRect {
       root.contextRequested(x, y)
     }
   }
+
+  LacunaTokens { id: tokens }
 
   DesignTokens {
     id: fallbackDesignTokens

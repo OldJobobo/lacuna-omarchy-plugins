@@ -580,6 +580,8 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.bluetooth/LacunaGeometry.qml",
             "lacuna.power/LacunaGeometry.qml",
             "lacuna.notifications/LacunaGeometry.qml",
+            "lacuna.theme/LacunaGeometry.qml",
+            "lacuna.wallpaper/LacunaGeometry.qml",
         }
         for path in sorted(geometry_files):
             self.assertIn("readonly property real curveKappa: " + literal, read(path), path)
@@ -600,6 +602,8 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.bluetooth/BarFlyoutSurface.qml",
             "lacuna.power/BarFlyoutSurface.qml",
             "lacuna.notifications/BarFlyoutSurface.qml",
+            "lacuna.theme/BarFlyoutSurface.qml",
+            "lacuna.wallpaper/BarFlyoutSurface.qml",
         ]
         for path in consumers:
             qml = read(path)
@@ -919,7 +923,7 @@ class QmlContractTests(unittest.TestCase):
         for native_id in ["omarchy.bluetooth", "omarchy.network", "omarchy.audio", "omarchy.power"]:
             self.assertNotIn(native_id, layout_ids)
 
-    def test_lacuna_network_exposes_provider_widget_and_panel_contract(self):
+    def test_lacuna_network_exposes_live_widget_flyout_contract(self):
         manifest = read_json("lacuna.network/manifest.json")
         service = read("lacuna.network/Service.qml")
         widget = read("lacuna.network/Widget.qml")
@@ -927,10 +931,10 @@ class QmlContractTests(unittest.TestCase):
         flyout = read("lacuna.network/NetworkFlyout.qml")
         model = read("lacuna.network/NetworkModel.js")
 
-        self.assertEqual(["service", "panel", "bar-widget"], manifest["kinds"])
+        self.assertEqual(["service", "bar-widget"], manifest["kinds"])
         self.assertTrue(manifest["keepLoaded"])
         self.assertEqual("Service.qml", manifest["entryPoints"]["service"])
-        self.assertEqual("Panel.qml", manifest["entryPoints"]["panel"])
+        self.assertNotIn("panel", manifest["entryPoints"])
         self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
 
         for snippet in [
@@ -954,6 +958,9 @@ class QmlContractTests(unittest.TestCase):
             'bar.shell.ensureService("lacuna.network")',
             'bar.shell.serviceFor("lacuna.network")',
             "NetworkFlyout {",
+            "readonly property bool opened: flyoutOpen",
+            "function open()",
+            "function close()",
             "flyoutOpen = !flyoutOpen",
             "root.networkService.toggleWifi()",
             "networkService.tooltip",
@@ -1016,7 +1023,7 @@ class QmlContractTests(unittest.TestCase):
         ]:
             self.assertIn(snippet, model)
 
-    def test_lacuna_audio_exposes_provider_widget_and_panel_contract(self):
+    def test_lacuna_audio_exposes_live_widget_flyout_contract(self):
         manifest = read_json("lacuna.audio/manifest.json")
         service = read("lacuna.audio/Service.qml")
         widget = read("lacuna.audio/Widget.qml")
@@ -1024,10 +1031,10 @@ class QmlContractTests(unittest.TestCase):
         panel = read("lacuna.audio/Panel.qml")
         model = read("lacuna.audio/AudioModel.js")
 
-        self.assertEqual(["service", "panel", "bar-widget"], manifest["kinds"])
+        self.assertEqual(["service", "bar-widget"], manifest["kinds"])
         self.assertTrue(manifest["keepLoaded"])
         self.assertEqual("Service.qml", manifest["entryPoints"]["service"])
-        self.assertEqual("Panel.qml", manifest["entryPoints"]["panel"])
+        self.assertNotIn("panel", manifest["entryPoints"])
         self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
 
         for snippet in [
@@ -1047,6 +1054,9 @@ class QmlContractTests(unittest.TestCase):
             'bar.shell.ensureService("lacuna.audio")',
             'bar.shell.serviceFor("lacuna.audio")',
             "AudioFlyout {",
+            "readonly property bool opened: flyoutOpen",
+            "function open()",
+            "function close()",
             "flyoutOpen = !flyoutOpen",
             "audioService.toggleOutputMute()",
             "audioService.tooltip",
@@ -1097,7 +1107,7 @@ class QmlContractTests(unittest.TestCase):
         ]:
             self.assertIn(snippet, model)
 
-    def test_lacuna_bluetooth_exposes_provider_widget_and_panel_contract(self):
+    def test_lacuna_bluetooth_exposes_live_widget_flyout_contract(self):
         manifest = read_json("lacuna.bluetooth/manifest.json")
         service = read("lacuna.bluetooth/Service.qml")
         widget = read("lacuna.bluetooth/Widget.qml")
@@ -1105,10 +1115,10 @@ class QmlContractTests(unittest.TestCase):
         panel = read("lacuna.bluetooth/Panel.qml")
         model = read("lacuna.bluetooth/BluetoothModel.js")
 
-        self.assertEqual(["service", "panel", "bar-widget"], manifest["kinds"])
+        self.assertEqual(["service", "bar-widget"], manifest["kinds"])
         self.assertTrue(manifest["keepLoaded"])
         self.assertEqual("Service.qml", manifest["entryPoints"]["service"])
-        self.assertEqual("Panel.qml", manifest["entryPoints"]["panel"])
+        self.assertNotIn("panel", manifest["entryPoints"])
         self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
 
         for snippet in [
@@ -1131,6 +1141,9 @@ class QmlContractTests(unittest.TestCase):
             'bar.shell.ensureService("lacuna.bluetooth")',
             'bar.shell.serviceFor("lacuna.bluetooth")',
             "BluetoothFlyout {",
+            "readonly property bool opened: flyoutOpen",
+            "function open()",
+            "function close()",
             "flyoutOpen = !flyoutOpen",
             "bluetoothService.toggleBluetooth()",
             "bluetoothService.tooltip",
@@ -1185,7 +1198,7 @@ class QmlContractTests(unittest.TestCase):
         ]:
             self.assertIn(snippet, model)
 
-    def test_lacuna_power_exposes_provider_widget_and_panel_contract(self):
+    def test_lacuna_power_exposes_live_widget_flyout_contract(self):
         manifest = read_json("lacuna.power/manifest.json")
         service = read("lacuna.power/Service.qml")
         widget = read("lacuna.power/Widget.qml")
@@ -1193,10 +1206,10 @@ class QmlContractTests(unittest.TestCase):
         panel = read("lacuna.power/Panel.qml")
         model = read("lacuna.power/PowerModel.js")
 
-        self.assertEqual(["service", "panel", "bar-widget"], manifest["kinds"])
+        self.assertEqual(["service", "bar-widget"], manifest["kinds"])
         self.assertTrue(manifest["keepLoaded"])
         self.assertEqual("Service.qml", manifest["entryPoints"]["service"])
-        self.assertEqual("Panel.qml", manifest["entryPoints"]["panel"])
+        self.assertNotIn("panel", manifest["entryPoints"])
         self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
 
         for snippet in [
@@ -1217,6 +1230,9 @@ class QmlContractTests(unittest.TestCase):
             'bar.shell.ensureService("lacuna.power")',
             'bar.shell.serviceFor("lacuna.power")',
             "PowerFlyout {",
+            "readonly property bool opened: flyoutOpen",
+            "function open()",
+            "function close()",
             "flyoutOpen = !flyoutOpen",
             "powerService.tooltip",
             "root.powerService.refresh()",
@@ -1396,25 +1412,51 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("text: root.displayText", qml)
         self.assertNotIn("text: root.weatherText", qml)
 
-    def test_theme_and_wallpaper_commands_use_current_omarchy_routes_without_extra_ipc(self):
+    def test_theme_and_wallpaper_widgets_use_details_flyouts_not_switchers(self):
         theme = read("lacuna.theme/Widget.qml")
-        widget = read("lacuna.wallpaper/Widget.qml")
-        catalog = read("lacuna.menu/menu/MenuCommandCatalog.qml")
-        panel = read("lacuna.shell-settings/Panel.qml")
+        wallpaper = read("lacuna.wallpaper/Widget.qml")
+        theme_flyout = read("lacuna.theme/ThemeFlyout.qml")
+        wallpaper_flyout = read("lacuna.wallpaper/WallpaperFlyout.qml")
 
-        self.assertIn("omarchy theme switcher", theme)
-        self.assertIn("omarchy theme set", theme)
-        self.assertIn("bar-size-state", theme)
-        self.assertIn("reapply", theme)
-        self.assertIn("omarchy theme current", theme)
-        self.assertIn("omarchy theme list", theme)
-        self.assertIn("function nextBackgroundCommand()", widget)
-        self.assertIn("bar.run(root.nextBackgroundCommand())", widget)
-        for qml in [theme, widget, catalog, panel]:
-            self.assertIn("omarchy theme", qml)
-            self.assertNotIn("refreshThemeBackgroundCommand", qml)
-            self.assertNotIn("applyCurrentBackgroundCommand", qml)
-            self.assertNotIn("background setInstant", qml)
+        for qml, flyout_type in [(theme, "ThemeFlyout"), (wallpaper, "WallpaperFlyout")]:
+            self.assertIn("readonly property bool opened: flyoutOpen", qml)
+            self.assertIn("function open()", qml)
+            self.assertIn("function close()", qml)
+            self.assertIn(f"{flyout_type} {{", qml)
+            self.assertNotIn("switcher", qml.lower())
+            self.assertNotIn("bar.run(", qml)
+        self.assertIn('text: "PALETTE ANATOMY"', theme_flyout)
+        self.assertIn('"dark_bg", "bg", "lighter_bg", "muted"', theme_flyout)
+        self.assertIn('iconSource: Qt.resolvedUrl("assets/tabler/palette.svg")', theme)
+        self.assertIn("text: root.displayText", theme)
+        self.assertIn('iconSource: Qt.resolvedUrl("assets/tabler/photo.svg")', wallpaper)
+        self.assertIn("text: root.displayText", wallpaper)
+        self.assertIn("interval: 1500", wallpaper)
+        self.assertIn("onTriggered: root.refresh()", wallpaper)
+        self.assertIn('text: "ACTIVE WALLPAPER"', wallpaper_flyout)
+        self.assertIn("Image {", wallpaper_flyout)
+        self.assertNotIn("switcher", theme_flyout.lower())
+        self.assertNotIn("switcher", wallpaper_flyout.lower())
+
+        for flyout in [theme_flyout, wallpaper_flyout]:
+            self.assertIn("LacunaTokens { id: tokens }", flyout)
+            self.assertIn("MotionTokens { id: motionTokens }", flyout)
+            self.assertIn("duration: motionTokens.reveal", flyout)
+            self.assertIn("(root.reveal - 0.55) / 0.45", flyout)
+            self.assertIn("font.family: tokens.displayFont", flyout)
+            self.assertIn("font.pixelSize: tokens.textTitle", flyout)
+            self.assertIn("font.letterSpacing: tokens.trackingTitle", flyout)
+            self.assertIn("font.family: tokens.monoFont", flyout)
+            self.assertIn("font.pixelSize: tokens.textSmall", flyout)
+        self.assertNotIn("width: 52; height: 3", wallpaper_flyout)
+        self.assertNotIn("width: 10\n", theme_flyout)
+
+        menu_header = read("lacuna.menu/menu/MenuHeader.qml")
+        menu_section = read("lacuna.menu/menu/MenuSection.qml")
+        menu_item = read("lacuna.menu/modules/LacunaMenuItem.qml")
+        self.assertIn("tokens.trackingTitleCompact : tokens.trackingTitle", menu_header)
+        self.assertIn("tokens.trackingSection", menu_section)
+        self.assertIn("tokens.trackingMenuItemCompact : tokens.trackingMenuItem", menu_item)
 
     def test_background_animations_use_single_selected_effect_contract(self):
         manifest = read_json("lacuna.aurora-drift/manifest.json")
@@ -2852,7 +2894,6 @@ class QmlContractTests(unittest.TestCase):
             'text: "Media"',
             "modelData.source || modelData.provider || \"\"",
             "id: favoritesScroll",
-            "id: headerFavoriteButton",
             "showLabels: false",
             "model: root.visibleFavorites",
         ]:
@@ -2860,6 +2901,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('icon === "user-circle" || icon === "account"', icons)
 
         self.assertIn('icon: root.service && root.service.currentFavorite ? "heart-filled" : "heart"', flyout)
+        self.assertNotIn("id: headerFavoriteButton", flyout)
         self.assertIn('icon: root.currentFavorite ? "heart-filled" : "heart"', tile)
         self.assertIn("readonly property int favoritesRevision", tile)
         self.assertIn("id: tileFavoriteButton", tile)
@@ -3169,13 +3211,11 @@ class QmlContractTests(unittest.TestCase):
 
         self.assertEqual("boolean", schema["enabled"]["type"])
         self.assertIs(schema["enabled"]["defaultValue"], True)
-        self.assertEqual(26, schema["maxTextLength"]["defaultValue"])
-        self.assertEqual("boolean", schema["showIcon"]["type"])
-        self.assertIs(schema["showIcon"]["defaultValue"], True)
+        self.assertEqual(22, schema["maxTextLength"]["defaultValue"])
+        self.assertNotIn("showIcon", schema)
         self.assertEqual("semantic", schema["colorProfile"]["defaultValue"])
         self.assertIn('readonly property bool widgetEnabled: boolSetting("enabled", true)', qml)
-        self.assertIn("visible: widgetEnabled && themeTitle.length > 0", qml)
-        self.assertIn('readonly property bool showIcon: boolSetting("showIcon", true)', qml)
+        self.assertIn("visible: widgetEnabled", qml)
 
     def test_usage_widgets_place_meter_away_from_open_indicator_edge(self):
         for plugin in ["lacuna.claude-usage", "lacuna.codex-usage"]:
@@ -3232,6 +3272,8 @@ class QmlContractTests(unittest.TestCase):
         for path in [
             "lacuna.claude-usage/ClaudeUsageFlyout.qml",
             "lacuna.codex-usage/CodexUsageFlyout.qml",
+            "lacuna.theme/ThemeFlyout.qml",
+            "lacuna.wallpaper/WallpaperFlyout.qml",
         ]:
             qml = read(path)
             self.assertIn("readonly property int shadowBottomMargin", qml)
@@ -3248,13 +3290,11 @@ class QmlContractTests(unittest.TestCase):
 
         self.assertEqual("boolean", schema["enabled"]["type"])
         self.assertIs(schema["enabled"]["defaultValue"], True)
-        self.assertEqual(18, schema["maxTextLength"]["defaultValue"])
-        self.assertEqual("boolean", schema["showIcon"]["type"])
-        self.assertIs(schema["showIcon"]["defaultValue"], True)
+        self.assertEqual(22, schema["maxTextLength"]["defaultValue"])
+        self.assertNotIn("showIcon", schema)
         self.assertEqual("semantic", schema["colorProfile"]["defaultValue"])
         self.assertIn('readonly property bool widgetEnabled: boolSetting("enabled", true)', qml)
-        self.assertIn("visible: widgetEnabled && displayText.length > 0", qml)
-        self.assertIn('readonly property bool showIcon: boolSetting("showIcon", true)', qml)
+        self.assertIn("visible: widgetEnabled", qml)
 
     def test_lacuna_state_and_shell_settings_are_split_plugins(self):
         state_manifest = read_json("lacuna.state/manifest.json")
@@ -3422,6 +3462,23 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("property bool showLabels", qml, path)
             self.assertIn("text: modelData.label || \"\"", qml, path)
             self.assertIn("onTriggered: root.sectionSelected(parent.sectionId)", qml, path)
+
+    def test_lacuna_bar_routes_shell_commands_to_live_flyout_widgets(self):
+        bar = read("lacuna.bar/Bar.qml")
+        adapter = read("lacuna.bar/OmarchyBarAdapter.qml")
+        implementation = read("lacuna.bar/OmarchyBar.qml")
+
+        for snippet in [
+            "function summonBarWidget(pluginId)",
+            "function hideBarWidget(pluginId)",
+            "function isBarWidgetOpen(pluginId)",
+        ]:
+            self.assertIn(snippet, bar)
+            self.assertIn(snippet, adapter)
+            self.assertIn(snippet, implementation)
+        self.assertIn("function findPanelWidget(pluginId)", implementation)
+        self.assertIn('"omarchy-bar-text-color"', implementation)
+        self.assertNotIn('"omarchy-shell-bar-text-color"', implementation)
 
     def test_simple_bar_helpers_match_canonical_vendored_templates(self):
         color_template = read("shared/qml/simple-bar/ColorProfile.qml")

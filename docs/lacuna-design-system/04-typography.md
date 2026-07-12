@@ -53,6 +53,24 @@ Control heights pair with the scale: `controlSmall 30`, `controlNormal 34`.
   `Text.PlainText`, `elide: Text.ElideRight`, `maximumLineCount: 1` for chrome labels. Color
   transitions animate with `color` (160ms, `OutCubic`) — type re-colors as a reveal, never a snap.
 
+## Tracking roles
+
+Letter spacing is part of the type role and comes from `LacunaTokens`, not
+component-local literals. Title tracking follows the sidebar `LACUNA`
+wordmark; menu items retain a quieter rhythm so repeated navigation rows do not
+read like competing headers.
+
+| Role | Full | Compact | Use |
+|---|---:|---:|---|
+| `trackingTitle` | `2.0px` | `1.4px` | Tektur panel titles and wordmarks |
+| `trackingMenuItem` | `0.9px` | `0.6px` | Tektur sidebar/menu item labels |
+| `trackingSection` | `0px` | `0px` | dense uppercase section labels |
+| `trackingBody` | `0px` | `0px` | mono body text, metadata, hints, and values |
+
+Capitalization remains contextual: wordmarks and section labels may uppercase;
+content-derived titles such as theme or wallpaper names preserve their normal
+title casing while using the title tracking role.
+
 ## Behavior, true to the metaphor
 
 - **Elision is a lacuna.** When text overflows, Lacuna *elides* (a trailing gap) rather than
@@ -69,3 +87,5 @@ Control heights pair with the scale: `controlSmall 30`, `controlNormal 34`.
 3. **Hierarchy via size + `ink`/`whisper`/`soft`**, not a stack of weights.
 4. **Elide, don't wrap or shrink, in chrome** — the trailing gap is intentional.
 5. **Reference font tokens, never literals.**
+6. **Reference tracking tokens, never literals.** Title, menu-item, section,
+   and body tracking are distinct roles.

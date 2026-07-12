@@ -14,13 +14,12 @@
   },
   "barWidget": {
     "displayName": "Lacuna Theme",
-    "description": "Shows the current Omarchy theme and opens the theme switcher.",
+    "description": "Shows the active palette and opens a Lacuna theme-details flyout.",
     "category": "Lacuna",
     "allowMultiple": false,
     "defaults": {
       "enabled": true,
-      "maxTextLength": 26,
-      "showIcon": true,
+      "maxTextLength": 22,
       "colorProfile": "semantic"
     },
     "schema": [
@@ -33,17 +32,11 @@
       {
         "key": "maxTextLength",
         "type": "integer",
-        "label": "Max text length",
-        "min": 4,
-        "max": 80,
+        "label": "Max title length",
+        "min": 8,
+        "max": 48,
         "step": 1,
-        "defaultValue": 26
-      },
-      {
-        "key": "showIcon",
-        "type": "boolean",
-        "label": "Show icon",
-        "defaultValue": true
+        "defaultValue": 22
       },
       {
         "key": "colorProfile",

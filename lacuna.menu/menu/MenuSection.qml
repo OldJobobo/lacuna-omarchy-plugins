@@ -98,7 +98,7 @@ Item {
     fontFamily: root.fontFamily
     font.pixelSize: root.compact ? 8 : 9
     font.weight: Font.DemiBold
-    font.letterSpacing: 0
+    font.letterSpacing: tokens.trackingSection
   }
 
   Row {

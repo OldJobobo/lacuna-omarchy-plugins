@@ -16,6 +16,7 @@ QtObject {
   id: root
 
   readonly property string monoFont: "Hack Nerd Font Propo"
+  readonly property string displayFont: "Tektur"
 
   // Motion durations live in MotionTokens (the named reveal scale,
   // 03-motion.md), not here.
@@ -40,6 +41,13 @@ QtObject {
   readonly property int textTitle: 16
   readonly property int textIcon: 15
   readonly property int textGlyph: 20
+
+  readonly property real trackingTitle: 2.0
+  readonly property real trackingTitleCompact: 1.4
+  readonly property real trackingMenuItem: 0.9
+  readonly property real trackingMenuItemCompact: 0.6
+  readonly property real trackingBody: 0.0
+  readonly property real trackingSection: 0.0
 
   readonly property int controlSmall: 30
   readonly property int controlNormal: 34

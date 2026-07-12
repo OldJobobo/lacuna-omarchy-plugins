@@ -6,6 +6,22 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class DocsContractTests(unittest.TestCase):
+    def test_root_design_entry_point_links_authoritative_design_system(self):
+        design = (ROOT / "DESIGN.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("docs/lacuna-design-system/README.md", design)
+        for name in ["00-philosophy.md", "01-color.md", "02-geometry.md", "03-motion.md", "04-typography.md", "05-components.md"]:
+            self.assertIn(name, design)
+        self.assertIn("[design-system entry point](DESIGN.md)", readme)
+
+    def test_typography_spec_defines_distinct_tracking_roles(self):
+        typography = (ROOT / "docs/lacuna-design-system/04-typography.md").read_text(encoding="utf-8")
+        self.assertIn("## Tracking roles", typography)
+        self.assertIn("`trackingTitle` | `2.0px` | `1.4px`", typography)
+        self.assertIn("`trackingMenuItem` | `0.9px` | `0.6px`", typography)
+        self.assertIn("`trackingSection` | `0px` | `0px`", typography)
+        self.assertIn("`trackingBody` | `0px` | `0px`", typography)
+
     def test_docs_have_status_markers(self):
         for path in sorted((ROOT / "docs").glob("*.md")):
             head = "\n".join(path.read_text(encoding="utf-8").splitlines()[:8])
@@ -95,6 +111,10 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("0.1.0-beta.1", roadmap)
         self.assertIn("0.1.0-rc.1", roadmap)
         self.assertIn("Optional visual-surface work is not a beta gate.", roadmap)
+        self.assertIn("The semi-persistent sidebar remains pointer-driven", roadmap)
+        self.assertIn("Media Search may take scoped focus", roadmap)
+        self.assertIn("canonical omakase setup", roadmap)
+        self.assertNotIn("`core`, `native`, and `advanced` profiles have documented boundaries", roadmap)
         self.assertIn("## Active Release Tracks", plans_index)
         self.assertIn("## Separate Non-Blocking Proposals", plans_index)
         self.assertIn("lacuna-clock-calendar-flyout-plan.md", plans_index)
@@ -124,6 +144,12 @@ class DocsContractTests(unittest.TestCase):
         p2 = (ROOT / "docs" / "plans" / "quattro-p2-release-and-evolution-plan.md").read_text(encoding="utf-8")
         release = (ROOT / "docs" / "development" / "release.md").read_text(encoding="utf-8")
         self.assertIn("Status: in progress; beta product-readiness track", p1)
+        self.assertIn("General keyboard navigation and Tab traversal", p1)
+        self.assertIn("Media Search field may receive keyboard input", p1)
+        self.assertIn("Escape may close an active flyout", p1)
+        self.assertIn("click-away dismissal", p1)
+        self.assertIn("## Workstream 5 — Omakase setup and customization", p1)
+        self.assertIn("choose between architectural profiles", p1)
         self.assertIn("tests/test_qml_behavior_video.py", p1)
         self.assertNotIn("tests/test_media_player_worker.py", p1)
         self.assertIn("Status: in progress; beta/RC release-readiness track", p2)

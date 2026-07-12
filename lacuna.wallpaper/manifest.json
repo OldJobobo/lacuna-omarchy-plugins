@@ -14,13 +14,12 @@
   },
   "barWidget": {
     "displayName": "Lacuna Wallpaper",
-    "description": "Shows the current Omarchy wallpaper and opens the background switcher.",
+    "description": "Shows the active wallpaper and opens a Lacuna preview/details flyout.",
     "category": "Lacuna",
     "allowMultiple": false,
     "defaults": {
       "enabled": true,
-      "maxTextLength": 18,
-      "showIcon": true,
+      "maxTextLength": 22,
       "colorProfile": "semantic"
     },
     "schema": [
@@ -33,17 +32,11 @@
       {
         "key": "maxTextLength",
         "type": "integer",
-        "label": "Max text length",
-        "min": 4,
-        "max": 80,
+        "label": "Max title length",
+        "min": 8,
+        "max": 48,
         "step": 1,
-        "defaultValue": 18
-      },
-      {
-        "key": "showIcon",
-        "type": "boolean",
-        "label": "Show icon",
-        "defaultValue": true
+        "defaultValue": 22
       },
       {
         "key": "colorProfile",

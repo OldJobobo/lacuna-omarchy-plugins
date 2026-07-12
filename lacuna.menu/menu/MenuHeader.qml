@@ -76,7 +76,7 @@ Item {
     fontFamily: headingFont.name !== "" ? headingFont.name : "Tektur"
     font.pixelSize: root.compact ? 13 : tokens.textTitle
     font.weight: Font.DemiBold
-    font.letterSpacing: root.compact ? 1.4 : 2.0
+    font.letterSpacing: root.compact ? tokens.trackingTitleCompact : tokens.trackingTitle
   }
 
   LacunaText {
