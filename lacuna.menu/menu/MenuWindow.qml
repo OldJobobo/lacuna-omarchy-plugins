@@ -5,9 +5,12 @@ import QtQuick
 import "../services"
 import "../components"
 import "../settings"
+import "MonitorPolicy.js" as MonitorPolicy
 
 Item {
   id: root
+
+  signal flyoutContentRegistered(string kind)
 
   property string omarchyPath: ""
   property var shell: null
@@ -18,6 +21,9 @@ Item {
   property int hostBarSize: 0
   property string pluginId: manifest && manifest.id ? manifest.id : "lacuna.menu"
   property var menuState: localMenuState
+  property var flyoutContentRefs: ({})
+  property string settingsSection: "overview"
+  property string requestedInteractionMonitorName: ""
   property bool initialSidebarDefaultApplied: false
   property string lacunaPath: manifest && manifest.__sourceDir ? manifest.__sourceDir : localPath(Qt.resolvedUrl(".."))
   property var sharedCompactState: null
@@ -25,6 +31,16 @@ Item {
   readonly property var lacunaSettings: resolveLacunaSettings()
   readonly property var compactState: sharedCompactState || localCompactState
   readonly property var sidebarState: sharedSidebarState || localSidebarState
+  // These aliases keep shared services visible inside per-output Variants.
+  // Variant delegates have their own lexical scope and cannot resolve sibling
+  // ids such as registry or designTokens directly.
+  readonly property var menuAppCatalogRef: appCatalog
+  readonly property var menuThemeRef: menuTheme
+  readonly property var menuDesignTokensRef: designTokens
+  readonly property var menuRailDesignTokensRef: railDesignTokens
+  readonly property var menuRegistryRef: registry
+  readonly property var menuMotionTokensRef: sharedMotion
+  readonly property var menuPanelControllerRef: panelController
   property color foreground: menuTheme.foreground
   property color background: menuTheme.background
   property color surfaceBackground: menuTheme.panelBackground
@@ -92,6 +108,7 @@ Item {
   readonly property bool mediaPlayerOpen: panelController.isFlyoutOpen("mediaPlayer")
   readonly property bool mediaPlayerVisible: panelController.isFlyoutVisible("mediaPlayer")
   readonly property bool flyoutOpen: panelController.flyoutOpen
+  readonly property bool flyoutRenderable: panelController.flyoutRenderable
   readonly property bool flyoutInteractive: panelController.flyoutInteractive
   property string appPickerMode: "customQuickLaunchApp"
   property string preferredAppPickerRole: ""
@@ -103,23 +120,26 @@ Item {
   readonly property int panelShadowOutset: frameShadow ? Math.ceil(panelShadowBlurMax + Math.abs(frameShadowOffsetX)) : 0
   readonly property string visibleFlyout: panelController.visibleFlyout
   readonly property string outgoingFlyout: panelController.outgoingFlyout
-  readonly property bool activeFlyoutSettings: visibleFlyout === "settings"
-  readonly property bool activeFlyoutShellSettings: visibleFlyout === "shellSettings"
-  readonly property bool activeFlyoutAppPicker: visibleFlyout === "appPicker"
-  readonly property bool activeFlyoutMediaPlayer: visibleFlyout === "mediaPlayer"
-  readonly property bool renderSettingsContent: settingsPanelVisible || outgoingFlyout === "settings"
-  readonly property bool renderShellSettingsContent: shellSettingsPanelVisible || outgoingFlyout === "shellSettings"
-  readonly property bool renderAppPickerContent: appPickerVisible || outgoingFlyout === "appPicker"
-  readonly property bool renderMediaPlayerContent: mediaPlayerVisible || outgoingFlyout === "mediaPlayer"
+  readonly property string retainedFlyout: panelController.retainedFlyout
+  readonly property string closingFlyout: panelController.closingFlyout
+  readonly property string incomingFlyout: panelController.incomingFlyout
+  readonly property bool activeFlyoutSettings: panelController.activeFlyout === "settings"
+  readonly property bool activeFlyoutShellSettings: panelController.activeFlyout === "shellSettings"
+  readonly property bool activeFlyoutAppPicker: panelController.activeFlyout === "appPicker"
+  readonly property bool activeFlyoutMediaPlayer: panelController.activeFlyout === "mediaPlayer"
+  readonly property bool renderSettingsContent: settingsPanelVisible || outgoingFlyout === "settings" || retainedFlyout === "settings" || closingFlyout === "settings"
+  readonly property bool renderShellSettingsContent: shellSettingsPanelVisible || outgoingFlyout === "shellSettings" || retainedFlyout === "shellSettings" || closingFlyout === "shellSettings"
+  readonly property bool renderAppPickerContent: appPickerVisible || outgoingFlyout === "appPicker" || retainedFlyout === "appPicker" || closingFlyout === "appPicker"
+  readonly property bool renderMediaPlayerContent: mediaPlayerVisible || outgoingFlyout === "mediaPlayer" || retainedFlyout === "mediaPlayer" || closingFlyout === "mediaPlayer"
   readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutShellSettings ? shellSettingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : activeFlyoutMediaPlayer ? mediaPlayerWidth : 0
-  readonly property int activeFlyoutHeight: activeFlyoutSettings ? settingsFlyoutHeight() : activeFlyoutShellSettings ? shellSettingsFlyoutHeight() : activeFlyoutAppPicker ? appPickerHeightFor(activeFlyoutY) : activeFlyoutMediaPlayer ? mediaPlayerFlyoutHeight() : 0
-  readonly property int activeFlyoutY: activeFlyoutSettings ? settingsFlyoutY(settingsFlyoutHeight()) : activeFlyoutShellSettings ? shellSettingsFlyoutY(shellSettingsFlyoutHeight()) : activeFlyoutAppPicker ? appPickerFlyoutY() : activeFlyoutMediaPlayer ? mediaPlayerFlyoutY(mediaPlayerFlyoutHeight()) : 0
+  readonly property int activeFlyoutHeight: activeFlyoutHeightFor(sidebarScreen)
+  readonly property int activeFlyoutY: activeFlyoutYFor(sidebarScreen)
   readonly property bool frameBorderAttachedFlyoutVisible: lacunaEnabled && panelController.flyoutRenderable && panelController.flyoutProgress > 0.001
   readonly property bool frameBorderAttachedConnectorVisible: frameBorderAttachedFlyoutVisible && sidebarSurfaceVisible && sidebarState.cornerPieces && settingsConnectorWidth > 0
   readonly property real frameBorderWindowY: visualTopInset
-  readonly property real frameBorderAttachedFlyoutY: frameBorderWindowY + (frameBorderAttachedConnectorVisible ? panelHost.connectorMaskY : panelHost.flyoutMaskY)
-  readonly property real frameBorderAttachedFlyoutHeight: frameBorderAttachedConnectorVisible ? panelHost.connectorMaskHeight : panelHost.flyoutMaskHeight
-  readonly property int frameOverlayWidth: !lacunaEnabled || barOwnsLacunaFrame || frameMode === "off" ? 0 : ((sidebarScreen ? sidebarScreen.width : 0) + 100)
+  readonly property real frameBorderAttachedFlyoutY: frameBorderAttachedFlyoutYFor(sidebarScreen)
+  readonly property real frameBorderAttachedFlyoutHeight: frameBorderAttachedFlyoutHeightFor(sidebarScreen)
+  readonly property int frameOverlayWidth: frameOverlayWidthFor(sidebarScreen)
   readonly property bool frameReserveActive: !barOwnsLacunaFrame && lacunaEnabled && sidebarState.exclusive && (panelController.menuRenderable || frameMode === "fullframe") && frameMode !== "off"
   readonly property bool sidebarReserveActive: lacunaEnabled && sidebarState.exclusive && panelController.menuRenderable && sidebarSurfaceVisible
   readonly property bool frameReserveFlush: frameReserveMode === "flush" || hyprWindowGapsDisabled || (frameReserveMode === "auto" && fakeFullscreenWorkspaceActive())
@@ -142,12 +162,16 @@ Item {
   // frame window, that always-mapped surface casts the bar shadow in every
   // frame mode, and it must not be doubled here.
   readonly property bool topBarPanelShadowVisible: lacunaEnabled && !barOwnsLacunaFrame && frameShadow && frameMode === "off" && root.topBar
-  readonly property int topBarPanelShadowVisualWidth: topBarPanelShadowVisible && root.sidebarScreen ? Math.max(0, Number(root.sidebarScreen.width) || 0) : 0
+  readonly property int topBarPanelShadowVisualWidth: topBarPanelShadowVisualWidthFor(sidebarScreen)
   readonly property real topBarPanelShadowX: 0
   readonly property real topBarPanelShadowWidth: topBarPanelShadowVisualWidth
   readonly property real topBarPanelShadowHeight: Math.max(10, Math.round(barEdgeCasterSize * 0.62))
   readonly property real frameOverlayProgress: !lacunaEnabled ? 0 : frameMode === "fullframe" ? 1 : panelController.menuProgress
   property string pendingFlyoutFocus: ""
+  // Semantic debounce for settings activation; deliberately independent of
+  // reduced-motion and animation-speed preferences.
+  readonly property int flyoutActivationFocusGuardMs: 900
+  readonly property bool transitionTraceEnabled: Quickshell.env("LACUNA_TRANSITION_TRACE") === "1"
   property bool pendingSystemRestartConfirmation: false
   property int pluginStateRevision: 0
   property int hyprWorkspaceRevision: 0
@@ -190,7 +214,68 @@ Item {
   readonly property int frameRadius: Math.max(0, positiveInt(frameSettings.radius, 14))
   readonly property int frameShadowOffsetX: numberSetting(frameSettings.shadowOffsetX, 2)
   readonly property int frameShadowOffsetY: numberSetting(frameSettings.shadowOffsetY, 3)
-  readonly property var sidebarScreen: Quickshell.screens && Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+  // The default policy follows the focused Hyprland output. Pinned mode keeps
+  // the sidebar on the configured output set, and all mode mirrors it to every
+  // live output. The settings-state helper reads the same focused monitor that
+  // Omarchy exposes to its shell settings.
+  readonly property var sidebarSettingsData: lacunaSettings.data && lacunaSettings.data.sidebar
+    ? lacunaSettings.data.sidebar : ({})
+  readonly property string sidebarMonitorPolicy: MonitorPolicy.normalizeMonitorPolicy(sidebarSettingsData.monitorPolicy)
+  readonly property string liveFocusedMonitorName: Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.monitor
+    ? String(Hyprland.focusedWorkspace.monitor.name || "")
+    : (Hyprland.focusedMonitor ? String(Hyprland.focusedMonitor.name || "") : "")
+  property string settledFocusedMonitorName: ""
+  readonly property string focusedMonitorName: settledFocusedMonitorName !== ""
+    ? settledFocusedMonitorName
+    : (liveFocusedMonitorName !== "" ? liveFocusedMonitorName
+    : (shellSettingsService && shellSettingsService.focusedMonitorName ? String(shellSettingsService.focusedMonitorName) : "")
+    )
+  // Auto means workspace focus owns the sidebar. A popup's source screen is
+  // useful for choosing an interaction surface in mirrored/pinned modes, but
+  // must never become a sticky override that effectively pins auto mode.
+  readonly property string activeMonitorName: sidebarMonitorPolicy === "auto" || requestedInteractionMonitorName === ""
+    ? focusedMonitorName : requestedInteractionMonitorName
+  readonly property var sidebarMonitorNames: MonitorPolicy.normalizeMonitorNames(sidebarSettingsData.monitorNames)
+  readonly property var sidebarScreens: MonitorPolicy.chooseSidebarScreens(Quickshell.screens, sidebarMonitorPolicy, activeMonitorName, sidebarMonitorNames)
+  readonly property var sidebarScreen: MonitorPolicy.choosePrimarySidebarScreen(Quickshell.screens, sidebarMonitorPolicy, activeMonitorName, sidebarMonitorNames)
+  readonly property var flyoutScreen: MonitorPolicy.chooseFlyoutScreen(Quickshell.screens, sidebarMonitorPolicy, activeMonitorName, sidebarMonitorNames)
+  readonly property var sidebarMonitorOptions: MonitorPolicy.monitorOptions(Quickshell.screens, sidebarMonitorNames)
+
+  onLiveFocusedMonitorNameChanged: {
+    if (liveFocusedMonitorName !== "") monitorHandoffTimer.restart()
+  }
+
+  function sidebarVisibleOnScreen(screen) {
+    return sidebarSurfaceVisible && MonitorPolicy.isSidebarScreen(sidebarScreens, screen)
+  }
+
+  function flyoutVisibleOnScreen(screen) {
+    if (!flyoutRenderable || !screen || !flyoutScreen) return false
+    if (flyoutScreen === screen) return true
+    var targetName = MonitorPolicy.screenName(flyoutScreen)
+    var screenName = MonitorPolicy.screenName(screen)
+    return targetName !== "" && targetName === screenName
+  }
+
+  function flyoutOpenOnScreen(screen) {
+    return flyoutOpen && flyoutVisibleOnScreen(screen)
+  }
+
+  function flyoutInteractiveOnScreen(screen) {
+    return flyoutInteractive && flyoutOpenOnScreen(screen)
+  }
+
+  function flyoutLaneWidthFor(screen) {
+    // Keep every mapped sidebar window at its maximum flyout width. Changing
+    // the layer-shell buffer width when a flyout opens makes the compositor
+    // briefly scale the existing sidebar buffer, visibly squeezing every
+    // child before the new buffer arrives.
+    return sidebarVisibleOnScreen(screen) ? flyoutLaneWidth : 0
+  }
+
+  function frameBorderAttachedFlyoutVisibleOnScreen(screen) {
+    return frameBorderAttachedFlyoutVisible && flyoutVisibleOnScreen(screen)
+  }
 
   Behavior on compactProgress {
     NumberAnimation {
@@ -215,8 +300,61 @@ Item {
     }
   }
 
+  onFlyoutContentRegistered: root.applyPendingFlyoutFocus()
+
   function localPath(url) {
     return valueHelpers.localPath(url)
+  }
+
+  function screenNamespace(screen) {
+    var name = MonitorPolicy.screenName(screen)
+    return name === "" ? "screen" : name.replace(/[^A-Za-z0-9_-]/g, "-")
+  }
+
+  function registerFlyoutContent(screen, kind, content) {
+    if (!screen || !kind || !content) return
+
+    var next = {}
+    for (var screenKey in flyoutContentRefs) {
+      var screenRefs = flyoutContentRefs[screenKey]
+      var copied = {}
+      for (var kindKey in screenRefs) copied[kindKey] = screenRefs[kindKey]
+      next[screenKey] = copied
+    }
+
+    var key = screenNamespace(screen)
+    if (!next[key]) next[key] = {}
+    next[key][String(kind)] = content
+    flyoutContentRefs = next
+    flyoutContentRegistered(String(kind))
+  }
+
+  function unregisterFlyoutContent(screen, kind, content) {
+    if (!screen || !kind) return
+
+    var key = screenNamespace(screen)
+    var existing = flyoutContentRefs[key]
+    if (!existing || (content && existing[String(kind)] !== content)) return
+
+    var next = {}
+    for (var screenKey in flyoutContentRefs) {
+      var screenRefs = flyoutContentRefs[screenKey]
+      var copied = {}
+      for (var kindKey in screenRefs) copied[kindKey] = screenRefs[kindKey]
+      next[screenKey] = copied
+    }
+    delete next[key][String(kind)]
+    flyoutContentRefs = next
+  }
+
+  function activeFlyoutContent(kind) {
+    if (!flyoutScreen) return null
+    var screenRefs = flyoutContentRefs[screenNamespace(flyoutScreen)]
+    return screenRefs && screenRefs[String(kind)] ? screenRefs[String(kind)] : null
+  }
+
+  function flyoutContentOpacity(kind) {
+    return panelController.contentSwitchOpacity(kind)
   }
 
   function resolvedOmarchyPath() {
@@ -339,45 +477,122 @@ Item {
     return configBarHeight()
   }
 
-  function settingsFlyoutHeight() {
-    var availableHeight = menuWindow.height - barBottomY - designTokens.topInset - designTokens.bottomInset
+  function sidebarWindowHeightFor(screen) {
+    var screenHeight = screen && screen.height !== undefined ? Number(screen.height) : 1080
+    if (!isFinite(screenHeight) || screenHeight <= 0) screenHeight = 1080
+    return Math.max(1, Math.round(screenHeight) - visualTopInset - visualBottomInset)
+  }
+
+  function settingsFlyoutHeightFor(screen) {
+    var availableHeight = sidebarWindowHeightFor(screen) - barBottomY - designTokens.topInset - designTokens.bottomInset
     return Math.max(360, Math.min(availableHeight, compact ? 560 : 660))
+  }
+
+  function settingsFlyoutHeight() {
+    return settingsFlyoutHeightFor(sidebarScreen)
+  }
+
+  function settingsFlyoutYFor(screen, panelHeight) {
+    var topLimit = barBottomY + designTokens.topInset
+    var lift = compact ? 72 : 112
+    return Math.max(topLimit, sidebarWindowHeightFor(screen) - panelHeight - designTokens.bottomInset - lift)
   }
 
   function settingsFlyoutY(panelHeight) {
-    var topLimit = barBottomY + designTokens.topInset
-    var lift = compact ? 72 : 112
-    return Math.max(topLimit, menuWindow.height - panelHeight - designTokens.bottomInset - lift)
+    return settingsFlyoutYFor(sidebarScreen, panelHeight)
   }
 
-  function appPickerFlyoutY() {
+  function appPickerFlyoutYFor(screen) {
     var topLimit = barBottomY + designTokens.topInset
     var panelHeight = root.compact ? 430 : 520
     var preferredY = topLimit + (compact ? 38 : 52)
-    var maxY = Math.max(topLimit, menuWindow.height - panelHeight - designTokens.bottomInset)
+    var maxY = Math.max(topLimit, sidebarWindowHeightFor(screen) - panelHeight - designTokens.bottomInset)
     return Math.min(preferredY, maxY)
   }
 
-  function appPickerHeightFor(y) {
-    return Math.min(menuWindow.height - y - designTokens.bottomInset, root.compact ? 430 : 520)
+  function appPickerFlyoutY() {
+    return appPickerFlyoutYFor(sidebarScreen)
   }
 
-  function mediaPlayerFlyoutHeight() {
-    var availableHeight = menuWindow.height - barBottomY - designTokens.topInset - designTokens.bottomInset
+  function appPickerHeightForScreen(screen, y) {
+    return Math.min(sidebarWindowHeightFor(screen) - y - designTokens.bottomInset, root.compact ? 430 : 520)
+  }
+
+  function appPickerHeightFor(y) {
+    return appPickerHeightForScreen(sidebarScreen, y)
+  }
+
+  function mediaPlayerFlyoutHeightFor(screen) {
+    var availableHeight = sidebarWindowHeightFor(screen) - barBottomY - designTokens.topInset - designTokens.bottomInset
     return Math.max(360, Math.min(availableHeight, compact ? 520 : 600))
   }
 
-  function mediaPlayerFlyoutY(panelHeight) {
-    return settingsFlyoutY(panelHeight)
+  function mediaPlayerFlyoutHeight() {
+    return mediaPlayerFlyoutHeightFor(sidebarScreen)
   }
 
-  function shellSettingsFlyoutHeight() {
-    var availableHeight = menuWindow.height - barBottomY - designTokens.topInset - designTokens.bottomInset
+  function mediaPlayerFlyoutYFor(screen, panelHeight) {
+    return settingsFlyoutYFor(screen, panelHeight)
+  }
+
+  function mediaPlayerFlyoutY(panelHeight) {
+    return mediaPlayerFlyoutYFor(sidebarScreen, panelHeight)
+  }
+
+  function shellSettingsFlyoutHeightFor(screen) {
+    var availableHeight = sidebarWindowHeightFor(screen) - barBottomY - designTokens.topInset - designTokens.bottomInset
     return Math.max(360, Math.min(availableHeight, compact ? 560 : 660))
   }
 
+  function shellSettingsFlyoutHeight() {
+    return shellSettingsFlyoutHeightFor(sidebarScreen)
+  }
+
+  function shellSettingsFlyoutYFor(screen, panelHeight) {
+    return settingsFlyoutYFor(screen, panelHeight)
+  }
+
   function shellSettingsFlyoutY(panelHeight) {
-    return settingsFlyoutY(panelHeight)
+    return shellSettingsFlyoutYFor(sidebarScreen, panelHeight)
+  }
+
+  function activeFlyoutHeightFor(screen) {
+    if (activeFlyoutSettings) return settingsFlyoutHeightFor(screen)
+    if (activeFlyoutShellSettings) return shellSettingsFlyoutHeightFor(screen)
+    if (activeFlyoutAppPicker) return appPickerHeightForScreen(screen, appPickerFlyoutYFor(screen))
+    if (activeFlyoutMediaPlayer) return mediaPlayerFlyoutHeightFor(screen)
+    return 0
+  }
+
+  function activeFlyoutYFor(screen) {
+    if (activeFlyoutSettings) return settingsFlyoutYFor(screen, settingsFlyoutHeightFor(screen))
+    if (activeFlyoutShellSettings) return shellSettingsFlyoutYFor(screen, shellSettingsFlyoutHeightFor(screen))
+    if (activeFlyoutAppPicker) return appPickerFlyoutYFor(screen)
+    if (activeFlyoutMediaPlayer) return mediaPlayerFlyoutYFor(screen, mediaPlayerFlyoutHeightFor(screen))
+    return 0
+  }
+
+  function frameBorderAttachedFlyoutYFor(screen) {
+    var connectorVisible = frameBorderAttachedConnectorVisible && flyoutVisibleOnScreen(screen)
+    var y = activeFlyoutYFor(screen)
+    return frameBorderWindowY + (connectorVisible ? y - settingsConnectorWidth : y)
+  }
+
+  function frameBorderAttachedFlyoutHeightFor(screen) {
+    var connectorVisible = frameBorderAttachedConnectorVisible && flyoutVisibleOnScreen(screen)
+    var height = activeFlyoutHeightFor(screen)
+    return connectorVisible ? height + settingsConnectorWidth * 2 : height
+  }
+
+  function frameOverlayWidthFor(screen) {
+    if (!lacunaEnabled || barOwnsLacunaFrame || frameMode === "off") return 0
+    var width = screen && screen.width !== undefined ? Number(screen.width) : 0
+    return Math.max(0, Math.round(width) + 100)
+  }
+
+  function topBarPanelShadowVisualWidthFor(screen) {
+    if (!topBarPanelShadowVisible || !screen) return 0
+    return Math.max(0, Math.round(Number(screen.width) || 0))
   }
 
   function validShellSettingsSurface(value) {
@@ -387,6 +602,8 @@ Item {
   function open(payloadJson) {
     if (!lacunaEnabled) return
     var payload = openPayload(payloadJson)
+    requestedInteractionMonitorName = payload && payload.popupContext && payload.popupContext.screenName
+      ? String(payload.popupContext.screenName) : ""
     panelController.openMenu()
     openPayloadFlyout(payload)
   }
@@ -406,7 +623,7 @@ Item {
     if (flyout === "") return
 
     if (flyout === "settings") {
-      if (payload.section) settingsPanel.currentSection = String(payload.section)
+      if (payload.section) settingsSection = String(payload.section)
       panelController.openFlyout("settings")
       if (sidebarState.collapsed) sidebarState.expand()
       requestFlyoutFocus("settings")
@@ -415,7 +632,6 @@ Item {
 
     if (flyout === "shellSettings") {
       shellSettingsSection = String(payload.section || "apps")
-      if (shellSettingsPanel.item) shellSettingsPanel.item.currentSection = shellSettingsSection
       panelController.openFlyout("shellSettings")
       requestFlyoutFocus("shellSettings")
       return
@@ -437,6 +653,7 @@ Item {
   }
 
   function closeFlyouts() {
+    traceSurface("focusGrabCleared")
     if (flyoutFocusClearHold.running) return
     pendingFlyoutFocus = ""
     panelController.closeActiveFlyout()
@@ -446,12 +663,26 @@ Item {
     flyoutFocusClearHold.restart()
   }
 
+  function traceSurface(event) {
+    if (!transitionTraceEnabled) return
+    panelController.trace(event, {
+      pendingFlyoutFocus: pendingFlyoutFocus,
+      sidebarSurfaceVisible: sidebarSurfaceVisible,
+      sidebarCollapsed: sidebarState.collapsed,
+      panelWidth: panelWidth,
+      sidebarReserveSize: sidebarReserveSize,
+      focusedMonitor: focusedMonitorName,
+      sidebarScreen: sidebarScreen ? String(sidebarScreen.name || "") : "",
+      flyoutScreen: flyoutScreen ? String(flyoutScreen.name || "") : ""
+    })
+  }
+
   // While this one-shot is running, closeFlyouts() is suppressed so a focus
   // change triggered by activating a settings control does not immediately
   // dismiss the flyout it just opened.
   Timer {
     id: flyoutFocusClearHold
-    interval: 900
+    interval: root.flyoutActivationFocusGuardMs
     repeat: false
   }
 
@@ -496,11 +727,38 @@ Item {
   }
 
   function sidebarDefaultMode() {
-    var sidebar = lacunaSettings && lacunaSettings.data && lacunaSettings.data.sidebar
-      ? lacunaSettings.data.sidebar : null
+    var sidebar = sidebarSettingsData
     var mode = sidebar && sidebar.defaultMode !== undefined ? String(sidebar.defaultMode).toLowerCase() : String(sidebarState.defaultMode || "off").toLowerCase()
     if (mode === "rail" || mode === "full") return mode
     return "off"
+  }
+
+  function setSidebarMonitorPolicy(policy) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    var normalized = MonitorPolicy.normalizeMonitorPolicy(policy)
+    next.sidebar.monitorPolicy = normalized
+    next.sidebar.monitorNames = MonitorPolicy.normalizeMonitorNames(next.sidebar.monitorNames)
+
+    if (normalized === "pinned" && next.sidebar.monitorNames.length === 0) {
+      var seed = MonitorPolicy.chooseFocusedScreen(Quickshell.screens, focusedMonitorName)
+      var seedName = MonitorPolicy.screenName(seed)
+      if (seedName !== "") next.sidebar.monitorNames = [seedName]
+    }
+
+    lacunaSettings.save(next, false, true)
+  }
+
+  function toggleSidebarMonitor(name, enabled) {
+    var target = String(name || "").trim()
+    if (target === "") return
+
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    var names = MonitorPolicy.normalizeMonitorNames(next.sidebar.monitorNames)
+    var index = names.indexOf(target)
+    if (enabled === true && index < 0) names.push(target)
+    if (enabled !== true && index >= 0) names.splice(index, 1)
+    next.sidebar.monitorNames = MonitorPolicy.normalizeMonitorNames(names)
+    lacunaSettings.save(next, false, true)
   }
 
   function sidebarDefaultKeepsMenuOpen() {
@@ -644,7 +902,8 @@ Item {
     }
 
     if (!appCatalog.ready) appCatalog.reload()
-    appPickerContent.resetSearch()
+    var picker = activeFlyoutContent("appPicker")
+    if (picker) picker.resetSearch()
     appPickerMode = "customQuickLaunchApp"
     preferredAppPickerRole = ""
     panelController.openFlyout("appPicker")
@@ -656,7 +915,8 @@ Item {
     if (!lacunaEnabled) return
 
     if (!appCatalog.ready) appCatalog.reload()
-    appPickerContent.resetSearch()
+    var picker = activeFlyoutContent("appPicker")
+    if (picker) picker.resetSearch()
     appPickerMode = "preferredApp"
     preferredAppPickerRole = role
     panelController.openFlyout("appPicker")
@@ -684,12 +944,12 @@ Item {
     if (!lacunaEnabled) return
 
     var nextSection = String(sectionId || "overview")
-    if (settingsPanelOpen && settingsPanel.currentSection === nextSection) {
+    if (settingsPanelOpen && settingsSection === nextSection) {
       panelController.closeFlyout("settings")
       return
     }
 
-    settingsPanel.currentSection = nextSection
+    settingsSection = nextSection
     panelController.openFlyout("settings")
     if (sidebarState.collapsed) sidebarState.expand()
     requestFlyoutFocus("settings")
@@ -717,13 +977,12 @@ Item {
     if (!lacunaEnabled) return
 
     var nextSection = String(sectionId || "apps")
-    if (shellSettingsPanelOpen && shellSettingsPanel.item && shellSettingsPanel.item.currentSection === nextSection) {
+    if (shellSettingsPanelOpen && shellSettingsSection === nextSection) {
       panelController.closeFlyout("shellSettings")
       return
     }
 
     shellSettingsSection = nextSection
-    if (shellSettingsPanel.item) shellSettingsPanel.item.currentSection = nextSection
     panelController.openFlyout("shellSettings")
     requestFlyoutFocus("shellSettings")
   }
@@ -742,17 +1001,21 @@ Item {
     }
 
     if (pendingFlyoutFocus === "" || !panelController.flyoutInteractive) return
-    if (pendingFlyoutFocus === "appPicker" && appPickerOpen) {
-      appPickerContent.forceSearchFocus()
+    var appPicker = activeFlyoutContent("appPicker")
+    var mediaPlayer = activeFlyoutContent("mediaPlayer")
+    var settings = activeFlyoutContent("settings")
+    var shellSettings = activeFlyoutContent("shellSettings")
+    if (pendingFlyoutFocus === "appPicker" && appPickerOpen && appPicker) {
+      appPicker.forceSearchFocus()
       pendingFlyoutFocus = ""
-    } else if (pendingFlyoutFocus === "mediaPlayer" && mediaPlayerOpen) {
-      mediaPlayerContent.forceSearchFocus()
+    } else if (pendingFlyoutFocus === "mediaPlayer" && mediaPlayerOpen && mediaPlayer) {
+      mediaPlayer.forceSearchFocus()
       pendingFlyoutFocus = ""
-    } else if (pendingFlyoutFocus === "settings" && settingsPanelOpen) {
-      settingsPanel.forceActiveFocus()
+    } else if (pendingFlyoutFocus === "settings" && settingsPanelOpen && settings) {
+      settings.forceActiveFocus()
       pendingFlyoutFocus = ""
-    } else if (pendingFlyoutFocus === "shellSettings" && shellSettingsPanelOpen && shellSettingsPanel.item) {
-      shellSettingsPanel.item.forceActiveFocus()
+    } else if (pendingFlyoutFocus === "shellSettings" && shellSettingsPanelOpen && shellSettings) {
+      shellSettings.forceActiveFocus()
       pendingFlyoutFocus = ""
     }
   }
@@ -1318,6 +1581,20 @@ Item {
       return true
     }
 
+    if (entry.action.indexOf("set-sidebar-monitor-policy-") === 0) {
+      setSidebarMonitorPolicy(entry.action.substring("set-sidebar-monitor-policy-".length))
+      return true
+    }
+
+    if (entry.action.indexOf("toggle-sidebar-monitor-") === 0) {
+      var monitorName = entry.action.substring("toggle-sidebar-monitor-".length)
+      toggleSidebarMonitor(
+        monitorName,
+        desiredChecked(entry, sidebarMonitorNames.indexOf(monitorName) < 0)
+      )
+      return true
+    }
+
     if (entry.action.indexOf("set-sidebar-default-") === 0) {
       setSidebarDefaultMode(entry.action.substring("set-sidebar-default-".length))
       return true
@@ -1685,6 +1962,7 @@ Item {
   }
 
   Component.onCompleted: {
+    settledFocusedMonitorName = liveFocusedMonitorName
     versionFile.reload()
     applyInitialSidebarDefault()
     refreshHyprWorkspaceState()
@@ -1736,6 +2014,17 @@ Item {
     onTriggered: root.refreshHyprWorkspaceState()
   }
 
+  // Let Hyprland finish its workspace animation before moving the layer-shell
+  // sidebar and frame reserve. Reconfiguring those surfaces mid-transition
+  // makes full-screen effects such as the vignette flash and competes with the
+  // compositor animation for a frame.
+  Timer {
+    id: monitorHandoffTimer
+    interval: root.menuMotionTokensRef.reveal
+    repeat: false
+    onTriggered: root.settledFocusedMonitorName = root.liveFocusedMonitorName
+  }
+
   Connections {
     target: Hyprland
 
@@ -1743,6 +2032,9 @@ Item {
       var name = event.name
       if (name.indexOf("workspace") >= 0 || name === "focusedmon" || name.indexOf("window") >= 0 || name === "fullscreen") {
         hyprWorkspaceRefreshTimer.restart()
+      }
+      if (name === "focusedmon" || name.indexOf("monitor") >= 0) {
+        if (root.shellSettingsService && typeof root.shellSettingsService.refresh === "function") root.shellSettingsService.refresh()
       }
     }
 
@@ -1808,6 +2100,9 @@ Item {
     sidebarCollapsed: sidebarState.collapsed
     sidebarCornerPieces: sidebarState.cornerPieces
     sidebarDefaultMode: root.sidebarDefaultMode()
+    sidebarMonitorPolicy: root.sidebarMonitorPolicy
+    sidebarMonitorNames: root.sidebarMonitorNames
+    sidebarMonitorOptions: root.sidebarMonitorOptions
     compact: root.compact
     barSizeMode: barSizeModeService.barSizeMode
     designStyle: root.designStyle
@@ -1855,6 +2150,8 @@ Item {
     id: panelController
     motionTokens: sharedMotion
     menuState: root.menuState
+    retainMenuOnExternalClose: root.sidebarSettingsLoaded() && root.sidebarDefaultKeepsMenuOpen()
+    transitionTraceEnabled: root.transitionTraceEnabled
     onFlyoutOpenChanged: {
       if (!flyoutOpen) root.pendingFlyoutFocus = ""
       else root.applyPendingFlyoutFocus()
@@ -1884,20 +2181,25 @@ Item {
     id: valueHelpers
   }
 
-  LacunaPanelWindow {
-    id: menuWindow
+  Variants {
+    model: root.sidebarScreens
 
-    targetScreen: root.sidebarScreen
+    LacunaPanelWindow {
+      id: menuWindow
+      required property var modelData
+
+    targetScreen: modelData
+    layerNamespace: root.pluginId + "-menu-" + root.screenNamespace(modelData)
     menuOpen: root.menuState.open
     panelVisible: root.lacunaEnabled && root.panelVisible
     keepMapped: root.lacunaEnabled && (root.frameMode !== "off" || root.topBarPanelShadowVisible)
-    flyoutOpen: root.lacunaEnabled && root.flyoutOpen
-    flyoutInteractive: root.lacunaEnabled && root.flyoutInteractive
+    flyoutOpen: root.lacunaEnabled && root.flyoutOpenOnScreen(modelData)
+    flyoutInteractive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)
     exclusive: sidebarState.exclusive
     panelWidth: root.panelWidth
     surfaceRightInset: root.surfaceRightInset
-    flyoutLaneWidth: root.flyoutLaneWidth
-    visualWidth: Math.max(root.frameOverlayWidth, root.topBarPanelShadowVisualWidth)
+    flyoutLaneWidth: root.flyoutLaneWidthFor(modelData)
+    visualWidth: Math.max(root.frameOverlayWidthFor(modelData), root.topBarPanelShadowVisualWidthFor(modelData))
     visualTopInset: root.visualTopInset
     visualBottomInset: root.visualBottomInset
     visualLeftInset: root.visualLeftInset
@@ -1926,12 +2228,21 @@ Item {
       sidebarHeight: menuWindow.height
       anchorRight: root.panelOnRight
       connectorWidth: root.settingsConnectorWidth
-      connectorRenderable: root.lacunaEnabled && root.sidebarSurfaceVisible && panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
-      flyoutY: root.activeFlyoutY
+      connectorRenderable: root.lacunaEnabled && root.sidebarSurfaceVisible && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      flyoutY: root.activeFlyoutYFor(modelData)
       flyoutWidth: Math.max(0, root.activeFlyoutWidth)
-      flyoutHeight: Math.max(0, root.activeFlyoutHeight)
-      flyoutProgress: panelController.flyoutProgress
-      flyoutRenderable: root.lacunaEnabled && panelController.flyoutRenderable
+      flyoutHeight: Math.max(0, root.activeFlyoutHeightFor(modelData))
+      flyoutProgress: root.menuPanelControllerRef.flyoutProgress
+      flyoutRenderable: root.lacunaEnabled && root.flyoutVisibleOnScreen(modelData)
+      geometrySwitchActive: root.menuPanelControllerRef.incomingFlyout !== ""
+      geometrySwitchProgress: root.menuPanelControllerRef.contentSwitchProgress
+    }
+
+    Connections {
+      target: root.menuPanelControllerRef
+      function onIncomingFlyoutChanged() {
+        if (root.menuPanelControllerRef.incomingFlyout !== "") panelHost.captureEffectiveGeometryForSwitch()
+      }
     }
 
     LacunaFrameOverlay {
@@ -1945,14 +2256,14 @@ Item {
       barSize: root.barControlSize
       barBottomY: root.barBottomY
       barEdgeCasterSize: root.barEdgeCasterSize
-      frameWidth: root.sidebarScreen ? root.sidebarScreen.width : menuWindow.width
+      frameWidth: modelData && modelData.width !== undefined ? Number(modelData.width) : menuWindow.width
       frameThickness: root.frameThickness
       frameRadius: root.frameRadius
       joinRadius: root.lacunaJoinRadius
       cornerPieces: sidebarState.cornerPieces
       progress: root.frameOverlayProgress
       frameColor: root.panelColor
-      borderColor: menuTheme.seam
+      borderColor: root.menuThemeRef.seam
       shadowOffsetX: root.frameShadowOffsetX
       shadowOffsetY: root.frameShadowOffsetY
       sidebarX: panelHost.sidebarMaskX
@@ -1967,26 +2278,31 @@ Item {
       connectorY: panelHost.connectorY
       connectorWidth: panelHost.effectiveConnectorWidth
       connectorHeight: panelHost.effectiveFlyoutHeight + panelHost.effectiveConnectorWidth * 2
-      connectorVisible: root.sidebarSurfaceVisible && panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      connectorVisible: root.sidebarSurfaceVisible && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
       flyoutX: panelHost.flyoutMaskX
       flyoutY: panelHost.flyoutMaskY
       flyoutWidth: panelHost.flyoutMaskWidth
       flyoutHeight: panelHost.flyoutMaskHeight
-      flyoutVisible: panelController.flyoutRenderable
+      flyoutVisible: root.flyoutVisibleOnScreen(modelData)
     }
 
     LacunaPanelUnifiedSurface {
       id: panelUnifiedSurface
 
       anchors.fill: parent
-      sidebarVisible: root.sidebarSurfaceVisible
-      flyoutOpen: root.flyoutOpen
-      flyoutRenderable: panelController.flyoutRenderable
-      connectorRenderable: root.sidebarSurfaceVisible && panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
-      shadowEnabled: root.lacunaEnabled && root.frameShadow && (root.sidebarSurfaceVisible || panelController.flyoutRenderable)
-      menuProgress: panelController.menuProgress
-      flyoutProgress: panelController.flyoutProgress
-      contentProgress: panelController.contentProgress
+      z: 0
+      // The durable sidebar is painted by `surface` below. Do not duplicate
+      // it inside the mutable MultiEffect source: that offscreen source is
+      // rebuilt as flyout geometry changes and intermittently blanks the real
+      // sidebar content for a few compositor frames.
+      sidebarVisible: false
+      flyoutOpen: root.flyoutOpenOnScreen(modelData)
+      flyoutRenderable: root.flyoutVisibleOnScreen(modelData)
+      connectorRenderable: root.sidebarSurfaceVisible && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      shadowEnabled: root.lacunaEnabled && root.frameShadow && root.menuPanelControllerRef.flyoutRenderable
+      menuProgress: root.menuPanelControllerRef.menuProgress
+      flyoutProgress: root.menuPanelControllerRef.flyoutProgress
+      contentProgress: root.menuPanelControllerRef.contentProgress
       sidebarX: panelHost.sidebarX
       panelWidth: root.panelWidth
       surfaceRightInset: root.surfaceRightInset
@@ -2009,7 +2325,7 @@ Item {
       panelRadius: root.lacunaJoinRadius
       panelColor: root.panelColor
       foreground: root.foreground
-      designTokens: designTokens
+      designTokens: root.menuDesignTokensRef
       shadowOffsetX: root.frameShadowOffsetX
       shadowOffsetY: root.frameShadowOffsetY
       shadowBlurMax: root.panelShadowBlurMax
@@ -2023,13 +2339,18 @@ Item {
     MenuSurface {
       id: surface
 
+      // Explicitly keep the durable sidebar above the mutable flattened
+      // shadow/source layer. MultiEffect source updates may render outside
+      // ordinary declaration order for a frame; without this pin, that opaque
+      // source covers the sidebar content during flyout geometry changes.
+      z: 10
       visible: root.sidebarSurfaceVisible
       anchors.top: parent.top
       anchors.bottom: parent.bottom
       x: panelHost.sidebarX
       panelWidth: root.panelWidth
       open: root.menuState.open
-      progress: panelController.menuProgress
+      progress: root.menuPanelControllerRef.menuProgress
       barHeight: root.barHeight
       barBottomY: root.barBottomY
       joinRadius: root.joinRadius
@@ -2041,24 +2362,30 @@ Item {
       openFromRight: root.panelOnRight
       panelColor: root.panelColor
       foreground: root.foreground
-      designTokens: designTokens
-      backgroundVisible: false
+      designTokens: root.menuDesignTokensRef
+      // Keep the visible sidebar paint independent of the flattened
+      // sidebar+flyout shadow source. The unified source changes geometry on
+      // every flyout frame; relying on it for visible sidebar paint makes the
+      // whole left sidebar flash/twitch when that texture is rebuilt.
+      // This opaque foreground copy covers the identical source silhouette
+      // while the unified surface beneath continues to cast one shadow.
+      backgroundVisible: true
 
       MenuContent {
         visible: root.sidebarSurfaceVisible && !sidebarState.collapsed
-        motionTokens: sharedMotion
+        motionTokens: root.menuMotionTokensRef
         anchors.fill: parent
-        anchors.leftMargin: designTokens.contentInset
-        anchors.rightMargin: designTokens.contentInset
-        anchors.topMargin: root.barBottomY + designTokens.topInset
-        anchors.bottomMargin: designTokens.bottomInset
+        anchors.leftMargin: root.menuDesignTokensRef.contentInset
+        anchors.rightMargin: root.menuDesignTokensRef.contentInset
+        anchors.topMargin: root.barBottomY + root.menuDesignTokensRef.topInset
+        anchors.bottomMargin: root.menuDesignTokensRef.bottomInset
         compact: root.compact
-        designTokens: designTokens
+        designTokens: root.menuDesignTokensRef
         open: root.menuState.open
         menuState: root.menuState
-        registry: registry
+        registry: root.menuRegistryRef
         version: root.version
-        themeTitle: menuTheme.themeTitle
+        themeTitle: root.menuThemeRef.themeTitle
         foreground: root.foreground
         background: root.background
         accent: root.accent
@@ -2093,14 +2420,14 @@ Item {
         anchors.top: parent.top
         anchors.topMargin: root.barBottomY + root.railTopGap
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: designTokens.bottomInset
+        anchors.bottomMargin: root.menuDesignTokensRef.bottomInset
         anchors.left: parent.left
         anchors.leftMargin: root.railLeftInset
         compact: root.railCompact
-        designTokens: railDesignTokens
+        designTokens: root.menuRailDesignTokensRef
         open: root.menuState.open
         menuState: root.menuState
-        registry: registry
+        registry: root.menuRegistryRef
         foreground: root.foreground
         panelWindow: menuWindow
         panelColor: root.panelColor
@@ -2125,9 +2452,10 @@ Item {
     LacunaPanelConnector {
       id: flyoutConnector
 
-      open: root.flyoutOpen
-      renderable: root.sidebarSurfaceVisible && panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
-      progress: panelController.flyoutProgress
+      z: 20
+      open: root.flyoutOpenOnScreen(modelData)
+      renderable: root.sidebarSurfaceVisible && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      progress: root.menuPanelControllerRef.flyoutProgress
       x: panelHost.connectorX
       y: panelHost.connectorY
       connectorWidth: panelHost.effectiveConnectorWidth
@@ -2140,11 +2468,12 @@ Item {
     LacunaAttachedFlyout {
       id: attachedFlyout
 
-      open: root.flyoutOpen
-      renderable: panelController.flyoutRenderable
-      interactive: root.flyoutOpen && root.flyoutInteractive
-      progress: panelController.flyoutRenderable ? panelController.flyoutProgress : 0
-      contentProgress: panelController.contentProgress
+      z: 20
+      open: root.flyoutOpenOnScreen(modelData)
+      renderable: root.flyoutVisibleOnScreen(modelData)
+      interactive: root.flyoutInteractiveOnScreen(modelData)
+      progress: root.menuPanelControllerRef.flyoutRenderable ? root.menuPanelControllerRef.flyoutProgress : 0
+      contentProgress: root.menuPanelControllerRef.contentProgress
       openX: panelHost.flyoutX
       openY: panelHost.effectiveFlyoutY
       openToLeft: root.panelOnRight
@@ -2153,7 +2482,7 @@ Item {
       panelRadius: root.lacunaJoinRadius
       panelColor: root.panelColor
       foreground: root.foreground
-      designTokens: designTokens
+      designTokens: root.menuDesignTokensRef
       backgroundVisible: false
 
       SettingsWindow {
@@ -2162,14 +2491,15 @@ Item {
         anchors.fill: parent
         visible: root.renderSettingsContent
         enabled: root.settingsPanelOpen
-        opacity: root.settingsPanelOpen ? 1 : 0
+        opacity: root.flyoutContentOpacity("settings")
         open: root.settingsPanelOpen
+        currentSection: root.settingsSection
         compact: root.compact
         drawBackground: false
-        designTokens: designTokens
-        registry: registry
+        designTokens: root.menuDesignTokensRef
+        registry: root.menuRegistryRef
         version: root.version
-        themeTitle: menuTheme.themeTitle
+        themeTitle: root.menuThemeRef.themeTitle
         foreground: root.foreground
         background: root.background
         accent: root.accent
@@ -2178,31 +2508,46 @@ Item {
         dangerAccent: root.dangerAccent
         navAccent: root.navAccent
         muted: root.muted
+        onCurrentSectionChanged: {
+          if (root.flyoutScreen === modelData && root.settingsSection !== currentSection)
+            root.settingsSection = currentSection
+        }
         onActivated: function(entry) {
           root.holdFlyoutAfterSettingsActivation()
           root.activate(entry)
           root.requestFlyoutFocus("settings")
         }
-        onCloseRequested: panelController.closeFlyout("settings")
+        onCloseRequested: root.menuPanelControllerRef.closeFlyout("settings")
+
+        Component.onCompleted: root.registerFlyoutContent(modelData, "settings", settingsPanel)
+        Component.onDestruction: root.unregisterFlyoutContent(modelData, "settings", settingsPanel)
       }
 
       Loader {
         id: shellSettingsPanel
 
-        property var registryRef: registry
+        property var registryRef: root.menuRegistryRef
 
         anchors.fill: parent
         active: root.renderShellSettingsContent
         visible: root.renderShellSettingsContent
-        opacity: root.shellSettingsPanelOpen ? 1 : 0
-        onLoaded: if (item) item.currentSection = root.shellSettingsSection
+        opacity: root.flyoutContentOpacity("shellSettings")
+        onLoaded: {
+          if (!item) return
+          item.currentSection = root.shellSettingsSection
+          root.registerFlyoutContent(modelData, "shellSettings", item)
+        }
+        onItemChanged: {
+          if (item) root.registerFlyoutContent(modelData, "shellSettings", item)
+        }
+        Component.onDestruction: root.unregisterFlyoutContent(modelData, "shellSettings", item)
         sourceComponent: Component {
           OmarchyShellSettingsWindow {
             currentSection: root.shellSettingsSection
             open: root.shellSettingsPanelOpen
             compact: root.compact
             drawBackground: false
-            designTokens: designTokens
+            designTokens: root.menuDesignTokensRef
             registry: shellSettingsPanel.registryRef
             settingsService: root.shellSettingsService
             foreground: root.foreground
@@ -2219,7 +2564,7 @@ Item {
               root.activate(entry)
               root.requestFlyoutFocus("shellSettings")
             }
-            onCloseRequested: panelController.closeFlyout("shellSettings")
+            onCloseRequested: root.menuPanelControllerRef.closeFlyout("shellSettings")
           }
         }
       }
@@ -2228,8 +2573,9 @@ Item {
         id: appPickerContent
 
         anchors.fill: parent
-        registry: registry
-        appCatalog: appCatalog
+        opacity: root.flyoutContentOpacity("appPicker")
+        registry: root.menuRegistryRef
+        appCatalog: root.menuAppCatalogRef
         customQuickLaunchApps: lacunaSettings.data && lacunaSettings.data.customQuickLaunchApps ? lacunaSettings.data.customQuickLaunchApps : []
         preferredApps: lacunaSettings.data && lacunaSettings.data.preferredApps ? lacunaSettings.data.preferredApps : ({})
         compact: root.compact
@@ -2237,34 +2583,41 @@ Item {
         contentVisible: root.renderAppPickerContent
         mode: root.appPickerMode
         preferredRole: root.preferredAppPickerRole
-        designTokens: designTokens
+        designTokens: root.menuDesignTokensRef
         foreground: root.foreground
         background: root.background
         accent: root.accent
         muted: root.muted
-        onCloseRequested: panelController.closeFlyout("appPicker")
+        onCloseRequested: root.menuPanelControllerRef.closeFlyout("appPicker")
         onSystemSelected: root.setPreferredApp(root.preferredAppPickerRole, "system")
         onAppSelected: function(appId) {
           if (root.appPickerMode === "preferredApp") root.setPreferredApp(root.preferredAppPickerRole, appId)
           else root.addCustomQuickLaunchApp(appId)
         }
+
+        Component.onCompleted: root.registerFlyoutContent(modelData, "appPicker", appPickerContent)
+        Component.onDestruction: root.unregisterFlyoutContent(modelData, "appPicker", appPickerContent)
       }
 
       FlyoutMediaPlayerContent {
         id: mediaPlayerContent
 
         anchors.fill: parent
+        opacity: root.flyoutContentOpacity("mediaPlayer")
         service: root.mediaPlayerService
         compact: root.compact
         open: root.mediaPlayerOpen
         contentVisible: root.renderMediaPlayerContent
-        designTokens: designTokens
+        designTokens: root.menuDesignTokensRef
         foreground: root.foreground
         background: root.background
         accent: root.accent
         muted: root.muted
         bodyFontFamily: root.bodyFontFamily
-        onCloseRequested: panelController.closeFlyout("mediaPlayer")
+        onCloseRequested: root.menuPanelControllerRef.closeFlyout("mediaPlayer")
+
+        Component.onCompleted: root.registerFlyoutContent(modelData, "mediaPlayer", mediaPlayerContent)
+        Component.onDestruction: root.unregisterFlyoutContent(modelData, "mediaPlayer", mediaPlayerContent)
       }
     }
 
@@ -2273,8 +2626,8 @@ Item {
 
       anchors.fill: parent
       active: root.lacunaEnabled && root.frameBorder
-      connectorVisible: root.sidebarSurfaceVisible && panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
-      flyoutVisible: panelController.flyoutRenderable && panelController.flyoutProgress > 0.001
+      connectorVisible: root.sidebarSurfaceVisible && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      flyoutVisible: root.flyoutVisibleOnScreen(modelData) && root.menuPanelControllerRef.flyoutProgress > 0.001
       openToLeft: root.panelOnRight
       connectorX: panelHost.connectorX
       connectorY: panelHost.connectorY
@@ -2284,7 +2637,7 @@ Item {
       flyoutWidth: panelHost.flyoutMaskWidth
       flyoutHeight: panelHost.flyoutMaskHeight
       panelRadius: root.lacunaJoinRadius
-      borderColor: menuTheme.seam
+      borderColor: root.menuThemeRef.seam
     }
 
     Item {
@@ -2321,7 +2674,7 @@ Item {
         y: Math.max(root.barBottomY + 44, Math.round((parent.height - height) / 2) - 18)
         width: Math.max(220, Math.min(parent.width - 28, root.compact ? 238 : 270))
         height: root.compact ? 164 : 184
-        radius: root.designStyle === "material" ? 12 : designTokens.radius
+        radius: root.designStyle === "material" ? 12 : root.menuDesignTokensRef.radius
         color: root.background
         border.width: root.designStyle === "lacuna" ? 0 : 1
         border.color: Qt.rgba(root.dangerAccent.r, root.dangerAccent.g, root.dangerAccent.b, 0.26)
@@ -2396,7 +2749,7 @@ Item {
           LacunaRect {
             width: Math.floor((parent.width - parent.spacing) / 2)
             height: parent.height
-            radius: root.designStyle === "material" ? height / 2 : designTokens.controlRadius
+            radius: root.designStyle === "material" ? height / 2 : root.menuDesignTokensRef.controlRadius
             color: "transparent"
             border.width: root.designStyle === "lacuna" ? 0 : 1
             border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.16)
@@ -2415,8 +2768,8 @@ Item {
             LacunaStateLayer {
               anchors.fill: parent
               stateColor: root.foreground
-              hoverOpacity: designTokens.hoverOpacity
-              pressOpacity: designTokens.activeOpacity
+              hoverOpacity: root.menuDesignTokensRef.hoverOpacity
+              pressOpacity: root.menuDesignTokensRef.activeOpacity
               onTriggered: root.cancelSystemRestart()
             }
           }
@@ -2424,7 +2777,7 @@ Item {
           LacunaRect {
             width: parent.width - parent.spacing - Math.floor((parent.width - parent.spacing) / 2)
             height: parent.height
-            radius: root.designStyle === "material" ? height / 2 : designTokens.controlRadius
+            radius: root.designStyle === "material" ? height / 2 : root.menuDesignTokensRef.controlRadius
             color: Qt.rgba(root.dangerAccent.r, root.dangerAccent.g, root.dangerAccent.b, 0.16)
             border.width: root.designStyle === "lacuna" ? 0 : 1
             border.color: Qt.rgba(root.dangerAccent.r, root.dangerAccent.g, root.dangerAccent.b, 0.32)
@@ -2443,8 +2796,8 @@ Item {
             LacunaStateLayer {
               anchors.fill: parent
               stateColor: root.dangerAccent
-              hoverOpacity: designTokens.hoverOpacity
-              pressOpacity: designTokens.activeOpacity
+              hoverOpacity: root.menuDesignTokensRef.hoverOpacity
+              pressOpacity: root.menuDesignTokensRef.activeOpacity
               onTriggered: root.confirmSystemRestart()
             }
           }
@@ -2453,51 +2806,89 @@ Item {
     }
   }
 
-  LacunaFrameReserveWindow {
-    targetScreen: root.sidebarScreen
-    active: root.sidebarReserveSize > 0
-    edge: root.panelOnRight ? "right" : "left"
-    reserveSize: root.sidebarReserveSize
-    layerNamespace: root.pluginId + "-sidebar-reserve"
   }
 
-  LacunaFrameReserveWindow {
-    targetScreen: root.sidebarScreen
-    active: root.frameReserveTop > 0
-    edge: "top"
-    reserveSize: root.frameReserveTop
-    layerNamespace: root.pluginId + "-frame-reserve"
+  Variants {
+    model: root.sidebarScreens
+
+    LacunaFrameReserveWindow {
+      required property var modelData
+
+      targetScreen: modelData
+      active: root.sidebarReserveSize > 0
+      edge: root.panelOnRight ? "right" : "left"
+      reserveSize: root.sidebarReserveSize
+      layerNamespace: root.pluginId + "-sidebar-reserve-" + root.screenNamespace(modelData)
+    }
   }
 
-  LacunaFrameReserveWindow {
-    targetScreen: root.sidebarScreen
-    active: root.topBarShadowReserve > 0
-    edge: "top"
-    reserveSize: root.topBarShadowReserve
-    layerNamespace: root.pluginId + "-topbar-shadow-reserve"
+  Variants {
+    model: root.sidebarScreens
+
+    LacunaFrameReserveWindow {
+      required property var modelData
+
+      targetScreen: modelData
+      active: root.frameReserveTop > 0
+      edge: "top"
+      reserveSize: root.frameReserveTop
+      layerNamespace: root.pluginId + "-frame-reserve-" + root.screenNamespace(modelData)
+    }
   }
 
-  LacunaFrameReserveWindow {
-    targetScreen: root.sidebarScreen
-    active: root.frameReserveBottom > 0
-    edge: "bottom"
-    reserveSize: root.frameReserveBottom
-    layerNamespace: root.pluginId + "-frame-reserve"
+  Variants {
+    model: root.sidebarScreens
+
+    LacunaFrameReserveWindow {
+      required property var modelData
+
+      targetScreen: modelData
+      active: root.topBarShadowReserve > 0
+      edge: "top"
+      reserveSize: root.topBarShadowReserve
+      layerNamespace: root.pluginId + "-topbar-shadow-reserve-" + root.screenNamespace(modelData)
+    }
   }
 
-  LacunaFrameReserveWindow {
-    targetScreen: root.sidebarScreen
-    active: root.frameReserveLeft > 0
-    edge: "left"
-    reserveSize: root.frameReserveLeft
-    layerNamespace: root.pluginId + "-frame-reserve"
+  Variants {
+    model: root.sidebarScreens
+
+    LacunaFrameReserveWindow {
+      required property var modelData
+
+      targetScreen: modelData
+      active: root.frameReserveBottom > 0
+      edge: "bottom"
+      reserveSize: root.frameReserveBottom
+      layerNamespace: root.pluginId + "-frame-reserve-" + root.screenNamespace(modelData)
+    }
   }
 
-  LacunaFrameReserveWindow {
-    targetScreen: root.sidebarScreen
-    active: root.frameReserveRight > 0
-    edge: "right"
-    reserveSize: root.frameReserveRight
-    layerNamespace: root.pluginId + "-frame-reserve"
+  Variants {
+    model: root.sidebarScreens
+
+    LacunaFrameReserveWindow {
+      required property var modelData
+
+      targetScreen: modelData
+      active: root.frameReserveLeft > 0
+      edge: "left"
+      reserveSize: root.frameReserveLeft
+      layerNamespace: root.pluginId + "-frame-reserve-" + root.screenNamespace(modelData)
+    }
+  }
+
+  Variants {
+    model: root.sidebarScreens
+
+    LacunaFrameReserveWindow {
+      required property var modelData
+
+      targetScreen: modelData
+      active: root.frameReserveRight > 0
+      edge: "right"
+      reserveSize: root.frameReserveRight
+      layerNamespace: root.pluginId + "-frame-reserve-" + root.screenNamespace(modelData)
+    }
   }
 }

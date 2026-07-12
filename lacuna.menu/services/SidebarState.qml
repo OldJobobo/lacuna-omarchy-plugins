@@ -10,6 +10,8 @@ Item {
   property bool collapsed: false
   property bool cornerPieces: true
   property string defaultMode: "off"
+  property string monitorPolicy: "auto"
+  property var monitorNames: []
   property bool displayInitialized: false
 
   // Two distinct concepts that previously bled together:
@@ -77,7 +79,9 @@ Item {
       // rewrites the stored collapsed state.
       collapsed: collapsed,
       exclusive: exclusive,
-      cornerPieces: cornerPieces
+      cornerPieces: cornerPieces,
+      monitorPolicy: next.sidebar && next.sidebar.monitorPolicy ? String(next.sidebar.monitorPolicy) : monitorPolicy,
+      monitorNames: next.sidebar && Array.isArray(next.sidebar.monitorNames) ? next.sidebar.monitorNames : monitorNames
     }
     settingsService.save(next, false, true)
   }
@@ -93,6 +97,8 @@ Item {
     }
     exclusive = !(sidebar && sidebar.exclusive === false)
     cornerPieces = !(sidebar && sidebar.cornerPieces === false)
+    monitorPolicy = sidebar && sidebar.monitorPolicy ? String(sidebar.monitorPolicy) : "auto"
+    monitorNames = sidebar && Array.isArray(sidebar.monitorNames) ? sidebar.monitorNames : []
   }
 
   Component.onCompleted: {

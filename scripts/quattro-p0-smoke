@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""Run the read-only live smoke matrix for the Lacuna Quattro P0 contract."""
+
+from __future__ import annotations
+
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+CORE_PLUGIN_IDS = {"lacuna.bar", "lacuna.state", "lacuna.shell-settings", "lacuna.menu"}
+CORE_BAR_IDS = {"lacuna.menu-button", "lacuna.bar-size-pill"}
+
+
+def run(command: list[str]) -> tuple[int, str]:
+    try:
+        result = subprocess.run(
+            command,
+            cwd=ROOT,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=45,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return 1, str(error)
+    return result.returncode, result.stdout.strip()
+
+
+def parse_json(command: list[str]) -> object:
+    code, output = run(command)
+    if code != 0:
+        raise RuntimeError(f"{' '.join(command)} failed:\n{output}")
+    try:
+        return json.loads(output)
+    except json.JSONDecodeError as error:
+        raise RuntimeError(f"{' '.join(command)} did not return JSON:\n{output[-2000:]}") from error
+
+
+def check_layers(monitors: list[dict], layers: str) -> list[str]:
+    failures: list[str] = []
+    for monitor in monitors:
+        name = str(monitor.get("name", ""))
+        match = re.search(rf"Monitor {re.escape(name)}:\n(.*?)(?=\nMonitor |\Z)", layers, re.DOTALL)
+        if not match:
+            failures.append(f"missing hyprctl layers section for {name}")
+            continue
+        block = match.group(1)
+        for namespace in ("lacuna-bar-frame", "lacuna-bar-frame-border"):
+            if f"namespace: {namespace}" not in block:
+                failures.append(f"{name} is missing {namespace}")
+    return failures
+
+
+def main() -> int:
+    failures: list[str] = []
+
+    compatibility_code, compatibility = run([str(ROOT / "scripts/quattro-compatibility"), "--check"])
+    print(compatibility)
+    if compatibility_code != 0:
+        failures.append("Quattro compatibility check failed")
+
+    try:
+        plugins = parse_json(["omarchy-shell", "shell", "listPlugins"])
+        plugin_map = {entry.get("id"): entry for entry in plugins if isinstance(entry, dict)}
+        for plugin_id in sorted(CORE_PLUGIN_IDS):
+            if not plugin_map.get(plugin_id, {}).get("enabled"):
+                failures.append(f"core plugin is not enabled: {plugin_id}")
+        if not plugin_map.get("lacuna.bar", {}).get("active"):
+            failures.append("lacuna.bar is not the active bar host")
+        print(f"Core plugins: {len(CORE_PLUGIN_IDS)} required entries enabled")
+    except RuntimeError as error:
+        failures.append(str(error))
+
+    try:
+        geometry = parse_json(["omarchy-shell", "shell", "debugBarGeometry"])
+        geometry_ids = {entry.get("id") for entry in geometry if isinstance(entry, dict)}
+        for plugin_id in sorted(CORE_BAR_IDS):
+            if plugin_id not in geometry_ids:
+                failures.append(f"bar geometry has no registered slot for {plugin_id}")
+        print(f"Bar geometry: {len(geometry)} live slot records")
+    except RuntimeError as error:
+        failures.append(str(error))
+
+    try:
+        monitors = parse_json(["hyprctl", "monitors", "-j"])
+        layers_code, layers = run(["hyprctl", "layers"])
+        if layers_code != 0:
+            failures.append(f"hyprctl layers failed:\n{layers}")
+        else:
+            failures.extend(check_layers(monitors, layers))
+        focused = [str(entry.get("name")) for entry in monitors if entry.get("focused")]
+        print(f"Layer surfaces: {len(monitors)} monitors checked; focused={focused or ['unknown']}")
+    except RuntimeError as error:
+        failures.append(str(error))
+
+    if failures:
+        print("P0 smoke: FAILED", file=sys.stderr)
+        for failure in failures:
+            print(f"  - {failure}", file=sys.stderr)
+        return 1
+    print("P0 smoke: PASS")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

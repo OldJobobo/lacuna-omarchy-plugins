@@ -8,6 +8,9 @@ Item {
   property bool sidebarCollapsed: false
   property bool sidebarCornerPieces: true
   property string sidebarDefaultMode: "off"
+  property string sidebarMonitorPolicy: "auto"
+  property var sidebarMonitorNames: []
+  property var sidebarMonitorOptions: []
   property bool compact: false
   property string barSizeMode: "full"
   property bool desktopClockEnabled: false
@@ -1035,6 +1038,21 @@ Item {
     if (root.sidebarDefaultMode === "rail") return "Return to the icon rail after actions and shell restart"
     if (root.sidebarDefaultMode === "full") return "Return to the full sidebar after actions and shell restart"
     return "Close the sidebar after actions and shell restart"
+  }
+
+  function sidebarMonitorPolicyName() {
+    if (root.sidebarMonitorPolicy === "pinned") return "Pinned"
+    if (root.sidebarMonitorPolicy === "all") return "All"
+    return "Auto"
+  }
+
+  function sidebarMonitorPolicyHint() {
+    if (root.sidebarMonitorPolicy === "pinned") {
+      var count = Array.isArray(root.sidebarMonitorNames) ? root.sidebarMonitorNames.length : 0
+      return count > 0 ? "Keep the sidebar on " + count + " selected output" + (count === 1 ? "" : "s") : "Choose one or more outputs below"
+    }
+    if (root.sidebarMonitorPolicy === "all") return "Show the sidebar and frame on every live output"
+    return "Follow the focused output, as Lacuna does today"
   }
 
   function itemsFor(view) {

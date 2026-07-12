@@ -23,6 +23,7 @@
         { "id": "lacuna.weather" },
         { "id": "lacuna.system-update" },
         { "id": "lacuna.notifications" },
+        { "id": "lacuna.reminders" },
         { "id": "lacuna.nightlight" },
         { "id": "lacuna.idle-inhibitor" },
         { "id": "lacuna.screen-recording" }
@@ -60,6 +61,7 @@
     { "id": "lacuna.nightlight" },
     { "id": "lacuna.idle-inhibitor" },
     { "id": "lacuna.screen-recording" },
+    { "id": "lacuna.reminders" },
     { "id": "lacuna.voxtype" }
   ]
 }

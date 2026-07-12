@@ -1,6 +1,29 @@
 {
   "version": 1,
   "designStyle": "carbon",
+  "designStyles": {
+    "lacuna": {
+      "bar": {
+        "centerAnchor": "lacuna.clock",
+        "layout": {
+          "left": ["lacuna.menu-button"],
+          "center": [
+            {
+              "id": "lacuna.clock",
+              "futureMetadata": {
+                "role": "time",
+                "weights": [1, 2, 3]
+              }
+            }
+          ],
+          "right": []
+        },
+        "futurePresetField": true
+      }
+    },
+    "omarchy": {},
+    "material": {}
+  },
   "colorProfile": "semantic",
   "compact": false,
   "barSizeMode": "theme",
@@ -62,7 +85,9 @@
     "defaultMode": "rail",
     "collapsed": true,
     "exclusive": false,
-    "cornerPieces": false
+    "cornerPieces": false,
+    "monitorPolicy": "pinned",
+    "monitorNames": ["DP-1", "DP-2"]
   },
     "backgroundEffects": {
         "enabled": true,

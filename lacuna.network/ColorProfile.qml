@@ -12,9 +12,10 @@ Item {
   property var palette: ({})
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
+  readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")
   readonly property string settingsPath: configHome + "/omarchy/lacuna/settings.json"
-  readonly property string colorsPath: configHome + "/omarchy/current/theme/colors.toml"
-  readonly property string themeNamePath: configHome + "/omarchy/current/theme.name"
+  readonly property string colorsPath: stateHome + "/omarchy/current/theme/colors.toml"
+  readonly property string themeNamePath: stateHome + "/omarchy/current/theme.name"
   readonly property string profile: normalizeProfile(widgetSetting("colorProfile", settingsProfile))
   // Design-language color roles (docs/lacuna-design-system/01-color.md) for the
   // bar-widget layer. foreground is the 'ink' role; urgent/warning are status
@@ -45,14 +46,32 @@ Item {
   function roleKey(roleName) {
     var map = {
       menu: "accent",
-      codex: "color6",
-      claude: "color13",
-      script: "color14",
-      density: "color5",
-      disk: "color12",
-      memory: "color10",
-      cpu: "color11",
-      temperature: "color9"
+      clock: "accent",
+      codex: "cyan",
+      claude: "magenta",
+      script: "bright_cyan",
+      density: "blue",
+      disk: "blue",
+      memory: "green",
+      cpu: "yellow",
+      temperature: "red",
+      audio: "cyan",
+      bluetooth: "blue",
+      network: "green",
+      power: "yellow",
+      notifications: "magenta",
+      reminders: "orange",
+      nightlight: "yellow",
+      idle: "bright_cyan",
+      recording: "red",
+      dictation: "cyan",
+      weather: "blue",
+      theme: "magenta",
+      wallpaper: "blue",
+      tray: "cyan",
+      mpris: "magenta",
+      workspaces: "accent",
+      occupied: "green"
     }
     return map[roleName] || roleName || "foreground"
   }
@@ -65,7 +84,8 @@ Item {
   function statusColor(status, roleName) {
     if (status === "critical" || status === "hot" || status === "alert" || status === "over") return urgent
     if (status === "warning" || status === "warm" || status === "low") return warning
-    if (status === "active" || status === "on") return accent
+    if (status === "active" || status === "on")
+      return profile === "colorful" ? roleColor(roleName || role, accent) : accent
     return roleColor(roleName || role, foreground)
   }
 
@@ -76,6 +96,19 @@ Item {
       var match = lines[i].match(/^\s*([A-Za-z0-9_-]+)\s*=\s*["']?([^"'\s]+)["']?/)
       if (match) next[match[1]] = match[2].trim()
     }
+    // Quattro exposes named palette keys. Keep aliases for older role maps and
+    // third-party Lacuna widgets while making the named palette authoritative.
+    if (!next.background && next.bg) next.background = next.bg
+    if (!next.foreground && next.fg) next.foreground = next.fg
+    if (!next.color5 && next.magenta) next.color5 = next.magenta
+    if (!next.color6 && next.cyan) next.color6 = next.cyan
+    if (!next.color9 && next.red) next.color9 = next.red
+    if (!next.color10 && next.green) next.color10 = next.green
+    if (!next.color11 && next.yellow) next.color11 = next.yellow
+    if (!next.color12 && next.blue) next.color12 = next.blue
+    if (!next.color13 && next.magenta) next.color13 = next.magenta
+    if (!next.color14 && next.cyan) next.color14 = next.cyan
+    if (!next.color15 && next.bright_fg) next.color15 = next.bright_fg
     palette = next
   }
 

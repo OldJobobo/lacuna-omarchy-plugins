@@ -179,7 +179,51 @@ def clamped_popup_x(
     return round(max(margin, min(point_x, window_width - implicit_width - margin)))
 
 
+def interpolated_flyout_geometry(
+    *,
+    progress: float,
+    from_y: float,
+    from_width: float,
+    from_height: float,
+    from_connector_width: float,
+    to_y: float,
+    to_width: float,
+    to_height: float,
+    to_connector_width: float,
+) -> dict[str, float]:
+    p = max(0.0, min(1.0, progress))
+    blend = lambda start, end: start + (end - start) * p
+    return {
+        "y": blend(from_y, to_y),
+        "width": blend(from_width, to_width),
+        "height": blend(from_height, to_height),
+        "connectorWidth": blend(from_connector_width, to_connector_width),
+    }
+
+
 class QmlGeometryTests(unittest.TestCase):
+    def test_panel_host_switch_geometry_uses_one_interpolated_set(self):
+        host = read("lacuna.menu/menu/LacunaPanelHost.qml")
+        self.assertIn("property bool geometrySwitchActive: false", host)
+        self.assertIn("function captureEffectiveGeometryForSwitch()", host)
+        self.assertIn("readonly property real effectiveFlyoutY: geometrySwitchActive ? interpolate(fromFlyoutY, flyoutY)", host)
+        self.assertIn("readonly property real flyoutMaskWidth: flyoutRenderable ? flyoutCurrentWidth : 0", host)
+
+        start = interpolated_flyout_geometry(
+            progress=0, from_y=80, from_width=560, from_height=620, from_connector_width=18,
+            to_y=160, to_width=420, to_height=440, to_connector_width=0,
+        )
+        middle = interpolated_flyout_geometry(
+            progress=0.5, from_y=80, from_width=560, from_height=620, from_connector_width=18,
+            to_y=160, to_width=420, to_height=440, to_connector_width=0,
+        )
+        end = interpolated_flyout_geometry(
+            progress=1, from_y=80, from_width=560, from_height=620, from_connector_width=18,
+            to_y=160, to_width=420, to_height=440, to_connector_width=0,
+        )
+        self.assertEqual(start, {"y": 80, "width": 560, "height": 620, "connectorWidth": 18})
+        self.assertEqual(middle, {"y": 120, "width": 490, "height": 530, "connectorWidth": 9})
+        self.assertEqual(end, {"y": 160, "width": 420, "height": 440, "connectorWidth": 0})
     def test_frame_geometry_never_paints_under_owning_bar_edge(self):
         frame = read("lacuna.bar/LacunaFrameWindow.qml")
         self.assertIn("readonly property real outerY: topBar ? Math.max(0, barSize) : 0", frame)
@@ -263,6 +307,32 @@ class QmlGeometryTests(unittest.TestCase):
         self.assertEqual(framed["bleed"], 26)
         self.assertEqual(framed["x"], 222)
         self.assertEqual(framed["y"], 6)
+
+    def test_multi_monitor_matrix_keeps_sidebar_occlusion_on_selected_output(self):
+        outputs = [
+            {"name": "DP-1", "width": 2560, "height": 1440, "transform": 0},
+            {"name": "DP-2", "width": 1920, "height": 1080, "transform": 0},
+            {"name": "DP-3", "width": 2560, "height": 1440, "transform": 1},
+        ]
+
+        for focused_name in ("DP-1", "DP-3"):
+            for output in outputs:
+                selected = output["name"] == focused_name
+                geometry = content_rect(
+                    screen_width=output["width"],
+                    screen_height=output["height"],
+                    frame_enabled=True,
+                    position="top",
+                    bar_size=32,
+                    thickness=8,
+                    radius=14,
+                    sidebar_on_left=310 if selected else 0,
+                )
+
+                self.assertTrue(geometry["framed"], output["name"])
+                self.assertEqual(310 if selected else 8, geometry["innerX"], output["name"])
+                self.assertGreater(geometry["innerWidth"], 0, output["name"])
+                self.assertGreater(geometry["innerHeight"], 0, output["name"])
 
     def test_frame_border_attachment_gap_only_when_flyout_attached_and_renderable(self):
         border = read("lacuna.bar/LacunaFrameBorderWindow.qml")

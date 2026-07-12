@@ -41,10 +41,11 @@ Item {
 
     return "<b>" + htmlEscape(identity) + "</b><br/>State: <font color='" + stateColor + "'>" + state + "</font><br/>Track: " + htmlEscape(label) + "<br/><br/>Left click: play/pause<br/>Right click: next"
   }
+  readonly property bool shown: cssClass !== "hidden" && displayText.length > 0 && (!vertical || !hideWhenVertical)
 
-  visible: cssClass !== "hidden" && displayText.length > 0 && (!vertical || !hideWhenVertical)
-  implicitWidth: visible ? button.implicitWidth : 0
-  implicitHeight: visible ? button.implicitHeight : 0
+  visible: shown
+  implicitWidth: shown ? button.implicitWidth : 0
+  implicitHeight: shown ? button.implicitHeight : 0
 
   function setting(name, fallback) {
     var value = settings ? settings[name] : undefined

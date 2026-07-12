@@ -8,7 +8,8 @@ LacunaRect {
 
   property alias icon: iconLabel.text
   property string iconSource: ""
-  property string accessibleName: ""
+  property string accessibleName: icon !== "" ? icon : "Button"
+  property string accessibleDescription: ""
   property color foreground: "#d8dee9"
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
   property color accent: "#88c0d0"
@@ -32,22 +33,36 @@ LacunaRect {
   radius: buttonRadius
   clip: true
   color: growsOnHover ? Qt.rgba(hoverAccent.r, hoverAccent.g, hoverAccent.b, stateLayer.reveal * 0.16) : "transparent"
-  border.width: activeFocus ? 1 : (growsOnHover && stateLayer.reveal > 0 ? 1 : 0)
-  border.color: Qt.rgba(hoverAccent.r, hoverAccent.g, hoverAccent.b, activeFocus ? 0.72 : 0.34)
+  border.width: activeFocus || (growsOnHover && stateLayer.reveal > 0) ? 1 : 0
+  border.color: activeFocus ? hoverAccent : Qt.rgba(hoverAccent.r, hoverAccent.g, hoverAccent.b, 0.34)
   y: growsOnHover ? -stateLayer.reveal * 2 : 0
   scale: visualScale
   transformOrigin: Item.Center
   activeFocusOnTab: !disabled
-  Accessible.role: Accessible.Button
-  Accessible.name: accessibleName !== "" ? accessibleName : iconLabel.text
-  Accessible.description: disabled ? "Unavailable" : ""
 
-  Keys.onPressed: function(event) {
-    if (disabled) return
-    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-      root.triggered()
-      event.accepted = true
-    }
+  Accessible.role: Accessible.Button
+  Accessible.name: accessibleName
+  Accessible.description: accessibleDescription
+  Accessible.focusable: !disabled
+  Accessible.onPressAction: root.activate()
+
+  function activate() {
+    if (!disabled) triggered()
+  }
+
+  Keys.onReturnPressed: function(event) {
+    root.activate()
+    event.accepted = true
+  }
+
+  Keys.onEnterPressed: function(event) {
+    root.activate()
+    event.accepted = true
+  }
+
+  Keys.onSpacePressed: function(event) {
+    root.activate()
+    event.accepted = true
   }
 
   Behavior on y {
@@ -106,7 +121,7 @@ LacunaRect {
     pressOpacity: root.pressOpacity
     onTriggered: {
       root.forceActiveFocus()
-      root.triggered()
+      root.activate()
     }
     onSecondaryClicked: root.secondaryTriggered()
   }

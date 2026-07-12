@@ -280,6 +280,14 @@ Item {
     return root.registry.sidebarDefaultModeName ? root.registry.sidebarDefaultModeName() : "Off"
   }
 
+  function sidebarMonitorPolicyName() {
+    return root.registry.sidebarMonitorPolicyName ? root.registry.sidebarMonitorPolicyName() : "Auto"
+  }
+
+  function sidebarMonitorPolicyHint() {
+    return root.registry.sidebarMonitorPolicyHint ? root.registry.sidebarMonitorPolicyHint() : "Follow the focused output"
+  }
+
   function densityName() {
     if (root.registry.barSizeMode === "theme") return "Theme"
     return root.registry.barSizeMode === "compact" ? "Compact" : "Full"
@@ -358,7 +366,7 @@ Item {
     }
 
     if (sectionId === "layout") {
-      return [
+      var layoutRows = [
         section("Sidebar", "Keep launcher behavior separate from Lacuna settings.", "lacuna"),
         row(root.registry.compact ? "density-compact" : "density-normal", "Lacuna Size", barSizeModeHint(), barSizeModeName(), "lacuna", "", "segments", false, [
           { value: "theme", label: "Theme" },
@@ -371,12 +379,33 @@ Item {
           { value: "rail", label: "Rail" }
         ], root.registry.sidebarDefaultMode, "set-sidebar-default-"),
         row("sidebar-overlay", "Window Mode", root.registry.sidebarExclusive ? "Float over windows" : "Reserve screen space", sidebarModeName(), "lacuna", "toggle-sidebar-mode", "toggle", root.registry.sidebarExclusive),
+        row("monitor", "Sidebar Monitors", sidebarMonitorPolicyHint(), sidebarMonitorPolicyName(), "lacuna", "", "segments", false, [
+          { value: "auto", label: "Auto" },
+          { value: "pinned", label: "Pinned" },
+          { value: "all", label: "All" }
+        ], root.registry.sidebarMonitorPolicy, "set-sidebar-monitor-policy-")
+      ]
+
+      if (root.registry.sidebarMonitorPolicy === "pinned") {
+        layoutRows.push(section("Pinned Outputs", "Select one or more live outputs for the sidebar and frame.", "lacuna"))
+        var monitorOptions = root.registry.sidebarMonitorOptions || []
+        for (var monitorIndex = 0; monitorIndex < monitorOptions.length; monitorIndex++) {
+          var monitor = monitorOptions[monitorIndex]
+          var monitorName = String(monitor.name || monitor.label || "")
+          if (monitorName === "") continue
+          var monitorChecked = monitor.checked === true
+          layoutRows.push(row("monitor", monitorName, monitorChecked ? "Pinned output" : "Available output", monitorChecked ? "On" : "Off", "lacuna", "toggle-sidebar-monitor-" + monitorName, "toggle", monitorChecked))
+        }
+      }
+
+      layoutRows.push(
         section("Settings Link", "Choose how Lacuna opens the separate Omarchy shell settings surface.", "lacuna"),
         row("settings", "Omarchy Settings Link", root.registry.shellSettingsSurfaceHint(), root.registry.shellSettingsSurfaceName(), "lacuna", "", "segments", false, [
           { value: "flyout", label: "Flyout" },
           { value: "window", label: "Window" }
         ], root.registry.shellSettingsSurface, "set-shell-settings-surface-")
-      ]
+      )
+      return layoutRows
     }
 
     if (sectionId === "media-player") {
@@ -495,10 +524,6 @@ Item {
   clip: true
   focus: open
   Keys.onEscapePressed: root.closeRequested()
-
-  Behavior on opacity {
-    LacunaAnim { motion: "fast" }
-  }
 
   Timer {
     id: controlResetTimer

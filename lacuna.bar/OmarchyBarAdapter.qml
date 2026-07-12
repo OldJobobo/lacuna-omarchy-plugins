@@ -9,6 +9,7 @@ Item {
   property var shell: null
   property var manifest: null
   property var pluginRegistry: null
+  property var menuToggleHandler: null
   readonly property var barItem: omarchyBar
 
   function debugBarGeometry() {
@@ -27,5 +28,6 @@ Item {
     barConfig: root.barConfig
     shell: root.shell
     manifest: root.manifest
+    menuToggleHandler: root.menuToggleHandler
   }
 }

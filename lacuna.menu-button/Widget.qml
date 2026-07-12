@@ -45,6 +45,7 @@ Item {
   }
 
   function openMenu() {
+    if (bar && typeof bar.activateInteraction === "function") bar.activateInteraction(root, moduleName)
     if (bar && bar.lacunaFrameHost === true && typeof bar.toggleMenu === "function") {
       bar.toggleMenu("{}")
       return

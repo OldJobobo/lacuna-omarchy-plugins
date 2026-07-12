@@ -3,6 +3,7 @@ import QtQuick
 import qs.Commons
 import "../lacuna.menu/menu"
 import "../lacuna.menu/services"
+import "ScreenModel.js" as ScreenModel
 
 Item {
   id: root
@@ -61,6 +62,7 @@ Item {
     id: "lacuna.menu",
     __sourceDir: lacunaMenuSourceDir
   })
+  readonly property var validBarScreens: ScreenModel.validScreens(Quickshell.screens)
 
   function resolveLacunaState() {
     if (root.shell && typeof root.shell.ensureService === "function") {
@@ -97,8 +99,24 @@ Item {
   }
 
   function hostedSidebarOccupiesEdge(edge, screen) {
-    if (!hostedSidebarVisible || hostedMenu.sidebarScreen !== screen) return false
+    if (!hostedSidebarVisibleOnScreen(screen)) return false
     return (edge === "left" && hostedSidebarOnLeft) || (edge === "right" && hostedSidebarOnRight)
+  }
+
+  function hostedSidebarVisibleOnScreen(screen) {
+    if (!hostedSidebarVisible) return false
+    if (hostedMenu && typeof hostedMenu.sidebarVisibleOnScreen === "function") {
+      return hostedMenu.sidebarVisibleOnScreen(screen)
+    }
+    return hostedMenu.sidebarScreen === screen
+  }
+
+  function hostedFlyoutVisibleOnScreen(screen) {
+    if (!hostedSidebarVisibleOnScreen(screen)) return false
+    if (hostedMenu && typeof hostedMenu.frameBorderAttachedFlyoutVisibleOnScreen === "function") {
+      return hostedMenu.frameBorderAttachedFlyoutVisibleOnScreen(screen)
+    }
+    return hostedMenu.frameBorderAttachedFlyoutVisible === true
   }
 
   function lacunaFrameContentRect(screen) {
@@ -109,7 +127,7 @@ Item {
     var bottomInset = root.position === "bottom" ? Math.max(0, root.barSize) : t
     var leftInset = root.position === "left" ? Math.max(0, root.barSize) : t
     var rightInset = root.position === "right" ? Math.max(0, root.barSize) : t
-    var sidebarOnThisScreen = root.hostedSidebarVisible && hostedMenu.sidebarScreen === screen
+    var sidebarOnThisScreen = root.hostedSidebarVisibleOnScreen(screen)
     var leftOcclusion = sidebarOnThisScreen && !hostedMenu.panelOnRight ? root.hostedSidebarFrameOcclusionWidth : 0
     var rightOcclusion = sidebarOnThisScreen && hostedMenu.panelOnRight ? root.hostedSidebarFrameOcclusionWidth : 0
     var x = Math.max(0, leftOcclusion > 0 ? leftOcclusion : leftInset)
@@ -169,6 +187,17 @@ Item {
     return true
   }
 
+  function contextualMenuPayload(payloadJson, popupContext) {
+    var payload = {}
+    try {
+      var parsed = JSON.parse(String(payloadJson || "{}"))
+      if (parsed && typeof parsed === "object") payload = parsed
+    } catch (e) {
+    }
+    payload.popupContext = popupContext || ({})
+    return JSON.stringify(payload)
+  }
+
   Theme {
     id: barTheme
   }
@@ -178,7 +207,7 @@ Item {
   // before the bar (and the hosted menu below) so the bar and sidebar
   // render above the frame paint.
   Variants {
-    model: Quickshell.screens
+    model: root.validBarScreens
 
     LacunaFrameWindow {
       required property var modelData
@@ -194,15 +223,15 @@ Item {
       shadowEnabled: root.frameShadow
       shadowOffsetX: root.frameShadowOffsetX
       shadowOffsetY: root.frameShadowOffsetY
-      leftEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && !hostedMenu.panelOnRight
-      rightEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && hostedMenu.panelOnRight
+      leftEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && !hostedMenu.panelOnRight
+      rightEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && hostedMenu.panelOnRight
       leftOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
       rightOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
     }
   }
 
   Variants {
-    model: Quickshell.screens
+    model: root.validBarScreens
 
     LacunaFrameBorderWindow {
       required property var modelData
@@ -215,13 +244,13 @@ Item {
       frameRadius: root.frameRadius
       cornerPieces: root.cornerPieces
       borderColor: barTheme.seam
-      leftEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && !hostedMenu.panelOnRight
-      rightEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && hostedMenu.panelOnRight
+      leftEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && !hostedMenu.panelOnRight
+      rightEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && hostedMenu.panelOnRight
       leftOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
       rightOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
-      attachedFlyoutVisible: hostedMenu.sidebarScreen === modelData && hostedMenu.frameBorderAttachedFlyoutVisible
-      attachedFlyoutY: hostedMenu.frameBorderAttachedFlyoutY
-      attachedFlyoutHeight: hostedMenu.frameBorderAttachedFlyoutHeight
+      attachedFlyoutVisible: root.hostedFlyoutVisibleOnScreen(modelData)
+      attachedFlyoutY: hostedMenu.frameBorderAttachedFlyoutYFor ? hostedMenu.frameBorderAttachedFlyoutYFor(modelData) : hostedMenu.frameBorderAttachedFlyoutY
+      attachedFlyoutHeight: hostedMenu.frameBorderAttachedFlyoutHeightFor ? hostedMenu.frameBorderAttachedFlyoutHeightFor(modelData) : hostedMenu.frameBorderAttachedFlyoutHeight
     }
   }
 
@@ -234,6 +263,9 @@ Item {
     pluginRegistry: root.pluginRegistry
     barWidgetRegistry: root.barWidgetRegistry
     barConfig: root.barConfig
+    menuToggleHandler: function(payloadJson, popupContext) {
+      return root.toggleMenu(root.contextualMenuPayload(payloadJson, popupContext))
+    }
   }
 
   // The full-frame paint surface is intentionally exclusion-ignored because it

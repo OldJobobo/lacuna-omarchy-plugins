@@ -12,6 +12,7 @@ These mirror common Omarchy/system surfaces with Lacuna styling:
 - `lacuna.audio`
 - `lacuna.bluetooth`
 - `lacuna.indicators`
+- `lacuna.reminders`
 - `lacuna.network`
 - `lacuna.notifications`
 - `lacuna.power`

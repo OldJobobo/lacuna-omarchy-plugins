@@ -28,8 +28,8 @@ Item {
   readonly property string temperatureCommand: "for f in /sys/class/hwmon/hwmon*/temp*_input /sys/class/thermal/thermal_zone*/temp; do [ -r \"$f\" ] || continue; v=$(cat \"$f\" 2>/dev/null) || continue; case \"$v\" in ''|*[!0-9]*) continue;; esac; [ \"$v\" -gt 0 ] && { printf '%s\\n' \"$v\"; exit 0; }; done; exit 1"
 
   visible: temperatureAvailable
-  implicitWidth: visible ? button.implicitWidth : 0
-  implicitHeight: visible ? button.implicitHeight : 0
+  implicitWidth: temperatureAvailable ? button.implicitWidth : 0
+  implicitHeight: temperatureAvailable ? button.implicitHeight : 0
   readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {

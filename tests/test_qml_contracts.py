@@ -133,16 +133,16 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property bool frameBorderAttachedFlyoutVisible", menu_window)
         self.assertIn("readonly property bool frameBorderAttachedConnectorVisible", menu_window)
         self.assertIn("readonly property real frameBorderAttachedFlyoutY", menu_window)
-        self.assertIn("frameBorderWindowY + (frameBorderAttachedConnectorVisible ? panelHost.connectorMaskY : panelHost.flyoutMaskY)", menu_window)
-        self.assertIn("frameBorderAttachedConnectorVisible ? panelHost.connectorMaskHeight : panelHost.flyoutMaskHeight", menu_window)
+        self.assertIn("frameBorderAttachedFlyoutYFor(sidebarScreen)", menu_window)
+        self.assertIn("frameBorderAttachedFlyoutHeightFor(sidebarScreen)", menu_window)
         self.assertIn("function setFrameBorder(enabled)", menu_window)
         self.assertIn('if (entry.action === "toggle-frame-border")', menu_window)
         self.assertIn("frameBorder: root.frameBorder", menu_window)
         self.assertIn('borderEnabled: root.lacunaEnabled && !root.barOwnsLacunaFrame && root.frameBorder && root.frameMode !== "off"', menu_window)
-        self.assertIn("borderColor: menuTheme.seam", menu_window)
+        self.assertIn("borderColor: root.menuThemeRef.seam", menu_window)
         self.assertIn("LacunaPanelBorder", menu_window)
         self.assertIn("active: root.lacunaEnabled && root.frameBorder", menu_window)
-        self.assertIn("flyoutVisible: panelController.flyoutRenderable && panelController.flyoutProgress > 0.001", menu_window)
+        self.assertIn("flyoutVisible: root.flyoutVisibleOnScreen(modelData) && root.menuPanelControllerRef.flyoutProgress > 0.001", menu_window)
         self.assertIn("readonly property bool frameBorder: frameSettings.border === true", bar)
         self.assertIn("LacunaFrameBorderWindow", bar)
         self.assertIn("active: root.frameEnabled && root.frameBorder", bar)
@@ -172,7 +172,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property real attachmentGapBottom: Math.min(borderBottom - borderRadius, attachedFlyoutY + attachedFlyoutHeight + borderInset)", border_window)
         self.assertIn("readonly property bool leftAttachmentGapVisible", border_window)
         self.assertIn("readonly property real leftVerticalUpperStartY", border_window)
-        self.assertIn("attachedFlyoutVisible: hostedMenu.sidebarScreen === modelData && hostedMenu.frameBorderAttachedFlyoutVisible", bar)
+        self.assertIn("attachedFlyoutVisible: root.hostedFlyoutVisibleOnScreen(modelData)", bar)
         self.assertIn("root.borderRadius * (1 - root.curveKappa)", border_window)
         self.assertIn("readonly property real borderInset: Math.max(0, borderWidth / 2)", overlay)
         self.assertIn("readonly property real strokeRight: borderRight - borderInset", overlay)
@@ -324,6 +324,10 @@ class QmlContractTests(unittest.TestCase):
         window = read("lacuna.menu/menu/MenuWindow.qml")
 
         self.assertIn("connectorRenderable ? effectiveFlyoutHeight + effectiveConnectorWidth * 2 : 0", host)
+        self.assertIn("property bool geometrySwitchActive: false", host)
+        self.assertIn("property real geometrySwitchProgress: 1", host)
+        self.assertIn("function captureEffectiveGeometryForSwitch()", host)
+        self.assertIn("geometrySwitchActive ? interpolate(fromFlyoutWidth, flyoutWidth)", host)
         self.assertIn("readonly property real flyoutCurrentWidth: Math.max(0, effectiveFlyoutWidth * clampedFlyoutProgress)", host)
         self.assertIn("readonly property real flyoutX: effectiveAnchorRight ? 0 : panelWidth + effectiveConnectorWidth", host)
         self.assertIn("property int flyoutLaneWidth: lacunaEnabled && panelController.menuRenderable ? maxFlyoutLaneWidth + panelShadowOutset : 0", window)
@@ -361,11 +365,24 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("id: bottomFrameJoinShape", surface)
         self.assertIn("LacunaPanelUnifiedSurface", window)
         self.assertLess(window.index("LacunaPanelUnifiedSurface"), window.index("MenuSurface"))
-        self.assertIn("shadowEnabled: root.lacunaEnabled && root.frameShadow && (root.sidebarSurfaceVisible || panelController.flyoutRenderable)", window)
+        self.assertIn("id: panelUnifiedSurface\n\n      anchors.fill: parent\n      z: 0", window)
+        self.assertIn("id: surface\n\n      // Explicitly keep the durable sidebar", window)
+        self.assertIn("z: 10\n      visible: root.sidebarSurfaceVisible", window)
+        self.assertIn("id: flyoutConnector\n\n      z: 20", window)
+        self.assertIn("id: attachedFlyout\n\n      z: 20", window)
+        visible_sidebar = window[window.index("MenuSurface", window.index("LacunaPanelUnifiedSurface") + len("LacunaPanelUnifiedSurface")):]
+        self.assertIn("backgroundVisible: true", visible_sidebar)
+        self.assertIn("visible sidebar paint independent of the flattened", visible_sidebar)
+        self.assertIn("readonly property var menuRegistryRef: registry", window)
+        self.assertIn("readonly property var menuDesignTokensRef: designTokens", window)
+        self.assertIn("registry: root.menuRegistryRef", window)
+        self.assertIn("designTokens: root.menuDesignTokensRef", window)
+        self.assertIn("sidebarVisible: false", window)
+        self.assertIn("shadowEnabled: root.lacunaEnabled && root.frameShadow && root.menuPanelControllerRef.flyoutRenderable", window)
         self.assertIn("shadowBlurMax: root.panelShadowBlurMax", window)
         self.assertIn('readonly property bool topBarPanelShadowVisible: lacunaEnabled && !barOwnsLacunaFrame && frameShadow && frameMode === "off" && root.topBar', window)
         self.assertIn("readonly property int topBarPanelShadowVisualWidth", window)
-        self.assertIn("visualWidth: Math.max(root.frameOverlayWidth, root.topBarPanelShadowVisualWidth)", window)
+        self.assertIn("visualWidth: Math.max(root.frameOverlayWidthFor(modelData), root.topBarPanelShadowVisualWidthFor(modelData))", window)
         self.assertIn('keepMapped: root.lacunaEnabled && (root.frameMode !== "off" || root.topBarPanelShadowVisible)', window)
         self.assertIn("topBarShadowEnabled: root.topBarPanelShadowVisible", window)
         self.assertIn("topBarShadowX: root.topBarPanelShadowX", window)
@@ -390,9 +407,33 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("LacunaPanelConnector {", unified)
         self.assertIn("LacunaAttachedFlyout {", unified)
         self.assertIn("property real contentProgress: Math.max(0, Math.min(1, flyoutProgress))", unified)
-        self.assertIn("readonly property real contentProgress: Math.max(0, Math.min(1, flyoutProgress))", read("lacuna.menu/services/PanelController.qml"))
+        controller = read("lacuna.menu/services/PanelController.qml")
+        self.assertIn("readonly property real flyoutContentThreshold: 0.55", controller)
+        self.assertIn("(flyoutProgress - flyoutContentThreshold) / (1 - flyoutContentThreshold)", controller)
+        self.assertIn("readonly property real menuToFlyoutThreshold: 0.65", controller)
+        self.assertIn("property real contentSwitchProgress: 1", controller)
+        self.assertIn("property int contentSwitchRevision: -1", controller)
+        self.assertNotIn("contentSwitchTimer", controller)
+        self.assertIn("duration: root.motionTokens.quick", controller)
+        self.assertIn("easing.type: Easing.OutCubic", controller)
+        self.assertIn("geometrySwitchProgress: root.menuPanelControllerRef.contentSwitchProgress", window)
+        self.assertIn("contentProgress: root.menuPanelControllerRef.contentProgress", window)
+        self.assertIn("opacity: root.flyoutContentOpacity(\"settings\")", window)
+        self.assertIn("opacity: root.flyoutContentOpacity(\"shellSettings\")", window)
+        self.assertIn("opacity: root.flyoutContentOpacity(\"appPicker\")", window)
+        self.assertIn("opacity: root.flyoutContentOpacity(\"mediaPlayer\")", window)
+        self.assertIn("return panelController.contentSwitchOpacity(kind)", window)
+        self.assertIn("applies contentProgress once", controller)
+        self.assertIn("property string retainedFlyout: \"\"", controller)
+        self.assertIn("property string closingFlyout: \"\"", controller)
+        self.assertIn("function contentSwitchOpacity(id)", controller)
+        self.assertIn("if (kind === retainedFlyout) opacity +=", controller)
+        self.assertIn("if (kind === activeFlyout) opacity += contentSwitchProgress", controller)
+        self.assertNotIn("deferredMenuOpenTimer", controller)
+        self.assertIn("readonly property int flyoutActivationFocusGuardMs: 900", window)
+        self.assertIn("interval: root.flyoutActivationFocusGuardMs", window)
         self.assertIn("progress: root.flyoutProgress", unified)
-        self.assertIn("progress: panelController.flyoutProgress", window)
+        self.assertIn("progress: root.menuPanelControllerRef.flyoutProgress", window)
         self.assertIn("backgroundVisible: true", unified)
         self.assertIn("y: root.barBottomY", overlay)
         self.assertIn("readonly property color solidFrameColor", overlay)
@@ -491,6 +532,38 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("recoveredFromCorruptSettings", qml, path)
             self.assertIn("settingsBackupFileView.setText(corrupt)", qml, path)
             self.assertIn('path: root.settingsFile + ".bak"', qml, path)
+
+    def test_lacuna_settings_share_versioned_canonical_layout_contract(self):
+        state = read("lacuna.state/Service.qml")
+        menu = read("lacuna.menu/services/LacunaSettings.qml")
+        example = read_json("config/settings.example.json")
+        fixture = read_json("tests/fixtures/full-settings.json")
+
+        self.assertEqual(state, menu)
+        for qml in [state, menu]:
+            self.assertIn("settingsSchemaVersion: 1", qml)
+            self.assertIn("function migrateSettings", qml)
+            self.assertIn("function preserveUnknownJson", qml)
+            self.assertIn('monitorPolicy: "auto"', qml)
+            self.assertIn("function normalizeSidebarMonitorPolicy", qml)
+            self.assertIn("function normalizeSidebarMonitorNames", qml)
+            self.assertIn("function designStyleBar", qml)
+            self.assertIn("function saveDesignStyleBar", qml)
+            self.assertIn('if (typeof value === "string")', qml)
+            self.assertIn("return stringId === \"\" ? null : { id: stringId }", qml)
+            self.assertIn("next.version = root.settingsSchemaVersion", qml)
+
+        self.assertEqual({"lacuna": {}, "omarchy": {}, "material": {}}, example["designStyles"])
+        self.assertEqual("auto", example["sidebar"]["monitorPolicy"])
+        self.assertEqual([], example["sidebar"]["monitorNames"])
+        self.assertEqual("pinned", fixture["sidebar"]["monitorPolicy"])
+        self.assertEqual(["DP-1", "DP-2"], fixture["sidebar"]["monitorNames"])
+        self.assertEqual("lacuna.clock", fixture["designStyles"]["lacuna"]["bar"]["centerAnchor"])
+        self.assertEqual("lacuna.menu-button", fixture["designStyles"]["lacuna"]["bar"]["layout"]["left"][0])
+        self.assertEqual(
+            {"role": "time", "weights": [1, 2, 3]},
+            fixture["designStyles"]["lacuna"]["bar"]["layout"]["center"][0]["futureMetadata"],
+        )
 
     def test_curve_kappa_constant_has_single_definition(self):
         # The Bezier circular-arc kappa is defined once in LacunaGeometry and
@@ -1221,11 +1294,47 @@ class QmlContractTests(unittest.TestCase):
             'bar.shell.serviceFor("lacuna.screen-recording")',
             "recordingService.toggleRecording()",
             "recordingService.tooltip",
-            "visible: recording || showInactive",
+            "readonly property bool shown: recording || showInactive",
+            "implicitWidth: shown ? button.implicitWidth : 0",
+            'command: ["pgrep", "--quiet", "-f", "^gpu-screen-recorder"]',
+            'text: "REC"',
+            "SequentialAnimation on scale",
         ]:
             self.assertIn(snippet, widget)
-        self.assertNotIn("pgrep", widget)
         self.assertNotIn("omarchy capture screenrecording", widget)
+
+    def test_lacuna_reminders_match_omarchy_indicator_workflow(self):
+        manifest = read_json("lacuna.reminders/manifest.json")
+        widget = read("lacuna.reminders/Widget.qml")
+        combined = read("lacuna.indicators/Widget.qml")
+
+        self.assertEqual(["bar-widget"], manifest["kinds"])
+        self.assertEqual("Widget.qml", manifest["entryPoints"]["barWidget"])
+        for snippet in [
+            'command: ["omarchy-reminder", "show", "--json"]',
+            'Quickshell.execDetached(["omarchy-reminder", "show"])',
+            'Quickshell.execDetached(["omarchy-reminder", "-i"])',
+            'text: root.reminderCount + " DUE"',
+        ]:
+            self.assertIn(snippet, widget)
+        self.assertIn('if (id === "Reminder") return reminderCount > 0', combined)
+        self.assertIn('command: ["omarchy-reminder", "show", "--json"]', combined)
+
+    def test_stateful_widgets_do_not_create_parent_visibility_loops(self):
+        for plugin in [
+            "lacuna.mpris",
+            "lacuna.nightlight",
+            "lacuna.reminders",
+            "lacuna.screen-recording",
+            "lacuna.script-pill",
+            "lacuna.system-update",
+            "lacuna.temperature",
+            "lacuna.voxtype",
+            "lacuna.weather",
+        ]:
+            widget = read(f"{plugin}/Widget.qml")
+            self.assertNotIn("implicitWidth: visible ?", widget, plugin)
+            self.assertNotIn("implicitHeight: visible ?", widget, plugin)
 
     def test_lacuna_tray_dispatches_status_notifier_context_menus(self):
         manifest = read_json("lacuna.tray/manifest.json")
@@ -1832,7 +1941,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.film-grain-overlay/Overlay.qml": ["root.foregroundOverlay ? WlrLayer.Overlay : WlrLayer.Bottom"],
             "lacuna.god-rays-overlay/Overlay.qml": ["root.foregroundOverlay ? WlrLayer.Overlay : WlrLayer.Bottom"],
             "lacuna.menu/menu/LacunaFrameReserveWindow.qml": ["WlrLayer.Top"],
-            "lacuna.menu/menu/LacunaPanelWindow.qml": ["exclusive ? WlrLayer.Top : WlrLayer.Overlay"],
+            "lacuna.menu/menu/LacunaPanelWindow.qml": ["WlrLayer.Overlay"],
             "lacuna.network/Panel.qml": ["WlrLayer.Overlay"],
             "lacuna.power/Panel.qml": ["WlrLayer.Overlay"],
             "lacuna.rainfall-overlay/Overlay.qml": ["root.foregroundOverlay ? WlrLayer.Overlay : WlrLayer.Bottom"],
@@ -2104,6 +2213,32 @@ class QmlContractTests(unittest.TestCase):
         profile = read("shared/qml/simple-bar/ColorProfile.qml")
         self.assertIn("readonly property color ink: foreground", profile)
 
+    def test_color_profiles_read_quattro_theme_state_and_named_hues(self):
+        profile = read("shared/qml/simple-bar/ColorProfile.qml")
+        workspaces = read("lacuna.workspaces/ColorProfile.qml")
+
+        for qml in (profile, workspaces):
+            self.assertIn('Quickshell.env("XDG_STATE_HOME")', qml)
+            self.assertIn('stateHome + "/omarchy/current/theme/colors.toml"', qml)
+            self.assertIn('stateHome + "/omarchy/current/theme.name"', qml)
+            self.assertNotIn('configHome + "/omarchy/current/theme', qml)
+            self.assertIn("if (!next.background && next.bg)", qml)
+            self.assertIn("if (!next.foreground && next.fg)", qml)
+
+        for role, hue in {
+            "codex": "cyan",
+            "claude": "magenta",
+            "memory": "green",
+            "cpu": "yellow",
+            "temperature": "red",
+            "recording": "red",
+        }.items():
+            self.assertIn(f'{role}: "{hue}"', profile)
+
+        self.assertIn('profile === "colorful" ? roleColor(roleName || role, accent) : accent', profile)
+        self.assertIn('occupied: "green"', workspaces)
+        self.assertIn('urgent: "red"', workspaces)
+
     def test_motion_uses_one_named_reveal_scale(self):
         # Phase D: a single named "reveal" scale (03-motion.md) replaces the
         # legacy + noctalia timing sets. animation* survive as same-value
@@ -2341,7 +2476,28 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property bool barOwnsLacunaFrame: hostManaged || (shell && shell.bar && shell.bar.lacunaFrameHost === true)", window)
         self.assertIn("property bool hostManaged: false", window)
         self.assertIn("if (root.hostManaged) return", window)
-        self.assertIn("readonly property int frameOverlayWidth: !lacunaEnabled || barOwnsLacunaFrame || frameMode === \"off\" ? 0", window)
+        self.assertIn("function frameOverlayWidthFor(screen)", window)
+        self.assertIn("readonly property var flyoutScreen: MonitorPolicy.chooseFlyoutScreen(Quickshell.screens, sidebarMonitorPolicy, activeMonitorName, sidebarMonitorNames)", window)
+        self.assertIn("Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.monitor", window)
+        self.assertIn("onLiveFocusedMonitorNameChanged", window)
+        self.assertIn("onTriggered: root.settledFocusedMonitorName = root.liveFocusedMonitorName", window)
+        self.assertIn('sidebarMonitorPolicy === "auto" || requestedInteractionMonitorName === ""', window)
+        self.assertIn("function flyoutVisibleOnScreen(screen)", window)
+        self.assertIn("function flyoutOpenOnScreen(screen)", window)
+        self.assertIn("function flyoutInteractiveOnScreen(screen)", window)
+        self.assertIn("function flyoutLaneWidthFor(screen)", window)
+        self.assertIn("return sidebarVisibleOnScreen(screen) ? flyoutLaneWidth : 0", window)
+        self.assertNotIn("return flyoutVisibleOnScreen(screen) ? flyoutLaneWidth : 0", window)
+        self.assertIn("flyoutOpen: root.lacunaEnabled && root.flyoutOpenOnScreen(modelData)", window)
+        self.assertIn("flyoutInteractive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)", window)
+        self.assertIn("flyoutLaneWidth: root.flyoutLaneWidthFor(modelData)", window)
+        self.assertIn("flyoutRenderable: root.lacunaEnabled && root.flyoutVisibleOnScreen(modelData)", window)
+        self.assertIn("open: root.flyoutOpenOnScreen(modelData)", window)
+        self.assertIn("interactive: root.flyoutInteractiveOnScreen(modelData)", window)
+        panel_window = read("lacuna.menu/menu/LacunaPanelWindow.qml")
+        self.assertIn("WlrLayershell.keyboardFocus: WlrKeyboardFocus.None", panel_window)
+        self.assertIn("HyprlandFocusGrab {", panel_window)
+        self.assertIn("because one of its pointer-operated flyouts is visible.\n    active: false", panel_window)
         self.assertIn('mode: root.lacunaEnabled && !root.barOwnsLacunaFrame ? root.frameMode : "off"', window)
         self.assertIn('shadowEnabled: root.lacunaEnabled && !root.barOwnsLacunaFrame && root.frameShadow && root.frameMode !== "off"', window)
         self.assertIn("readonly property bool frameReserveActive: !barOwnsLacunaFrame && lacunaEnabled", window)
@@ -2384,8 +2540,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("property bool cornerPieces: true", overlay)
         self.assertNotIn("id: surfaceShadowLayer", overlay)
         self.assertIn("LacunaPanelUnifiedSurface", window)
-        self.assertIn("flyoutRenderable: panelController.flyoutRenderable", window)
-        self.assertIn("connectorRenderable: root.sidebarSurfaceVisible && panelController.flyoutRenderable && sidebarState.cornerPieces && root.settingsConnectorWidth > 0", window)
+        self.assertIn("flyoutRenderable: root.flyoutVisibleOnScreen(modelData)", window)
+        self.assertIn("connectorRenderable: root.sidebarSurfaceVisible && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0", window)
         self.assertIn("backgroundVisible: false", window)
         self.assertIn("source: frameSource", overlay)
         self.assertNotIn("id: sidebarSilhouette", overlay)
@@ -2804,6 +2960,7 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.notifications",
             "lacuna.power",
             "lacuna.rainfall-overlay",
+            "lacuna.reminders",
             "lacuna.screen-recording",
             "lacuna.script-pill",
             "lacuna.settings-persistence",
@@ -2963,7 +3120,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("shadowEnabled: root.frameShadow", bar)
         self.assertIn("shadowOffsetX: root.frameShadowOffsetX", bar)
         self.assertIn("shadowOffsetY: root.frameShadowOffsetY", bar)
-        self.assertIn("leftEdgeOccupied: root.hostedSidebarVisible && hostedMenu.sidebarScreen === modelData && !hostedMenu.panelOnRight", bar)
+        self.assertIn("leftEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && !hostedMenu.panelOnRight", bar)
         self.assertIn("frameRadius: root.frameRadius", bar)
         self.assertIn("cornerPieces: root.cornerPieces", bar)
         self.assertIn("leftOccupiedWidth: root.hostedSidebarFrameOcclusionWidth", bar)
@@ -3115,7 +3272,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("return Math.max(360, Math.min(availableHeight, compact ? 560 : 660))", menu)
         shell_section = menu.split("function openShellSettingsSection", 1)[1].split("function requestFlyoutFocus", 1)[0]
         self.assertNotIn("sidebarState.expand()", shell_section)
-        self.assertIn("return settingsFlyoutY(panelHeight)", menu)
+        self.assertIn("return settingsFlyoutYFor(sidebarScreen, panelHeight)", menu)
         self.assertIn('surface: "flyout"', settings)
         self.assertIn('"Omarchy Settings Link"', settings_window)
         self.assertIn('"set-shell-settings-surface-"', settings_window)
@@ -3244,7 +3401,7 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("showLabels: true", qml, path)
 
         menu = read("lacuna.menu/menu/MenuWindow.qml")
-        self.assertIn("property var registryRef: registry", menu)
+        self.assertIn("property var registryRef: root.menuRegistryRef", menu)
         self.assertIn("registry: shellSettingsPanel.registryRef", menu)
         self.assertIn("onCurrentSectionChanged: root.shellSettingsSection = currentSection", menu)
 

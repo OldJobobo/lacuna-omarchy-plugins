@@ -12,9 +12,9 @@ Lacuna palette, because there is no Lacuna palette.
 
 Color enters from two theme files Omarchy maintains:
 
-- `~/.config/omarchy/current/theme/colors.toml` — the palette (`foreground`, `background`,
-  `accent`, `color1`–`color15`).
-- `~/.config/omarchy/current/theme/shell.toml` — shell-layer overrides (`menu.text`,
+- `~/.local/state/omarchy/current/theme/colors.toml` — the Quattro palette (`fg`, `bg`,
+  `accent`, and named hues such as `red`, `green`, `cyan`, and `magenta`).
+- `~/.local/state/omarchy/current/theme/shell.toml` — shell-layer overrides (`menu.text`,
   `menu.selected`, `bar.background`, …), read via `shellColor()` / `shellSurfaceColor()`.
 
 Shell overrides win where present; palette is the base; the fallback constants are the floor.
@@ -88,11 +88,15 @@ A user (or per-widget setting) selects a `colorProfile`, stored in
 
   | role | palette key | role | palette key |
   |---|---|---|---|
-  | `menu` | `accent` | `disk` | `color12` |
-  | `codex` | `color6` | `memory` | `color10` |
-  | `claude` | `color13` | `cpu` | `color11` |
-  | `script` | `color14` | `temperature` | `color9` |
-  | `density` | `color5` | | |
+  | `menu`, `clock`, `workspaces` | `accent` | `disk`, `density`, `weather`, `wallpaper` | `blue` |
+  | `codex`, `audio`, `dictation`, `tray` | `cyan` | `memory`, `network`, `occupied` | `green` |
+  | `claude`, `notifications`, `theme`, `mpris` | `magenta` | `cpu`, `power`, `nightlight` | `yellow` |
+  | `script`, `idle` | `bright_cyan` | `temperature`, `recording` | `red` |
+  | `reminders` | `orange` | `bluetooth` | `blue` |
+
+  Legacy `colorN` aliases are accepted when an older theme still supplies them, but named
+  Quattro keys are authoritative. Active/on states retain their widget role hue in colorful
+  mode; warning and urgent states still override it with their semantic status colors.
 
 `colorful` is an **opt-in affordance for status widgets**, not the default and never the menu
 chrome. The menu always obeys the unified model. Even in `colorful` mode, hues come from the

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.reminders",
+  "name": "Lacuna Reminders",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Lacuna heads-up indicator for active Omarchy reminders.",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "Widget.qml" },
+  "barWidget": {
+    "displayName": "Lacuna Reminders",
+    "description": "Shows due reminders and opens the Omarchy reminder flow.",
+    "category": "Lacuna",
+    "allowMultiple": false,
+    "defaults": {
+      "showInactive": false,
+      "interval": 5000
+    },
+    "schema": [
+      {
+        "key": "showInactive",
+        "type": "boolean",
+        "label": "Show when inactive",
+        "default": false,
+        "defaultValue": false
+      },
+      {
+        "key": "interval",
+        "type": "number",
+        "label": "Refresh interval (ms)",
+        "default": 5000,
+        "defaultValue": 5000
+      }
+    ]
+  },
+  "lacuna": {
+    "standalone": true,
+    "bundle": "standalone",
+    "requires": [],
+    "recommends": []
+  }
+}

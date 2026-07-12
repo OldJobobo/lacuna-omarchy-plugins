@@ -24,9 +24,10 @@ Item {
   readonly property bool showWhenEmpty: setting("showWhenEmpty", false) === true
   readonly property string command: script.length > 0 ? resolveCommand(script) : ""
 
-  visible: (showWhenEmpty || displayText.length > 0) && cssClass !== "hidden"
-  implicitWidth: visible ? button.implicitWidth : 0
-  implicitHeight: visible ? button.implicitHeight : 0
+  readonly property bool shown: (showWhenEmpty || displayText.length > 0) && cssClass !== "hidden"
+  visible: shown
+  implicitWidth: shown ? button.implicitWidth : 0
+  implicitHeight: shown ? button.implicitHeight : 0
   readonly property bool tooltipHovered: visible && opacity > 0 && mouseArea.containsMouse
 
   function setting(name, fallback) {

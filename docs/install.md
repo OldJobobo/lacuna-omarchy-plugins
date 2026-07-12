@@ -41,6 +41,13 @@ Preview any install without changing the system:
 ./scripts/lacuna install --profile full --dry-run
 ```
 
+The installer performs a dependency preflight before staging. A non-dry-run
+preserves the current `shell.json` and Lacuna `settings.json` under
+`~/.config/omarchy/lacuna/backups/`, stages each plugin through a temporary
+directory, and retains the previous installed copy as a hidden plugin backup.
+If validation, rescan, or shell activation fails, the staged copies and shell
+configuration are restored and the previous shell is reloaded.
+
 Stage a full install without enabling it:
 
 ```bash
@@ -56,6 +63,10 @@ Update already-installed Lacuna plugins from this checkout:
 ./scripts/lacuna update --yes
 ./scripts/lacuna update --plugin lacuna.menu,lacuna.state --yes
 ```
+
+Updates are transactional at the plugin-batch level. A failed rescan restores
+all plugins touched by that update, while the state snapshots remain available
+for manual recovery.
 
 ## Uninstall
 
@@ -92,3 +103,13 @@ Reset to the stock Omarchy bar with:
 ```bash
 omarchy plugin bar reset
 ```
+
+For a live checkout deploy during development, use the same verified workflow:
+
+```bash
+./scripts/dev deploy --all --only-changed --dry-run
+./scripts/dev deploy --all --only-changed
+```
+
+The developer deploy also keeps prior plugin copies and restores them if the
+rescan, shell restart, or installed-copy verification fails.

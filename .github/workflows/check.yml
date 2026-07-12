@@ -15,6 +15,7 @@ jobs:
         run: |
           pacman -Syu --noconfirm --needed \
             git \
+            nodejs \
             python \
             python-pytest \
             qt6-declarative \
@@ -27,5 +28,9 @@ jobs:
           path: .ci/omarchy
       - name: Configure Qt tools
         run: echo "/usr/lib/qt6/bin" >> "$GITHUB_PATH"
+      - name: Verify required runtimes
+        run: |
+          python3 --version
+          node --version
       - name: Run checks
         run: ./scripts/check.sh

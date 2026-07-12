@@ -23,7 +23,7 @@
     "allowMultiple": false,
     "defaults": {
       "showInactive": false,
-      "interval": 1500,
+      "interval": 1000,
       "colorProfile": "semantic"
     },
     "schema": [
@@ -38,8 +38,8 @@
         "key": "interval",
         "type": "number",
         "label": "Refresh interval (ms)",
-        "default": 1500,
-        "defaultValue": 1500
+        "default": 1000,
+        "defaultValue": 1000
       },
       {
         "key": "colorProfile",

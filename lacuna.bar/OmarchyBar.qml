@@ -6,6 +6,7 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
 import "BarModel.js" as BarModel
+import "ScreenModel.js" as ScreenModel
 
 Item {
   id: root
@@ -26,6 +27,8 @@ Item {
   // Manifest for the active bar option. Present for custom bars and useful for
   // diagnostics; the built-in bar does not otherwise need it.
   property var manifest: null
+  property var menuToggleHandler: null
+  readonly property bool lacunaFrameHost: true
   // Mirrors the on-disk `bar-off` flag so the user can hide the bar without
   // killing the entire shell. Wired to BarPanel.visible below; updated by the
   // FileView watcher further down.
@@ -89,6 +92,9 @@ Item {
   property bool tooltipShown: false
   property int tooltipRequest: 0
   property var activePopout: null
+  property bool editMode: false
+  property string activeInteractionScreenName: ""
+  property var activePopupContext: ({})
   property var barDragSource: null
   property var barDragTarget: null
   property bool barDragAfter: false
@@ -104,6 +110,61 @@ Item {
   property var configControls: []
   property var clickTargets: []
   property var debugModuleSlots: []
+  readonly property var validBarScreens: ScreenModel.validScreens(Quickshell.screens)
+
+  function screenName(screen) {
+    return ScreenModel.screenName(screen)
+  }
+
+  function popupContext(anchorItem, moduleId) {
+    var window = targetWindow(anchorItem)
+    var screen = window && window.screen ? window.screen : ScreenModel.fallbackScreen(validBarScreens, activeInteractionScreenName)
+    var point = { x: 0, y: 0 }
+    if (anchorItem && window && window.contentItem) {
+      try {
+        point = window.contentItem.mapFromItem(anchorItem, 0, 0)
+      } catch (e) {
+      }
+    }
+    return {
+      screenName: screenName(screen),
+      anchor: {
+        x: Math.round(point.x),
+        y: Math.round(point.y),
+        width: Math.max(0, Math.round(anchorItem ? anchorItem.width : 0)),
+        height: Math.max(0, Math.round(anchorItem ? anchorItem.height : 0))
+      },
+      barPosition: position,
+      vertical: vertical,
+      moduleId: String(moduleId || "")
+    }
+  }
+
+  function activateInteraction(anchorItem, moduleId) {
+    var context = popupContext(anchorItem, moduleId)
+    activeInteractionScreenName = context.screenName
+    activePopupContext = context
+    clearTooltip()
+    return context
+  }
+
+  function toggleMenu(payloadJson) {
+    if (typeof menuToggleHandler !== "function") return false
+    return menuToggleHandler(payloadJson || "{}", activePopupContext)
+  }
+
+  function reconcileScreens() {
+    if (ScreenModel.hasScreen(validBarScreens, activeInteractionScreenName)) return
+    if (activePopout && typeof activePopout.close === "function") activePopout.close()
+    activePopout = null
+    clearTooltip()
+    clearBarDrag()
+    var fallback = ScreenModel.fallbackScreen(validBarScreens, "")
+    activeInteractionScreenName = screenName(fallback)
+    activePopupContext = ({})
+  }
+
+  onValidBarScreensChanged: reconcileScreens()
 
   function registerClickTarget(target) {
     if (!target || clickTargets.indexOf(target) !== -1) return
@@ -164,7 +225,10 @@ Item {
         visible: slot.visible === true && slot.width > 0 && slot.height > 0,
         itemVisible: slot.activeItem.visible === true,
         itemWidth: Math.round(slot.activeItem.implicitWidth || 0),
-        itemHeight: Math.round(slot.activeItem.implicitHeight || 0)
+        itemHeight: Math.round(slot.activeItem.implicitHeight || 0),
+        recording: "recording" in slot.activeItem ? slot.activeItem.recording === true : undefined,
+        polledRecording: "polledRecording" in slot.activeItem ? slot.activeItem.polledRecording === true : undefined,
+        recordingServiceResolved: "recordingService" in slot.activeItem ? slot.activeItem.recordingService !== null : undefined
       })
     }
     return out
@@ -217,6 +281,21 @@ Item {
     barDragOffsetY = 0
   }
 
+  function enterEditMode() {
+    editMode = true
+    clearTooltip()
+  }
+
+  function exitEditMode() {
+    editMode = false
+    clearBarDrag()
+  }
+
+  function toggleEditMode() {
+    if (editMode) exitEditMode()
+    else enterEditMode()
+  }
+
   function barDragScreenPoint(scenePoint) {
     var x = scenePoint ? scenePoint.x : 0
     var y = scenePoint ? scenePoint.y : 0
@@ -244,7 +323,10 @@ Item {
     }, Qt.size(grabWidth, grabHeight))
   }
 
-  function requestPopout(owner) {
+  function requestPopout(owner, anchorItem, moduleId) {
+    var anchor = anchorItem || (owner && owner.anchorItem ? owner.anchorItem : null)
+    var ownerModule = moduleId || (owner && owner.owner && owner.owner.moduleName ? owner.owner.moduleName : "")
+    activateInteraction(anchor, ownerModule)
     if (activePopout === owner) return
     if (activePopout) {
       if ("closeForPopoutSwitch" in activePopout) activePopout.closeForPopoutSwitch()
@@ -488,6 +570,22 @@ Item {
     return -1
   }
 
+  function validLayout(layout) {
+    if (!Util.isPlainObject(layout)) return false
+    var regions = ["left", "center", "right"]
+    var seen = {}
+    for (var r = 0; r < regions.length; r++) {
+      var entries = layout[regions[r]]
+      if (!Array.isArray(entries)) return false
+      for (var i = 0; i < entries.length; i++) {
+        var id = entryId(entries[i])
+        if (!id || seen[id]) return false
+        seen[id] = true
+      }
+    }
+    return true
+  }
+
   function moveModuleInConfig(config, fromRegion, fromName, toRegion, beforeName) {
     var fromEntries = rawLayoutSection(config, fromRegion)
     var toEntries = rawLayoutSection(config, toRegion)
@@ -511,6 +609,11 @@ Item {
     }
 
     toEntries.splice(toIndex, 0, movedEntry)
+    if (!validLayout(config.bar.layout)) {
+      toEntries.splice(toIndex, 1)
+      fromEntries.splice(fromIndex, 0, movedEntry)
+      return false
+    }
     return true
   }
 
@@ -623,6 +726,7 @@ Item {
     var target = moduleClickTargetAt(slot, localX, localY)
     if (!target) return false
 
+    root.activateInteraction(slot.activeItem || slot, slot.moduleName)
     target.triggerPress(button)
     return true
   }
@@ -790,7 +894,7 @@ Item {
   }
 
   Variants {
-    model: Quickshell.screens
+    model: root.validBarScreens
 
     delegate: Component {
       BarPanel {
@@ -802,7 +906,7 @@ Item {
   }
 
   Variants {
-    model: Quickshell.screens
+    model: root.validBarScreens
 
     delegate: Component {
       DragGhostPanel {
@@ -1423,13 +1527,13 @@ Item {
     HoverHandler { id: moduleHover }
 
     BorderSurface {
-      visible: slot.dragSource
+      visible: root.editMode || slot.dragSource
       anchors.fill: parent
       anchors.margins: Style.space(1)
       color: root.background
       borderSpec: Border.flat(root.barForeground, 1)
       radius: Math.min(Style.cornerRadius, height / 2)
-      opacity: 0.32
+      opacity: slot.dragSource ? 0.32 : 0.12
     }
 
     Loader {
@@ -1547,7 +1651,7 @@ Item {
       property bool suppressClick: false
       property real pressedX: 0
       property real pressedY: 0
-      readonly property bool canReorder: root.shell && typeof root.shell.mutateShellConfig === "function"
+      readonly property bool canReorder: root.editMode && root.shell && typeof root.shell.mutateShellConfig === "function"
       readonly property real dragThreshold: Style.space(4)
 
       anchors.fill: parent

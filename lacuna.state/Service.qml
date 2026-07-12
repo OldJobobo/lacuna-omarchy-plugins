@@ -7,6 +7,9 @@ Item {
 
   signal loaded()
 
+  // Keep this version separate from plugin manifest schemaVersion values. It
+  // describes the on-disk Lacuna runtime settings contract only.
+  readonly property int settingsSchemaVersion: 1
   readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy/lacuna"
   readonly property string settingsFile: configDir + "/settings.json"
   property var data: defaultData()
@@ -24,7 +27,7 @@ Item {
 
   function defaultData() {
     return {
-      version: 1,
+      version: root.settingsSchemaVersion,
       designStyle: "lacuna",
       designStyles: {
         lacuna: {},
@@ -81,7 +84,9 @@ Item {
         defaultMode: "off",
         collapsed: false,
         exclusive: true,
-        cornerPieces: true
+        cornerPieces: true,
+        monitorPolicy: "auto",
+        monitorNames: []
       },
       backgroundEffects: {
         enabled: true,
@@ -149,50 +154,154 @@ Item {
     }
   }
 
-  function normalize(value) {
-    var next = defaultData()
+  function migrateSettings(value) {
+    var source = {}
     if (value && typeof value === "object") {
-      next.version = Number(value.version || 1)
-      next.designStyle = normalizeDesignStyle(value.designStyle)
-      next.designStyles = normalizeDesignStyles(value.designStyles || value.stylePresets || value.designStylePresets)
-      next.colorProfile = String(value.colorProfile || "").toLowerCase() === "colorful" ? "colorful" : "semantic"
-      next.quickLaunchLayout = normalizeLayoutMode(value.quickLaunchLayout || value.quickLaunchView, "list")
-      next.dailyLaunchLayout = normalizeLayoutMode(value.dailyLaunchLayout || value.launchLayout || value.dailyLaunchView, "list")
-      next.shortcutsLayout = normalizeLayoutMode(value.shortcutsLayout || value.shortcutLayout || value.shortcutsView, "list")
-      next.controlsLayout = normalizeControlsLayout(value.controlsLayout || value.controlLayout || value.controlsView)
-      next.barSizeMode = normalizeBarSizeMode(value.barSizeMode, value.compact === true)
-      next.compact = next.barSizeMode === "compact"
-      next.reduceMotion = value.reduceMotion === true
-      next.barSizeSnapshot = normalizeBarSizeSnapshot(value.barSizeSnapshot)
-      next.sizeTransition = normalizeSizeTransition(value.sizeTransition)
-      next.customQuickLaunchApps = normalizeCustomQuickLaunchApps(value.customQuickLaunchApps || value.quickLaunch)
-      next.customQuickLaunchNames = normalizeCustomQuickLaunchNames(value.customQuickLaunchNames || value.quickLaunchNames, next.customQuickLaunchApps)
-      next.preferredApps = normalizePreferredApps(value.preferredApps || value.defaultLaunchers || value.appDefaults)
-      next.power = normalizePowerSettings(value.power || value.session || value.system)
-      next.shellSettings = normalizeShellSettings(value.shellSettings || value.omarchySettings)
-      next.mediaProviders = normalizeMediaProviders(value.mediaProviders || value.providers)
-      next.mediaPlayer = normalizeMediaPlayer(value.mediaPlayer || value.player)
-      if (value.sidebar && typeof value.sidebar === "object") {
-        next.sidebar.defaultMode = normalizeSidebarDefaultMode(value.sidebar.defaultMode)
-        next.sidebar.collapsed = value.sidebar.collapsed === true
-        next.sidebar.exclusive = value.sidebar.exclusive !== false
-        next.sidebar.cornerPieces = value.sidebar.cornerPieces !== false
-      }
-      next.backgroundEffects = normalizeBackgroundEffects(value.backgroundEffects || value.bgEffects)
-      next.backgroundVignette = normalizeBackgroundVignette(value.backgroundVignette || value.bgVignette || value.vignette)
-      if (value.frame && typeof value.frame === "object") {
-        next.frame.mode = normalizeFrameMode(value.frame.mode)
-        next.frame.reserveMode = normalizeFrameReserveMode(value.frame.reserveMode)
-        next.frame.shadow = value.frame.shadow === true
-        next.frame.border = value.frame.border === true
-        next.frame.thickness = boundedInt(value.frame.thickness, 8, 2, 24)
-        next.frame.radius = boundedInt(value.frame.radius, 14, 0, 32)
-        next.frame.shadowDirection = normalizeShadowDirection(value.frame.shadowDirection)
-        var offset = shadowOffsetFor(next.frame.shadowDirection)
-        next.frame.shadowOffsetX = boundedInt(value.frame.shadowOffsetX, offset.x, -8, 8)
-        next.frame.shadowOffsetY = boundedInt(value.frame.shadowOffsetY, offset.y, -8, 8)
+      for (var key in value) {
+        var safe = normalizeJsonValue(value[key])
+        if (safe !== undefined) source[key] = safe
       }
     }
+
+    var version = Number(source.version)
+    if (!isFinite(version) || version < 1) {
+      if (source.sidebar === undefined && source.sidebarMode !== undefined) {
+        source.sidebar = { defaultMode: source.sidebarMode }
+      }
+      if (source.designStyles === undefined && source.stylePresets !== undefined) {
+        source.designStyles = source.stylePresets
+      }
+    }
+    if (version > root.settingsSchemaVersion) {
+      console.warn("Lacuna settings.json is newer than this plugin; preserving known JSON-safe fields")
+    }
+    source.version = root.settingsSchemaVersion
+    return source
+  }
+
+  function preserveUnknownJson(target, source, knownKeys) {
+    if (!target || !source || typeof source !== "object") return
+    for (var key in source) {
+      if (knownKeys && knownKeys[key] === true) continue
+      var safe = normalizeJsonValue(source[key])
+      if (safe !== undefined) target[key] = safe
+    }
+  }
+
+  function normalize(value) {
+    var source = migrateSettings(value)
+    value = value && typeof value === "object" ? value : ({})
+    var next = defaultData()
+    if (source && typeof source === "object") {
+      preserveUnknownJson(next, source, {
+        version: true,
+        designStyle: true,
+        designStyles: true,
+        stylePresets: true,
+        designStylePresets: true,
+        colorProfile: true,
+        quickLaunchLayout: true,
+        quickLaunchView: true,
+        dailyLaunchLayout: true,
+        launchLayout: true,
+        dailyLaunchView: true,
+        shortcutsLayout: true,
+        shortcutLayout: true,
+        shortcutsView: true,
+        controlsLayout: true,
+        controlLayout: true,
+        controlsView: true,
+        barSizeMode: true,
+        compact: true,
+        reduceMotion: true,
+        barSizeSnapshot: true,
+        sizeTransition: true,
+        customQuickLaunchApps: true,
+        quickLaunch: true,
+        customQuickLaunchNames: true,
+        quickLaunchNames: true,
+        preferredApps: true,
+        defaultLaunchers: true,
+        appDefaults: true,
+        power: true,
+        session: true,
+        system: true,
+        shellSettings: true,
+        omarchySettings: true,
+        mediaProviders: true,
+        providers: true,
+        mediaPlayer: true,
+        player: true,
+        sidebar: true,
+        backgroundEffects: true,
+        bgEffects: true,
+        backgroundVignette: true,
+        bgVignette: true,
+        vignette: true,
+        frame: true
+      })
+      next.designStyle = normalizeDesignStyle(source.designStyle)
+      next.designStyles = normalizeDesignStyles(source.designStyles || source.stylePresets || source.designStylePresets)
+      next.colorProfile = String(source.colorProfile || "").toLowerCase() === "colorful" ? "colorful" : "semantic"
+      next.quickLaunchLayout = normalizeLayoutMode(source.quickLaunchLayout || source.quickLaunchView, "list")
+      next.dailyLaunchLayout = normalizeLayoutMode(source.dailyLaunchLayout || source.launchLayout || source.dailyLaunchView, "list")
+      next.shortcutsLayout = normalizeLayoutMode(source.shortcutsLayout || source.shortcutLayout || source.shortcutsView, "list")
+      next.controlsLayout = normalizeControlsLayout(source.controlsLayout || source.controlLayout || source.controlsView)
+      next.barSizeMode = normalizeBarSizeMode(source.barSizeMode, source.compact === true)
+      next.compact = next.barSizeMode === "compact"
+      next.reduceMotion = value.reduceMotion === true
+      next.barSizeSnapshot = normalizeBarSizeSnapshot(source.barSizeSnapshot)
+      next.sizeTransition = normalizeSizeTransition(source.sizeTransition)
+      next.customQuickLaunchApps = normalizeCustomQuickLaunchApps(source.customQuickLaunchApps || source.quickLaunch)
+      next.customQuickLaunchNames = normalizeCustomQuickLaunchNames(source.customQuickLaunchNames || source.quickLaunchNames, next.customQuickLaunchApps)
+      next.preferredApps = normalizePreferredApps(source.preferredApps || source.defaultLaunchers || source.appDefaults)
+      next.power = normalizePowerSettings(source.power || source.session || source.system)
+      next.shellSettings = normalizeShellSettings(source.shellSettings || source.omarchySettings)
+      next.mediaProviders = normalizeMediaProviders(source.mediaProviders || source.providers)
+      next.mediaPlayer = normalizeMediaPlayer(source.mediaPlayer || source.player)
+      if (source.sidebar && typeof source.sidebar === "object") {
+        next.sidebar.defaultMode = normalizeSidebarDefaultMode(source.sidebar.defaultMode)
+        next.sidebar.collapsed = source.sidebar.collapsed === true
+        next.sidebar.exclusive = source.sidebar.exclusive !== false
+        next.sidebar.cornerPieces = source.sidebar.cornerPieces !== false
+        next.sidebar.monitorPolicy = normalizeSidebarMonitorPolicy(source.sidebar.monitorPolicy)
+        next.sidebar.monitorNames = normalizeSidebarMonitorNames(source.sidebar.monitorNames)
+        preserveUnknownJson(next.sidebar, source.sidebar, {
+          defaultMode: true,
+          collapsed: true,
+          exclusive: true,
+          cornerPieces: true,
+          monitorPolicy: true,
+          monitorNames: true
+        })
+      }
+      next.backgroundEffects = normalizeBackgroundEffects(source.backgroundEffects || source.bgEffects)
+      next.backgroundVignette = normalizeBackgroundVignette(source.backgroundVignette || source.bgVignette || source.vignette)
+      if (source.frame && typeof source.frame === "object") {
+        next.frame.mode = normalizeFrameMode(source.frame.mode)
+        next.frame.reserveMode = normalizeFrameReserveMode(source.frame.reserveMode)
+        next.frame.shadow = source.frame.shadow === true
+        next.frame.border = value.frame.border === true
+        next.frame.thickness = boundedInt(source.frame.thickness, 8, 2, 24)
+        next.frame.radius = boundedInt(source.frame.radius, 14, 0, 32)
+        next.frame.shadowDirection = normalizeShadowDirection(source.frame.shadowDirection)
+        var offset = shadowOffsetFor(next.frame.shadowDirection)
+        next.frame.shadowOffsetX = boundedInt(source.frame.shadowOffsetX, offset.x, -8, 8)
+        next.frame.shadowOffsetY = boundedInt(source.frame.shadowOffsetY, offset.y, -8, 8)
+        preserveUnknownJson(next.frame, source.frame, {
+          mode: true,
+          reserveMode: true,
+          shadow: true,
+          border: true,
+          thickness: true,
+          radius: true,
+          shadowDirection: true,
+          shadowOffsetX: true,
+          shadowOffsetY: true
+        })
+      }
+    }
+    next.version = root.settingsSchemaVersion
     return next
   }
 
@@ -447,6 +556,26 @@ Item {
     return "off"
   }
 
+  function normalizeSidebarMonitorPolicy(value) {
+    var policy = String(value || "").toLowerCase()
+    if (policy === "pinned" || policy === "fixed" || policy === "selected") return "pinned"
+    if (policy === "all" || policy === "everywhere") return "all"
+    return "auto"
+  }
+
+  function normalizeSidebarMonitorNames(value) {
+    var source = Array.isArray(value) ? value : String(value || "").split(",")
+    var names = []
+    var seen = {}
+    for (var i = 0; i < source.length && names.length < 16; i++) {
+      var name = String(source[i] || "").trim()
+      if (name === "" || seen[name]) continue
+      seen[name] = true
+      names.push(name)
+    }
+    return names
+  }
+
   function normalizeLayoutMode(value, fallback) {
     var layout = String(value || "").toLowerCase()
     if (layout === "grid" || layout === "list") return layout
@@ -545,6 +674,7 @@ Item {
       var preset = {}
       var bar = normalizeDesignStyleBar(source.bar || source.barLayout)
       if (bar !== null) preset.bar = bar
+      preserveUnknownJson(preset, source, { bar: true, barLayout: true })
       next[style] = preset
     }
 
@@ -564,6 +694,9 @@ Item {
 
     var next = { layout: layout }
     if (centerAnchor !== "") next.centerAnchor = centerAnchor
+    if (value.layout && typeof value.layout === "object") {
+      preserveUnknownJson(next, value, { layout: true, centerAnchor: true })
+    }
     return next
   }
 
@@ -585,6 +718,10 @@ Item {
   }
 
   function normalizeBarLayoutEntry(value) {
+    if (typeof value === "string") {
+      var stringId = String(value).trim()
+      return stringId === "" ? null : { id: stringId }
+    }
     if (!value || typeof value !== "object") return null
     var id = String(value.id || "").trim()
     if (id === "") return null
@@ -596,6 +733,24 @@ Item {
       if (normalized !== undefined) next[key] = normalized
     }
     return next
+  }
+
+  function designStyleBar(style) {
+    var key = normalizeDesignStyle(style)
+    var styles = data && data.designStyles ? data.designStyles : ({})
+    var preset = styles[key]
+    return preset && preset.bar ? preset.bar : null
+  }
+
+  function saveDesignStyleBar(style, value) {
+    var key = normalizeDesignStyle(style)
+    var next = normalize(data)
+    if (!next.designStyles || typeof next.designStyles !== "object") next.designStyles = {}
+    if (!next.designStyles[key] || typeof next.designStyles[key] !== "object") next.designStyles[key] = {}
+    var bar = normalizeDesignStyleBar(value)
+    if (bar === null) delete next.designStyles[key].bar
+    else next.designStyles[key].bar = bar
+    save(next)
   }
 
   function normalizeJsonValue(value) {

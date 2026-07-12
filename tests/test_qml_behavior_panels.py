@@ -1,10 +1,206 @@
 import unittest
+from pathlib import Path
 
 from qml_harness import HAVE_SESSION, parse_behave, qml_url, require_no_qml_errors, run_quickshell
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class SettingsFlyoutTransitionContracts(unittest.TestCase):
+    def test_settings_surfaces_do_not_reanimate_controller_owned_opacity(self):
+        for relative in [
+            "lacuna.menu/settings/SettingsWindow.qml",
+            "lacuna.menu/settings/OmarchyShellSettingsWindow.qml",
+            "lacuna.shell-settings/settings/OmarchyShellSettingsWindow.qml",
+        ]:
+            qml = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertNotIn("Behavior on opacity", qml, relative)
+
+        window = (ROOT / "lacuna.menu/menu/MenuWindow.qml").read_text(encoding="utf-8")
+        self.assertIn('opacity: root.flyoutContentOpacity("settings")', window)
+        self.assertIn('opacity: root.flyoutContentOpacity("shellSettings")', window)
+
+
 @unittest.skipUnless(HAVE_SESSION, "needs a quickshell binary and a Wayland session")
 class QmlPanelBehaviorTests(unittest.TestCase):
+    def test_persistent_sidebar_rejects_external_close_without_hiding(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var controller: null
+
+  QtObject {{
+    id: menuState
+    property bool open: true
+    function show() {{ open = true }}
+    function close() {{ open = false }}
+  }}
+
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.menu/services/PanelController.qml')}")
+    controller = component.createObject(root, {{
+      menuState: menuState,
+      retainMenuOnExternalClose: true,
+      animationDuration: 10000,
+      panelVisible: true,
+      menuProgress: 1
+    }})
+    menuState.open = false
+    console.log("BEHAVE " + JSON.stringify({{
+      open: menuState.open,
+      progress: controller.menuProgress,
+      visible: controller.panelVisible,
+      state: controller.menuStateName,
+      target: controller.menuAnimationTarget
+    }}))
+    quitTimer.start()
+  }}
+
+  Timer {{ id: quitTimer; interval: 20; onTriggered: Qt.quit() }}
+}}
+"""
+        output = run_quickshell(qml)
+        require_no_qml_errors(output)
+        row = parse_behave(output)[0]
+        self.assertTrue(row["open"])
+        self.assertEqual(row["progress"], 1)
+        self.assertTrue(row["visible"])
+        self.assertEqual(row["target"], 1)
+
+    def test_panel_controller_threshold_queue_and_reduced_motion_contract(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var controller: null
+  QtObject {{
+    id: menuState
+    property bool open: true
+    function show() {{ open = true }}
+    function close() {{ open = false }}
+  }}
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.menu/services/PanelController.qml')}")
+    controller = component.createObject(root, {{ menuState: menuState }})
+    controller.animationDuration = 10000
+    controller.panelVisible = true
+    controller.menuProgress = 0.64
+    controller.openFlyout("settings")
+    console.log("BEHAVE " + JSON.stringify({{ label: "queued", pending: controller.pendingFlyout, active: controller.activeFlyout, content: controller.contentProgress }}))
+    controller.motionTokens.animationDisabled = true
+    controller.menuProgress = 0.65
+    console.log("BEHAVE " + JSON.stringify({{ label: "threshold", pending: controller.pendingFlyout, active: controller.activeFlyout, flyout: controller.flyoutProgress, content: controller.contentProgress }}))
+    controller.closeMenu()
+    console.log("BEHAVE " + JSON.stringify({{ label: "cancelled", pending: controller.pendingFlyout, active: controller.activeFlyout }}))
+    quitTimer.start()
+  }}
+  Timer {{ id: quitTimer; interval: 20; repeat: false; onTriggered: Qt.quit() }}
+}}
+"""
+        output = run_quickshell(qml)
+        require_no_qml_errors(output)
+        rows = {row["label"]: row for row in parse_behave(output)}
+        self.assertEqual(rows["queued"]["pending"], "settings")
+        self.assertEqual(rows["queued"]["active"], "")
+        self.assertEqual(rows["queued"]["content"], 0)
+        self.assertEqual(rows["threshold"]["active"], "settings")
+        self.assertEqual(rows["threshold"]["flyout"], 1)
+        self.assertEqual(rows["threshold"]["content"], 1)
+        self.assertEqual(rows["cancelled"]["pending"], "")
+
+    def test_panel_controller_preserves_content_blend_on_interrupt_and_close(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var controller: null
+  QtObject {{
+    id: menuState
+    property bool open: true
+    function show() {{ open = true }}
+    function close() {{ open = false }}
+  }}
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.menu/services/PanelController.qml')}")
+    controller = component.createObject(root, {{ menuState: menuState }})
+    controller.motionTokens.animationDisabled = true
+    controller.panelVisible = true; controller.menuProgress = 1
+    controller.openFlyout("a")
+    controller.motionTokens.animationDisabled = false
+    controller.openFlyout("b")
+    controller.contentSwitchProgress = 0.4
+    controller.openFlyout("c")
+    console.log("BEHAVE " + JSON.stringify({{ label: "third", retained: controller.retainedFlyout, retainedWeight: controller.retainedFlyoutWeight, outgoing: controller.outgoingFlyout, outgoingWeight: controller.outgoingFlyoutWeight, incoming: controller.incomingFlyout, a: controller.contentSwitchOpacity("a"), b: controller.contentSwitchOpacity("b"), c: controller.contentSwitchOpacity("c") }}))
+    controller.contentSwitchProgress = 0.3
+    controller.closeActiveFlyout()
+    console.log("BEHAVE " + JSON.stringify({{ label: "close", retained: controller.retainedFlyout, retainedWeight: controller.retainedFlyoutWeight, outgoing: controller.outgoingFlyout, outgoingWeight: controller.outgoingFlyoutWeight, closing: controller.closingFlyout, incoming: controller.incomingFlyout, a: controller.contentSwitchOpacity("a"), b: controller.contentSwitchOpacity("b"), c: controller.contentSwitchOpacity("c") }}))
+    quitTimer.start()
+  }}
+  Timer {{ id: quitTimer; interval: 20; repeat: false; onTriggered: Qt.quit() }}
+}}
+"""
+        output = run_quickshell(qml)
+        require_no_qml_errors(output)
+        rows = {row["label"]: row for row in parse_behave(output)}
+        third = rows["third"]
+        self.assertEqual((third["retained"], third["outgoing"], third["incoming"]), ("a", "b", "c"))
+        self.assertAlmostEqual(third["a"], 0.6)
+        self.assertAlmostEqual(third["b"], 0.4)
+        self.assertEqual(third["c"], 0)
+        close = rows["close"]
+        self.assertEqual(close["incoming"], "")
+        self.assertAlmostEqual(close["a"], 0.42)
+        self.assertAlmostEqual(close["b"], 0.28)
+        self.assertEqual(close["closing"], "c")
+        self.assertAlmostEqual(close["c"], 0.3)
+
+    def test_panel_controller_sums_roles_when_switch_reverses(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var controller: null
+  QtObject {{
+    id: menuState
+    property bool open: true
+    function show() {{ open = true }}
+    function close() {{ open = false }}
+  }}
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.menu/services/PanelController.qml')}")
+    controller = component.createObject(root, {{ menuState: menuState }})
+    controller.motionTokens.animationDisabled = true
+    controller.panelVisible = true
+    controller.menuProgress = 1
+    controller.openFlyout("a")
+    controller.motionTokens.animationDisabled = false
+    controller.openFlyout("b")
+    controller.contentSwitchProgress = 0.4
+    controller.openFlyout("a")
+    controller.contentSwitchProgress = 0.5
+    console.log("BEHAVE " + JSON.stringify({{ label: "reverse", a: controller.contentSwitchOpacity("a"), b: controller.contentSwitchOpacity("b") }}))
+    quitTimer.start()
+  }}
+  Timer {{ id: quitTimer; interval: 20; repeat: false; onTriggered: Qt.quit() }}
+}}
+"""
+        output = run_quickshell(qml)
+        require_no_qml_errors(output)
+        rows = {row["label"]: row for row in parse_behave(output)}
+        self.assertAlmostEqual(rows["reverse"]["a"], 0.8)
+        self.assertAlmostEqual(rows["reverse"]["b"], 0.2)
+        self.assertAlmostEqual(rows["reverse"]["a"] + rows["reverse"]["b"], 1)
+
     def test_panel_controller_rapid_menu_and_flyout_transitions_settle(self):
         qml = f"""
 import Quickshell
@@ -163,7 +359,9 @@ ShellRoot {{
 
   Timer {{
     id: settleProbe
-    interval: 60
+    // The shell remains open while the controller-owned quick crossfade
+    // completes; this must outlast MotionTokens.quick.
+    interval: 220
     repeat: false
     onTriggered: {{
       root.emitState("after-swap")

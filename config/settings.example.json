@@ -1,6 +1,11 @@
 {
   "version": 1,
   "designStyle": "lacuna",
+  "designStyles": {
+    "lacuna": {},
+    "omarchy": {},
+    "material": {}
+  },
   "colorProfile": "semantic",
   "compact": false,
   "barSizeMode": "theme",
@@ -44,7 +49,9 @@
     "defaultMode": "off",
     "collapsed": false,
     "exclusive": true,
-    "cornerPieces": true
+    "cornerPieces": true,
+    "monitorPolicy": "auto",
+    "monitorNames": []
   },
   "backgroundEffects": {
     "enabled": true,
