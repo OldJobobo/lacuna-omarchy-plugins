@@ -2195,6 +2195,8 @@ Item {
     keepMapped: root.lacunaEnabled && (root.frameMode !== "off" || root.topBarPanelShadowVisible)
     flyoutOpen: root.lacunaEnabled && root.flyoutOpenOnScreen(modelData)
     flyoutInteractive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)
+    keyboardInputActive: root.lacunaEnabled && root.activeFlyoutMediaPlayer && root.flyoutInteractiveOnScreen(modelData)
+    dismissActive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)
     exclusive: sidebarState.exclusive
     panelWidth: root.panelWidth
     surfaceRightInset: root.surfaceRightInset
@@ -2218,6 +2220,7 @@ Item {
     flyoutMaskWidth: panelHost.flyoutMaskWidth
     flyoutMaskHeight: panelHost.flyoutMaskHeight
     onFocusGrabCleared: root.closeFlyouts()
+    onDismissRequested: root.closeFlyouts()
 
     LacunaPanelHost {
       id: panelHost

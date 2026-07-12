@@ -22,6 +22,11 @@ Column {
   property string activeTab: "search"
   property string fallbackProviderFilter: "all"
   property string fallbackPresentationMode: "auto"
+  property int selectedResultIndex: -1
+  property string favoritesFilter: ""
+  property string favoritesSort: "recent"
+  property string pendingClearKind: ""
+  property string feedbackText: ""
   readonly property int resultRowHeight: compact ? 46 : 54
   readonly property int resultPageSize: Math.max(8, Math.ceil(resultScroll.height / (resultRowHeight + resultScroll.spacing)))
   readonly property int initialResultWindow: resultPageSize * 2
@@ -47,6 +52,8 @@ Column {
   readonly property bool activeProviderLoading: currentProviderFilter === "all"
     ? anyProviderLoading : providerStatus(currentProviderFilter).loading === true
   readonly property bool inputIsYoutubeUrl: service && typeof service.isYoutubeUrl === "function" && service.isYoutubeUrl(searchInput.text)
+  readonly property int resultCount: service && service.allResults ? service.allResults.length : 0
+  readonly property var visibleFavorites: filteredFavorites()
 
   signal closeRequested()
 
@@ -64,6 +71,97 @@ Column {
     if (inputIsYoutubeUrl) service.playUrl(searchInput.text)
     else if (String(searchInput.text || "").trim() === "") service.loadDefaultSuggestions()
     else service.search(searchInput.text)
+  }
+
+  function clearSearch() {
+    searchDebounce.stop()
+    searchInput.text = ""
+    selectedResultIndex = -1
+    ensureDefaultSuggestions()
+    searchInput.forceActiveFocus()
+  }
+
+  function scheduleSearch() {
+    selectedResultIndex = -1
+    if (!open || activeTab !== "search" || inputIsYoutubeUrl) {
+      searchDebounce.stop()
+      return
+    }
+    var trimmed = String(searchInput.text || "").trim()
+    if (trimmed.length >= 2) searchDebounce.restart()
+    else searchDebounce.stop()
+  }
+
+  function moveResultSelection(delta) {
+    var count = service && service.results ? service.results.length : 0
+    if (count < 1) {
+      selectedResultIndex = -1
+      return
+    }
+    selectedResultIndex = Math.max(0, Math.min(count - 1, selectedResultIndex < 0 ? (delta > 0 ? 0 : count - 1) : selectedResultIndex + delta))
+  }
+
+  function activateSelectedResult(addToQueue) {
+    if (!service || selectedResultIndex < 0 || !service.results || selectedResultIndex >= service.results.length) {
+      search()
+      return
+    }
+    var track = service.results[selectedResultIndex]
+    if (addToQueue) {
+      service.addToQueue(track)
+      showFeedback("Added to queue")
+    } else {
+      service.playNow(track)
+    }
+  }
+
+  function filteredFavorites() {
+    var source = service && service.favorites ? service.favorites.slice() : []
+    var needle = String(favoritesFilter || "").trim().toLowerCase()
+    if (needle !== "") {
+      source = source.filter(function(track) {
+        return [track.title, track.uploader, track.source, track.provider].some(function(value) {
+          return String(value || "").toLowerCase().indexOf(needle) !== -1
+        })
+      })
+    }
+    if (favoritesSort === "title") {
+      source.sort(function(a, b) { return String(a.title || "").localeCompare(String(b.title || "")) })
+    } else if (favoritesSort === "provider") {
+      source.sort(function(a, b) {
+        var providerOrder = String(a.source || a.provider || "").localeCompare(String(b.source || b.provider || ""))
+        return providerOrder !== 0 ? providerOrder : String(a.title || "").localeCompare(String(b.title || ""))
+      })
+    } else {
+      source.reverse()
+    }
+    return source
+  }
+
+  function cycleFavoritesSort() {
+    favoritesSort = favoritesSort === "recent" ? "title" : favoritesSort === "title" ? "provider" : "recent"
+  }
+
+  function favoritesSortLabel() {
+    return favoritesSort === "title" ? "Title" : favoritesSort === "provider" ? "Provider" : "Recent"
+  }
+
+  function showFeedback(message) {
+    feedbackText = String(message || "")
+    feedbackTimer.restart()
+  }
+
+  function requestClear(kind) {
+    if (pendingClearKind === kind) {
+      if (service && kind === "favorites") service.clearFavorites()
+      else if (service && kind === "queue") service.clearQueue()
+      pendingClearKind = ""
+      clearConfirmTimer.stop()
+      showFeedback(kind === "favorites" ? "Favorites cleared" : "Queue cleared")
+      return
+    }
+    pendingClearKind = kind
+    clearConfirmTimer.restart()
   }
 
   function ensureDefaultSuggestions() {
@@ -208,6 +306,30 @@ Column {
   onServiceChanged: ensureDefaultSuggestions()
 
   Timer {
+    id: searchDebounce
+    interval: 320
+    repeat: false
+    onTriggered: {
+      if (root.service && root.open && root.activeTab === "search" && !root.inputIsYoutubeUrl)
+        root.service.search(searchInput.text)
+    }
+  }
+
+  Timer {
+    id: clearConfirmTimer
+    interval: 2600
+    repeat: false
+    onTriggered: root.pendingClearKind = ""
+  }
+
+  Timer {
+    id: feedbackTimer
+    interval: 1800
+    repeat: false
+    onTriggered: root.feedbackText = ""
+  }
+
+  Timer {
     id: defaultSuggestionsTimer
     interval: 900
     repeat: false
@@ -336,7 +458,7 @@ Column {
       id: accountButton
 
       icon: "user-circle"
-      accessibleName: "YouTube account"
+      accessibleName: root.service && root.service.youtubeLoginEnabled ? "YouTube account connected" : "Connect YouTube account"
       disabled: !root.service
       opacity: disabled ? 0.42 : 1
       foreground: root.foreground
@@ -361,6 +483,7 @@ Column {
       id: headerFavoriteButton
 
       icon: root.service && root.service.currentFavorite ? "heart-filled" : "heart"
+      accessibleName: root.service && root.service.currentFavorite ? "Remove current track from favorites" : "Favorite current track"
       disabled: !root.service || !root.service.hasTrack
       opacity: disabled ? 0.42 : 1
       foreground: root.foreground
@@ -383,6 +506,7 @@ Column {
       id: closeButton
 
       icon: "x"
+      accessibleName: "Close Media Player"
       foreground: root.foreground
       muted: root.muted
       accent: root.accent
@@ -485,7 +609,7 @@ Column {
 
             anchors.fill: parent
             anchors.leftMargin: root.compact ? 28 : 30
-            anchors.rightMargin: searchButton.width + (clearSearchButton.visible ? clearSearchButton.width + 2 : 0) + 10
+            anchors.rightMargin: searchActionButton.width + 10
             color: root.foreground
             selectedTextColor: root.background
             selectionColor: root.accent
@@ -493,51 +617,44 @@ Column {
             font.pixelSize: root.compact ? 10 : 11
             verticalAlignment: TextInput.AlignVCenter
             clip: true
+            activeFocusOnTab: true
+            Accessible.role: Accessible.EditableText
+            Accessible.name: "Search media"
+            Accessible.description: "Search configured providers or paste a YouTube URL"
             onTextChanged: {
               root.query = text
-              draftSearchTimer.restart()
+              root.scheduleSearch()
             }
-            Keys.onReturnPressed: root.search()
-            Keys.onEnterPressed: root.search()
-            Keys.onEscapePressed: {
-              if (text !== "") clear()
-              else root.closeRequested()
+            Keys.onDownPressed: function(event) {
+              root.moveResultSelection(1)
+              event.accepted = true
+            }
+            Keys.onUpPressed: function(event) {
+              root.moveResultSelection(-1)
+              event.accepted = true
+            }
+            Keys.onEscapePressed: function(event) {
+              root.closeRequested()
+              event.accepted = true
+            }
+            Keys.onReturnPressed: function(event) {
+              root.activateSelectedResult((event.modifiers & Qt.ShiftModifier) !== 0)
+              event.accepted = true
+            }
+            Keys.onEnterPressed: function(event) {
+              root.activateSelectedResult((event.modifiers & Qt.ShiftModifier) !== 0)
+              event.accepted = true
             }
           }
 
           LacunaIconButton {
-            id: clearSearchButton
-
-            visible: searchInput.text !== ""
-            anchors.right: searchButton.left
-            anchors.rightMargin: 2
-            anchors.verticalCenter: parent.verticalCenter
-            icon: "x"
-            foreground: root.foreground
-            muted: root.muted
-            accent: root.accent
-            hoverAccent: root.accent
-            buttonSize: root.compact ? 20 : 22
-            buttonRadius: root.designTokens.controlRadius
-            hoverOpacity: root.designTokens.hoverOpacity
-            pressOpacity: root.designTokens.activeOpacity
-            iconSize: root.compact ? 10 : 11
-            onTriggered: {
-              searchInput.clear()
-              searchInput.forceActiveFocus()
-            }
-            QQC.ToolTip.visible: hovered
-            QQC.ToolTip.delay: 450
-            QQC.ToolTip.text: "Clear"
-          }
-
-          LacunaIconButton {
-            id: searchButton
+            id: searchActionButton
 
             anchors.right: parent.right
             anchors.rightMargin: 4
             anchors.verticalCenter: parent.verticalCenter
-            icon: root.inputIsYoutubeUrl ? "player-play" : "search"
+            icon: searchInput.text !== "" && !root.inputIsYoutubeUrl ? "x" : root.inputIsYoutubeUrl ? "player-play" : "search"
+            accessibleName: searchInput.text !== "" && !root.inputIsYoutubeUrl ? "Clear search" : root.inputIsYoutubeUrl ? "Play URL" : "Search"
             foreground: root.foreground
             muted: root.muted
             accent: root.accent
@@ -547,7 +664,10 @@ Column {
             hoverOpacity: root.designTokens.hoverOpacity
             pressOpacity: root.designTokens.activeOpacity
             iconSize: root.compact ? 12 : 13
-            onTriggered: root.search()
+            onTriggered: {
+              if (searchInput.text !== "" && !root.inputIsYoutubeUrl) root.clearSearch()
+              else root.search()
+            }
           }
 
         }
@@ -830,7 +950,8 @@ Column {
         }
 
         Row {
-          visible: root.activeTab === "queue" || root.activeTab === "favorites"
+          visible: (root.activeTab === "queue" && root.queueLength > 0)
+            || (root.activeTab === "favorites" && root.favoritesLength > 0)
           width: parent.width
           height: visible ? (root.compact ? 26 : 30) : 0
           spacing: 6
@@ -839,8 +960,8 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width - clearListButton.width - parent.spacing
             text: root.activeTab === "favorites"
-              ? (root.favoritesLength > 0 ? root.favoritesLength + " favorites" : "Favorites are empty")
-              : (root.queueLength > 0 ? root.queueLength + " queued" : "Queue is empty")
+              ? root.visibleFavorites.length + (root.favoritesFilter.trim() !== "" ? " of " + root.favoritesLength : "") + " favorites"
+              : root.queueLength + " queued"
             color: root.muted
             fontFamily: root.bodyFontFamily
             font.pixelSize: root.compact ? 9 : 10
@@ -848,29 +969,117 @@ Column {
             elide: Text.ElideRight
           }
 
-          LacunaIconButton {
+          LacunaRect {
             id: clearListButton
 
             visible: root.activeTab === "favorites" ? root.favoritesLength > 0 : root.queueLength > 0
-            icon: "x"
-            foreground: root.foreground
-            muted: root.muted
-            accent: root.accent
-            hoverAccent: root.accent
-            buttonSize: root.compact ? 24 : 26
-            buttonRadius: root.designTokens.controlRadius
-            hoverOpacity: root.designTokens.hoverOpacity
-            pressOpacity: root.designTokens.activeOpacity
-            iconSize: root.compact ? 12 : 13
-            onTriggered: {
-              if (root.service && root.activeTab === "favorites") {
-                root.service.clearFavorites();
-              } else if (root.service) {
-                root.service.clearQueue();
+            width: visible ? clearLabel.width + 14 : 0
+            height: parent.height
+            color: "transparent"
+            border.width: root.pendingClearKind === root.activeTab ? 1 : 0
+            border.color: root.accent
+            activeFocusOnTab: visible
+            Accessible.role: Accessible.Button
+            Accessible.name: root.pendingClearKind === root.activeTab ? "Confirm clear " + root.activeTab : "Clear " + root.activeTab
+            Keys.onReturnPressed: root.requestClear(root.activeTab)
+            Keys.onEnterPressed: root.requestClear(root.activeTab)
+
+            LacunaText {
+              id: clearLabel
+              anchors.centerIn: parent
+              text: root.pendingClearKind === root.activeTab ? "Confirm" : "Clear"
+              color: root.pendingClearKind === root.activeTab ? root.accent : root.muted
+              fontFamily: root.bodyFontFamily
+              font.pixelSize: root.compact ? 9 : 10
+            }
+
+            LacunaStateLayer {
+              anchors.fill: parent
+              stateColor: root.accent
+              hoverOpacity: root.designTokens.hoverOpacity
+              pressOpacity: root.designTokens.activeOpacity
+              onTriggered: root.requestClear(root.activeTab)
+            }
+          }
+
+        }
+
+        Row {
+          id: favoritesTools
+
+          visible: root.activeTab === "favorites" && root.favoritesLength > 0
+          width: parent.width
+          height: visible ? (root.compact ? 28 : 32) : 0
+          spacing: 6
+
+          LacunaRect {
+            width: Math.max(0, parent.width - favoritesSortButton.width - parent.spacing)
+            height: parent.height
+            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.055)
+            border.width: favoritesFilterInput.activeFocus ? 1 : 0
+            border.color: root.accent
+
+            LacunaText {
+              visible: favoritesFilterInput.text === ""
+              anchors.left: parent.left
+              anchors.leftMargin: 8
+              anchors.verticalCenter: parent.verticalCenter
+              text: "Filter favorites"
+              color: root.muted
+              fontFamily: root.bodyFontFamily
+              font.pixelSize: root.compact ? 9 : 10
+            }
+
+            TextInput {
+              id: favoritesFilterInput
+              anchors.fill: parent
+              anchors.leftMargin: 8
+              anchors.rightMargin: 8
+              color: root.foreground
+              selectedTextColor: root.background
+              selectionColor: root.accent
+              font.family: root.bodyFontFamily
+              font.pixelSize: root.compact ? 9 : 10
+              verticalAlignment: TextInput.AlignVCenter
+              activeFocusOnTab: true
+              Accessible.role: Accessible.EditableText
+              Accessible.name: "Filter favorites"
+              onTextChanged: root.favoritesFilter = text
+              Keys.onEscapePressed: {
+                root.closeRequested()
+                event.accepted = true
               }
             }
           }
 
+          LacunaRect {
+            id: favoritesSortButton
+            width: favoritesSortLabel.width + 18
+            height: parent.height
+            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.055)
+            activeFocusOnTab: true
+            Accessible.role: Accessible.Button
+            Accessible.name: "Sort favorites by " + root.favoritesSortLabel()
+            Keys.onReturnPressed: root.cycleFavoritesSort()
+            Keys.onEnterPressed: root.cycleFavoritesSort()
+
+            LacunaText {
+              id: favoritesSortLabel
+              anchors.centerIn: parent
+              text: root.favoritesSortLabel()
+              color: root.muted
+              fontFamily: root.bodyFontFamily
+              font.pixelSize: root.compact ? 9 : 10
+            }
+
+            LacunaStateLayer {
+              anchors.fill: parent
+              stateColor: root.accent
+              hoverOpacity: root.designTokens.hoverOpacity
+              pressOpacity: root.designTokens.activeOpacity
+              onTriggered: root.cycleFavoritesSort()
+            }
+          }
         }
 
         LacunaText {
@@ -882,6 +1091,48 @@ Column {
           font.pixelSize: root.compact ? 9 : 10
           maximumLineCount: 2
           wrapMode: Text.WordWrap
+        }
+
+        LacunaText {
+          visible: root.feedbackText !== ""
+          width: parent.width
+          text: root.feedbackText
+          color: root.accent
+          fontFamily: root.bodyFontFamily
+          font.pixelSize: root.compact ? 9 : 10
+          horizontalAlignment: Text.AlignHCenter
+        }
+
+        LacunaText {
+          visible: root.activeTab === "search" && root.service && root.service.searching
+          width: parent.width
+          text: "Searching…"
+          color: root.muted
+          fontFamily: root.bodyFontFamily
+          font.pixelSize: root.compact ? 9 : 10
+          horizontalAlignment: Text.AlignHCenter
+        }
+
+        LacunaText {
+          visible: root.activeTab === "search" && root.service && !root.service.searching
+            && String(searchInput.text || "").trim() !== "" && root.resultCount === 0
+            && root.service.errorText === ""
+          width: parent.width
+          text: "No results for “" + String(searchInput.text || "").trim() + "”"
+          color: root.muted
+          fontFamily: root.bodyFontFamily
+          font.pixelSize: root.compact ? 9 : 10
+          horizontalAlignment: Text.AlignHCenter
+        }
+
+        LacunaText {
+          visible: root.activeTab === "search" && root.service && !root.service.searching && root.resultCount > 0
+          width: parent.width
+          text: root.resultCount + (root.resultCount === 1 ? " result" : " results")
+          color: root.muted
+          fontFamily: root.bodyFontFamily
+          font.pixelSize: root.compact ? 8 : 9
+          horizontalAlignment: Text.AlignRight
         }
 
         LacunaScrollView {
@@ -1067,20 +1318,29 @@ Column {
 
               width: parent.width
               height: root.compact ? 46 : 54
-              activeFocusOnTab: true
-              Accessible.role: Accessible.Button
-              Accessible.name: "Play " + String(modelData.title || "Untitled video")
-              Keys.onPressed: function(event) {
-                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-                  if (root.service) root.service.playNow(modelData)
-                  event.accepted = true
-                }
-              }
               radius: root.designTokens.radius
               color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, rowMouse.reveal * 0.08)
-              border.width: root.designTokens.lacuna ? 0 : 1
+              border.width: root.selectedResultIndex === index ? 1 : root.designTokens.lacuna ? 0 : 1
               border.color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, 0.22)
               clip: true
+              activeFocusOnTab: true
+              Accessible.role: Accessible.ListItem
+              Accessible.name: String(modelData.title || "Untitled media")
+              Keys.onReturnPressed: root.service.playNow(modelData)
+              Keys.onEnterPressed: root.service.playNow(modelData)
+              Keys.onSpacePressed: {
+                root.service.addToQueue(modelData)
+                root.showFeedback("Added to queue")
+              }
+
+              LacunaRect {
+                anchors.left: parent.left
+                anchors.leftMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                width: root.compact ? 34 : 40
+                height: width
+                color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.055)
+              }
 
               Image {
                 id: thumb
@@ -1254,6 +1514,7 @@ Column {
                   onTriggered: {
                     if (root.service) {
                       root.service.addToQueue(modelData);
+                      root.showFeedback("Added to queue");
                     }
                   }
                 }
@@ -1276,6 +1537,7 @@ Column {
                 onTriggered: {
                   resultRow.forceActiveFocus()
                   if (root.service) {
+                    root.selectedResultIndex = index;
                     root.service.playNow(modelData);
                   }
                 }
@@ -1320,6 +1582,7 @@ Column {
               required property int index
               readonly property bool favorite: root.isFavorite(modelData)
               readonly property color rowAccent: root.accent
+              readonly property bool reorderActionsVisible: queueMouse.containsMouse || activeFocus
 
               width: parent.width
               height: root.compact ? 50 : 58
@@ -1328,6 +1591,34 @@ Column {
               border.width: root.designTokens.lacuna ? 0 : 1
               border.color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, 0.22)
               clip: true
+              activeFocusOnTab: true
+              Accessible.role: Accessible.ListItem
+              Accessible.name: (index + 1) + ". " + String(modelData.title || "Untitled media")
+              Accessible.description: "Press Enter to play, Alt Up or Alt Down to reorder, Delete to remove"
+              Keys.onReturnPressed: root.service.playQueued(index)
+              Keys.onEnterPressed: root.service.playQueued(index)
+              Keys.onDeletePressed: root.service.removeQueued(index)
+              Keys.onUpPressed: function(event) {
+                if ((event.modifiers & Qt.AltModifier) !== 0) {
+                  root.service.moveQueued(index, -1)
+                  event.accepted = true
+                }
+              }
+              Keys.onDownPressed: function(event) {
+                if ((event.modifiers & Qt.AltModifier) !== 0) {
+                  root.service.moveQueued(index, 1)
+                  event.accepted = true
+                }
+              }
+
+              LacunaRect {
+                anchors.left: parent.left
+                anchors.leftMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                width: root.compact ? 36 : 42
+                height: width
+                color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.055)
+              }
 
               Image {
                 id: queueThumb
@@ -1401,6 +1692,7 @@ Column {
 
                 LacunaIconButton {
                   icon: queueRow.favorite ? "heart-filled" : "heart"
+                  accessibleName: queueRow.favorite ? "Remove from favorites" : "Add to favorites"
                   foreground: root.foreground
                   muted: queueRow.favorite ? root.accent : root.muted
                   accent: root.accent
@@ -1419,6 +1711,7 @@ Column {
 
                 LacunaIconButton {
                   icon: "player-play"
+                  accessibleName: "Play queued item"
                   foreground: root.foreground
                   muted: root.muted
                   accent: root.accent
@@ -1437,6 +1730,8 @@ Column {
 
                 LacunaIconButton {
                   icon: "arrow-up"
+                  visible: queueRow.reorderActionsVisible
+                  accessibleName: "Move earlier"
                   enabled: index > 0
                   opacity: enabled ? 1 : 0.36
                   foreground: root.foreground
@@ -1457,6 +1752,8 @@ Column {
 
                 LacunaIconButton {
                   icon: "arrow-down"
+                  visible: queueRow.reorderActionsVisible
+                  accessibleName: "Move later"
                   enabled: root.service && index < root.service.queue.length - 1
                   opacity: enabled ? 1 : 0.36
                   foreground: root.foreground
@@ -1477,6 +1774,7 @@ Column {
 
                 LacunaIconButton {
                   icon: "x"
+                  accessibleName: "Remove from queue"
                   foreground: root.foreground
                   muted: root.muted
                   accent: root.accent
@@ -1522,14 +1820,68 @@ Column {
 
           }
 
-          LacunaText {
+          Item {
             visible: root.queueLength === 0
             width: parent.width
-            text: "Add media from Search"
-            color: root.muted
-            fontFamily: root.bodyFontFamily
-            font.pixelSize: root.compact ? 9 : 10
-            horizontalAlignment: Text.AlignHCenter
+            height: visible ? Math.max(140, queueScroll.height - 8) : 0
+
+            Column {
+              anchors.centerIn: parent
+              spacing: 8
+
+              LacunaTablerIcon {
+                anchors.horizontalCenter: parent.horizontalCenter
+                name: "list"
+                color: root.muted
+                iconSize: root.compact ? 18 : 20
+              }
+
+              LacunaText {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "Queue is empty"
+                color: root.foreground
+                fontFamily: root.bodyFontFamily
+                font.pixelSize: root.compact ? 10 : 11
+              }
+
+              LacunaRect {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: queueSearchLabel.width + 16
+                height: root.compact ? 26 : 28
+                color: "transparent"
+                activeFocusOnTab: true
+                Accessible.role: Accessible.Button
+                Accessible.name: "Search for media"
+                Keys.onReturnPressed: {
+                  root.activeTab = "search"
+                  searchInput.forceActiveFocus()
+                }
+                Keys.onEnterPressed: {
+                  root.activeTab = "search"
+                  searchInput.forceActiveFocus()
+                }
+
+                LacunaText {
+                  id: queueSearchLabel
+                  anchors.centerIn: parent
+                  text: "Add media from Search"
+                  color: root.accent
+                  fontFamily: root.bodyFontFamily
+                  font.pixelSize: root.compact ? 9 : 10
+                }
+
+                LacunaStateLayer {
+                  anchors.fill: parent
+                  stateColor: root.accent
+                  hoverOpacity: root.designTokens.hoverOpacity
+                  pressOpacity: root.designTokens.activeOpacity
+                  onTriggered: {
+                    root.activeTab = "search"
+                    searchInput.forceActiveFocus()
+                  }
+                }
+              }
+            }
           }
 
         }
@@ -1545,7 +1897,7 @@ Column {
           edgeMaskColor: root.background
 
           Repeater {
-            model: root.favoritesRevision >= 0 && root.service && root.service.favorites ? root.service.favorites : []
+            model: root.visibleFavorites
 
             LacunaRect {
               required property var modelData
@@ -1559,6 +1911,26 @@ Column {
               border.width: root.designTokens.lacuna ? 0 : 1
               border.color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, 0.22)
               clip: true
+              activeFocusOnTab: true
+              Accessible.role: Accessible.ListItem
+              Accessible.name: String(modelData.title || "Untitled media")
+              Accessible.description: "Press Enter to play, Space to add to queue, or Delete to remove from favorites"
+              Keys.onReturnPressed: root.service.playNow(modelData)
+              Keys.onEnterPressed: root.service.playNow(modelData)
+              Keys.onSpacePressed: {
+                root.service.addToQueue(modelData)
+                root.showFeedback("Added to queue")
+              }
+              Keys.onDeletePressed: root.service.toggleFavorite(modelData)
+
+              LacunaRect {
+                anchors.left: parent.left
+                anchors.leftMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                width: root.compact ? 36 : 42
+                height: width
+                color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.055)
+              }
 
               Image {
                 id: favoriteThumb
@@ -1632,6 +2004,7 @@ Column {
 
                 LacunaIconButton {
                   icon: "player-play"
+                  accessibleName: "Play favorite"
                   foreground: root.foreground
                   muted: root.muted
                   accent: root.accent
@@ -1643,13 +2016,14 @@ Column {
                   iconSize: root.compact ? 11 : 12
                   onTriggered: {
                     if (root.service) {
-                      root.service.playFavorite(index);
+                      root.service.playNow(modelData);
                     }
                   }
                 }
 
                 LacunaIconButton {
                   icon: "plus"
+                  accessibleName: "Add favorite to queue"
                   foreground: root.foreground
                   muted: root.muted
                   accent: root.accent
@@ -1662,12 +2036,14 @@ Column {
                   onTriggered: {
                     if (root.service) {
                       root.service.addToQueue(modelData);
+                      root.showFeedback("Added to queue");
                     }
                   }
                 }
 
                 LacunaIconButton {
-                  icon: "x"
+                  icon: "heart-filled"
+                  accessibleName: "Remove from favorites"
                   foreground: root.foreground
                   muted: root.muted
                   accent: root.accent
@@ -1679,7 +2055,7 @@ Column {
                   iconSize: root.compact ? 11 : 12
                   onTriggered: {
                     if (root.service) {
-                      root.service.removeFavorite(index);
+                      root.service.toggleFavorite(modelData);
                     }
                   }
                 }
@@ -1701,7 +2077,7 @@ Column {
                 showFill: false
                 onTriggered: {
                   if (root.service) {
-                    root.service.playFavorite(index);
+                    root.service.playNow(modelData);
                   }
                 }
                 onScrolled: function(delta) {
@@ -1713,10 +2089,44 @@ Column {
 
           }
 
-          LacunaText {
+          Item {
             visible: root.favoritesLength === 0
             width: parent.width
-            text: "Favorite media from Search or Queue"
+            height: visible ? Math.max(140, favoritesScroll.height - 8) : 0
+
+            Column {
+              anchors.centerIn: parent
+              spacing: 8
+
+              LacunaTablerIcon {
+                anchors.horizontalCenter: parent.horizontalCenter
+                name: "heart"
+                color: root.muted
+                iconSize: root.compact ? 18 : 20
+              }
+
+              LacunaText {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "No favorites yet"
+                color: root.foreground
+                fontFamily: root.bodyFontFamily
+                font.pixelSize: root.compact ? 10 : 11
+              }
+
+              LacunaText {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "Favorite media from Search or Queue"
+                color: root.muted
+                fontFamily: root.bodyFontFamily
+                font.pixelSize: root.compact ? 9 : 10
+              }
+            }
+          }
+
+          LacunaText {
+            visible: root.favoritesLength > 0 && root.visibleFavorites.length === 0
+            width: parent.width
+            text: "No favorites match “" + root.favoritesFilter.trim() + "”"
             color: root.muted
             fontFamily: root.bodyFontFamily
             font.pixelSize: root.compact ? 9 : 10
