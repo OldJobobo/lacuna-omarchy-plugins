@@ -87,7 +87,7 @@ class DocsContractTests(unittest.TestCase):
         plans_index = (ROOT / "docs" / "plans" / "README.md").read_text(encoding="utf-8")
         historical_tracker = (ROOT / "docs" / "plans" / "lacuna-suite-improvement-plan.md").read_text(encoding="utf-8")
 
-        self.assertIn("Status: active project control (updated 2026-07-11)", roadmap)
+        self.assertIn("Status: active project control (updated 2026-07-12)", roadmap)
         self.assertIn("`lacuna.bar` is the intentional custom bar host", roadmap)
         self.assertIn("P0 — Core foundation", roadmap)
         self.assertIn("P1 — Product integration", roadmap)
@@ -97,12 +97,15 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("Optional visual-surface work is not a beta gate.", roadmap)
         self.assertIn("## Active Release Tracks", plans_index)
         self.assertIn("## Separate Non-Blocking Proposals", plans_index)
+        self.assertIn("lacuna-clock-calendar-flyout-plan.md", plans_index)
+        self.assertIn("Clock And Calendar Flyout", roadmap)
 
         for name in [
             "sidebar-settings-flyout-stability-plan.md",
             "quattro-p0-core-foundation-plan.md",
             "quattro-p1-product-integration-plan.md",
             "quattro-p2-release-and-evolution-plan.md",
+            "lacuna-clock-calendar-flyout-plan.md",
         ]:
             self.assertIn(name, plans_index)
             self.assertTrue((ROOT / "docs" / "plans" / name).exists(), name)

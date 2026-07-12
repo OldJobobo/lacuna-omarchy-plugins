@@ -1,6 +1,6 @@
 # Lacuna Quattro Roadmap
 
-Status: active project control (updated 2026-07-11)
+Status: active project control (updated 2026-07-12)
 
 This is the canonical roadmap for turning Lacuna into a first-class desktop
 enhancement for Omarchy Quattro. It is intentionally narrower than the full
@@ -54,6 +54,11 @@ custom shell boundary deliberate, testable, and safe to evolve.
 Optional visual-surface changes are tracked separately and do not block this
 roadmap. Existing surfaces remain protected by their current contracts while
 the core shell is stabilized.
+
+- The proposed [Clock And Calendar Flyout](plans/lacuna-clock-calendar-flyout-plan.md)
+  upgrades `lacuna.clock` with an adaptive time/date face and a read-only visual
+  month calendar. It is not a beta or RC gate and does not include events or an
+  external calendar backend.
 
 ## Operating Rules
 
