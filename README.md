@@ -1,88 +1,124 @@
-# Lacuna Omarchy Plugins
+# Lacuna for Omarchy
 
-Current suite version: `0.1.0`.
+Lacuna is a cohesive desktop layer for Omarchy: a custom bar and frame,
+attached sidebar, focused system flyouts, expressive widgets, and optional
+desktop ambience—all running inside Omarchy's existing shell.
 
-This repository is the Omarchy plugin integration path for Lacuna. It contains
-standalone plugin directories that can be installed into
-`~/.config/omarchy/plugins/` and loaded by Omarchy shell without starting a
-second Quickshell process.
+It is designed for people who want a desktop with a distinct visual identity
+without giving up Omarchy's plugin system, settings, services, or recovery
+tools.
 
-The older standalone Lacuna shell remains a source reference for behavior,
-styling, and workflow ideas. New Omarchy work should happen here as plugins.
+![Lacuna desktop with its custom bar, frame, sidebar, and overlays](docs/screenshots/reference/01-desktop-bar-overlays.png)
 
-## Structure
+## What You Get
 
-Plugin directories live at the repository root as `lacuna.*` directories. This
-is intentional: Omarchy's repo-source installer scans only top-level folders
-that contain a `manifest.json`.
+- A Lacuna-owned bar and full-screen frame with deliberate seam and connector
+  geometry.
+- A persistent sidebar for launching apps, controlling media, and reaching
+  Lacuna and Omarchy settings.
+- Integrated audio, network, Bluetooth, power, notifications, tray, weather,
+  workspace, clock, and system-status widgets.
+- Theme and wallpaper controls that follow the active Omarchy palette.
+- Optional desktop treatments including a large adaptive clock and ambience
+  overlays.
+- Transactional install, update, rollback, and uninstall workflows that
+  preserve your current shell configuration before making changes.
 
-- `lacuna.bar/`: Lacuna's Omarchy bar-option host. It owns the Lacuna frame
-  surfaces and applies a Lacuna module layout instead of the stock Omarchy bar
-  plugin set.
-- `lacuna.menu/`, `lacuna.state/`, `lacuna.shell-settings/`, and
-  `lacuna.menu-button/`: the core Lacuna sidebar/menu bundle.
-- `lacuna.theme/`, `lacuna.wallpaper/`, and `lacuna.theme-preloader/`: theme
-  and wallpaper controls plus the optional preview/background helper service.
-- `lacuna.*-overlay/`, `lacuna.desktop-clock/`, and
-  `lacuna.background-vignette/`: desktop ambience overlays.
-- `lacuna.audio/`, `lacuna.network/`, `lacuna.bluetooth/`,
-  `lacuna.notifications/`, `lacuna.indicators/`, and other `lacuna.*`
-  topbar widgets: a-la-carte bar widgets.
-- `lacuna.bar-size-pill/`: Omarchy host bar compact/full toggle.
-- `lacuna.compact-pill/`: legacy companion for `lacuna.bar-size-pill`; prefer
-  `lacuna.bar-size-pill` for new layouts.
-- `shared/qml/simple-bar/`: canonical vendored helper templates for simple
-  Lacuna topbar widgets.
-- `config/`: example Omarchy shell and Lacuna settings files.
-- `docs/`: project documentation, architecture references, plugin catalog,
-  design system, screenshots, and historical plans.
+Lacuna stays inside Omarchy's single Quickshell process. It does not launch a
+second shell alongside your desktop.
 
 ## Install
 
-Run the Lacuna installer for a menu-driven setup:
+Clone the repository, enter it, and launch the guided installer:
 
 ```bash
 ./scripts/lacuna
 ```
 
-Common scripted installs:
+Choose **Full Lacuna install** for the complete experience. The installer
+stages the plugins, selects the Lacuna bar, applies its recommended layout,
+rescans plugins, and reloads the shell.
+
+Preview the same operation without changing your system:
 
 ```bash
-./scripts/lacuna install --profile full
+./scripts/lacuna install --profile full --dry-run
+```
+
+For smaller setups, install only the core shell or the Lacuna replacements for
+Omarchy's native bar widgets:
+
+```bash
 ./scripts/lacuna install --profile core
 ./scripts/lacuna install --profile native --activate
 ```
 
-The full profile is the new-machine setup path: it stages Lacuna plugins,
-selects `lacuna.bar`, applies the Lacuna bar layout, and restarts Omarchy shell
-once. Use `--no-activate --keep-layout` to stage without enabling.
+See [Install and update](docs/install.md) for custom plugin selection, manual
+Omarchy source installation, updates, rollback behavior, and uninstalling.
 
-See [docs/install.md](docs/install.md) for install, update, uninstall, and
-manual Omarchy source workflows.
+## Make It Yours
 
-## Development
+Lacuna supports two complementary configuration surfaces:
 
-Run the full local check before publishing changes:
+- Omarchy Settings controls bar placement and per-widget options stored in
+  `~/.config/omarchy/shell.json`.
+- Lacuna settings control the frame, sidebar, color profile, preferred apps,
+  quick launchers, and other Lacuna-owned behavior stored in
+  `~/.config/omarchy/lacuna/settings.json`.
+
+Use the `semantic` color profile for a restrained foreground-led bar or
+`colorful` to let widgets draw more actively from the current Omarchy theme.
+Read [Configuration](docs/configuration.md) for the full settings model.
+
+## Pick Your Experience
+
+- **Full:** the custom bar, frame, sidebar, Lacuna widgets, theme workflow, and
+  optional visual surfaces.
+- **Core:** the Lacuna bar, frame, sidebar, state, and settings foundation.
+- **Native replacements:** Lacuna-styled alternatives for common Omarchy bar
+  widgets without requiring the full desktop composition.
+- **A la carte:** standalone widgets and overlays such as Clock, Weather,
+  Workspaces, Codex Usage, Claude Usage, Desktop Clock, and Rainfall.
+
+Browse the [plugin catalog](docs/plugins/README.md) for the available surfaces
+and their install boundaries.
+
+## Safety And Recovery
+
+Before an install or update, Lacuna snapshots the active Omarchy shell and
+Lacuna state. Plugins are staged through temporary directories and verified
+before the operation is accepted. If validation, rescan, or activation fails,
+the previous plugin copies and shell configuration are restored.
+
+Return to Omarchy's stock bar at any time with:
+
+```bash
+omarchy plugin bar reset
+```
+
+## Project Status
+
+Lacuna is currently at version `0.1.0` and is being prepared for its first
+Quattro beta. The core shell is usable now, while compatibility, accessibility,
+packaging, and release validation continue to be hardened.
+
+Follow the [project roadmap](docs/roadmap.md) for current priorities. Plans and
+historical design records live in the [planning ledger](docs/plans/README.md).
+
+## For Contributors
+
+The repository uses one top-level `lacuna.*` directory per Omarchy plugin so
+Omarchy can install directly from the source. Run the complete local validation
+before publishing changes:
 
 ```bash
 ./scripts/check.sh
 ```
 
-See [docs/development/testing.md](docs/development/testing.md) for validation
-and Omarchy smoke-test commands.
-
-## Documentation
-
-- [docs/README.md](docs/README.md): documentation map and reading paths.
-- [docs/architecture/overview.md](docs/architecture/overview.md): current
-  architecture.
-- [docs/plugins/README.md](docs/plugins/README.md): plugin catalog and install
-  grouping.
-- [docs/configuration.md](docs/configuration.md): shell and Lacuna runtime
-  settings.
-- [docs/lacuna-design-system/](docs/lacuna-design-system/): Lacuna design
-  language.
+Start with the [documentation map](docs/README.md),
+[architecture overview](docs/architecture/overview.md), and
+[testing guide](docs/development/testing.md).
 
 ## License
 
-Lacuna Omarchy Plugins is released under the MIT License. See `LICENSE`.
+Lacuna is released under the [MIT License](LICENSE).
