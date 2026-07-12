@@ -9,6 +9,7 @@ PanelWindow {
   default property alias content: contentLayer.data
 
   signal focusGrabCleared()
+  signal dismissRequested()
 
   property var targetScreen: null
   property bool menuOpen: false
@@ -37,9 +38,36 @@ PanelWindow {
   property real flyoutMaskWidth: 0
   property real flyoutMaskHeight: 0
   property bool flyoutInteractive: false
+  property bool keyboardInputActive: false
+  property bool dismissActive: false
+  property bool focusGrabActive: false
   property bool anchorRight: false
   property string layerNamespace: "lacuna-menu"
   readonly property bool inputActive: panelVisible
+
+  onDismissActiveChanged: {
+    if (dismissActive) focusGrabArmTimer.restart()
+    else {
+      focusGrabArmTimer.stop()
+      focusGrabActive = false
+    }
+  }
+
+  Timer {
+    id: focusGrabArmTimer
+    interval: 240
+    repeat: false
+    onTriggered: {
+      if (root.dismissActive) root.focusGrabActive = true
+    }
+  }
+
+  Shortcut {
+    sequence: "Escape"
+    context: Qt.WindowShortcut
+    enabled: root.dismissActive
+    onActivated: root.dismissRequested()
+  }
 
   visible: panelVisible || keepMapped
   screen: targetScreen
@@ -51,10 +79,12 @@ PanelWindow {
   // compositor map timing cannot place a primary-output sidebar underneath
   // the frame shadow while other output variants remain above it.
   WlrLayershell.layer: WlrLayer.Overlay
-  // The persistent sidebar and its flyouts share one layer-shell surface.
-  // Keep that surface pointer-driven: changing its keyboard focus policy while
-  // a flyout opens can make the compositor reconfigure the entire sidebar.
-  WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+  // The persistent sidebar and its flyouts share one layer-shell surface. Keep
+  // ordinary menu use pointer-driven, but allow explicitly keyboard-driven
+  // content (currently Media Player search) to receive compositor key events.
+  WlrLayershell.keyboardFocus: root.keyboardInputActive
+    ? WlrKeyboardFocus.Exclusive
+    : root.dismissActive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
   margins {
     top: root.visualTopInset
@@ -87,11 +117,14 @@ PanelWindow {
   }
 
   HyprlandFocusGrab {
-    // A persistent desktop sidebar must never grab keyboard focus merely
-    // because one of its pointer-operated flyouts is visible.
-    active: false
+    // Ordinary sidebar flyouts remain pointer-driven. Media Player is the
+    // explicit keyboard surface; its grab supplies outside-click dismissal.
+    active: root.focusGrabActive
     windows: [root]
-    onCleared: root.focusGrabCleared()
+    onCleared: {
+      if (root.focusGrabActive && root.dismissActive)
+        root.focusGrabCleared()
+    }
   }
 
   anchors {

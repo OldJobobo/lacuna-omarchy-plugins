@@ -2474,9 +2474,15 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("open: root.flyoutOpenOnScreen(modelData)", window)
         self.assertIn("interactive: root.flyoutInteractiveOnScreen(modelData)", window)
         panel_window = read("lacuna.menu/menu/LacunaPanelWindow.qml")
-        self.assertIn("WlrLayershell.keyboardFocus: WlrKeyboardFocus.None", panel_window)
+        self.assertIn("property bool keyboardInputActive: false", panel_window)
+        self.assertIn("? WlrKeyboardFocus.Exclusive", panel_window)
+        self.assertIn("root.dismissActive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None", panel_window)
+        self.assertIn("keyboardInputActive: root.lacunaEnabled && root.activeFlyoutMediaPlayer && root.flyoutInteractiveOnScreen(modelData)", window)
         self.assertIn("HyprlandFocusGrab {", panel_window)
-        self.assertIn("because one of its pointer-operated flyouts is visible.\n    active: false", panel_window)
+        self.assertIn("active: root.focusGrabActive", panel_window)
+        self.assertIn("if (root.dismissActive) root.focusGrabActive = true", panel_window)
+        self.assertIn("dismissActive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)", window)
+        self.assertIn("onDismissRequested: root.closeFlyouts()", window)
         self.assertIn('mode: root.lacunaEnabled && !root.barOwnsLacunaFrame ? root.frameMode : "off"', window)
         self.assertIn('shadowEnabled: root.lacunaEnabled && !root.barOwnsLacunaFrame && root.frameShadow && root.frameMode !== "off"', window)
         self.assertIn("readonly property bool frameReserveActive: !barOwnsLacunaFrame && lacunaEnabled", window)
@@ -2789,7 +2795,6 @@ class QmlContractTests(unittest.TestCase):
             'id: "favorites"',
             'icon: "heart"',
             'label: "Favorites"',
-            "readonly property string repeatMode",
             "readonly property string currentSearchFilter",
             "function setSearchFilter(value)",
             "readonly property int favoritesLength",
@@ -2803,31 +2808,27 @@ class QmlContractTests(unittest.TestCase):
             "onOpenChanged: ensureDefaultSuggestions()",
             "onActiveTabChanged: ensureDefaultSuggestions()",
             'text: "Search media or paste YouTube URL"',
-            'icon: root.inputIsYoutubeUrl ? "player-play" : "search"',
+            'id: searchActionButton',
+            'accessibleName: searchInput.text !== "" && !root.inputIsYoutubeUrl ? "Clear search"',
             "id: searchFilterRow",
             'text: "All"',
             'text: "Music"',
             'root.setSearchFilter("all")',
             'root.setSearchFilter("music")',
-            "id: transportControls",
-            'visible: root.activeTab !== "search"',
             "id: durationBadgeText",
             "text: modelData.duration || \"\"",
             "function isFavorite(track)",
             "var revision = favoritesRevision",
-            "root.service.clearFavorites()",
+            "service.clearFavorites()",
             "root.service.toggleFavorite(modelData)",
-            "root.service.playFavorite(index)",
-            "root.service.removeFavorite(index)",
+            "root.service.playNow(modelData)",
             "Favorite media from Search or Queue",
             'text: "Media"',
             "modelData.source || modelData.provider || \"\"",
             "id: favoritesScroll",
             "id: headerFavoriteButton",
             "showLabels: false",
-            "root.service.cycleRepeatMode()",
-            'icon: root.repeatMode === "one" ? "repeat-once" : "repeat"',
-            "model: root.favoritesRevision >= 0 && root.service && root.service.favorites ? root.service.favorites : []",
+            "model: root.visibleFavorites",
         ]:
             self.assertIn(snippet, flyout)
         self.assertIn('icon === "user-circle" || icon === "account"', icons)
