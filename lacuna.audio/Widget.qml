@@ -8,6 +8,7 @@ Item {
   property var settings: ({})
   property var audioService: null
   property bool flyoutOpen: false
+  readonly property bool opened: flyoutOpen
 
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
@@ -41,6 +42,10 @@ Item {
 
   function close() {
     flyoutOpen = false
+  }
+
+  function open() {
+    flyoutOpen = true
   }
 
   function tooltip() {

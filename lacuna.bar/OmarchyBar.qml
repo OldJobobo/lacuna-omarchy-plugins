@@ -190,6 +190,38 @@ Item {
     debugModuleSlots = next
   }
 
+  function findPanelWidget(pluginId) {
+    var id = String(pluginId || "")
+    if (!id) return null
+    for (var i = 0; i < debugModuleSlots.length; i++) {
+      var slot = debugModuleSlots[i]
+      if (!slot || slot.moduleName !== id || !slot.activeItem) continue
+      var item = slot.activeItem
+      if (typeof item.open !== "function" || typeof item.close !== "function" || item.opened === undefined) continue
+      return item
+    }
+    return null
+  }
+
+  function summonBarWidget(pluginId) {
+    var item = findPanelWidget(pluginId)
+    if (!item) return false
+    item.open()
+    return true
+  }
+
+  function hideBarWidget(pluginId) {
+    var item = findPanelWidget(pluginId)
+    if (!item) return false
+    item.close()
+    return true
+  }
+
+  function isBarWidgetOpen(pluginId) {
+    var item = findPanelWidget(pluginId)
+    return !!item && item.opened === true
+  }
+
   function registerConfigControl(control) {
     if (!control || configControls.indexOf(control) !== -1) return
     var next = configControls.slice()
@@ -774,7 +806,7 @@ Item {
     if (!requestedTransparent || transparentForegroundProc.running) return
 
     transparentForegroundProc.command = [
-      "omarchy-shell-bar-text-color",
+      "omarchy-bar-text-color",
       root.position,
       String(root.barSize),
       colorHex(root.themeForeground),

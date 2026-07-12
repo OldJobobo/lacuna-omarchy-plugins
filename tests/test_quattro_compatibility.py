@@ -30,6 +30,7 @@ class QuattroCompatibilityTests(unittest.TestCase):
         self.assertEqual("unknown", result["omarchyVersion"])
         self.assertEqual("unknown", result["quickshellVersion"])
         self.assertIsNone(result["vendoredParity"])
+        self.assertEqual([], result["upstreamReviewRequired"])
         self.assertTrue(all(state == "skipped" for state in result["corePluginValidation"].values()))
 
     def test_json_cli_exposes_explicit_live_result(self):
@@ -44,9 +45,23 @@ class QuattroCompatibilityTests(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
         report = json.loads(result.stdout)
-        self.assertIn(report["status"], {"compatible", "unknown"})
+        self.assertIn(report["status"], {"compatible", "unknown", "review-required"})
         self.assertIn("upstreamBarFiles", report)
+        self.assertIn("shell.qml", report["upstreamBarFiles"])
+        self.assertIn("upstreamReviewRequired", report)
         self.assertIn("lacuna.bar", report["corePluginValidation"])
+
+    def test_changed_reviewed_upstream_hash_requires_review(self):
+        module = load_module()
+        original = module.REVIEW_FILE
+        try:
+            module.REVIEW_FILE = ROOT / "tests/fixtures/quattro-compatibility-mismatch.json"
+            result = module.report(repo_only=False)
+        finally:
+            module.REVIEW_FILE = original
+
+        self.assertEqual("review-required", result["status"])
+        self.assertIn("Bar.qml", result["upstreamReviewRequired"])
 
 
 if __name__ == "__main__":

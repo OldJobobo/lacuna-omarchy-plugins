@@ -14,9 +14,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OMARCHY_ROOT = Path(os.environ.get("OMARCHY_PATH", Path.home() / ".local/share/omarchy"))
+REVIEW_FILE = ROOT / "config/quattro-compatibility.json"
 BAR_FILES = {
     "Bar.qml": OMARCHY_ROOT / "shell/plugins/bar/Bar.qml",
     "BarModel.js": OMARCHY_ROOT / "shell/plugins/bar/BarModel.js",
+    "shell.qml": OMARCHY_ROOT / "shell/shell.qml",
 }
 CORE_PLUGINS = ["lacuna.bar", "lacuna.state", "lacuna.shell-settings", "lacuna.menu"]
 
@@ -97,6 +99,8 @@ def plugin_validation() -> dict[str, str]:
 
 
 def report(repo_only: bool) -> dict:
+    review = json.loads(REVIEW_FILE.read_text(encoding="utf-8"))
+    reviewed_hashes = review.get("upstreamFiles", {})
     omarchy_version = "unknown" if repo_only else package_version("omarchy")
     quickshell_version = "unknown" if repo_only else package_version("quickshell")
     upstream_files = {} if repo_only else {
@@ -111,9 +115,16 @@ def report(repo_only: bool) -> dict:
     validation = {plugin_id: "skipped" for plugin_id in CORE_PLUGINS} if repo_only else plugin_validation()
 
     missing = [name for name, data in upstream_files.items() if not data["exists"]]
+    changed = [
+        name
+        for name, data in upstream_files.items()
+        if data["exists"] and reviewed_hashes.get(name) != data["sha256"]
+    ]
     validation_failed = [plugin_id for plugin_id, state in validation.items() if state == "fail"]
     if missing or parity is False or validation_failed:
         status = "incompatible"
+    elif changed:
+        status = "review-required"
     elif not repo_only and (omarchy_version == "unknown" or quickshell_version == "unknown" or parity is None):
         status = "unknown"
     elif not repo_only and not omarchy_version.startswith("4."):
@@ -127,7 +138,9 @@ def report(repo_only: bool) -> dict:
         "omarchyVersion": omarchy_version,
         "quickshellVersion": quickshell_version,
         "barSourceRevision": omarchy_version if omarchy_version != "unknown" else "unknown",
+        "reviewedOmarchyVersion": review.get("reviewedOmarchyVersion", "unknown"),
         "upstreamBarFiles": upstream_files,
+        "upstreamReviewRequired": changed,
         "vendoredParity": parity,
         "corePluginValidation": validation,
     }
@@ -148,6 +161,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  Omarchy: {result['omarchyVersion']} ({result['omarchyPath']})")
         print(f"  Quickshell: {result['quickshellVersion']}")
         print(f"  Vendored parity: {result['vendoredParity']}")
+        if result["upstreamReviewRequired"]:
+            print(f"  Review required: {', '.join(result['upstreamReviewRequired'])}")
         for plugin_id, state in result["corePluginValidation"].items():
             print(f"  {plugin_id}: {state}")
 

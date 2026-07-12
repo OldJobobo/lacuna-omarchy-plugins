@@ -20,6 +20,18 @@ Item {
     return omarchyBar.openConfigPanel()
   }
 
+  function summonBarWidget(pluginId) {
+    return omarchyBar.summonBarWidget(pluginId)
+  }
+
+  function hideBarWidget(pluginId) {
+    return omarchyBar.hideBarWidget(pluginId)
+  }
+
+  function isBarWidgetOpen(pluginId) {
+    return omarchyBar.isBarWidgetOpen(pluginId)
+  }
+
   OmarchyBar {
     id: omarchyBar
 

@@ -1,6 +1,6 @@
 # Quattro Compatibility Ledger
 
-Status: reference (updated 2026-07-10)
+Status: reference (updated 2026-07-12)
 
 This is the compatibility record for the Lacuna core bundle on Omarchy
 Quattro. It is intentionally a ledger, not a promise that every future
@@ -10,12 +10,12 @@ Omarchy development build is supported.
 
 | Component | Observed value |
 | --- | --- |
-| Omarchy package | `omarchy-dev 4.0.0.r1034.gaf82848-1` |
+| Omarchy package | `omarchy-dev 4.0.0.r1043.g17efd5e-1` |
 | Quickshell package | `quickshell 0.3.0-2` |
 | Omarchy path | `/usr/share/omarchy` |
 | Upstream bar source | `/usr/share/omarchy/shell/plugins/bar/` |
-| Bar source revision | package revision `af82848` (encoded in the Omarchy package version) |
-| Target date | 2026-07-10 |
+| Bar source revision | package revision `17efd5e` (encoded in the Omarchy package version) |
+| Target date | 2026-07-12 |
 
 The current upstream bar source is package-managed rather than a Git checkout,
 so the package version and source hashes are the authoritative revision record
@@ -23,8 +23,9 @@ on this machine:
 
 | File | SHA-256 |
 | --- | --- |
-| `shell/plugins/bar/Bar.qml` | `9202417d6201cc05a80f74ba6e07d1f60d3aff7b42793151c01eacdec3404852` |
+| `shell/plugins/bar/Bar.qml` | `6e18f9b249acf3d64a51f34004907ee77be76c780cba989d8be3869a65bb74e9` |
 | `shell/plugins/bar/BarModel.js` | `729f86bc475ad3b6383bfff4b44a64132da2a5cd36e5470ca4d6bec9ee3712c0` |
+| `shell/shell.qml` | `1aa87fad78f7edaa5e40f4603a1e115f5036235ae26b631ade4d8fecf016690c` |
 
 `lacuna.bar/BarModel.js` matches the upstream `BarModel.js`. The copied
 `lacuna.bar/OmarchyBar.qml` is intentionally Lacuna-owned and diverges from
@@ -40,9 +41,12 @@ scripts/quattro-compatibility --check
 ```
 
 It records the live Omarchy and Quickshell package versions, verifies the
-upstream bar files exist, checks the declared vendored pairs, and validates the
-core plugin folders. For CI or a machine without a live Omarchy installation,
-use the repository-only mode:
+upstream bar and shell files exist, checks the declared vendored pairs, and
+validates the core plugin folders. It also compares the live files with the
+reviewed hashes in `config/quattro-compatibility.json`; upstream drift returns
+`review-required` until those contracts are inspected and the baseline is
+updated. For CI or a machine without a live Omarchy installation, use the
+repository-only mode:
 
 ```bash
 scripts/quattro-compatibility --repo-only --check
@@ -61,6 +65,8 @@ following contract-sensitive areas before accepting the new revision:
    widget registry APIs.
 5. `lacuna.bar` frame/sidebar ownership, `lacuna.menu` summon compatibility,
    and the layer/geometry contract.
+6. Live bar-widget summon/hide/toggle routing through `open()`, `close()`, and
+   `opened`, including behavior after the bar reloads widget instances.
 
 Required source and runtime checks after an upgrade:
 

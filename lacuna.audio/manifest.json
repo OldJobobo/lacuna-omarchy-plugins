@@ -7,14 +7,12 @@
   "description": "Lacuna audio provider, bar pill, and panel backed by PipeWire.",
   "kinds": [
     "service",
-    "panel",
     "bar-widget"
   ],
   "activation": "persistent",
   "keepLoaded": true,
   "entryPoints": {
     "service": "Service.qml",
-    "panel": "Panel.qml",
     "barWidget": "Widget.qml"
   },
   "barWidget": {

@@ -17,6 +17,9 @@ the repository root as a runtime import path.
 ## Entry Points
 
 - Bar widgets expose an `Item`, usually through `Widget.qml`.
+- Bar widgets with attached flyouts expose `open()`, `close()`, and a boolean
+  `opened` property so Omarchy shell summon/hide/toggle commands route to the
+  current live widget instance after bar reloads.
 - Menu and panel surfaces implement `open(payloadJson)` and `close()`.
 - `lacuna.bar` is a bar option selected through `bar.id`, not a bar widget
   placed in `bar.layout`.

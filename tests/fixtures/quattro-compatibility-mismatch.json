@@ -1,0 +1,8 @@
+{
+  "reviewedOmarchyVersion": "test",
+  "upstreamFiles": {
+    "Bar.qml": "mismatch",
+    "BarModel.js": "729f86bc475ad3b6383bfff4b44a64132da2a5cd36e5470ca4d6bec9ee3712c0",
+    "shell.qml": "1aa87fad78f7edaa5e40f4603a1e115f5036235ae26b631ade4d8fecf016690c"
+  }
+}
