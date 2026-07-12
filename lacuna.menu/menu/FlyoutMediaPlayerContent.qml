@@ -360,7 +360,7 @@ Column {
     spacing: 8
 
     LacunaText {
-      width: parent.width - presentationControl.width - accountButton.width - headerFavoriteButton.width - closeButton.width - parent.spacing * 4
+      width: parent.width - presentationControl.width - accountButton.width - closeButton.width - parent.spacing * 3
       anchors.verticalCenter: parent.verticalCenter
       text: "Media"
       color: root.foreground
@@ -477,29 +477,6 @@ Column {
       QQC.ToolTip.visible: hovered
       QQC.ToolTip.delay: 450
       QQC.ToolTip.text: "YouTube account"
-    }
-
-    LacunaIconButton {
-      id: headerFavoriteButton
-
-      icon: root.service && root.service.currentFavorite ? "heart-filled" : "heart"
-      accessibleName: root.service && root.service.currentFavorite ? "Remove current track from favorites" : "Favorite current track"
-      disabled: !root.service || !root.service.hasTrack
-      opacity: disabled ? 0.42 : 1
-      foreground: root.foreground
-      muted: root.service && root.service.currentFavorite ? root.accent : root.muted
-      accent: root.accent
-      hoverAccent: root.accent
-      buttonSize: root.compact ? 24 : 28
-      buttonRadius: root.designTokens.controlRadius
-      hoverOpacity: root.designTokens.hoverOpacity
-      pressOpacity: root.designTokens.activeOpacity
-      iconSize: root.compact ? 13 : 15
-      onTriggered: {
-        if (root.service) {
-          root.service.toggleFavorite(root.service.currentTrack);
-        }
-      }
     }
 
     LacunaIconButton {
