@@ -163,7 +163,7 @@ Required checks:
 ./scripts/check.sh
 python3 -m pytest
 ./scripts/lacuna status
-./scripts/lacuna install --profile core --dry-run
+./scripts/lacuna install --dry-run
 ./scripts/lacuna update --dry-run
 omarchy plugin list
 omarchy-shell shell listPlugins
@@ -178,6 +178,8 @@ back, and understood without relying on private project knowledge.
 ### Beta
 
 - Version set to `0.1.0-beta.1` in `VERSION` and every manifest.
+- The normal installer path activates the canonical omakase setup without a
+  profile-selection decision.
 - Changelog contains beta scope, migrations, known limitations, and supported
   Omarchy/Quickshell versions.
 - Archive is built from committed files and its inventory is verified.

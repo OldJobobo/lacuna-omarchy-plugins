@@ -39,7 +39,7 @@ from the repository's existing `0.1.0` version.
 ./scripts/check.sh
 scripts/quattro-compatibility --check
 scripts/quattro-p0-smoke
-./scripts/lacuna install --profile core --dry-run
+./scripts/lacuna install --dry-run
 ./scripts/lacuna update --dry-run
 ./scripts/lacuna status
 git diff --check

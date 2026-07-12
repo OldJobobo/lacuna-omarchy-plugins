@@ -44,10 +44,11 @@ custom shell boundary deliberate, testable, and safe to evolve.
 
 - audio, network, Bluetooth, power, tray, notifications, media, and system
   status widgets
-- keyboard, focus, tooltip, and accessible interaction behavior
+- pointer interaction, tooltip behavior, semantic labeling, and compositor
+  focus safety
 - multi-monitor sidebar and frame policy
 - media-player lifecycle, provider settings, and failure recovery
-- curated plugin bundles and user-facing configuration
+- one canonical omakase installation with post-install customization
 
 ### Deferred feature work
 
@@ -119,10 +120,10 @@ Lacuna's identity.
 Deliverables:
 
 - native-service integration matrix
-- accessible keyboard and pointer interaction
+- pointer-first interaction that preserves focus for the active application
 - settings UI completeness and subsetting round trips
 - media lifecycle and provider failure recovery
-- clean core/native/advanced bundle boundaries
+- one designed omakase default with safe customization and reset behavior
 - menu and settings maintenance boundaries
 
 Plan: [P1 Product Integration](plans/quattro-p1-product-integration-plan.md)
@@ -150,11 +151,15 @@ Beta is ready when:
 
 - P0 remains green on the declared Omarchy/Quickshell pair.
 - Core settings have an inventory and deterministic persistence coverage.
-- Core keyboard, focus, accessible-name, and non-pointer interaction blockers
-  are closed.
+- The semi-persistent sidebar remains pointer-driven and does not acquire
+  keyboard focus merely because it or a flyout is visible. Explicit text-entry
+  controls such as Media Search may take scoped focus; Escape and click-away
+  dismissal must close the flyout and restore the prior application focus.
 - Media is either covered by its documented failure/recovery contract or
   explicitly kept outside the core release profile.
-- `core`, `native`, and `advanced` profiles have documented boundaries.
+- A clean install activates the canonical omakase setup without asking the user
+  to choose an architectural profile; supported customization and reset paths
+  preserve a known-good Lacuna default.
 - A packaged clean install, restart, update failure, rollback, uninstall, and
   stock-bar recovery rehearsal has been recorded.
 - Known limitations and supported versions are included in beta release notes.
@@ -166,7 +171,7 @@ Optional visual-surface work is not a beta gate.
 RC is ready when:
 
 - No open shell-breaking, state-loss, credential-exposure, installer,
-  rollback, or core-accessibility defects remain.
+  rollback, or input/focus-safety defects remain.
 - Beta feedback has been resolved or explicitly documented as out of scope.
 - Diagnostics distinguish missing, disabled, failed, and stale-installed core
   plugins and provide recovery actions.
@@ -193,7 +198,8 @@ true:
 - Native services and Lacuna widgets do not issue competing orchestration or
   duplicate user-visible state.
 - Media failures fall back without trapping the shell in a broken state.
-- Keyboard, focus, tooltip, and accessible-name checks cover the core shell.
+- Pointer dismissal, tooltip, semantic-label, input-mask, and layer-shell
+  focus-safety checks cover the core shell.
 - The support matrix records the tested Omarchy/Quickshell revisions.
 - The documentation index, version, manifests, and release notes agree.
 
@@ -219,9 +225,9 @@ true:
 - Target environment: Omarchy 4.0.0 alpha/Quattro development builds.
 - Runtime model: one long-running Quickshell process with top-level Lacuna
   plugin directories.
-- Validation on 2026-07-11 reports 239 passing tests and 3 environment skips.
+- Validation on 2026-07-12 reports 265 passing tests and 3 environment skips.
   Treat this as a dated observation, not a pinned expected count.
 - `scripts/quattro-compatibility --check` reports compatibility with Omarchy
-  `4.0.0.r1042.gcc64c3e-1` and Quickshell `0.3.0-2` on the current machine.
+  `4.0.0.r1043.g17efd5e-1` and Quickshell `0.3.0-2` on the current machine.
 - The suite and all manifests currently report `0.1.0`; the next publishable
   artifact is `0.1.0-beta.1`, not `0.0.1-beta`.

@@ -12,7 +12,7 @@ an entry here does not make a historical plan active again.
 | Plan | State | Role and next boundary |
 | --- | --- | --- |
 | [Sidebar And Settings Flyout Stability](./sidebar-settings-flyout-stability-plan.md) | Completed and user-verified | Keeps the shared layer-shell surface at a fixed width so settings flyouts cannot squeeze or redraw the persistent sidebar. |
-| [Quattro P1 — Product Integration](./quattro-p1-product-integration-plan.md) | In progress; beta product readiness | Close settings, accessibility, media recovery, native integration, and bundle acceptance gates. |
+| [Quattro P1 — Product Integration](./quattro-p1-product-integration-plan.md) | In progress; beta product readiness | Close settings, sidebar focus safety, media recovery, native integration, and the canonical omakase setup. General keyboard navigation is excluded; scoped Media Search typing and Escape/click-away dismissal remain supported. |
 | [Quattro P2 — Release And Evolution](./quattro-p2-release-and-evolution-plan.md) | In progress alongside P1 | Close compatibility, diagnostics, packaging, migration, documentation, beta, and RC gates. |
 
 ## Separate Non-Blocking Proposals

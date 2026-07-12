@@ -1,6 +1,6 @@
 # Quattro P1 — Product Integration Plan
 
-Status: in progress; beta product-readiness track (reviewed 2026-07-11)
+Status: in progress; beta product-readiness track (reviewed 2026-07-12)
 
 P1 builds on the P0 core foundation and makes Lacuna feel like a complete,
 native Quattro desktop layer while preserving its custom bar and frame.
@@ -23,9 +23,9 @@ native Omarchy integration boundary, and a predictable failure mode.
 | --- | --- | --- | --- |
 | Native service integration | Mostly complete | Ownership policy and service implementations exist. | Finish the complete owner/action/failure matrix and coexistence checks. |
 | Settings and subsettings | In progress | Versioned state, migration, corrupt-state recovery, and nested helpers exist. | Inventory every control/key and close deterministic round-trip gaps. |
-| Accessibility and interaction | In progress | Shared icon and menu-rail buttons expose names/roles/actions, keyboard activation, Tab focus, and visible focus; runtime coverage protects the primitive. | Label call sites meaningfully, extend the contract to settings controls, and prove complete surface traversal. |
+| Interaction and focus safety | In progress; general keyboard navigation removed from scope | Pointer interaction, semantic labels, Media Search text entry, Escape dismissal, and click-away dismissal exist. | Keep passive sidebar use pointer-driven, scope keyboard focus to intentional text entry, and prove focus restoration and dismissal without turning the sidebar into a keyboard-navigated surface. |
 | Media reliability | In progress | Playback services, provider scripts, video transition behavior, and failure tests exist. | Document ownership; cover provider cancellation, redaction, restart, and fallback. |
-| Bundles and catalog | In progress | Installer profiles, manifest metadata, stability tiers, and catalog grouping exist. | Align profile names/contents and prove independent install/remove behavior. |
+| Omakase setup and customization | In progress | The installer already has a full default, manifest metadata, and catalog grouping. | Define one canonical designed setup and prove safe customization and reset behavior. |
 | P1 validation | Pending | Repository and P0 checks pass. | Complete the beta product matrix and live smoke record. |
 
 ## Workstream 1 — Native service integration matrix
@@ -97,16 +97,34 @@ Acceptance:
 - Invalid values are clamped or rejected consistently.
 - Settings UI and state services agree on nested objects and defaults.
 
-## Workstream 3 — Accessibility and interaction quality
+## Workstream 3 — Pointer interaction and focus safety
+
+Product decision: the Lacuna sidebar is a semi-persistent desktop surface, not
+a modal application window. General keyboard navigation and Tab traversal
+inside the sidebar or its attached flyouts are out of scope. Intentional text
+entry remains supported: the Media Search field may receive keyboard input,
+Escape may close an active flyout, and clicking outside may dismiss it. The
+surface must not take keyboard focus merely because it or a flyout is visible.
 
 Tasks:
 
-- Add accessible names and roles to core bar, sidebar, rail, flyout, and
-  settings controls.
-- Ensure keyboard focus can enter, move through, and leave every core surface.
-- Make Escape, Tab, arrow keys, Enter, and Space behavior consistent.
-- Preserve visible focus indicators in every design style.
-- Verify tooltip targets and hover-only affordances have non-pointer paths.
+- Keep passive sidebar and flyout use at `WlrKeyboardFocus.None`.
+- Allow a scoped keyboard-focus state for an explicitly activated text-entry
+  control such as Media Search; end that state immediately when the flyout is
+  dismissed or the search interaction ends.
+- Support Escape dismissal while a flyout owns scoped keyboard focus.
+- Preserve click-away dismissal for interactive flyouts, with any focus grab
+  limited to that dismissal lifecycle and never activated solely because the
+  persistent sidebar is mapped.
+- Restore focus to the previously active application after Escape, click-away,
+  or explicit close.
+- Retain meaningful accessible names and roles where they do not make controls
+  keyboard-focusable or change compositor focus policy.
+- Keep tooltip targets and hover affordances understandable through visible
+  labels or pointer-accessible controls.
+- Move workflows requiring broader keyboard navigation than direct text entry
+  into a separate transient/modal surface with an explicit focus lifecycle; do
+  not turn the persistent sidebar host into a Tab-navigated surface.
 - Ensure click-through frame and overlay surfaces do not steal input.
 
 Primary files:
@@ -124,10 +142,15 @@ Testing boundary:
 
 Acceptance:
 
-- Core workflows can be completed without a pointer.
-- Every interactive control has a meaningful accessible label.
-- Focus state remains visible against both dark and light themes.
-- Input masks and layer-shell focus behavior are covered by smoke tests.
+- Opening the sidebar or a non-text flyout does not steal keyboard focus from
+  the active application.
+- Activating Media Search accepts typing; Escape, click-away, and explicit
+  close dismiss the flyout and restore application focus.
+- Layer-shell keyboard focus changes only for the bounded text-entry lifecycle,
+  not for passive pointer interaction or general flyout visibility.
+- Pointer-operated controls have meaningful labels and reliable hit regions.
+- Input masks, outside-click behavior, and layer-shell focus policy are covered
+  by runtime smoke tests.
 
 ## Workstream 4 — Media lifecycle and provider reliability
 
@@ -161,18 +184,21 @@ Acceptance:
 - Failed media surfaces fall back to an available presentation.
 - Settings and queue state survive restart according to documented policy.
 
-## Workstream 5 — Product bundles and catalog clarity
+## Workstream 5 — Omakase setup and customization
 
 Tasks:
 
-- Define `core`, `native`, and `advanced` installer-profile boundaries and
-  align manifest bundle metadata with those user-facing profiles.
-- Ensure each bundle has complete required companions and a safe default.
-- Mark experimental or provider-dependent plugins clearly in the catalog.
-- Keep standalone plugins installable without silently activating the full
-  Lacuna bar.
-- Make the custom bar host and its required core companions obvious in the
-  installer and README.
+- Define one canonical omakase installation: the designed Lacuna bar, sidebar,
+  layout, settings baseline, and supported plugin collection.
+- Make the normal install path activate that setup without asking the user to
+  choose between architectural profiles.
+- Keep the result customizable after installation without weakening the
+  quality or coherence of the default experience.
+- Provide a safe reset path back to the canonical layout and settings baseline.
+- Mark optional, experimental, or provider-dependent plugins clearly without
+  turning them into competing beta installation profiles.
+- Keep lower-level selective installation available only where useful for
+  development, recovery, or advanced manual customization.
 
 Primary files:
 
@@ -183,9 +209,13 @@ Primary files:
 
 Acceptance:
 
-- Each bundle can be installed, listed, updated, and removed independently.
-- The catalog explains required companions and runtime ownership.
-- Users can return to a minimal native configuration without deleting state.
+- A clean normal install produces the complete designed Lacuna experience.
+- The installer, README, catalog, default layout, and settings baseline agree
+  on what the omakase setup contains.
+- Users can customize the installed setup and safely reset it to the canonical
+  default without deleting unrelated state.
+- Selective installation mechanisms do not appear as required product choices
+  in the beta onboarding path.
 
 ## Workstream 6 — P1 validation
 
@@ -200,12 +230,12 @@ omarchy-shell shell listShellConfig
 omarchy-shell shell summon lacuna.menu "{}"
 ```
 
-P1 is complete when core workflows, native services, settings, accessibility,
-and media recovery behave as one coherent product.
+P1 is complete when core workflows, native services, settings, pointer/focus
+safety, and media recovery behave as one coherent product.
 
 ## Beta Exit Record
 
 Do not mark P1 complete from repository tests alone. Record the supported
 environment, packaged artifact, clean-install result, shell restart result,
-settings round trip, core keyboard smoke, and media failure fallback in this
-section when the beta gate is actually run.
+settings round trip, sidebar focus-safety smoke, and media failure fallback in
+this section when the beta gate is actually run.
