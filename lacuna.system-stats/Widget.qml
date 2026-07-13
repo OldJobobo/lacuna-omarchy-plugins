@@ -9,14 +9,21 @@ Item {
   property var bar: null
   property string moduleName: "lacuna.system-stats"
   property var settings: ({})
+  property var manifest: null
   property int cpuPercent: 0
   property int memoryPercent: 0
   property string diskText: "--"
+  property int diskPercent: 0
+  property var snapshot: ({})
   property real previousCpuTotal: 0
   property real previousCpuIdle: 0
   property var cpuHistory: []
   property var memoryHistory: []
-  readonly property int historyLimit: 30
+  property var diskHistory: []
+  property bool flyoutOpen: false
+  property string flyoutMode: "cpu"
+  readonly property bool opened: flyoutOpen
+  readonly property int historyLimit: 60
 
   readonly property bool vertical: bar ? bar.vertical : false
   readonly property int barSize: bar ? bar.barSize : 26
@@ -40,7 +47,27 @@ Item {
     cpuFile.reload()
     memFile.reload()
     if (!diskProc.running) diskProc.running = true
+    if (!snapshotProc.running) snapshotProc.running = true
   }
+
+  function localPath(url) {
+    var value = String(url || "")
+    return value.indexOf("file://") === 0 ? decodeURIComponent(value.slice(7)) : value
+  }
+
+  function parseSnapshot(raw) {
+    try { snapshot = JSON.parse(String(raw || "{}")) }
+    catch (error) { snapshot = ({}) }
+  }
+
+  function openMetric(metric) {
+    flyoutMode = metric
+    flyoutOpen = true
+    if (bar) bar.hideTooltip(root)
+  }
+
+  function open() { openMetric("cpu") }
+  function close() { flyoutOpen = false }
 
   ColorProfile {
     id: colorProfile
@@ -95,6 +122,8 @@ Item {
     }
     var fields = lines[1].trim().split(/\s+/)
     diskText = fields.length >= 5 ? fields[4] : "??"
+    diskPercent = Math.max(0, Math.min(100, Number(diskText.replace("%", "")) || 0))
+    diskHistory = diskHistory.concat([diskPercent]).slice(-historyLimit)
   }
 
   Component.onCompleted: refresh()
@@ -131,6 +160,15 @@ Item {
     }
   }
 
+  Process {
+    id: snapshotProc
+    command: ["python3", root.localPath(Qt.resolvedUrl("scripts/system-stats-snapshot.py"))]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.parseSnapshot(text)
+    }
+  }
+
   Row {
     id: content
     spacing: root.buttonSpacing
@@ -146,7 +184,8 @@ Item {
       barSize: root.barSize
       hoverDuration: motionTokens.hoverDuration
       showLabel: root.showLabels
-      history: root.memoryHistory
+      history: root.diskHistory
+      metric: "disk"
     }
 
     StatButton {
@@ -160,7 +199,8 @@ Item {
       barSize: root.barSize
       hoverDuration: motionTokens.hoverDuration
       showLabel: root.showLabels
-      history: root.cpuHistory
+      history: root.memoryHistory
+      metric: "memory"
     }
 
     StatButton {
@@ -174,6 +214,8 @@ Item {
       barSize: root.barSize
       hoverDuration: motionTokens.hoverDuration
       showLabel: root.showLabels
+      history: root.cpuHistory
+      metric: "cpu"
     }
   }
 
@@ -188,6 +230,7 @@ Item {
     property int hoverDuration: 150
     property bool showLabel: true
     property var history: []
+    property string metric: "cpu"
     property bool compact: !vertical && barSize <= 26
     property int topbarIconSize: compact ? 12 : barSize >= 30 ? 16 : 14
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
@@ -290,7 +333,25 @@ Item {
       acceptedButtons: Qt.LeftButton
       onEntered: if (parent.bar && parent.tooltip) parent.bar.showTooltip(parent, parent.tooltip)
       onExited: if (parent.bar) parent.bar.hideTooltip(parent)
-      onClicked: if (parent.bar) parent.bar.run("omarchy launch or focus tui btop")
+      onClicked: root.openMetric(parent.metric)
     }
+  }
+
+  TelemetryFlyout {
+    anchorItem: root
+    owner: root
+    bar: root.bar
+    open: root.flyoutOpen
+    mode: root.flyoutMode
+    cpuPercent: root.cpuPercent
+    memoryPercent: root.memoryPercent
+    diskPercent: root.diskPercent
+    cpuHistory: root.cpuHistory
+    memoryHistory: root.memoryHistory
+    diskHistory: root.diskHistory
+    snapshot: root.snapshot
+    cpuAccent: colorProfile.roleColor("cpu", root.foreground)
+    memoryAccent: colorProfile.roleColor("memory", root.foreground)
+    diskAccent: colorProfile.roleColor("disk", root.foreground)
   }
 }

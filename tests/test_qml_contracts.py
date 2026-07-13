@@ -582,6 +582,8 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.notifications/LacunaGeometry.qml",
             "lacuna.theme/LacunaGeometry.qml",
             "lacuna.wallpaper/LacunaGeometry.qml",
+            "lacuna.system-stats/LacunaGeometry.qml",
+            "lacuna.temperature/LacunaGeometry.qml",
         }
         for path in sorted(geometry_files):
             self.assertIn("readonly property real curveKappa: " + literal, read(path), path)
@@ -604,6 +606,8 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.notifications/BarFlyoutSurface.qml",
             "lacuna.theme/BarFlyoutSurface.qml",
             "lacuna.wallpaper/BarFlyoutSurface.qml",
+            "lacuna.system-stats/BarFlyoutSurface.qml",
+            "lacuna.temperature/BarFlyoutSurface.qml",
         ]
         for path in consumers:
             qml = read(path)
@@ -1073,10 +1077,14 @@ class QmlContractTests(unittest.TestCase):
             "activeService.toggleOutputMute()",
             "activeService.setDefaultSink(modelData)",
             "activeService.setDefaultSource(modelData)",
+            "activeService.setStreamVolume(streamSlat.node, value / 100)",
+            "activeService.toggleStreamMute(streamSlat.node)",
             "component ActionChip: Rectangle",
             "component DeviceSlat: Rectangle",
+            "component StreamSlat: Rectangle",
             'text: "LACUNA AUDIO"',
             'text: "OUTPUT DEVICES"',
+            'text: "PLAYBACK STREAMS"',
         ]:
             self.assertIn(snippet, flyout)
 
@@ -1396,11 +1404,38 @@ class QmlContractTests(unittest.TestCase):
 
     def test_system_stats_uses_tabler_cpu_icon(self):
         qml = read("lacuna.system-stats/Widget.qml")
+        flyout = read("lacuna.system-stats/TelemetryFlyout.qml")
+        thermal_widget = read("lacuna.temperature/Widget.qml")
+        thermal_flyout = read("lacuna.temperature/ThermalFlyout.qml")
         icon = read("lacuna.system-stats/assets/tabler/cpu.svg")
 
         self.assertIn('iconSource: Qt.resolvedUrl("assets/tabler/cpu.svg")', qml)
         self.assertNotIn('iconSource: Qt.resolvedUrl("assets/tabler/assembly-filled.svg")', qml)
         self.assertIn("icon-tabler-cpu", icon)
+        self.assertIn('metric: "disk"', qml)
+        self.assertIn('metric: "memory"', qml)
+        self.assertIn('metric: "cpu"', qml)
+        self.assertIn("TelemetryFlyout {", qml)
+        self.assertIn("history: root.diskHistory", qml)
+        self.assertIn("history: root.memoryHistory", qml)
+        self.assertIn("history: root.cpuHistory", qml)
+        self.assertNotIn("btop", qml)
+        self.assertIn('"SYSTEM / MEMORY"', flyout)
+        self.assertIn('"SYSTEM / STORAGE"', flyout)
+        self.assertIn('"SYSTEM / PROCESSOR"', flyout)
+        self.assertIn("BarFlyoutSurface {", flyout)
+        self.assertIn("LacunaDropShadow", flyout)
+        self.assertIn("font.letterSpacing: tokens.trackingTitle", flyout)
+        self.assertIn("i % 15 === 0", flyout)
+        self.assertIn("id: allocationField", flyout)
+        self.assertIn('visible: root.mode === "disk"', flyout)
+        self.assertIn("font.family: tokens.displayFont; font.pixelSize: tokens.textTelemetry", flyout)
+        self.assertIn("ThermalFlyout {", thermal_widget)
+        self.assertNotIn("btop", thermal_widget)
+        self.assertIn('text: "THERMAL / SENSOR ARRAY"', thermal_flyout)
+        self.assertIn("SENSOR FIELD", thermal_flyout)
+        self.assertIn("LacunaDropShadow", thermal_flyout)
+        self.assertIn("font.family: tokens.displayFont; font.pixelSize: tokens.textTelemetry", thermal_flyout)
 
     def test_weather_splits_leading_condition_icon_from_label(self):
         qml = read("lacuna.weather/Widget.qml")

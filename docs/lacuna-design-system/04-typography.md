@@ -39,6 +39,7 @@ flow through density `mix()` only where a layout demands it.
 | `title` | 16 | Tektur | section / panel headers |
 | `icon` | 15 | — | inline icon sizing baseline |
 | `glyph` | 20 | — | large feature glyphs |
+| `telemetry` | 58 | Tektur | dominant numeric readings in instrument and monitoring surfaces |
 
 Control heights pair with the scale: `controlSmall 30`, `controlNormal 34`.
 

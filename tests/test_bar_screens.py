@@ -80,7 +80,7 @@ class BarScreenModelTests(unittest.TestCase):
         workspaces = (ROOT / "lacuna.workspaces" / "Widget.qml").read_text(encoding="utf-8")
         media = (ROOT / "lacuna.mpris" / "Widget.qml").read_text(encoding="utf-8")
 
-        self.assertIn("readonly property int historyLimit: 30", stats)
+        self.assertIn("readonly property int historyLimit: 60", stats)
         self.assertIn("slice(-historyLimit)", stats)
         self.assertIn("property var history: []", stats)
         self.assertIn("readonly property bool workspaceOccupied", workspaces)

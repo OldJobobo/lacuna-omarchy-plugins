@@ -9,8 +9,13 @@ Item {
   property var bar: null
   property string moduleName: "lacuna.temperature"
   property var settings: ({})
+  property var manifest: null
   property int temperatureF: 0
   property bool temperatureAvailable: false
+  property var thermalSnapshot: ({})
+  property var temperatureHistory: []
+  property bool flyoutOpen: false
+  readonly property bool opened: flyoutOpen
 
   readonly property bool vertical: bar ? bar.vertical : false
   readonly property int barSize: bar ? bar.barSize : 26
@@ -25,7 +30,6 @@ Item {
   readonly property url iconSource: Qt.resolvedUrl("assets/tabler/temperature-plus-filled.svg")
   readonly property string status: temperatureF >= criticalF ? "Hot" : temperatureF >= warmF ? "Warm" : "Normal"
   readonly property color statusColor: colorProfile.statusColor(status.toLowerCase(), "temperature")
-  readonly property string temperatureCommand: "for f in /sys/class/hwmon/hwmon*/temp*_input /sys/class/thermal/thermal_zone*/temp; do [ -r \"$f\" ] || continue; v=$(cat \"$f\" 2>/dev/null) || continue; case \"$v\" in ''|*[!0-9]*) continue;; esac; [ \"$v\" -gt 0 ] && { printf '%s\\n' \"$v\"; exit 0; }; done; exit 1"
 
   visible: temperatureAvailable
   implicitWidth: temperatureAvailable ? button.implicitWidth : 0
@@ -37,20 +41,37 @@ Item {
     return value === undefined || value === null ? fallback : value
   }
 
+  function localPath(url) {
+    var value = String(url || "")
+    return value.indexOf("file://") === 0 ? decodeURIComponent(value.slice(7)) : value
+  }
+
   function parseTemperature(raw) {
-    var milliC = Number(String(raw || "").trim())
-    if (!isFinite(milliC) || milliC <= 0) {
+    var parsed = ({})
+    try { parsed = JSON.parse(String(raw || "{}")) }
+    catch (error) { parsed = ({}) }
+    var primary = parsed.primary || {}
+    var fahrenheit = Number(primary.fahrenheit || 0)
+    if (!isFinite(fahrenheit) || fahrenheit <= 0) {
       temperatureAvailable = false
       return
     }
-    temperatureF = Math.round((milliC / 1000 * 9 / 5) + 32)
+    thermalSnapshot = parsed
+    temperatureF = Math.round(fahrenheit)
+    temperatureHistory = temperatureHistory.concat([temperatureF]).slice(-60)
     temperatureAvailable = true
   }
 
   function refresh() {
-    tempProc.command = ["bash", "-c", temperatureCommand]
     if (!tempProc.running) tempProc.running = true
   }
+
+  function open() {
+    flyoutOpen = true
+    if (bar) bar.hideTooltip(root)
+  }
+
+  function close() { flyoutOpen = false }
 
   ColorProfile {
     id: colorProfile
@@ -78,6 +99,7 @@ Item {
 
   Process {
     id: tempProc
+    command: ["python3", root.localPath(Qt.resolvedUrl("scripts/thermal-snapshot.py"))]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: root.parseTemperature(text)
@@ -157,7 +179,22 @@ Item {
       acceptedButtons: Qt.LeftButton
       onEntered: if (bar) bar.showTooltip(root, root.tooltip())
       onExited: if (bar) bar.hideTooltip(root)
-      onClicked: if (bar) bar.run("omarchy launch or focus tui btop")
+      onClicked: root.open()
     }
+  }
+
+  ThermalFlyout {
+    anchorItem: root
+    owner: root
+    bar: root.bar
+    open: root.flyoutOpen
+    snapshot: root.thermalSnapshot
+    history: root.temperatureHistory
+    temperatureF: root.temperatureF
+    warmF: root.warmF
+    criticalF: root.criticalF
+    accentColor: root.statusColor
+    normalColor: root.bar && root.bar.accent ? root.bar.accent : root.foreground
+    warningColor: colorProfile.statusColor("warning", "temperature")
   }
 }
