@@ -79,12 +79,16 @@ PopupWindow {
     property string outputMood: "Muted"
     property var sinks: []
     property var sources: []
+    property var streams: []
     function setOutputVolume(value) {}
     function toggleOutputMute() {}
     function toggleInputMute() {}
     function setDefaultSink(node) {}
     function setDefaultSource(node) {}
     function nodeLabel(node) { return "Unknown" }
+    function streamLabel(node) { return "Stream" }
+    function setStreamVolume(node, value) {}
+    function toggleStreamMute(node) {}
   }
 
   HyprlandFocusGrab {
@@ -287,6 +291,27 @@ PopupWindow {
                 onTriggered: activeService.setDefaultSource(modelData)
               }
             }
+
+            Text {
+              width: parent.width
+              visible: activeService.streams.length > 0
+              height: visible ? implicitHeight + root.space(9) : 0
+              verticalAlignment: Text.AlignBottom
+              text: "PLAYBACK STREAMS"
+              color: root.dimColor
+              font.family: root.fontFamily
+              font.pixelSize: 11
+              font.bold: true
+            }
+
+            Repeater {
+              model: activeService.streams
+              StreamSlat {
+                required property var modelData
+                width: parent ? parent.width : 0
+                node: modelData
+              }
+            }
           }
         }
       }
@@ -364,6 +389,90 @@ PopupWindow {
       hoverEnabled: true
       cursorShape: Qt.PointingHandCursor
       onClicked: slat.triggered()
+    }
+  }
+
+  component StreamSlat: Rectangle {
+    id: streamSlat
+
+    required property var node
+    readonly property bool muted: node && node.audio ? node.audio.muted : true
+    readonly property int percent: node && node.audio ? Math.round(node.audio.volume * 100) : 0
+
+    height: root.space(68)
+    radius: 0
+    color: streamMouse.containsMouse ? root.panelHover : root.panelFill
+    border.width: 1
+    border.color: root.lineColor
+
+    Text {
+      id: streamMute
+      anchors.left: parent.left
+      anchors.top: parent.top
+      anchors.leftMargin: root.space(11)
+      anchors.topMargin: root.space(10)
+      width: root.space(22)
+      text: streamSlat.muted ? "󰝟" : "󰕾"
+      color: streamSlat.muted ? root.dimColor : root.accentColor
+      font.family: root.fontFamily
+      font.pixelSize: 16
+      horizontalAlignment: Text.AlignHCenter
+
+      MouseArea {
+        anchors.fill: parent
+        cursorShape: Qt.PointingHandCursor
+        onClicked: activeService.toggleStreamMute(streamSlat.node)
+      }
+    }
+
+    Text {
+      anchors.left: streamMute.right
+      anchors.right: streamPercent.left
+      anchors.top: parent.top
+      anchors.leftMargin: root.space(8)
+      anchors.rightMargin: root.space(8)
+      anchors.topMargin: root.space(10)
+      text: activeService.streamLabel(streamSlat.node)
+      color: root.foreground
+      font.family: root.fontFamily
+      font.pixelSize: 13
+      elide: Text.ElideRight
+    }
+
+    Text {
+      id: streamPercent
+      anchors.right: parent.right
+      anchors.top: parent.top
+      anchors.rightMargin: root.space(11)
+      anchors.topMargin: root.space(11)
+      width: root.space(38)
+      text: streamSlat.percent + "%"
+      color: root.dimColor
+      font.family: root.fontFamily
+      font.pixelSize: 11
+      font.bold: true
+      horizontalAlignment: Text.AlignRight
+    }
+
+    Slider {
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.bottom: parent.bottom
+      anchors.leftMargin: root.space(11)
+      anchors.rightMargin: root.space(11)
+      anchors.bottomMargin: root.space(7)
+      from: 0
+      to: 150
+      value: streamSlat.percent
+      live: true
+      onMoved: activeService.setStreamVolume(streamSlat.node, value / 100)
+    }
+
+    MouseArea {
+      id: streamMouse
+      anchors.fill: parent
+      acceptedButtons: Qt.NoButton
+      hoverEnabled: true
     }
   }
 }
