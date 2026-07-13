@@ -209,6 +209,7 @@ class CodexWeeklyStatusTests(unittest.TestCase):
                 },
             }
 
+        future = int(datetime.now().timestamp()) + 86400
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             sessions = home / ".codex" / "sessions" / "2026" / "06" / "21"
@@ -217,8 +218,8 @@ class CodexWeeklyStatusTests(unittest.TestCase):
             session_file.write_text(
                 "\n".join(
                     [
-                        json.dumps(token_event("2026-06-21T08:09:59.582Z", "codex", 62.0, 1782337249)),
-                        json.dumps(token_event("2026-06-21T16:02:44.298Z", "codex_bengalfox", 0.0, 1782662543)),
+                        json.dumps(token_event("2026-06-21T08:09:59.582Z", "codex", 62.0, future)),
+                        json.dumps(token_event("2026-06-21T16:02:44.298Z", "codex_bengalfox", 0.0, future)),
                     ]
                 )
                 + "\n",
@@ -230,7 +231,78 @@ class CodexWeeklyStatusTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Weekly limit left: 38.0%", result.stdout)
         self.assertIn("Weekly used: 62.0%", result.stdout)
-        self.assertIn("2026-06-24", result.stdout)
+
+    def test_weekly_left_recognizes_weekly_window_in_primary(self):
+        event = {
+            "timestamp": "2026-07-12T22:45:31.079Z",
+            "type": "event_msg",
+            "payload": {
+                "type": "token_count",
+                "rate_limits": {
+                    "limit_id": "codex",
+                    "plan_type": "prolite",
+                    "primary": {
+                        "used_percent": 7.0,
+                        "resets_at": 1784487505,
+                        "window_minutes": 10080,
+                    },
+                    "secondary": None,
+                },
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            sessions = home / ".codex" / "sessions" / "2026" / "07" / "12"
+            sessions.mkdir(parents=True)
+            (sessions / "session.jsonl").write_text(json.dumps(event) + "\n", encoding="utf-8")
+            result = run([str(self.LEFT_SCRIPT)], {"HOME": str(home)})
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("5h used", result.stdout)
+        self.assertIn("Weekly limit left: 93.0%", result.stdout)
+        self.assertIn("Weekly used: 7.0%", result.stdout)
+
+    def test_weekly_left_combines_split_five_hour_and_weekly_streams(self):
+        def event(timestamp, limit_id, minutes, used, reset):
+            return {
+                "timestamp": timestamp,
+                "type": "event_msg",
+                "payload": {
+                    "type": "token_count",
+                    "rate_limits": {
+                        "limit_id": limit_id,
+                        "plan_type": "prolite",
+                        "primary": {
+                            "used_percent": used,
+                            "resets_at": reset,
+                            "window_minutes": minutes,
+                        },
+                        "secondary": None,
+                    },
+                },
+            }
+
+        future = int(datetime.now().timestamp()) + 86400
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            sessions = home / ".codex" / "sessions" / "2026" / "07" / "12"
+            sessions.mkdir(parents=True)
+            (sessions / "session.jsonl").write_text(
+                "\n".join(
+                    [
+                        json.dumps(event("2026-07-12T22:00:00Z", "codex_bengalfox", 300, 12.0, future)),
+                        json.dumps(event("2026-07-12T22:01:00Z", "codex", 10080, 9.0, future)),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            result = run([str(self.LEFT_SCRIPT)], {"HOME": str(home)})
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("5h used: 12.0%", result.stdout)
+        self.assertIn("Weekly used: 9.0%", result.stdout)
 
 
 class PreloadThemeSwitcherTests(unittest.TestCase):

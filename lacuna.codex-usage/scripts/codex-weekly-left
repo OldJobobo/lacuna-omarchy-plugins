@@ -74,6 +74,52 @@ def parse_latest_token_count():
     return best
 
 
+def parse_latest_windows():
+    best = {300: None, 10080: None}
+    now = datetime.now(tz=timezone.utc).timestamp()
+
+    for path in iter_session_files():
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                for raw_line in handle:
+                    try:
+                        event = json.loads(raw_line)
+                    except json.JSONDecodeError:
+                        continue
+                    if event.get("type") != "event_msg":
+                        continue
+                    payload = event.get("payload") or {}
+                    if payload.get("type") != "token_count" or not event.get("timestamp"):
+                        continue
+
+                    rate_limits = payload.get("rate_limits") or {}
+                    for key, legacy_minutes in (("primary", 300), ("secondary", 10080)):
+                        window = rate_limits.get(key) or {}
+                        if window.get("used_percent") is None:
+                            continue
+                        minutes = window.get("window_minutes")
+                        if minutes is None:
+                            minutes = legacy_minutes
+                        if minutes not in best:
+                            continue
+                        resets_at = window.get("resets_at")
+                        if resets_at is not None and float(resets_at) < now:
+                            continue
+                        candidate = {
+                            "timestamp": event["timestamp"],
+                            "path": path,
+                            "payload": payload,
+                            "window": window,
+                        }
+                        current = best[minutes]
+                        if current is None or candidate_rank(candidate) > candidate_rank(current):
+                            best[minutes] = candidate
+        except OSError:
+            continue
+
+    return best
+
+
 def format_reset_time(epoch_seconds):
     if epoch_seconds is None:
         return "unknown"
@@ -81,33 +127,52 @@ def format_reset_time(epoch_seconds):
     return dt.strftime("%Y-%m-%d %I:%M:%S %p %Z")
 
 
+def limit_window(rate_limits, window_minutes, legacy_key):
+    windows = []
+    for key in ("primary", "secondary"):
+        window = rate_limits.get(key) or {}
+        if window:
+            windows.append(window)
+        if window.get("window_minutes") == window_minutes:
+            return window
+
+    # Older Codex events omitted window_minutes and used fixed positions.
+    if windows and all(window.get("window_minutes") is None for window in windows):
+        return rate_limits.get(legacy_key) or {}
+    return {}
+
+
 def main():
-    latest = parse_latest_token_count()
-    if latest is None:
+    windows = parse_latest_windows()
+    session_event = windows[300]
+    weekly_event = windows[10080]
+    selected = [event for event in (session_event, weekly_event) if event is not None]
+    if not selected:
         print("No Codex token_count events found in ~/.codex/sessions", file=sys.stderr)
         return 1
 
+    latest = max(selected, key=lambda event: event["timestamp"])
+    session = session_event["window"] if session_event else {}
+    weekly = weekly_event["window"] if weekly_event else {}
+    session_used_percent = session.get("used_percent")
+    session_reset_at = session.get("resets_at")
+    weekly_used_percent = weekly.get("used_percent")
+    weekly_reset_at = weekly.get("resets_at")
     rate_limits = latest["payload"].get("rate_limits") or {}
-    primary = rate_limits.get("primary") or {}
-    secondary = rate_limits.get("secondary") or {}
-    primary_used_percent = primary.get("used_percent")
-    primary_reset_at = primary.get("resets_at")
-    weekly_used_percent = secondary.get("used_percent")
-    weekly_reset_at = secondary.get("resets_at")
     plan_type = rate_limits.get("plan_type") or "unknown"
 
-    if weekly_used_percent is None and primary_used_percent is None:
+    if weekly_used_percent is None and session_used_percent is None:
         print("Latest token_count event does not include primary or secondary used_percent", file=sys.stderr)
         return 1
 
     source = latest["path"]
     timestamp = latest["timestamp"]
 
-    if primary_used_percent is not None:
-        primary_left_percent = max(0.0, 100.0 - float(primary_used_percent))
-        print(f"5h limit left: {primary_left_percent:.1f}%")
-        print(f"5h used: {float(primary_used_percent):.1f}%")
-        print(f"5h resets: {format_reset_time(primary_reset_at)}")
+    if session_used_percent is not None:
+        session_left_percent = max(0.0, 100.0 - float(session_used_percent))
+        print(f"5h limit left: {session_left_percent:.1f}%")
+        print(f"5h used: {float(session_used_percent):.1f}%")
+        print(f"5h resets: {format_reset_time(session_reset_at)}")
 
     if weekly_used_percent is not None:
         weekly_left_percent = max(0.0, 100.0 - float(weekly_used_percent))
