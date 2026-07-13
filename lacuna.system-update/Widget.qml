@@ -14,7 +14,7 @@ Item {
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.statusColor(updateAvailable ? "active" : "normal", "system-update")
   readonly property int intervalMs: Math.max(60000, Number(setting("interval", 21600000)))
-  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
 
   visible: updateAvailable
   implicitWidth: updateAvailable ? button.implicitWidth : 0

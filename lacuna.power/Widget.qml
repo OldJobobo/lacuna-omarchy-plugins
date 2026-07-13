@@ -16,7 +16,7 @@ Item {
   readonly property bool low: powerService ? powerService.low : false
   readonly property bool charging: powerService ? powerService.charging : false
   readonly property color moduleColor: colorProfile.statusColor(low ? "critical" : charging ? "active" : "normal", "power")
-  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property string icon: powerService ? powerService.icon : ""
 
   implicitWidth: button.implicitWidth

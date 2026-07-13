@@ -5,6 +5,56 @@ from qml_harness import HAVE_SESSION, parse_behave, qml_url, require_no_qml_erro
 
 @unittest.skipUnless(HAVE_SESSION, "needs a quickshell binary and a Wayland session")
 class QmlColorProfileBehaviorTests(unittest.TestCase):
+    def test_theme_and_wallpaper_profiles_color_roles_without_changing_foreground(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var themeProfile: null
+  property var wallpaperProfile: null
+  property string themeIcon: ""
+  property string themeText: ""
+  property string wallpaperIcon: ""
+  property string wallpaperText: ""
+  Component.onCompleted: {{
+    var theme = Qt.createComponent("{qml_url('lacuna.theme/ColorProfile.qml')}", Component.PreferSynchronous)
+    var wallpaper = Qt.createComponent("{qml_url('lacuna.wallpaper/ColorProfile.qml')}", Component.PreferSynchronous)
+    themeProfile = theme.createObject(root, {{ widgetSettings: {{ colorProfile: "colorful" }} }})
+    wallpaperProfile = wallpaper.createObject(root, {{ widgetSettings: {{ colorProfile: "colorful" }} }})
+    var colors = 'fg = "#eeeeee"\\nmagenta = "#ab47bc"\\nblue = "#2979ff"'
+    themeProfile.loadTheme(colors)
+    wallpaperProfile.loadTheme(colors)
+    themeIcon = themeProfile.roleColor("theme", themeProfile.foreground).toString()
+    themeText = themeProfile.foreground.toString()
+    wallpaperIcon = wallpaperProfile.roleColor("wallpaper", wallpaperProfile.foreground).toString()
+    wallpaperText = wallpaperProfile.foreground.toString()
+    finish.restart()
+  }}
+  Timer {{
+    id: finish
+    interval: 20
+    onTriggered: {{
+      console.log("BEHAVE " + JSON.stringify({{
+        themeIcon: root.themeIcon,
+        themeText: root.themeText,
+        wallpaperIcon: root.wallpaperIcon,
+        wallpaperText: root.wallpaperText
+      }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        result = parse_behave(output)[-1]
+        self.assertEqual(result["themeIcon"], "#ab47bc")
+        self.assertEqual(result["themeText"], "#eeeeee")
+        self.assertEqual(result["wallpaperIcon"], "#2979ff")
+        self.assertEqual(result["wallpaperText"], "#eeeeee")
+
     def test_colorful_profile_uses_named_role_hues_for_active_widgets(self):
         qml = f"""
 import Quickshell

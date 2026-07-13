@@ -26,7 +26,10 @@ Item {
   readonly property int criticalF: Math.max(warmF + 1, Number(setting("criticalF", 185)))
   readonly property bool compact: !vertical && barSize <= 26
   readonly property bool showText: setting("showText", compact ? false : true) === true
-  readonly property int topbarIconSize: compact ? 12 : barSize >= 30 ? 16 : 14
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
+  readonly property int topbarTextSize: barSize <= 26 ? 12 : 13
+  readonly property int contentSpacing: 6
+  readonly property int horizontalPadding: vertical ? 0 : 7
   readonly property url iconSource: Qt.resolvedUrl("assets/tabler/temperature-plus-filled.svg")
   readonly property string status: temperatureF >= criticalF ? "Hot" : temperatureF >= warmF ? "Warm" : "Normal"
   readonly property color statusColor: colorProfile.statusColor(status.toLowerCase(), "temperature")
@@ -117,9 +120,7 @@ Item {
       seam: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.35)
       accent: colorProfile.accent
     }
-    readonly property int horizontalPadding: root.vertical ? 0 : (root.compact ? 5 : 8)
-
-    width: root.vertical ? root.barSize : Math.max(root.compact ? root.barSize : 36, content.implicitWidth + horizontalPadding * 2)
+    width: root.vertical ? root.barSize : Math.max(root.compact ? root.barSize : 36, content.implicitWidth + root.horizontalPadding * 2)
     height: root.vertical ? Math.max(root.barSize, content.implicitHeight + 10) : root.barSize
     implicitWidth: width
     implicitHeight: height
@@ -134,32 +135,46 @@ Item {
       id: content
       anchors.centerIn: parent
       rotation: root.vertical ? -90 : 0
-      spacing: root.showText ? (root.compact ? 3 : 4) : 0
+      spacing: root.contentSpacing
 
-      Image {
+      Item {
         anchors.verticalCenter: parent.verticalCenter
-        source: root.iconSource
-        width: root.topbarIconSize
-        height: root.topbarIconSize
-        sourceSize.width: width
-        sourceSize.height: height
-        smooth: true
-        mipmap: true
-        layer.enabled: true
-        layer.effect: MultiEffect {
-          colorization: 1.0
-          colorizationColor: root.statusColor
+        width: root.topbarIconSize + 4
+        height: root.topbarIconSize + 4
+
+        Image {
+          anchors.centerIn: parent
+          source: root.iconSource
+          width: root.topbarIconSize
+          height: root.topbarIconSize
+          sourceSize.width: width
+          sourceSize.height: height
+          smooth: true
+          mipmap: true
+          layer.enabled: true
+          layer.effect: MultiEffect {
+            colorization: 1.0
+            colorizationColor: root.statusColor
+          }
         }
+      }
+
+      Rectangle {
+        anchors.verticalCenter: parent.verticalCenter
+        visible: root.showText
+        width: 1
+        height: Math.max(10, root.topbarIconSize - 1)
+        color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.18)
       }
 
       Text {
         visible: root.showText
         anchors.verticalCenter: parent.verticalCenter
         text: root.temperatureF + " F"
-        color: root.statusColor
+        color: root.foreground
         font.family: bar ? bar.fontFamily : "Hack Nerd Font Propo"
-        font.pixelSize: root.compact ? 12 : 14
-        font.weight: root.status === "Hot" ? Font.DemiBold : Font.Normal
+        font.pixelSize: root.topbarTextSize
+        font.weight: Font.DemiBold
         maximumLineCount: 1
       }
     }

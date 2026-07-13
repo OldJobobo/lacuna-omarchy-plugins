@@ -23,9 +23,10 @@ Item {
   property real sweepPosition: -0.35
   property int barSize: 26
   property int minButtonWidth: Math.max(32, barSize)
-  property int contentHorizontalPadding: compact ? 8 : 16
-  property int labelPixelSize: compact ? 13 : 14
-  property int iconSize: barSize >= 32 ? 18 : compact ? 12 : 13
+  property int contentHorizontalPadding: 14
+  property int labelPixelSize: 12
+  property int iconSize: barSize >= 30 ? 15 : 13
+  property int contentSpacing: 6
   property string fontFamily: "Hack Nerd Font Propo"
   property int labelFontWeight: active ? Font.DemiBold : Font.Normal
   property real hoverPulseAmount: 0
@@ -58,7 +59,7 @@ Item {
   }
 
   function baseTextColor() {
-    return root.active || root.accentText ? root.accent : root.foreground
+    return root.accentText ? root.accent : root.foreground
   }
 
   function iconPath(icon) {
@@ -113,13 +114,13 @@ Item {
     id: content
 
     anchors.centerIn: parent
-    spacing: root.iconName !== "" ? 4 : 0
+    spacing: root.contentSpacing
 
     Item {
       visible: root.iconName !== ""
       anchors.verticalCenter: parent.verticalCenter
-      width: visible ? root.iconSize : 0
-      height: root.iconSize
+      width: root.iconSize + 4
+      height: root.iconSize + 4
 
       Shape {
         anchors.centerIn: parent
@@ -131,7 +132,7 @@ Item {
         preferredRendererType: Shape.CurveRenderer
 
         ShapePath {
-          strokeColor: root.baseTextColor()
+          strokeColor: root.accent
           strokeWidth: 2
           fillColor: "transparent"
           capStyle: ShapePath.RoundCap
@@ -139,6 +140,14 @@ Item {
           PathSvg { path: root.iconPath(root.iconName) }
         }
       }
+    }
+
+    Rectangle {
+      anchors.verticalCenter: parent.verticalCenter
+      visible: root.iconName !== "" && root.text.length > 0
+      width: 1
+      height: Math.max(10, root.iconSize - 1)
+      color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.18)
     }
 
     Item {

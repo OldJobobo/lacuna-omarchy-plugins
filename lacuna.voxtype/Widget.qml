@@ -13,7 +13,7 @@ Item {
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.statusColor(active ? "active" : "normal", "dictation")
-  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property bool showInactive: boolSetting("showInactive", false)
   readonly property bool shown: active || showInactive
 

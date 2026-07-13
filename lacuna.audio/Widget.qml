@@ -17,7 +17,7 @@ Item {
   readonly property real volume: audioService ? audioService.outputVolume : 0
   readonly property int percent: audioService ? audioService.outputPercent : 0
   readonly property color moduleColor: colorProfile.statusColor(!hasSink || muted ? "warning" : "normal", "audio")
-  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property int wheelStep: Math.max(1, Math.min(25, Number(setting("wheelStep", 5))))
   readonly property string icon: audioService ? audioService.outputIcon : ""
 

@@ -17,6 +17,8 @@ Item {
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.roleColor("wallpaper", foreground)
+  readonly property color iconColor: moduleColor
+  readonly property color textColor: foreground
   readonly property bool widgetEnabled: boolSetting("enabled", true)
   readonly property int maxTextLength: Math.max(8, Number(setting("maxTextLength", 22)))
   readonly property int iconSize: barSize >= 30 ? 15 : 13
@@ -147,7 +149,7 @@ Item {
           sourceSize.width: width
           sourceSize.height: height
           layer.enabled: true
-          layer.effect: MultiEffect { colorization: 1; colorizationColor: root.moduleColor }
+          layer.effect: MultiEffect { colorization: 1; colorizationColor: root.iconColor }
         }
       }
 
@@ -161,7 +163,7 @@ Item {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         text: root.displayText
-        color: root.foreground
+        color: root.textColor
         font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
         font.pixelSize: root.barSize <= 26 ? 12 : 13
         font.weight: Font.DemiBold

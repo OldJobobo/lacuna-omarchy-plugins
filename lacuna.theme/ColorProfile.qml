@@ -12,9 +12,10 @@ Item {
   property var palette: ({})
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
+  readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")
   readonly property string settingsPath: configHome + "/omarchy/lacuna/settings.json"
-  readonly property string colorsPath: configHome + "/omarchy/current/theme/colors.toml"
-  readonly property string themeNamePath: configHome + "/omarchy/current/theme.name"
+  readonly property string colorsPath: stateHome + "/omarchy/current/theme/colors.toml"
+  readonly property string themeNamePath: stateHome + "/omarchy/current/theme.name"
   readonly property string profile: normalizeProfile(widgetSetting("colorProfile", settingsProfile))
   readonly property color foreground: bar ? bar.foreground : themeColor("foreground", "#d8dee9")
   readonly property color urgent: bar ? bar.urgent : themeColor("color9", "#d42b5b")
@@ -44,8 +45,8 @@ Item {
       memory: "color10",
       cpu: "color11",
       temperature: "color9",
-      theme: "color14",
-      wallpaper: "color11"
+      theme: "magenta",
+      wallpaper: "blue"
     }
     return map[roleName] || roleName || "foreground"
   }
@@ -68,6 +69,10 @@ Item {
       var match = lines[i].match(/^\s*([A-Za-z0-9_-]+)\s*=\s*["']?([^"'\s]+)["']?/)
       if (match) next[match[1]] = match[2].trim()
     }
+    if (!next.background && next.bg) next.background = next.bg
+    if (!next.foreground && next.fg) next.foreground = next.fg
+    if (!next.magenta && next.color5) next.magenta = next.color5
+    if (!next.blue && next.color4) next.blue = next.color4
     palette = next
   }
 

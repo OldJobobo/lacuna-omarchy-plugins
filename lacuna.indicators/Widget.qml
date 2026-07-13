@@ -26,7 +26,8 @@ Item {
   readonly property int pendingCount: notificationService ? notificationService.pendingModel.count : 0
   readonly property bool dnd: notificationService ? notificationService.doNotDisturb : false
   readonly property bool hasActiveIndicator: hasConfiguredActiveIndicator()
-  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
+  readonly property int idleGlyphSize: topbarIconSize - 3
 
   implicitWidth: indicatorRow.implicitWidth
   implicitHeight: indicatorRow.implicitHeight
@@ -300,7 +301,7 @@ Item {
           color: indicatorButton.indicatorColor
           opacity: indicatorButton.active || clickArea.containsMouse ? 1 : 0.72
           font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
-          font.pixelSize: indicatorButton.indicatorId === "StayAwake" ? Math.max(9, root.topbarIconSize - 3) : root.topbarIconSize
+          font.pixelSize: indicatorButton.indicatorId === "StayAwake" ? root.idleGlyphSize : root.topbarIconSize
           font.bold: indicatorButton.indicatorId === "StayAwake"
           renderType: Text.NativeRendering
         }

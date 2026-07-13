@@ -17,7 +17,7 @@ Item {
   readonly property bool dnd: notificationService ? notificationService.doNotDisturb : false
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.statusColor(dnd ? "warning" : pendingCount > 0 ? "active" : "normal", "notifications")
-  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property string icon: dnd ? "󰂛" : pendingCount > 0 ? "󱅫" : "󰂚"
 
   implicitWidth: button.implicitWidth

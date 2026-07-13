@@ -1416,9 +1416,9 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('metric: "memory"', qml)
         self.assertIn('metric: "cpu"', qml)
         self.assertIn("TelemetryFlyout {", qml)
-        self.assertIn("history: root.diskHistory", qml)
-        self.assertIn("history: root.memoryHistory", qml)
-        self.assertIn("history: root.cpuHistory", qml)
+        self.assertIn("diskHistory: root.diskHistory", qml)
+        self.assertIn("memoryHistory: root.memoryHistory", qml)
+        self.assertIn("cpuHistory: root.cpuHistory", qml)
         self.assertNotIn("btop", qml)
         self.assertIn('"SYSTEM / MEMORY"', flyout)
         self.assertIn('"SYSTEM / STORAGE"', flyout)
@@ -1444,8 +1444,43 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("function textWithoutLeadingWeatherIcon(raw)", qml)
         self.assertIn('readonly property string weatherIcon: leadingWeatherIcon(weatherText) || "󰖐"', qml)
         self.assertIn("text: root.weatherIcon", qml)
+        self.assertIn("readonly property color iconColor: moduleColor", qml)
+        self.assertIn("readonly property color textColor: foreground", qml)
+        self.assertIn("readonly property color seamColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.18)", qml)
+        self.assertIn("readonly property int topbarIconSize: barSize >= 30 ? 15 : 13", qml)
+        self.assertIn("readonly property int topbarTextSize: barSize <= 26 ? 12 : 13", qml)
+        self.assertIn("readonly property int contentSpacing: 6", qml)
+        self.assertIn("readonly property int horizontalPadding: vertical ? 0 : 7", qml)
+        self.assertIn("width: root.topbarIconSize + 4", qml)
+        self.assertIn("visible: root.showText && root.displayText.length > 0", qml)
+        self.assertIn("color: root.seamColor", qml)
+        self.assertIn("color: root.textColor", qml)
+        self.assertIn("font.pixelSize: root.topbarTextSize", qml)
+        self.assertIn("font.weight: Font.DemiBold", qml)
+        self.assertIn('weather: "blue"', read("lacuna.weather/ColorProfile.qml"))
         self.assertIn("text: root.displayText", qml)
         self.assertNotIn("text: root.weatherText", qml)
+
+    def test_clock_splits_colored_date_from_foreground_time(self):
+        qml = read("lacuna.clock/Widget.qml")
+
+        self.assertIn("readonly property color dateColor: moduleColor", qml)
+        self.assertIn("readonly property color timeColor: foreground", qml)
+        self.assertIn("readonly property color seamColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.18)", qml)
+        self.assertIn("readonly property int topbarTextSize: barSize <= 26 ? 12 : 13", qml)
+        self.assertIn("readonly property int contentSpacing: 6", qml)
+        self.assertIn("readonly property int horizontalPadding: vertical ? 0 : 7", qml)
+        self.assertIn("function dateFormatPart(format)", qml)
+        self.assertIn("function timeFormatPart(format)", qml)
+        self.assertIn("readonly property string dateText: formattedWith(displayDate, activeDateFormat)", qml)
+        self.assertIn("readonly property string timeText: formattedWith(displayDate, activeTimeFormat)", qml)
+        self.assertIn("text: root.dateText", qml)
+        self.assertIn("color: root.dateColor", qml)
+        self.assertIn("color: root.seamColor", qml)
+        self.assertIn("text: root.timeText", qml)
+        self.assertIn("color: root.timeColor", qml)
+        self.assertEqual(qml.count("font.weight: Font.DemiBold"), 2)
+        self.assertIn('clock: "accent"', read("lacuna.clock/ColorProfile.qml"))
 
     def test_theme_and_wallpaper_widgets_use_details_flyouts_not_switchers(self):
         theme = read("lacuna.theme/Widget.qml")
@@ -2198,6 +2233,58 @@ class QmlContractTests(unittest.TestCase):
         self.assertNotIn("root.active ? 0.08", qml)
         self.assertNotIn("height: 2\n    color: root.accent\n    opacity: root.active", qml)
         self.assertIn('property string designStyle: "lacuna"', qml)
+        self.assertIn("property int labelPixelSize: barSize <= 26 ? 12 : 13", qml)
+        self.assertIn("property int labelFontWeight: Font.DemiBold", qml)
+        self.assertIn("font.pixelSize: root.labelPixelSize", qml)
+        self.assertIn("font.weight: root.labelFontWeight", qml)
+        self.assertNotIn("font.pixelSize: root.omarchyStyle ? 14", qml)
+
+    def test_first_party_bar_icons_share_one_size_scale(self):
+        topbar_plugins = [
+            "lacuna.audio",
+            "lacuna.bar-size-pill",
+            "lacuna.bluetooth",
+            "lacuna.claude-usage",
+            "lacuna.codex-usage",
+            "lacuna.compact-pill",
+            "lacuna.idle-inhibitor",
+            "lacuna.indicators",
+            "lacuna.menu-button",
+            "lacuna.network",
+            "lacuna.nightlight",
+            "lacuna.notifications",
+            "lacuna.power",
+            "lacuna.reminders",
+            "lacuna.screen-recording",
+            "lacuna.system-stats",
+            "lacuna.system-update",
+            "lacuna.temperature",
+            "lacuna.voxtype",
+            "lacuna.weather",
+        ]
+        for plugin in topbar_plugins:
+            qml = read(f"{plugin}/Widget.qml")
+            self.assertIn("readonly property int topbarIconSize: barSize >= 30 ? 15 : 13", qml, plugin)
+            self.assertNotIn("barSize >= 30 ? 16 : 14", qml, plugin)
+
+        for plugin in ["lacuna.theme", "lacuna.wallpaper"]:
+            self.assertIn("readonly property int iconSize: barSize >= 30 ? 15 : 13", read(f"{plugin}/Widget.qml"), plugin)
+
+        self.assertIn("iconSize: root.barSize >= 30 ? 15 : 13", read("lacuna.mpris/Widget.qml"))
+        tray = read("lacuna.tray/Widget.qml")
+        self.assertIn("readonly property int topbarIconSize: root.barSize >= 30 ? 15 : 13", tray)
+        self.assertIn("implicitSize: root.topbarIconSize", tray)
+        self.assertIn("width: root.topbarIconSize", tray)
+        self.assertIn("height: root.topbarIconSize", tray)
+        idle = read("lacuna.idle-inhibitor/Widget.qml")
+        indicators = read("lacuna.indicators/Widget.qml")
+        for qml in [idle, indicators]:
+            self.assertIn("readonly property int idleGlyphSize: topbarIconSize - 3", qml)
+        self.assertIn("font.pixelSize: root.idleGlyphSize", idle)
+        self.assertIn(
+            'font.pixelSize: indicatorButton.indicatorId === "StayAwake" ? root.idleGlyphSize : root.topbarIconSize',
+            indicators,
+        )
 
     def test_lacuna_menu_button_uses_lacuna_icon_asset(self):
         qml = read("lacuna.menu-button/Widget.qml")
@@ -2315,6 +2402,21 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('profile === "colorful" ? roleColor(roleName || role, accent) : accent', profile)
         self.assertIn('occupied: "green"', workspaces)
         self.assertIn('urgent: "red"', workspaces)
+
+    def test_theme_and_wallpaper_keep_text_ink_while_colorizing_icons(self):
+        for plugin, role, hue in [
+            ("lacuna.theme", "theme", "magenta"),
+            ("lacuna.wallpaper", "wallpaper", "blue"),
+        ]:
+            widget = read(f"{plugin}/Widget.qml")
+            profile = read(f"{plugin}/ColorProfile.qml")
+
+            self.assertIn("readonly property color iconColor: moduleColor", widget)
+            self.assertIn("readonly property color textColor: foreground", widget)
+            self.assertIn("colorizationColor: root.iconColor", widget)
+            self.assertIn("color: root.textColor", widget)
+            self.assertIn('stateHome + "/omarchy/current/theme/colors.toml"', profile)
+            self.assertIn(f'{role}: "{hue}"', profile)
 
     def test_motion_uses_one_named_reveal_scale(self):
         # Phase D: a single named "reveal" scale (03-motion.md) replaces the
@@ -3284,6 +3386,78 @@ class QmlContractTests(unittest.TestCase):
         self.assertEqual("integer", codex_schema["cycleInterval"]["type"])
         self.assertEqual("left", codex_manifest["barWidget"]["defaults"]["displayMode"])
         self.assertEqual("enum", codex_schema["displayMode"]["type"])
+
+    def test_usage_widgets_match_theme_wallpaper_bar_typography_and_seam(self):
+        for plugin in ["lacuna.claude-usage", "lacuna.codex-usage"]:
+            qml = read(f"{plugin}/Widget.qml")
+            self.assertIn("readonly property color iconColor: moduleColor", qml)
+            self.assertIn("readonly property color textColor: foreground", qml)
+            self.assertIn("readonly property color seamColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.18)", qml)
+            self.assertIn("readonly property int topbarIconSize: barSize >= 30 ? 15 : 13", qml)
+            self.assertIn("readonly property int topbarTextSize: barSize <= 26 ? 12 : 13", qml)
+            self.assertIn("readonly property int contentSpacing: 6", qml)
+            self.assertIn("readonly property int horizontalPadding: root.vertical ? 0 : 7", qml)
+            self.assertIn("width: root.topbarIconSize + 4", qml)
+            self.assertIn("visible: root.showIcon && label.text.length > 0", qml)
+            self.assertIn("colorizationColor: root.iconColor", qml)
+            self.assertIn("color: root.textColor", qml)
+            self.assertIn("pixelSize: root.topbarTextSize", qml)
+            self.assertIn("fontWeight: Font.DemiBold", qml)
+
+    def test_mpris_matches_bar_style_without_removing_playing_sweep(self):
+        widget = read("lacuna.mpris/Widget.qml")
+        button = read("lacuna.mpris/components/LacunaMprisButton.qml")
+        profile = read("lacuna.mpris/ColorProfile.qml")
+
+        self.assertIn("accentText: false", widget)
+        self.assertIn("contentHorizontalPadding: 14", widget)
+        self.assertIn("labelPixelSize: 12", widget)
+        self.assertIn("iconSize: root.barSize >= 30 ? 15 : 13", widget)
+        self.assertIn("labelFontWeight: Font.DemiBold", widget)
+        self.assertIn('sweepActive: root.sweepOnPlaying && root.cssClass === "playing"', widget)
+
+        self.assertIn("property int contentSpacing: 6", button)
+        self.assertIn("property int labelPixelSize: 12", button)
+        self.assertIn("return root.accentText ? root.accent : root.foreground", button)
+        self.assertIn("strokeColor: root.accent", button)
+        self.assertIn("width: root.iconSize + 4", button)
+        self.assertIn('visible: root.iconName !== "" && root.text.length > 0', button)
+        self.assertIn("color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.18)", button)
+        self.assertIn("NumberAnimation on sweepPosition", button)
+        self.assertIn("running: root.sweepActive && root.visible", button)
+        self.assertIn("color: root.textSweepColor(index, label.text.length)", button)
+
+        self.assertIn('stateHome + "/omarchy/current/theme/colors.toml"', profile)
+        self.assertIn('playing: "green"', profile)
+        self.assertIn('paused: "muted"', profile)
+
+    def test_resource_widgets_match_bar_style_and_keep_graphs_out_of_bar(self):
+        stats = read("lacuna.system-stats/Widget.qml")
+        temperature = read("lacuna.temperature/Widget.qml")
+
+        for qml in [stats, temperature]:
+            self.assertIn("readonly property int topbarIconSize: barSize >= 30 ? 15 : 13", qml)
+            self.assertIn("readonly property int topbarTextSize: barSize <= 26 ? 12 : 13", qml)
+            self.assertIn("readonly property int contentSpacing: 6", qml)
+            self.assertIn("readonly property int horizontalPadding: vertical ? 0 : 7", qml)
+            self.assertIn("font.weight: Font.DemiBold", qml)
+
+        stat_button = stats[stats.index("component StatButton:") :]
+        self.assertNotIn("Canvas {", stats)
+        self.assertNotIn("id: trendCanvas", stats)
+        self.assertNotIn("property var history: []", stat_button)
+        self.assertIn("width: content.parent.topbarIconSize + 4", stats)
+        self.assertIn("colorizationColor: content.parent.accent", stats)
+        self.assertIn("color: content.parent.foreground", stats)
+        self.assertIn("visible: content.parent.showLabel", stats)
+
+        self.assertIn("width: root.topbarIconSize + 4", temperature)
+        self.assertIn("colorizationColor: root.statusColor", temperature)
+        self.assertIn("color: root.foreground", temperature)
+        self.assertIn("visible: root.showText", temperature)
+
+        self.assertIn("Canvas {", read("lacuna.system-stats/TelemetryFlyout.qml"))
+        self.assertIn("Canvas {", read("lacuna.temperature/ThermalFlyout.qml"))
 
     def test_codex_usage_rotates_between_5h_and_weekly_windows(self):
         qml = read("lacuna.codex-usage/Widget.qml")

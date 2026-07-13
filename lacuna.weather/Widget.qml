@@ -18,7 +18,13 @@ Item {
   readonly property int intervalMs: Math.max(10000, Number(setting("interval", 60000)))
   readonly property bool compact: !vertical && barSize <= 26
   readonly property bool showText: setting("showText", compact ? false : true) === true
-  readonly property int topbarIconSize: compact ? 13 : barSize >= 30 ? 16 : 14
+  readonly property color iconColor: moduleColor
+  readonly property color textColor: foreground
+  readonly property color seamColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.18)
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
+  readonly property int topbarTextSize: barSize <= 26 ? 12 : 13
+  readonly property int contentSpacing: 6
+  readonly property int horizontalPadding: vertical ? 0 : 7
   readonly property string home: Quickshell.env("HOME")
   readonly property string weatherScript: home + "/.config/omarchy/bar/scripts/weather-temp"
   readonly property string weatherIcon: leadingWeatherIcon(weatherText) || "󰖐"
@@ -98,9 +104,8 @@ Item {
     id: button
 
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
-    readonly property int horizontalPadding: root.vertical ? 0 : (root.compact ? 5 : 8)
 
-    width: root.vertical ? root.barSize : Math.max(root.barSize, content.implicitWidth + horizontalPadding * 2)
+    width: root.vertical ? root.barSize : Math.max(root.barSize, content.implicitWidth + root.horizontalPadding * 2)
     height: root.vertical ? Math.max(root.barSize, content.implicitHeight + 10) : root.barSize
     implicitWidth: width
     implicitHeight: height
@@ -115,24 +120,39 @@ Item {
       id: content
       anchors.centerIn: parent
       rotation: root.vertical ? -90 : 0
-      spacing: root.showText && root.displayText.length > 0 ? 4 : 0
+      spacing: root.contentSpacing
 
-      Text {
+      Item {
         anchors.verticalCenter: parent.verticalCenter
-        text: root.weatherIcon
-        color: root.moduleColor
-        font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
-        font.pixelSize: root.topbarIconSize
-        renderType: Text.NativeRendering
+        width: root.topbarIconSize + 4
+        height: root.topbarIconSize + 4
+
+        Text {
+          anchors.centerIn: parent
+          text: root.weatherIcon
+          color: root.iconColor
+          font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
+          font.pixelSize: root.topbarIconSize
+          renderType: Text.NativeRendering
+        }
+      }
+
+      Rectangle {
+        anchors.verticalCenter: parent.verticalCenter
+        visible: root.showText && root.displayText.length > 0
+        width: 1
+        height: Math.max(10, root.topbarIconSize - 1)
+        color: root.seamColor
       }
 
       Text {
-        visible: root.showText
+        visible: root.showText && root.displayText.length > 0
         anchors.verticalCenter: parent.verticalCenter
         text: root.displayText
-        color: root.moduleColor
+        color: root.textColor
         font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
-        font.pixelSize: root.compact ? 12 : 14
+        font.pixelSize: root.topbarTextSize
+        font.weight: Font.DemiBold
         maximumLineCount: 1
         renderType: Text.NativeRendering
       }

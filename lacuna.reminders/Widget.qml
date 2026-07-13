@@ -22,6 +22,7 @@ Item {
   readonly property bool showInactive: setting("showInactive", false) === true
   readonly property bool shown: active || showInactive
   readonly property int intervalMs: Math.max(1000, Number(setting("interval", 5000)))
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
 
   visible: shown
   implicitWidth: shown ? button.implicitWidth : 0
@@ -129,7 +130,7 @@ Item {
       color: root.active ? root.urgent : root.foreground
       opacity: root.active ? 1 : 0.58
       font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
-      font.pixelSize: root.barSize >= 30 ? 16 : 14
+      font.pixelSize: root.topbarIconSize
       renderType: Text.NativeRendering
     }
 

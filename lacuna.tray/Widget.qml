@@ -24,6 +24,7 @@ BarWidget {
   readonly property var allItems: bucket("all")
   readonly property int drawerCount: drawerItems.length
   readonly property int trayItemExtent: Style.space(16)
+  readonly property int topbarIconSize: root.barSize >= 30 ? 15 : 13
   readonly property int trayItemGap: Style.space(17)
   readonly property int trayJoinGap: Style.space(6)
   readonly property int drawerExtent: drawerCount > 0 ? drawerCount * trayItemExtent + (drawerCount - 1) * trayItemGap : 0
@@ -607,9 +608,9 @@ BarWidget {
       readonly property string primarySource: root.trayIconSource(trayItemRoot.modelData.icon)
       readonly property string fallbackSource: root.trayIconFallbackSource(trayItemRoot.modelData.icon)
       anchors.centerIn: parent
-      implicitSize: Style.space(12)
-      width: Style.space(12)
-      height: Style.space(12)
+      implicitSize: root.topbarIconSize
+      width: root.topbarIconSize
+      height: root.topbarIconSize
       source: fallbackActive && fallbackSource ? fallbackSource : primarySource
       onPrimarySourceChanged: fallbackActive = false
       onStatusChanged: {

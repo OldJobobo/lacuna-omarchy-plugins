@@ -125,9 +125,14 @@ Item {
     barSize: root.barSize
     active: root.cssClass === "playing"
     showActiveState: false
+    accentText: false
     sweepActive: root.sweepOnPlaying && root.cssClass === "playing"
     sweepColor: root.background
+    contentHorizontalPadding: 14
+    labelPixelSize: 12
+    iconSize: root.barSize >= 30 ? 15 : 13
     fontFamily: bar ? bar.fontFamily : "Hack Nerd Font Propo"
+    labelFontWeight: Font.DemiBold
     tooltipHost: root.bar
     onTriggered: root.togglePlayer()
     onSecondaryTriggered: root.nextTrack()

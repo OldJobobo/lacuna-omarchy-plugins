@@ -18,7 +18,8 @@ Item {
   readonly property bool stayAwake: serviceStateLoaded ? idleService.stayAwake === true : polledStayAwake
   readonly property bool idleEnabled: serviceStateLoaded ? idleService.idleEnabled === true : polledIdleEnabled
   readonly property color moduleColor: colorProfile.statusColor(stayAwake ? "active" : "normal", "idle")
-  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
+  readonly property int idleGlyphSize: topbarIconSize - 3
   readonly property bool showInactive: boolSetting("showInactive", true)
   readonly property bool shown: stayAwake || showInactive || mouseArea.containsMouse
 
@@ -161,7 +162,7 @@ Item {
       color: root.moduleColor
       opacity: root.stayAwake || mouseArea.containsMouse ? 1 : 0.55
       font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
-      font.pixelSize: Math.max(9, root.topbarIconSize - 3)
+      font.pixelSize: root.idleGlyphSize
       font.bold: true
       renderType: Text.NativeRendering
     }

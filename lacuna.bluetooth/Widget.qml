@@ -16,7 +16,7 @@ Item {
   readonly property bool enabled: bluetoothService ? bluetoothService.enabled : false
   readonly property bool connected: bluetoothService ? bluetoothService.connected : false
   readonly property color moduleColor: colorProfile.statusColor(!available || !enabled ? "warning" : connected ? "active" : "normal", "bluetooth")
-  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property string icon: bluetoothService ? bluetoothService.icon : "󰂲"
 
   implicitWidth: button.implicitWidth

@@ -14,7 +14,7 @@ Item {
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.roleColor("menu", foreground)
   readonly property string tooltipText: String(setting("tooltip", "Lacuna"))
-  readonly property int topbarIconSize: (barSize >= 30 ? 16 : 14) + 2
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property url iconSource: Qt.resolvedUrl("assets/tabler/circle-dotted-letter-l.svg")
 
   implicitWidth: button.implicitWidth

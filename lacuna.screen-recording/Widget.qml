@@ -16,7 +16,7 @@ Item {
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property bool recording: polledRecording || (recordingService ? recordingService.recording : false)
   readonly property color moduleColor: colorProfile.statusColor(recording ? "active" : "normal", "recording")
-  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property bool showInactive: boolSetting("showInactive", false)
   readonly property bool shown: recording || showInactive
   readonly property int intervalMs: Math.max(500, Number(setting("interval", 1000)))

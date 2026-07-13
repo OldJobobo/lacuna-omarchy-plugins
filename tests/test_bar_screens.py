@@ -82,7 +82,8 @@ class BarScreenModelTests(unittest.TestCase):
 
         self.assertIn("readonly property int historyLimit: 60", stats)
         self.assertIn("slice(-historyLimit)", stats)
-        self.assertIn("property var history: []", stats)
+        for history in ("cpuHistory", "memoryHistory", "diskHistory"):
+            self.assertIn(f"property var {history}: []", stats)
         self.assertIn("readonly property bool workspaceOccupied", workspaces)
         self.assertIn('sweepActive: root.sweepOnPlaying && root.cssClass === "playing"', media)
 

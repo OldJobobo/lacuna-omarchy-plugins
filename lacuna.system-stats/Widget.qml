@@ -33,6 +33,10 @@ Item {
   readonly property bool compact: !vertical && barSize <= 26
   readonly property int buttonSpacing: compact ? 0 : 2
   readonly property bool showLabels: setting("showLabels", compact ? false : true) === true
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
+  readonly property int topbarTextSize: barSize <= 26 ? 12 : 13
+  readonly property int contentSpacing: 6
+  readonly property int horizontalPadding: vertical ? 0 : 7
 
   visible: true
   implicitWidth: content.implicitWidth
@@ -184,7 +188,6 @@ Item {
       barSize: root.barSize
       hoverDuration: motionTokens.hoverDuration
       showLabel: root.showLabels
-      history: root.diskHistory
       metric: "disk"
     }
 
@@ -199,7 +202,6 @@ Item {
       barSize: root.barSize
       hoverDuration: motionTokens.hoverDuration
       showLabel: root.showLabels
-      history: root.memoryHistory
       metric: "memory"
     }
 
@@ -214,7 +216,6 @@ Item {
       barSize: root.barSize
       hoverDuration: motionTokens.hoverDuration
       showLabel: root.showLabels
-      history: root.cpuHistory
       metric: "cpu"
     }
   }
@@ -229,10 +230,13 @@ Item {
     property int barSize: 26
     property int hoverDuration: 150
     property bool showLabel: true
-    property var history: []
     property string metric: "cpu"
     property bool compact: !vertical && barSize <= 26
-    property int topbarIconSize: compact ? 12 : barSize >= 30 ? 16 : 14
+    property color foreground: bar ? bar.foreground : "#d8dee9"
+    property int topbarIconSize: barSize >= 30 ? 15 : 13
+    property int topbarTextSize: barSize <= 26 ? 12 : 13
+    property int contentSpacing: 6
+    property int horizontalPadding: vertical ? 0 : 7
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
 
     BarHoverSeam {
@@ -242,7 +246,7 @@ Item {
       accent: parent.accent
     }
 
-    width: vertical ? barSize : Math.max(compact ? barSize : 36, content.implicitWidth + (compact ? 8 : 12))
+    width: vertical ? barSize : Math.max(compact ? barSize : 36, content.implicitWidth + horizontalPadding * 2)
     height: vertical ? Math.max(barSize, content.implicitHeight + 10) : barSize
     implicitWidth: width
     implicitHeight: height
@@ -258,62 +262,46 @@ Item {
       id: content
       anchors.centerIn: parent
       rotation: parent.vertical ? -90 : 0
-      spacing: content.parent.showLabel ? (content.parent.compact ? 3 : 4) : 0
+      spacing: content.parent.contentSpacing
 
-      Canvas {
-        id: trendCanvas
-        visible: content.parent.history.length > 1 && content.parent.showLabel && !content.parent.vertical
+      Item {
         anchors.verticalCenter: parent.verticalCenter
-        width: visible ? 18 : 0
-        height: 12
+        width: content.parent.topbarIconSize + 4
+        height: content.parent.topbarIconSize + 4
 
-        onPaint: {
-          var ctx = getContext("2d")
-          ctx.reset()
-          var values = content.parent.history
-          if (values.length < 2) return
-          ctx.strokeStyle = content.parent.accent
-          ctx.lineWidth = 1
-          ctx.beginPath()
-          for (var i = 0; i < values.length; i++) {
-            var x = i * (width - 1) / Math.max(1, values.length - 1)
-            var y = height - 1 - Math.max(0, Math.min(100, Number(values[i]))) * (height - 2) / 100
-            if (i === 0) ctx.moveTo(x, y)
-            else ctx.lineTo(x, y)
+        Image {
+          anchors.centerIn: parent
+          source: content.parent.iconSource
+          width: content.parent.topbarIconSize
+          height: content.parent.topbarIconSize
+          sourceSize.width: width
+          sourceSize.height: height
+          smooth: true
+          mipmap: true
+          layer.enabled: true
+          layer.effect: MultiEffect {
+            colorization: 1.0
+            colorizationColor: content.parent.accent
           }
-          ctx.stroke()
-        }
-
-        onVisibleChanged: requestPaint()
-        Connections {
-          target: content.parent
-          function onHistoryChanged() { trendCanvas.requestPaint() }
         }
       }
 
-      Image {
+      Rectangle {
         anchors.verticalCenter: parent.verticalCenter
-        source: content.parent.iconSource
-        width: content.parent.topbarIconSize
-        height: content.parent.topbarIconSize
-        sourceSize.width: width
-        sourceSize.height: height
-        smooth: true
-        mipmap: true
-        layer.enabled: true
-        layer.effect: MultiEffect {
-          colorization: 1.0
-          colorizationColor: content.parent.accent
-        }
+        visible: content.parent.showLabel
+        width: 1
+        height: Math.max(10, content.parent.topbarIconSize - 1)
+        color: Qt.rgba(content.parent.foreground.r, content.parent.foreground.g, content.parent.foreground.b, 0.18)
       }
 
       Text {
         visible: content.parent.showLabel
         anchors.verticalCenter: parent.verticalCenter
         text: content.parent.label
-        color: content.parent.accent
+        color: content.parent.foreground
         font.family: content.parent.bar ? content.parent.bar.fontFamily : "Hack Nerd Font Propo"
-        font.pixelSize: 14
+        font.pixelSize: content.parent.topbarTextSize
+        font.weight: Font.DemiBold
         maximumLineCount: 1
       }
     }

@@ -51,8 +51,11 @@ Item {
   readonly property color moduleColor: colorProfile.statusColor(activeClass, "claude")
   readonly property color sessionModuleColor: colorProfile.statusColor(cssClass, "claude")
   readonly property color weekModuleColor: colorProfile.statusColor(weekClass, "claude")
+  readonly property color iconColor: moduleColor
+  readonly property color textColor: foreground
   readonly property color mutedColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.58)
   readonly property color trackColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.16)
+  readonly property color seamColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.18)
   readonly property int intervalMs: Math.max(5000, Number(setting("interval", 30000)))
   readonly property bool compact: !vertical && barSize <= 26
   readonly property int maxTextLength: Math.max(4, Number(setting("maxTextLength", compact ? 10 : 32)))
@@ -62,7 +65,9 @@ Item {
   readonly property bool showWeekly: setting("showWeekly", true) === true
   readonly property int cycleMs: Math.max(2000, Number(setting("cycleInterval", 6000)))
   readonly property string displayMode: String(setting("displayMode", "left"))
-  readonly property int topbarIconSize: compact ? 12 : barSize >= 30 ? 16 : 14
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
+  readonly property int topbarTextSize: barSize <= 26 ? 12 : 13
+  readonly property int contentSpacing: 6
   readonly property string scriptPath: localPath(Qt.resolvedUrl("scripts/claude-code-status.sh"))
   readonly property url iconSource: Qt.resolvedUrl("assets/claude-ai.svg")
 
@@ -212,7 +217,7 @@ Item {
     id: button
 
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
-    readonly property int horizontalPadding: root.vertical ? 0 : (root.compact ? 5 : 8)
+    readonly property int horizontalPadding: root.vertical ? 0 : 7
     readonly property int stableMinimumWidth: root.vertical ? root.barSize : (root.compact ? 58 : 104)
     readonly property int meterHeight: root.showProgress && !root.vertical ? 2 : 0
     readonly property bool meterAtTop: !root.vertical && root.bar && root.bar.position === "top"
@@ -262,37 +267,50 @@ Item {
       id: content
       anchors.centerIn: parent
       anchors.verticalCenterOffset: button.meterHeight > 0 ? (button.meterAtTop ? 1 : -1) : 0
-      spacing: root.compact ? 3 : 4
+      spacing: root.contentSpacing
       rotation: root.vertical ? -90 : 0
 
-      Image {
-        id: icon
+      Item {
         anchors.verticalCenter: parent.verticalCenter
         visible: root.showIcon
-        source: root.iconSource
-        width: root.topbarIconSize
-        height: root.topbarIconSize
-        sourceSize.width: width
-        sourceSize.height: height
-        fillMode: Image.PreserveAspectFit
-        smooth: true
-        mipmap: true
-        opacity: 0.88 + button.hoverReveal * 0.12
-        layer.enabled: true
-        layer.effect: MultiEffect {
-          colorization: 1.0
-          colorizationColor: root.moduleColor
+        width: root.topbarIconSize + 4
+        height: root.topbarIconSize + 4
+
+        Image {
+          id: icon
+          anchors.centerIn: parent
+          source: root.iconSource
+          width: root.topbarIconSize
+          height: root.topbarIconSize
+          sourceSize.width: width
+          sourceSize.height: height
+          fillMode: Image.PreserveAspectFit
+          smooth: true
+          mipmap: true
+          layer.enabled: true
+          layer.effect: MultiEffect {
+            colorization: 1.0
+            colorizationColor: root.iconColor
+          }
         }
+      }
+
+      Rectangle {
+        anchors.verticalCenter: parent.verticalCenter
+        visible: root.showIcon && label.text.length > 0
+        width: 1
+        height: Math.max(10, root.topbarIconSize - 1)
+        color: root.seamColor
       }
 
       BarCycleText {
         id: label
         anchors.verticalCenter: parent.verticalCenter
         text: root.primaryText
-        color: root.moduleColor
+        color: root.textColor
         fontFamily: bar ? bar.fontFamily : "Hack Nerd Font Propo"
-        pixelSize: root.compact ? 12 : 14
-        fontWeight: root.actionableState ? Font.DemiBold : Font.Normal
+        pixelSize: root.topbarTextSize
+        fontWeight: Font.DemiBold
         colorDuration: motionTokens.colorDuration
       }
     }

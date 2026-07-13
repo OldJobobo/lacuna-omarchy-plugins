@@ -14,11 +14,24 @@ Item {
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.roleColor("clock", foreground)
+  readonly property color dateColor: moduleColor
+  readonly property color timeColor: foreground
+  readonly property color seamColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.18)
   readonly property bool compact: !vertical && barSize <= 26
+  readonly property int topbarTextSize: barSize <= 26 ? 12 : 13
+  readonly property int contentSpacing: 6
+  readonly property int horizontalPadding: vertical ? 0 : 7
+  readonly property string normalFormat: setting("format", "ddd d h:mm AP")
   readonly property string activeFormat: alt
     ? setting("formatAlt", "dd MMMM 'W'ww yyyy")
-    : (vertical ? setting("verticalFormat", "HH\n—\nmm") : (compact ? setting("compactFormat", "h:mm AP") : setting("format", "ddd d h:mm AP")))
+    : (vertical ? setting("verticalFormat", "HH\n—\nmm") : (compact ? setting("compactFormat", "h:mm AP") : normalFormat))
   readonly property string displayText: formatted(displayDate)
+  readonly property string normalDateFormat: dateFormatPart(normalFormat)
+  readonly property string normalTimeFormat: timeFormatPart(normalFormat)
+  readonly property string activeDateFormat: alt ? setting("formatAlt", "dd MMMM 'W'ww yyyy") : normalDateFormat
+  readonly property string activeTimeFormat: vertical ? setting("verticalFormat", "HH\n—\nmm") : normalTimeFormat
+  readonly property string dateText: formattedWith(displayDate, activeDateFormat)
+  readonly property string timeText: formattedWith(displayDate, activeTimeFormat)
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -46,6 +59,23 @@ Item {
     return Qt.formatDateTime(date, activeFormat.replace(/ww/g, isoWeekLiteral(date)))
   }
 
+  function dateFormatPart(format) {
+    var value = String(format || "")
+    var hourIndex = value.search(/[hH]/)
+    var dateFormat = hourIndex > 0 ? value.slice(0, hourIndex).trim() : ""
+    return dateFormat || "ddd d"
+  }
+
+  function timeFormatPart(format) {
+    var value = String(format || "")
+    var hourIndex = value.search(/[hH]/)
+    return hourIndex >= 0 ? value.slice(hourIndex).trim() : "h:mm AP"
+  }
+
+  function formattedWith(date, format) {
+    return Qt.formatDateTime(date, String(format || "").replace(/ww/g, isoWeekLiteral(date)))
+  }
+
   ColorProfile {
     id: colorProfile
     bar: root.bar
@@ -67,10 +97,9 @@ Item {
     id: button
 
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
-    readonly property int horizontalPadding: root.vertical ? 0 : (root.compact ? 5 : 8)
 
-    width: root.vertical ? root.barSize : Math.max(root.barSize, label.implicitWidth + horizontalPadding * 2)
-    height: root.vertical ? Math.max(root.barSize, label.implicitHeight + 10) : root.barSize
+    width: root.vertical ? root.barSize : Math.max(root.barSize, content.implicitWidth + root.horizontalPadding * 2)
+    height: root.vertical ? Math.max(root.barSize, content.implicitHeight + 10) : root.barSize
     implicitWidth: width
     implicitHeight: height
 
@@ -80,16 +109,40 @@ Item {
       opacity: button.hoverReveal * 0.06
     }
 
-    Text {
-      id: label
+    Row {
+      id: content
       anchors.centerIn: parent
       rotation: root.vertical ? -90 : 0
-      text: root.displayText
-      color: root.moduleColor
-      font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
-      font.pixelSize: root.compact ? 13 : 14
-      maximumLineCount: 1
-      renderType: Text.NativeRendering
+      spacing: root.contentSpacing
+
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: root.dateText
+        color: root.dateColor
+        font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
+        font.pixelSize: root.topbarTextSize
+        font.weight: Font.DemiBold
+        maximumLineCount: 1
+        renderType: Text.NativeRendering
+      }
+
+      Rectangle {
+        anchors.verticalCenter: parent.verticalCenter
+        width: 1
+        height: Math.max(10, root.topbarTextSize)
+        color: root.seamColor
+      }
+
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: root.timeText
+        color: root.timeColor
+        font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
+        font.pixelSize: root.topbarTextSize
+        font.weight: Font.DemiBold
+        maximumLineCount: 1
+        renderType: Text.NativeRendering
+      }
     }
 
     Behavior on hoverReveal {

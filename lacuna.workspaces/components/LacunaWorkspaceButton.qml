@@ -25,9 +25,9 @@ Item {
   property bool compact: !vertical && barSize <= 26
   property int minButtonWidth: Math.max(compact ? 20 : 24, compact ? barSize - 2 : barSize)
   property int contentHorizontalPadding: compact ? 5 : 16
-  property int labelPixelSize: compact ? 12 : 14
+  property int labelPixelSize: barSize <= 26 ? 12 : 13
   property string fontFamily: "BlexMono Nerd Font Propo"
-  property int labelFontWeight: active ? Font.DemiBold : Font.Normal
+  property int labelFontWeight: Font.DemiBold
   property real hoverPulseAmount: 0
   property var tooltipHost: null
   property MotionTokens motionTokens: defaultMotionTokens
@@ -171,8 +171,8 @@ Item {
     color: root.baseTextColor()
     opacity: root.labelOpacity
     font.family: root.fontFamily
-    font.pixelSize: root.omarchyStyle ? 14 : root.materialStyle ? root.labelPixelSize : root.labelPixelSize
-    font.weight: root.materialStyle && root.active ? Font.DemiBold : root.labelFontWeight
+    font.pixelSize: root.labelPixelSize
+    font.weight: root.labelFontWeight
     scale: root.labelAnimatedScale
     transformOrigin: Item.Center
     maximumLineCount: 1

@@ -18,7 +18,7 @@ Item {
   readonly property string frequency: networkService ? networkService.frequency : ""
   readonly property color moduleColor: colorProfile.statusColor(kind === "disconnected" ? "warning" : "normal", "network")
   readonly property int intervalMs: Math.max(1000, Number(setting("interval", 5000)))
-  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property string icon: networkService ? networkService.icon : "󰤮"
 
   implicitWidth: button.implicitWidth

@@ -17,7 +17,7 @@ Item {
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color moduleColor: colorProfile.statusColor("active", "density")
   readonly property int intervalMs: Math.max(500, Number(setting("interval", 1000)))
-  readonly property int topbarIconSize: barSize >= 30 ? 16 : 14
+  readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property string scriptPath: localPath(Qt.resolvedUrl("scripts/bar-size-state"))
   readonly property url iconSource: mode === "full" ? Qt.resolvedUrl("assets/tabler/arrows-minimize.svg") : Qt.resolvedUrl("assets/tabler/arrows-maximize.svg")
 
