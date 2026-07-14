@@ -7,8 +7,10 @@ Item {
   property var bar: null
   property string moduleName: "lacuna.clock"
   property var settings: ({})
-  property bool alt: false
+  property bool flyoutOpen: false
   property date displayDate: clock.date
+
+  readonly property bool opened: flyoutOpen
 
   readonly property bool vertical: bar ? bar.vertical : false
   readonly property int barSize: bar ? bar.barSize : 26
@@ -22,14 +24,14 @@ Item {
   readonly property int contentSpacing: 6
   readonly property int horizontalPadding: vertical ? 0 : 7
   readonly property string normalFormat: setting("format", "ddd d h:mm AP")
-  readonly property string activeFormat: alt
-    ? setting("formatAlt", "dd MMMM 'W'ww yyyy")
-    : (vertical ? setting("verticalFormat", "HH\n—\nmm") : (compact ? setting("compactFormat", "h:mm AP") : normalFormat))
+  readonly property string activeFormat: vertical ? setting("verticalFormat", "HH\n—\nmm") : normalFormat
   readonly property string displayText: formatted(displayDate)
   readonly property string normalDateFormat: dateFormatPart(normalFormat)
   readonly property string normalTimeFormat: timeFormatPart(normalFormat)
-  readonly property string activeDateFormat: alt ? setting("formatAlt", "dd MMMM 'W'ww yyyy") : normalDateFormat
-  readonly property string activeTimeFormat: vertical ? setting("verticalFormat", "HH\n—\nmm") : normalTimeFormat
+  readonly property string activeDateFormat: setting("dateFormat", normalDateFormat)
+  readonly property string activeTimeFormat: vertical
+    ? setting("verticalFormat", "HH\n—\nmm")
+    : setting("timeFormat", normalTimeFormat)
   readonly property string dateText: formattedWith(displayDate, activeDateFormat)
   readonly property string timeText: formattedWith(displayDate, activeTimeFormat)
 
@@ -40,6 +42,22 @@ Item {
   function setting(name, fallback) {
     var value = settings ? settings[name] : undefined
     return value === undefined || value === null ? fallback : value
+  }
+
+  function open() {
+    flyoutOpen = true
+  }
+
+  function close() {
+    flyoutOpen = false
+  }
+
+  function closeForPopoutSwitch() {
+    close()
+  }
+
+  function toggleFlyout() {
+    flyoutOpen = !flyoutOpen
   }
 
   function isoWeek(date) {
@@ -93,6 +111,15 @@ Item {
     onDateChanged: root.displayDate = date
   }
 
+  CalendarFlyout {
+    anchorItem: button
+    bar: root.bar
+    owner: root
+    open: root.flyoutOpen
+    liveDate: root.displayDate
+    accentColor: root.moduleColor
+  }
+
   Item {
     id: button
 
@@ -113,9 +140,10 @@ Item {
       id: content
       anchors.centerIn: parent
       rotation: root.vertical ? -90 : 0
-      spacing: root.contentSpacing
+      spacing: root.vertical ? 0 : root.contentSpacing
 
       Text {
+        visible: !root.vertical
         anchors.verticalCenter: parent.verticalCenter
         text: root.dateText
         color: root.dateColor
@@ -127,6 +155,7 @@ Item {
       }
 
       Rectangle {
+        visible: !root.vertical
         anchors.verticalCenter: parent.verticalCenter
         width: 1
         height: Math.max(10, root.topbarTextSize)
@@ -157,11 +186,11 @@ Item {
       anchors.fill: parent
       hoverEnabled: true
       acceptedButtons: Qt.LeftButton | Qt.RightButton
-      onEntered: if (root.bar) root.bar.showTooltip(root, alt ? "Clock alternate format" : "Clock")
+      onEntered: if (root.bar) root.bar.showTooltip(root, "Clock and calendar")
       onExited: if (root.bar) root.bar.hideTooltip(root)
       onClicked: function(mouse) {
         if (mouse.button === Qt.RightButton && root.bar) root.bar.run("omarchy menu timezone")
-        else root.alt = !root.alt
+        else root.toggleFlyout()
       }
     }
   }

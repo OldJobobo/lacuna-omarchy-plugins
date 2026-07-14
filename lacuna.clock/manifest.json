@@ -14,12 +14,13 @@
   },
   "barWidget": {
     "displayName": "Lacuna Clock",
-    "description": "Shows the current time with Lacuna sizing and hover treatment.",
+    "description": "Shows the current time and opens a read-only month calendar.",
     "category": "Lacuna",
     "allowMultiple": false,
     "defaults": {
       "format": "ddd d h:mm AP",
-      "formatAlt": "dd MMMM 'W'ww yyyy",
+      "dateFormat": "ddd d",
+      "timeFormat": "h:mm AP",
       "verticalFormat": "HH\n\u2014\nmm",
       "colorProfile": "semantic"
     },
@@ -31,10 +32,16 @@
         "defaultValue": "ddd d h:mm AP"
       },
       {
-        "key": "formatAlt",
+        "key": "dateFormat",
         "type": "string",
-        "label": "Alternate format",
-        "defaultValue": "dd MMMM 'W'ww yyyy"
+        "label": "Date format",
+        "defaultValue": "ddd d"
+      },
+      {
+        "key": "timeFormat",
+        "type": "string",
+        "label": "Time format",
+        "defaultValue": "h:mm AP"
       },
       {
         "key": "verticalFormat",

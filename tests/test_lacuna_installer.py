@@ -580,7 +580,7 @@ class LacunaInstallerTests(unittest.TestCase):
                             {"id": "omarchy.workspaces"},
                         ],
                         "center": [
-                            {"id": "lacuna.clock", "format": "HH:mm"},
+                            {"id": "lacuna.clock", "format": "HH:mm", "formatAlt": "legacy value"},
                         ],
                         "right": [
                             {"id": "lacuna.temperature", "warmF": 140},
@@ -613,7 +613,9 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertNotIn("lacuna.tray", layout_ids)
         self.assertIn({"id": "lacuna.codex-usage", "interval": 60}, layout["left"])
         self.assertEqual("HH:mm", layout["center"][0]["format"])
-        self.assertIn("formatAlt", layout["center"][0])
+        self.assertEqual("legacy value", layout["center"][0]["formatAlt"])
+        self.assertIn("dateFormat", layout["center"][0])
+        self.assertIn("timeFormat", layout["center"][0])
         self.assertIn("verticalFormat", layout["center"][0])
         self.assertIn({"id": "lacuna.temperature", "warmF": 140}, layout["right"])
 

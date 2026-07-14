@@ -17,7 +17,8 @@
         {
           "id": "lacuna.clock",
           "format": "ddd d h:mm AP",
-          "formatAlt": "dd MMMM 'W'ww yyyy",
+          "dateFormat": "ddd d",
+          "timeFormat": "h:mm AP",
           "verticalFormat": "HH\n-\nmm"
         },
         { "id": "lacuna.weather" },

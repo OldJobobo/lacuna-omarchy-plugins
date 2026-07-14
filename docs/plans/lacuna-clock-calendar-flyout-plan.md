@@ -1,7 +1,27 @@
 # Lacuna Clock And Calendar Flyout Plan
 
-Status: proposed; decision-complete for implementation after geometry and
-compatibility review
+Status: implemented and live-verified 2026-07-13
+
+## Implementation Result
+
+`lacuna.clock` now ships the adaptive split date/time face and a plugin-local,
+read-only month calendar. `CalendarModel.js` and `CalendarState.qml` own local
+noon date math, the fixed Sunday-first 42-cell grid, navigation, selection, and
+midnight rollover. `CalendarFlyout.qml` owns the hero header, controls,
+exclusive popout coordination, focus-grab dismissal, and four-edge placement;
+`BarFlyoutSurface.qml` owns the matching top, bottom, left, and right molded
+shells.
+
+The legacy `formatAlt` setting is no longer exposed or read, but existing
+unknown inline values remain untouched when the installer merges bar layout
+settings. Explicit `dateFormat` and `timeFormat` settings now control the
+horizontal face, with the legacy combined `format` retained as the fallback.
+
+Validation completed with the repository check suite, runtime QML calendar and
+popout probes, deterministic four-edge geometry coverage, a verified live
+deployment of `lacuna.clock`, visible top-edge flyout rendering, and live bar
+position smoke checks for top, bottom, left, and right. The user configuration
+was restored to its original top-bar position after the matrix.
 
 ## Summary
 
@@ -144,8 +164,8 @@ out of scope.
 
 ## Completion Boundary
 
-The proposal is complete when the adaptive bar face and read-only visual month
-flyout are implemented, covered by deterministic and runtime behavior tests,
+This implementation boundary is complete: the adaptive bar face and read-only
+visual month flyout are covered by deterministic and runtime behavior tests,
 deployed into the live Omarchy plugin directory, and verified in the running
 shell. Calendar-provider integration remains a separate future product
-decision and must not be inferred from this plan.
+decision and must not be inferred from this implementation.

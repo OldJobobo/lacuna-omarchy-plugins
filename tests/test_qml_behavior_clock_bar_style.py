@@ -15,6 +15,8 @@ ShellRoot {{
   property var clockWidget: null
   property string normalDate: ""
   property string normalTime: ""
+  property string customDate: ""
+  property string customTime: ""
 
   QtObject {{
     id: mockBar
@@ -36,14 +38,21 @@ ShellRoot {{
       bar: mockBar,
       settings: {{
         format: "ddd d h:mm AP",
-        formatAlt: "dd MMMM 'W'ww yyyy",
         verticalFormat: "HH\\n—\\nmm"
       }},
       displayDate: new Date(2026, 6, 12, 22, 48, 0)
     }})
     normalDate = clockWidget.dateText
     normalTime = clockWidget.timeText
-    clockWidget.alt = true
+    clockWidget.settings = {{
+      format: "ddd d h:mm AP",
+      dateFormat: "MMM d",
+      timeFormat: "HH:mm",
+      formatAlt: "ignored legacy value",
+      verticalFormat: "HH\\n—\\nmm"
+    }}
+    customDate = clockWidget.dateText
+    customTime = clockWidget.timeText
     finish.restart()
   }}
 
@@ -54,8 +63,9 @@ ShellRoot {{
       console.log("BEHAVE " + JSON.stringify({{
         normalDate: root.normalDate,
         normalTime: root.normalTime,
-        alternateDate: clockWidget.dateText,
-        alternateTime: clockWidget.timeText,
+        customDate: root.customDate,
+        customTime: root.customTime,
+        opened: clockWidget.opened,
         textSize: clockWidget.topbarTextSize,
         spacing: clockWidget.contentSpacing,
         padding: clockWidget.horizontalPadding,
@@ -72,8 +82,9 @@ ShellRoot {{
 
         self.assertEqual(result["normalDate"], "Sun 12")
         self.assertEqual(result["normalTime"], "10:48 PM")
-        self.assertEqual(result["alternateDate"], "12 July W28 2026")
-        self.assertEqual(result["alternateTime"], "10:48 PM")
+        self.assertEqual(result["customDate"], "Jul 12")
+        self.assertEqual(result["customTime"], "22:48")
+        self.assertFalse(result["opened"])
         self.assertEqual(result["textSize"], 12)
         self.assertEqual(result["spacing"], 6)
         self.assertEqual(result["padding"], 7)
