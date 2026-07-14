@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import unittest
 from pathlib import Path
 
@@ -201,7 +202,115 @@ def interpolated_flyout_geometry(
     }
 
 
+def calendar_surface_geometry(edge: str, panel_width: int = 350, panel_height: int = 440, join_radius: int = 13) -> dict[str, int]:
+    horizontal = edge in {"top", "bottom"}
+    return {
+        "width": panel_width + (join_radius * 2 if horizontal else join_radius),
+        "height": panel_height + (join_radius if horizontal else join_radius * 2),
+        "panelLeft": join_radius if edge in {"top", "bottom", "left"} else 0,
+        "panelTop": join_radius if edge in {"top", "left", "right"} else 0,
+    }
+
+
+def calendar_shadow_margins(edge: str, blur_max: int = 28, offset_x: int = 2, offset_y: int = 3) -> dict[str, int]:
+    margin = math.ceil(blur_max + max(abs(offset_x), abs(offset_y)))
+    far_left = math.ceil(margin + blur_max * 0.6 + max(0, -offset_x))
+    far_right = math.ceil(margin + blur_max * 0.6 + max(0, offset_x))
+    far_top = math.ceil(margin + blur_max * 0.6 + max(0, -offset_y))
+    far_bottom = math.ceil(margin + blur_max * 0.6 + max(0, offset_y))
+    return {
+        "left": 0 if edge == "left" else (far_left if edge == "right" else margin),
+        "right": 0 if edge == "right" else (far_right if edge == "left" else margin),
+        "top": 0 if edge == "top" else (far_top if edge == "bottom" else margin),
+        "bottom": 0 if edge == "bottom" else (far_bottom if edge == "top" else margin),
+    }
+
+
 class QmlGeometryTests(unittest.TestCase):
+    def test_calendar_surface_orients_attachment_and_reveal_on_all_bar_edges(self):
+        surface = read("lacuna.clock/BarFlyoutSurface.qml")
+        flyout = read("lacuna.clock/CalendarFlyout.qml")
+
+        self.assertEqual(
+            {"width": 376, "height": 453, "panelLeft": 13, "panelTop": 13},
+            calendar_surface_geometry("top"),
+        )
+        self.assertEqual(
+            {"width": 376, "height": 453, "panelLeft": 13, "panelTop": 0},
+            calendar_surface_geometry("bottom"),
+        )
+        self.assertEqual(
+            {"width": 363, "height": 466, "panelLeft": 13, "panelTop": 13},
+            calendar_surface_geometry("left"),
+        )
+        self.assertEqual(
+            {"width": 363, "height": 466, "panelLeft": 0, "panelTop": 13},
+            calendar_surface_geometry("right"),
+        )
+
+        for edge in ("top", "bottom", "left", "right"):
+            self.assertIn(f'visible: root.attachmentEdge === "{edge}"', surface)
+        self.assertEqual(4, surface.count("strokeWidth: 0"))
+        self.assertNotIn("radius:", surface)
+        self.assertIn("readonly property real curveKappa: lacunaGeometry.curveKappa", surface)
+        self.assertIn('x: root.attachmentEdge === "right" ? root.implicitWidth - width : 0', flyout)
+        self.assertIn('y: root.attachmentEdge === "bottom" ? root.implicitHeight - height : 0', flyout)
+        self.assertIn("point.x = Math.max(root.margin", flyout)
+        self.assertIn("point.y = Math.max(root.margin", flyout)
+
+    def test_calendar_shadow_padding_stays_off_the_attached_edge(self):
+        flyout = read("lacuna.clock/CalendarFlyout.qml")
+
+        self.assertEqual({"left": 31, "right": 31, "top": 0, "bottom": 51}, calendar_shadow_margins("top"))
+        self.assertEqual({"left": 31, "right": 31, "top": 48, "bottom": 0}, calendar_shadow_margins("bottom"))
+        self.assertEqual({"left": 0, "right": 50, "top": 31, "bottom": 31}, calendar_shadow_margins("left"))
+        self.assertEqual({"left": 48, "right": 0, "top": 31, "bottom": 31}, calendar_shadow_margins("right"))
+        self.assertIn('readonly property int shadowLeftMargin: attachmentEdge === "left"', flyout)
+        self.assertIn('readonly property int shadowRightMargin: attachmentEdge === "right"', flyout)
+        self.assertIn('readonly property int shadowTopMargin: attachmentEdge === "top"', flyout)
+        self.assertIn('readonly property int shadowBottomMargin: attachmentEdge === "bottom"', flyout)
+        self.assertIn("implicitWidth: surface.fullWidth + shadowLeftMargin + shadowRightMargin", flyout)
+        self.assertIn("implicitHeight: surface.fullHeight + shadowTopMargin + shadowBottomMargin", flyout)
+
+    def test_weather_surface_and_shadow_follow_all_bar_edges(self):
+        surface = read("lacuna.weather/BarFlyoutSurface.qml")
+        flyout = read("lacuna.weather/WeatherFlyout.qml")
+
+        self.assertEqual(
+            {"width": 456, "height": 393, "panelLeft": 13, "panelTop": 13},
+            calendar_surface_geometry("top", 430, 380),
+        )
+        self.assertEqual(
+            {"width": 456, "height": 393, "panelLeft": 13, "panelTop": 0},
+            calendar_surface_geometry("bottom", 430, 380),
+        )
+        self.assertEqual(
+            {"width": 443, "height": 406, "panelLeft": 13, "panelTop": 13},
+            calendar_surface_geometry("left", 430, 380),
+        )
+        self.assertEqual(
+            {"width": 443, "height": 406, "panelLeft": 0, "panelTop": 13},
+            calendar_surface_geometry("right", 430, 380),
+        )
+        for edge in ("top", "bottom", "left", "right"):
+            self.assertIn(f'visible: root.attachmentEdge === "{edge}"', surface)
+        self.assertEqual(4, surface.count("strokeWidth: 0"))
+        self.assertNotIn("radius:", surface)
+        self.assertIn("readonly property real curveKappa: lacunaGeometry.curveKappa", surface)
+        self.assertIn('x: root.attachmentEdge === "right" ? root.implicitWidth - width : 0', flyout)
+        self.assertIn('y: root.attachmentEdge === "bottom" ? root.implicitHeight - height : 0', flyout)
+        self.assertIn("point.x = Math.max(root.margin", flyout)
+        self.assertIn("point.y = Math.max(root.margin", flyout)
+
+        self.assertEqual({"left": 31, "right": 31, "top": 0, "bottom": 51}, calendar_shadow_margins("top"))
+        self.assertEqual({"left": 31, "right": 31, "top": 48, "bottom": 0}, calendar_shadow_margins("bottom"))
+        self.assertEqual({"left": 0, "right": 50, "top": 31, "bottom": 31}, calendar_shadow_margins("left"))
+        self.assertEqual({"left": 48, "right": 0, "top": 31, "bottom": 31}, calendar_shadow_margins("right"))
+        self.assertIn('readonly property int shadowLeftMargin: attachmentEdge === "left"', flyout)
+        self.assertIn('readonly property int shadowRightMargin: attachmentEdge === "right"', flyout)
+        self.assertIn('readonly property int shadowTopMargin: attachmentEdge === "top"', flyout)
+        self.assertIn('readonly property int shadowBottomMargin: attachmentEdge === "bottom"', flyout)
+
     def test_panel_host_switch_geometry_uses_one_interpolated_set(self):
         host = read("lacuna.menu/menu/LacunaPanelHost.qml")
         self.assertIn("property bool geometrySwitchActive: false", host)

@@ -584,6 +584,8 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.wallpaper/LacunaGeometry.qml",
             "lacuna.system-stats/LacunaGeometry.qml",
             "lacuna.temperature/LacunaGeometry.qml",
+            "lacuna.clock/LacunaGeometry.qml",
+            "lacuna.weather/LacunaGeometry.qml",
         }
         for path in sorted(geometry_files):
             self.assertIn("readonly property real curveKappa: " + literal, read(path), path)
@@ -608,6 +610,8 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.wallpaper/BarFlyoutSurface.qml",
             "lacuna.system-stats/BarFlyoutSurface.qml",
             "lacuna.temperature/BarFlyoutSurface.qml",
+            "lacuna.clock/BarFlyoutSurface.qml",
+            "lacuna.weather/BarFlyoutSurface.qml",
         ]
         for path in consumers:
             qml = read(path)
@@ -1437,29 +1441,89 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("LacunaDropShadow", thermal_flyout)
         self.assertIn("font.family: tokens.displayFont; font.pixelSize: tokens.textTelemetry", thermal_flyout)
 
-    def test_weather_splits_leading_condition_icon_from_label(self):
-        qml = read("lacuna.weather/Widget.qml")
+    def test_weather_flyout_is_standalone_resilient_and_coordinated(self):
+        widget = read("lacuna.weather/Widget.qml")
+        flyout = read("lacuna.weather/WeatherFlyout.qml")
+        state = read("lacuna.weather/WeatherState.qml")
+        model = read("lacuna.weather/WeatherModel.js")
+        manifest = json.loads(read("lacuna.weather/manifest.json"))
+        defaults = manifest["barWidget"]["defaults"]
+        schema = {entry["key"]: entry for entry in manifest["barWidget"]["schema"]}
 
-        self.assertIn("function leadingWeatherIcon(raw)", qml)
-        self.assertIn("function textWithoutLeadingWeatherIcon(raw)", qml)
-        self.assertIn('readonly property string weatherIcon: leadingWeatherIcon(weatherText) || "󰖐"', qml)
-        self.assertIn("text: root.weatherIcon", qml)
-        self.assertIn("readonly property color iconColor: moduleColor", qml)
-        self.assertIn("readonly property color textColor: foreground", qml)
-        self.assertIn("readonly property color seamColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.18)", qml)
-        self.assertIn("readonly property int topbarIconSize: barSize >= 30 ? 15 : 13", qml)
-        self.assertIn("readonly property int topbarTextSize: barSize <= 26 ? 12 : 13", qml)
-        self.assertIn("readonly property int contentSpacing: 6", qml)
-        self.assertIn("readonly property int horizontalPadding: vertical ? 0 : 7", qml)
-        self.assertIn("width: root.topbarIconSize + 4", qml)
-        self.assertIn("visible: root.showText && root.displayText.length > 0", qml)
-        self.assertIn("color: root.seamColor", qml)
-        self.assertIn("color: root.textColor", qml)
-        self.assertIn("font.pixelSize: root.topbarTextSize", qml)
-        self.assertIn("font.weight: Font.DemiBold", qml)
+        self.assertIn("property bool flyoutOpen: false", widget)
+        self.assertIn("readonly property bool opened: flyoutOpen", widget)
+        for method in ("open", "close", "closeForPopoutSwitch", "toggleFlyout"):
+            self.assertIn(f"function {method}()", widget)
+        self.assertIn("WeatherState {", widget)
+        self.assertIn("WeatherFlyout {", widget)
+        self.assertIn("owner: root", widget)
+        self.assertIn("weatherState: weatherState", widget)
+        self.assertIn("root.refresh(true)", widget)
+        self.assertIn("weatherState.notificationText()", widget)
+        self.assertIn("readonly property string weatherIcon: weatherState.icon", widget)
+        self.assertIn("readonly property string displayText: weatherState.barLabel", widget)
+        self.assertIn("readonly property color iconColor: moduleColor", widget)
+        self.assertIn("readonly property color textColor: foreground", widget)
+        self.assertIn("text: root.weatherIcon", widget)
+        self.assertIn("text: root.displayText", widget)
+        self.assertIn("font.weight: Font.DemiBold", widget)
+        self.assertNotIn("omarchy weather status", widget)
+
+        self.assertIn("readonly property var coordinatorKey: owner || root", flyout)
+        self.assertIn('bar.requestPopout(coordinatorKey, anchorItem, owner ? owner.moduleName : "")', flyout)
+        self.assertIn("bar.releasePopout(coordinatorKey)", flyout)
+        self.assertIn("HyprlandFocusGrab", flyout)
+        self.assertIn("onCleared: root.close()", flyout)
+        self.assertIn('text: "WEATHER / CONDITIONS"', flyout)
+        self.assertIn('text: "FORECAST / 3 DAYS"', flyout)
+        self.assertIn("model: root.forecastDays.length > 0 ? root.forecastDays : 3", flyout)
+        self.assertIn("function loadFrameSettings(raw)", flyout)
+        self.assertIn("shadowEnabled = frame.shadow === true", flyout)
+        self.assertIn('configHome + "/omarchy/lacuna/settings.json"', flyout)
+        self.assertIn("id: shadowSource", flyout)
+        self.assertIn("LacunaDropShadow {", flyout)
+        self.assertIn("source: shadowSource", flyout)
+        self.assertIn("shadowEnabled: root.shadowEnabled", flyout)
+        self.assertIn("readonly property bool contentFitsPanel:", flyout)
+        self.assertIn("font.family: root.displayFontFamily", flyout)
+        self.assertIn("font.weight: root.displayHeroWeight", flyout)
+        self.assertIn("font.letterSpacing: root.displayTitleTracking", flyout)
+        tokens = read("lacuna.weather/LacunaTokens.qml")
+        self.assertIn('readonly property string displayFont: "Tektur"', tokens)
+        self.assertIn("readonly property int displayTelemetryWeight: Font.Normal", tokens)
+        self.assertIn("readonly property real trackingTitle: 2.0", tokens)
+
+        self.assertIn("Math.max(60000, Number(setting(\"interval\", 900000))", state)
+        self.assertIn("property bool stale: false", state)
+        self.assertIn("property string errorText", state)
+        self.assertIn("stale = hasData", state)
+        self.assertIn("function finishWeatherRequest(raw)", state)
+        self.assertIn("function finishDailyRequest(raw)", state)
+        self.assertIn("function finishLocationRequest(raw)", state)
+        self.assertIn("function finishOpenMeteoRequest(raw)", state)
+        self.assertIn("Model.buildLocationUrl", state)
+        self.assertIn("Model.buildOpenMeteoWeatherUrl", state)
+        self.assertIn("Model.reportFromOpenMeteo", state)
+        self.assertIn("Model.buildForecastDays", state)
+        self.assertIn('command = ["curl", "-fsS", "--max-time", "5"', state)
+        self.assertIn("function buildWttrUrl(location)", model)
+        self.assertIn("function buildLocationUrl(location)", model)
+        self.assertIn("function parseLocation(raw, override)", model)
+        self.assertIn("function buildOpenMeteoWeatherUrl(location)", model)
+        self.assertIn("function reportFromOpenMeteo(payload, location)", model)
+        self.assertIn("encodeURIComponent(normalized)", model)
+        self.assertIn("function shouldUseImperial", model)
+        self.assertIn("function openMeteoUrl(report)", model)
+        self.assertIn("function buildForecastDays", model)
+        self.assertIn("function notificationText(data)", model)
+
+        self.assertEqual(900000, defaults["interval"])
+        self.assertEqual("", defaults["location"])
+        self.assertEqual("auto", defaults["unit"])
+        self.assertEqual(60000, schema["interval"]["min"])
+        self.assertEqual(["auto", "imperial", "metric"], schema["unit"]["options"])
+        self.assertEqual([], manifest["lacuna"]["requires"])
         self.assertIn('weather: "blue"', read("lacuna.weather/ColorProfile.qml"))
-        self.assertIn("text: root.displayText", qml)
-        self.assertNotIn("text: root.weatherText", qml)
 
     def test_clock_splits_colored_date_from_foreground_time(self):
         qml = read("lacuna.clock/Widget.qml")
@@ -1481,6 +1545,80 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("color: root.timeColor", qml)
         self.assertEqual(qml.count("font.weight: Font.DemiBold"), 2)
         self.assertIn('clock: "accent"', read("lacuna.clock/ColorProfile.qml"))
+
+    def test_clock_calendar_flyout_is_standalone_read_only_and_coordinated(self):
+        widget = read("lacuna.clock/Widget.qml")
+        flyout = read("lacuna.clock/CalendarFlyout.qml")
+        state = read("lacuna.clock/CalendarState.qml")
+        model = read("lacuna.clock/CalendarModel.js")
+        manifest = json.loads(read("lacuna.clock/manifest.json"))
+        defaults = manifest["barWidget"]["defaults"]
+        schema = {entry["key"]: entry for entry in manifest["barWidget"]["schema"]}
+
+        self.assertIn("property bool flyoutOpen: false", widget)
+        self.assertIn("readonly property bool opened: flyoutOpen", widget)
+        for method in ("open", "close", "closeForPopoutSwitch", "toggleFlyout"):
+            self.assertIn(f"function {method}()", widget)
+        self.assertIn("CalendarFlyout {", widget)
+        self.assertIn("owner: root", widget)
+        self.assertIn("liveDate: root.displayDate", widget)
+        self.assertIn('bar.run("omarchy menu timezone")', widget)
+        self.assertNotIn("property bool alt", widget)
+        self.assertNotIn("formatAlt", widget)
+
+        self.assertIn("readonly property var coordinatorKey: owner || root", flyout)
+        self.assertIn('bar.requestPopout(coordinatorKey, anchorItem, owner ? owner.moduleName : "")', flyout)
+        self.assertIn("bar.releasePopout(coordinatorKey)", flyout)
+        self.assertIn("HyprlandFocusGrab", flyout)
+        self.assertIn("onCleared: root.close()", flyout)
+        self.assertIn("model: calendar.cells", flyout)
+        self.assertIn('text: "Today"', flyout)
+        self.assertIn("CalendarState {", flyout)
+        self.assertIn("import Quickshell.Io", flyout)
+        self.assertIn("function loadFrameSettings(raw)", flyout)
+        self.assertIn("shadowEnabled = frame.shadow === true", flyout)
+        self.assertIn('configHome + "/omarchy/lacuna/settings.json"', flyout)
+        self.assertIn("id: shadowSource", flyout)
+        self.assertIn("LacunaDropShadow {", flyout)
+        self.assertIn("LacunaTokens { id: tokens }", flyout)
+        self.assertIn("font.family: root.displayFontFamily", flyout)
+        self.assertIn("font.weight: root.displayHeroWeight", flyout)
+        self.assertIn("font.letterSpacing: root.displayTitleTracking", flyout)
+        self.assertIn('readonly property string displayFont: "Tektur"', read("lacuna.clock/LacunaTokens.qml"))
+        self.assertIn("readonly property int displayTelemetryWeight: Font.Normal", read("lacuna.clock/LacunaTokens.qml"))
+        self.assertIn("readonly property real trackingTitle: 2.0", read("lacuna.clock/LacunaTokens.qml"))
+        self.assertIn("source: shadowSource", flyout)
+        self.assertIn("shadowEnabled: root.shadowEnabled", flyout)
+        self.assertIn("x: root.shadowLeftMargin", flyout)
+        self.assertIn("y: root.shadowTopMargin", flyout)
+        self.assertIn("readonly property bool contentFitsPanel:", flyout)
+        self.assertIn("height: root.footerHeight", flyout)
+        shadow = read("lacuna.clock/LacunaDropShadow.qml")
+        self.assertIn("MultiEffect {", shadow)
+        self.assertIn("autoPaddingEnabled: root.autoPaddingEnabled", shadow)
+        self.assertNotIn("autoPaddingEnabled: true", shadow)
+
+        self.assertIn("function showPreviousMonth()", state)
+        self.assertIn("function showNextMonth()", state)
+        self.assertIn("function selectCell(cell)", state)
+        self.assertIn("function showToday()", state)
+        self.assertIn("function syncLiveDate(value)", state)
+        self.assertIn("for (var index = 0; index < 42; index++)", model)
+        self.assertIn("12, 0, 0, 0", model)
+        self.assertIn("1 - first.getDay()", model)
+        self.assertIn('locale.toString(date, "ddd")', model)
+
+        self.assertEqual("ddd d", defaults["dateFormat"])
+        self.assertEqual("h:mm AP", defaults["timeFormat"])
+        self.assertNotIn("formatAlt", defaults)
+        self.assertIn("dateFormat", schema)
+        self.assertIn("timeFormat", schema)
+        self.assertNotIn("formatAlt", schema)
+        self.assertEqual([], manifest["lacuna"]["requires"])
+
+        combined = "\n".join((widget, flyout, state, model)).lower()
+        for forbidden in ("event backend", "calendar backend", "caldav", "agenda", "create event"):
+            self.assertNotIn(forbidden, combined)
 
     def test_theme_and_wallpaper_widgets_use_details_flyouts_not_switchers(self):
         theme = read("lacuna.theme/Widget.qml")

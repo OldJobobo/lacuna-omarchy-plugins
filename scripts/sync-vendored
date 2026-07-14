@@ -83,6 +83,18 @@ def vendored_pairs() -> list[tuple[Path, Path]]:
 
     for source, target in [
         (
+            ROOT / "lacuna.clock/BarFlyoutSurface.qml",
+            ROOT / "lacuna.weather/BarFlyoutSurface.qml",
+        ),
+        (
+            ROOT / "lacuna.clock/LacunaDropShadow.qml",
+            ROOT / "lacuna.weather/LacunaDropShadow.qml",
+        ),
+        (
+            ROOT / "lacuna.clock/LacunaGeometry.qml",
+            ROOT / "lacuna.weather/LacunaGeometry.qml",
+        ),
+        (
             ROOT / "lacuna.shell-settings/components/LacunaGeometry.qml",
             ROOT / "lacuna.bar/LacunaGeometry.qml",
         ),

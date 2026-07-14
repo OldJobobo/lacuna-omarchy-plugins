@@ -33,9 +33,21 @@ ShellRoot {{
     var component = Qt.createComponent("{qml_url('lacuna.weather/Widget.qml')}", Component.PreferSynchronous)
     weather = component.createObject(root, {{
       bar: mockBar,
-      settings: {{ showText: true, interval: 999999 }},
-      weatherText: " 66 F"
+      settings: {{ showText: true, interval: 999999, unit: "imperial" }},
+      autoRefresh: false
     }})
+    weather.weatherStateRef.activeWeatherKey = weather.weatherStateRef.requestKey
+    weather.weatherStateRef.finishWeatherRequest(JSON.stringify({{
+      current_condition: [{{
+        temp_F: "66", temp_C: "19", FeelsLikeF: "65", FeelsLikeC: "18",
+        weatherCode: "113", weatherDesc: [{{ value: "Sunny" }}],
+        windspeedMiles: "5", windspeedKmph: "8", humidity: "42"
+      }}],
+      nearest_area: [{{
+        areaName: [{{ value: "Seattle" }}],
+        country: [{{ value: "United States" }}]
+      }}]
+    }}))
     finish.restart()
   }}
 
@@ -62,7 +74,7 @@ ShellRoot {{
         result = parse_behave(output)[-1]
 
         self.assertEqual(result["icon"], "")
-        self.assertEqual(result["text"], "66 F")
+        self.assertEqual(result["text"], "66° F")
         self.assertEqual(result["iconSize"], 13)
         self.assertEqual(result["textSize"], 12)
         self.assertEqual(result["spacing"], 6)

@@ -21,7 +21,6 @@ These documents are not part of the beta or RC critical path.
 
 | Plan | State | Role and boundary |
 | --- | --- | --- |
-| [Clock And Calendar Flyout](./lacuna-clock-calendar-flyout-plan.md) | Proposed; ready for implementation | Adaptive time/date bar face and a visual, read-only month flyout; events and external calendar backends are excluded. |
 | [Surface Transition Pipeline Repair](./lacuna-surface-transition-pipeline-plan.md) | Proposed; ready for implementation | Optional interaction/transition work tracked separately from release readiness. |
 | [Shell Layout Presets And Agent Orchestration](./lacuna-shell-layout-presets-agent-orchestration-plan.md) | Proposed feature | Built-in per-monitor/workspace layout presets and the first Agent Orchestration shell mode. Not yet represented in runtime settings or QML. |
 | [Issue Creation](./lacuna-issue-creation-plan.md) | Draft operations plan | A prepared GitHub issue-creation batch. It is not an implementation phase and should be revalidated before creating external issues. |
@@ -30,6 +29,8 @@ These documents are not part of the beta or RC critical path.
 
 | Plan | State | Current authority |
 | --- | --- | --- |
+| [Weather Flyout](./lacuna-weather-flyout-plan.md) | Implemented and live-verified 2026-07-13 | Current conditions, three future days, resilient shared data state, popout coordination, and four-edge molded geometry. |
+| [Clock And Calendar Flyout](./lacuna-clock-calendar-flyout-plan.md) | Implemented and live-verified 2026-07-13 | Adaptive date/time face, read-only month grid, popout coordination, and four-edge molded geometry; calendar providers remain excluded. |
 | [Quattro P0 — Core Foundation](./quattro-p0-core-foundation-plan.md) | Complete; validated 2026-07-10 | Foundation checkpoint for settings, geometry, installation, recovery, and validation. |
 | [Lacuna Bar Refactor](./lacuna-bar-refactor-plan.md) | Complete | Current custom bar-host composition; living behavior is in source and architecture docs. |
 | [Bar Size Mode](./lacuna-bar-size-mode-plan.md) | Implemented | Retained as design notes and a manual smoke checklist. |

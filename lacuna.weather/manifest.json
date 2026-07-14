@@ -4,7 +4,7 @@
   "name": "Lacuna Weather",
   "version": "0.1.0",
   "author": "Lacuna",
-  "description": "Lacuna-styled weather status for the Omarchy bar.",
+  "description": "Lacuna weather status with an attached current-conditions and forecast flyout.",
   "kinds": [
     "bar-widget"
   ],
@@ -14,11 +14,13 @@
   },
   "barWidget": {
     "displayName": "Lacuna Weather",
-    "description": "Shows the current weather command output and opens the weather notification.",
+    "description": "Shows current conditions and opens a four-day weather flyout.",
     "category": "Lacuna",
     "allowMultiple": false,
     "defaults": {
-      "interval": 60000,
+      "interval": 900000,
+      "location": "",
+      "unit": "auto",
       "showText": true,
       "colorProfile": "semantic"
     },
@@ -27,9 +29,27 @@
         "key": "interval",
         "type": "integer",
         "label": "Refresh interval (ms)",
-        "min": 10000,
-        "step": 10000,
-        "defaultValue": 60000
+        "min": 60000,
+        "step": 60000,
+        "defaultValue": 900000
+      },
+      {
+        "key": "location",
+        "type": "string",
+        "label": "Location override",
+        "description": "Leave blank to infer the location from the network.",
+        "defaultValue": ""
+      },
+      {
+        "key": "unit",
+        "type": "enum",
+        "label": "Temperature unit",
+        "options": [
+          "auto",
+          "imperial",
+          "metric"
+        ],
+        "defaultValue": "auto"
       },
       {
         "key": "showText",

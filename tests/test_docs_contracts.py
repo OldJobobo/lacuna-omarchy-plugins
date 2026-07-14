@@ -118,6 +118,8 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("## Active Release Tracks", plans_index)
         self.assertIn("## Separate Non-Blocking Proposals", plans_index)
         self.assertIn("lacuna-clock-calendar-flyout-plan.md", plans_index)
+        self.assertIn("lacuna-weather-flyout-plan.md", plans_index)
+        self.assertIn("Implemented and live-verified 2026-07-13", plans_index)
         self.assertIn("Clock And Calendar Flyout", roadmap)
 
         for name in [
@@ -126,6 +128,7 @@ class DocsContractTests(unittest.TestCase):
             "quattro-p1-product-integration-plan.md",
             "quattro-p2-release-and-evolution-plan.md",
             "lacuna-clock-calendar-flyout-plan.md",
+            "lacuna-weather-flyout-plan.md",
         ]:
             self.assertIn(name, plans_index)
             self.assertTrue((ROOT / "docs" / "plans" / name).exists(), name)
