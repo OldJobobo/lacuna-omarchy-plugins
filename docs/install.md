@@ -14,6 +14,10 @@ Run the Lacuna helper for a menu-driven setup:
 ./scripts/lacuna
 ```
 
+This works from either a Git clone or a downloaded and extracted repository
+archive. A clone uses the local checkout as its Omarchy plugin source; an
+archive automatically registers the official GitHub repository as `lacuna`.
+
 The first screen offers:
 
 - Full Lacuna install

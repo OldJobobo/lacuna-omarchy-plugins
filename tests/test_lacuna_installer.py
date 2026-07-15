@@ -313,6 +313,16 @@ class LacunaInstallerTests(unittest.TestCase):
 
         self.assertEqual(module.default_source_url(), str(ROOT))
 
+    def test_default_source_url_uses_official_repo_for_extracted_archive(self):
+        module = load_installer_module()
+
+        with tempfile.TemporaryDirectory() as tmp, \
+            mock.patch.object(module, "ROOT", Path(tmp)):
+            self.assertEqual(
+                module.default_source_url(),
+                "https://github.com/OldJobobo/lacuna-omarchy-plugins.git",
+            )
+
     def test_stale_source_catalog_reports_repair_commands(self):
         module = load_installer_module()
 

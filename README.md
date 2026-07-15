@@ -32,8 +32,13 @@ second shell alongside your desktop.
 Clone the repository, enter it, and launch the guided installer:
 
 ```bash
+git clone https://github.com/OldJobobo/lacuna-omarchy-plugins.git ~/lacuna
+cd ~/lacuna
 ./scripts/lacuna
 ```
+
+The installer also works from a downloaded and extracted repository archive;
+run `./scripts/lacuna` from the extracted directory.
 
 Choose **Full Lacuna install** for the complete experience. The installer
 stages the plugins, selects the Lacuna bar, applies its recommended layout,

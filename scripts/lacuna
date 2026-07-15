@@ -17,6 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = "lacuna"
+OFFICIAL_SOURCE_URL = "https://github.com/OldJobobo/lacuna-omarchy-plugins.git"
 LEGACY_PLUGIN = "lacuna.compact-pill"
 BACKUPS_TO_KEEP = 2
 RUNTIME_BACKUPS_TO_KEEP = 8
@@ -427,23 +428,10 @@ def source_exists(source: str) -> bool | None:
     return any(entry.get("id") == source for entry in data.get("sources", []))
 
 
-def repo_remote_url() -> str | None:
-    result = subprocess.run(
-        ["git", "-C", str(ROOT), "remote", "get-url", "origin"],
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    if result.returncode != 0:
-        return None
-    return result.stdout.strip() or None
-
-
 def default_source_url() -> str | None:
     if (ROOT / ".git").exists():
         return str(ROOT)
-    return repo_remote_url()
+    return OFFICIAL_SOURCE_URL
 
 
 def source_catalog_ids() -> set[str] | None:
