@@ -67,7 +67,8 @@ Item {
   readonly property string displayMode: String(setting("displayMode", "left"))
   readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property int topbarTextSize: barSize <= 26 ? 12 : 13
-  readonly property int contentSpacing: 6
+  readonly property int contentSpacing: 5
+  readonly property int horizontalPadding: vertical ? 0 : 5
   readonly property string scriptPath: localPath(Qt.resolvedUrl("scripts/claude-code-status.sh"))
   readonly property url iconSource: Qt.resolvedUrl("assets/claude-ai.svg")
 
@@ -217,12 +218,11 @@ Item {
     id: button
 
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
-    readonly property int horizontalPadding: root.vertical ? 0 : 7
     readonly property int stableMinimumWidth: root.vertical ? root.barSize : (root.compact ? 58 : 104)
     readonly property int meterHeight: root.showProgress && !root.vertical ? 2 : 0
     readonly property bool meterAtTop: !root.vertical && root.bar && root.bar.position === "top"
 
-    width: root.vertical ? root.barSize : Math.max(stableMinimumWidth, content.implicitWidth + horizontalPadding * 2)
+    width: root.vertical ? root.barSize : Math.max(stableMinimumWidth, content.implicitWidth + root.horizontalPadding * 2)
     height: root.vertical ? Math.max(root.barSize, content.implicitHeight + 10) : root.barSize
     implicitWidth: width
     implicitHeight: height
@@ -273,8 +273,8 @@ Item {
       Item {
         anchors.verticalCenter: parent.verticalCenter
         visible: root.showIcon
-        width: root.topbarIconSize + 4
-        height: root.topbarIconSize + 4
+        width: root.topbarIconSize
+        height: root.topbarIconSize
 
         Image {
           id: icon

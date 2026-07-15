@@ -1532,8 +1532,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property color timeColor: foreground", qml)
         self.assertIn("readonly property color seamColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.18)", qml)
         self.assertIn("readonly property int topbarTextSize: barSize <= 26 ? 12 : 13", qml)
-        self.assertIn("readonly property int contentSpacing: 6", qml)
-        self.assertIn("readonly property int horizontalPadding: vertical ? 0 : 7", qml)
+        self.assertIn("readonly property int contentSpacing: 5", qml)
+        self.assertIn("readonly property int horizontalPadding: vertical ? 0 : 5", qml)
         self.assertIn("function dateFormatPart(format)", qml)
         self.assertIn("function timeFormatPart(format)", qml)
         self.assertIn("readonly property string dateText: formattedWith(displayDate, activeDateFormat)", qml)
@@ -3497,7 +3497,7 @@ class QmlContractTests(unittest.TestCase):
             qml = read(f"{plugin}/Widget.qml")
             self.assertIn('readonly property bool showProgress: setting("showProgress", true) === true', qml)
             self.assertIn("readonly property int stableMinimumWidth: root.vertical ? root.barSize : (root.compact ? 58 : 104)", qml)
-            self.assertIn("width: root.vertical ? root.barSize : Math.max(stableMinimumWidth, content.implicitWidth + horizontalPadding * 2)", qml)
+            self.assertIn("width: root.vertical ? root.barSize : Math.max(stableMinimumWidth, content.implicitWidth + root.horizontalPadding * 2)", qml)
             self.assertIn('readonly property bool meterAtTop: !root.vertical && root.bar && root.bar.position === "top"', qml)
             self.assertIn("y: button.meterAtTop ? 3 : parent.height - height - 3", qml)
             self.assertIn("anchors.verticalCenterOffset: button.meterHeight > 0 ? (button.meterAtTop ? 1 : -1) : 0", qml)
@@ -3533,9 +3533,9 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("readonly property color seamColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.18)", qml)
             self.assertIn("readonly property int topbarIconSize: barSize >= 30 ? 15 : 13", qml)
             self.assertIn("readonly property int topbarTextSize: barSize <= 26 ? 12 : 13", qml)
-            self.assertIn("readonly property int contentSpacing: 6", qml)
-            self.assertIn("readonly property int horizontalPadding: root.vertical ? 0 : 7", qml)
-            self.assertIn("width: root.topbarIconSize + 4", qml)
+            self.assertIn("readonly property int contentSpacing: 5", qml)
+            self.assertIn("readonly property int horizontalPadding: vertical ? 0 : 5", qml)
+            self.assertIn("width: root.topbarIconSize", qml)
             self.assertIn("visible: root.showIcon && label.text.length > 0", qml)
             self.assertIn("colorizationColor: root.iconColor", qml)
             self.assertIn("color: root.textColor", qml)
@@ -3548,17 +3548,17 @@ class QmlContractTests(unittest.TestCase):
         profile = read("lacuna.mpris/ColorProfile.qml")
 
         self.assertIn("accentText: false", widget)
-        self.assertIn("contentHorizontalPadding: 14", widget)
+        self.assertIn("contentHorizontalPadding: 10", widget)
         self.assertIn("labelPixelSize: 12", widget)
         self.assertIn("iconSize: root.barSize >= 30 ? 15 : 13", widget)
         self.assertIn("labelFontWeight: Font.DemiBold", widget)
         self.assertIn('sweepActive: root.sweepOnPlaying && root.cssClass === "playing"', widget)
 
-        self.assertIn("property int contentSpacing: 6", button)
+        self.assertIn("property int contentSpacing: 5", button)
         self.assertIn("property int labelPixelSize: 12", button)
         self.assertIn("return root.accentText ? root.accent : root.foreground", button)
         self.assertIn("strokeColor: root.accent", button)
-        self.assertIn("width: root.iconSize + 4", button)
+        self.assertIn("width: root.iconSize", button)
         self.assertIn('visible: root.iconName !== "" && root.text.length > 0', button)
         self.assertIn("color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.18)", button)
         self.assertIn("NumberAnimation on sweepPosition", button)
@@ -3569,6 +3569,31 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('playing: "green"', profile)
         self.assertIn('paused: "muted"', profile)
 
+    def test_bar_icon_seams_use_equal_optical_spacing(self):
+        widget_paths = [
+            "lacuna.claude-usage/Widget.qml",
+            "lacuna.codex-usage/Widget.qml",
+            "lacuna.system-stats/Widget.qml",
+            "lacuna.temperature/Widget.qml",
+            "lacuna.theme/Widget.qml",
+            "lacuna.wallpaper/Widget.qml",
+            "lacuna.weather/Widget.qml",
+        ]
+
+        for path in widget_paths:
+            qml = read(path)
+            self.assertIn("contentSpacing: 5", qml, path)
+            self.assertNotRegex(qml, r"width: .*IconSize \+ 4", path)
+            self.assertNotRegex(qml, r"width: .*iconSize \+ 4", path)
+
+        self.assertIn("readonly property int horizontalPadding: 0", read("lacuna.system-stats/Widget.qml"))
+        self.assertIn("readonly property int horizontalPadding: vertical ? 0 : 2", read("lacuna.temperature/Widget.qml"))
+
+        mpris = read("lacuna.mpris/components/LacunaMprisButton.qml")
+        self.assertIn("property int contentSpacing: 5", mpris)
+        self.assertIn("property int contentHorizontalPadding: 10", mpris)
+        self.assertNotIn("width: root.iconSize + 4", mpris)
+
     def test_resource_widgets_match_bar_style_and_keep_graphs_out_of_bar(self):
         stats = read("lacuna.system-stats/Widget.qml")
         temperature = read("lacuna.temperature/Widget.qml")
@@ -3576,20 +3601,24 @@ class QmlContractTests(unittest.TestCase):
         for qml in [stats, temperature]:
             self.assertIn("readonly property int topbarIconSize: barSize >= 30 ? 15 : 13", qml)
             self.assertIn("readonly property int topbarTextSize: barSize <= 26 ? 12 : 13", qml)
-            self.assertIn("readonly property int contentSpacing: 6", qml)
-            self.assertIn("readonly property int horizontalPadding: vertical ? 0 : 7", qml)
+            self.assertIn("readonly property int contentSpacing: 5", qml)
             self.assertIn("font.weight: Font.DemiBold", qml)
+            self.assertIn("horizontalAlignment: Text.AlignLeft", qml)
 
         stat_button = stats[stats.index("component StatButton:") :]
         self.assertNotIn("Canvas {", stats)
         self.assertNotIn("id: trendCanvas", stats)
         self.assertNotIn("property var history: []", stat_button)
-        self.assertIn("width: content.parent.topbarIconSize + 4", stats)
+        self.assertIn('metricFontMetrics.advanceWidth("100%")', stats)
+        self.assertIn("width: content.parent.topbarIconSize", stats)
+        self.assertIn("width: content.parent.valueWidth", stats)
         self.assertIn("colorizationColor: content.parent.accent", stats)
         self.assertIn("color: content.parent.foreground", stats)
         self.assertIn("visible: content.parent.showLabel", stats)
 
-        self.assertIn("width: root.topbarIconSize + 4", temperature)
+        self.assertIn('temperatureFontMetrics.advanceWidth("000 F")', temperature)
+        self.assertIn("width: root.topbarIconSize", temperature)
+        self.assertIn("width: root.temperatureValueWidth", temperature)
         self.assertIn("colorizationColor: root.statusColor", temperature)
         self.assertIn("color: root.foreground", temperature)
         self.assertIn("visible: root.showText", temperature)

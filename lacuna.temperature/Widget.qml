@@ -28,8 +28,9 @@ Item {
   readonly property bool showText: setting("showText", compact ? false : true) === true
   readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property int topbarTextSize: barSize <= 26 ? 12 : 13
-  readonly property int contentSpacing: 6
-  readonly property int horizontalPadding: vertical ? 0 : 7
+  readonly property int contentSpacing: 5
+  readonly property int horizontalPadding: vertical ? 0 : 2
+  readonly property int temperatureValueWidth: Math.ceil(temperatureFontMetrics.advanceWidth("000 F"))
   readonly property url iconSource: Qt.resolvedUrl("assets/tabler/temperature-plus-filled.svg")
   readonly property string status: temperatureF >= criticalF ? "Hot" : temperatureF >= warmF ? "Warm" : "Normal"
   readonly property color statusColor: colorProfile.statusColor(status.toLowerCase(), "temperature")
@@ -87,6 +88,13 @@ Item {
     id: motionTokens
   }
 
+  FontMetrics {
+    id: temperatureFontMetrics
+    font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
+    font.pixelSize: root.topbarTextSize
+    font.weight: Font.DemiBold
+  }
+
   function tooltip() {
     return "<b>CPU Temperature</b><br/>Current: " + temperatureF + " F<br/>Status: " + status + "<br/>Warm: " + warmF + " F<br/>Critical: " + criticalF + " F"
   }
@@ -139,8 +147,8 @@ Item {
 
       Item {
         anchors.verticalCenter: parent.verticalCenter
-        width: root.topbarIconSize + 4
-        height: root.topbarIconSize + 4
+        width: root.topbarIconSize
+        height: root.topbarIconSize
 
         Image {
           anchors.centerIn: parent
@@ -170,11 +178,13 @@ Item {
       Text {
         visible: root.showText
         anchors.verticalCenter: parent.verticalCenter
+        width: root.temperatureValueWidth
         text: root.temperatureF + " F"
         color: root.foreground
         font.family: bar ? bar.fontFamily : "Hack Nerd Font Propo"
         font.pixelSize: root.topbarTextSize
         font.weight: Font.DemiBold
+        horizontalAlignment: Text.AlignLeft
         maximumLineCount: 1
       }
     }

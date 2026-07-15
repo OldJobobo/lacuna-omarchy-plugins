@@ -35,8 +35,9 @@ Item {
   readonly property bool showLabels: setting("showLabels", compact ? false : true) === true
   readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property int topbarTextSize: barSize <= 26 ? 12 : 13
-  readonly property int contentSpacing: 6
-  readonly property int horizontalPadding: vertical ? 0 : 7
+  readonly property int contentSpacing: 5
+  readonly property int horizontalPadding: 0
+  readonly property int metricValueWidth: Math.ceil(metricFontMetrics.advanceWidth("100%"))
 
   visible: true
   implicitWidth: content.implicitWidth
@@ -82,6 +83,13 @@ Item {
 
   MotionTokens {
     id: motionTokens
+  }
+
+  FontMetrics {
+    id: metricFontMetrics
+    font.family: root.bar ? root.bar.fontFamily : "Hack Nerd Font Propo"
+    font.pixelSize: root.topbarTextSize
+    font.weight: Font.DemiBold
   }
 
   function parseCpu(raw) {
@@ -188,6 +196,7 @@ Item {
       barSize: root.barSize
       hoverDuration: motionTokens.hoverDuration
       showLabel: root.showLabels
+      valueWidth: root.metricValueWidth
       metric: "disk"
     }
 
@@ -202,6 +211,7 @@ Item {
       barSize: root.barSize
       hoverDuration: motionTokens.hoverDuration
       showLabel: root.showLabels
+      valueWidth: root.metricValueWidth
       metric: "memory"
     }
 
@@ -216,6 +226,7 @@ Item {
       barSize: root.barSize
       hoverDuration: motionTokens.hoverDuration
       showLabel: root.showLabels
+      valueWidth: root.metricValueWidth
       metric: "cpu"
     }
   }
@@ -230,13 +241,14 @@ Item {
     property int barSize: 26
     property int hoverDuration: 150
     property bool showLabel: true
+    property int valueWidth: 0
     property string metric: "cpu"
     property bool compact: !vertical && barSize <= 26
     property color foreground: bar ? bar.foreground : "#d8dee9"
     property int topbarIconSize: barSize >= 30 ? 15 : 13
     property int topbarTextSize: barSize <= 26 ? 12 : 13
-    property int contentSpacing: 6
-    property int horizontalPadding: vertical ? 0 : 7
+    property int contentSpacing: 5
+    property int horizontalPadding: 0
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
 
     BarHoverSeam {
@@ -266,8 +278,8 @@ Item {
 
       Item {
         anchors.verticalCenter: parent.verticalCenter
-        width: content.parent.topbarIconSize + 4
-        height: content.parent.topbarIconSize + 4
+        width: content.parent.topbarIconSize
+        height: content.parent.topbarIconSize
 
         Image {
           anchors.centerIn: parent
@@ -297,11 +309,13 @@ Item {
       Text {
         visible: content.parent.showLabel
         anchors.verticalCenter: parent.verticalCenter
+        width: content.parent.valueWidth
         text: content.parent.label
         color: content.parent.foreground
         font.family: content.parent.bar ? content.parent.bar.fontFamily : "Hack Nerd Font Propo"
         font.pixelSize: content.parent.topbarTextSize
         font.weight: Font.DemiBold
+        horizontalAlignment: Text.AlignLeft
         maximumLineCount: 1
       }
     }

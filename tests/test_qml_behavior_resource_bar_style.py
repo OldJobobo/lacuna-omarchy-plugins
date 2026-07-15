@@ -15,6 +15,8 @@ ShellRoot {{
   property var stats: null
   property var temperature: null
   property real widthBeforeHistory: 0
+  property real statsWidthAtMinimum: 0
+  property real temperatureWidthAtMinimum: 0
 
   QtObject {{
     id: mockBar
@@ -40,6 +42,10 @@ ShellRoot {{
       bar: mockBar,
       settings: {{ showText: true, interval: 999999 }}
     }})
+    stats.diskText = "9%"
+    stats.memoryPercent = 9
+    stats.cpuPercent = 9
+    temperature.parseTemperature(JSON.stringify({{ primary: {{ fahrenheit: 9 }} }}))
     settle.restart()
   }}
 
@@ -48,9 +54,15 @@ ShellRoot {{
     interval: 150
     onTriggered: {{
       root.widthBeforeHistory = stats.implicitWidth
+      root.statsWidthAtMinimum = stats.implicitWidth
+      root.temperatureWidthAtMinimum = temperature.implicitWidth
       stats.cpuHistory = [5, 20, 40, 80]
       stats.memoryHistory = [20, 30, 40, 50]
       stats.diskHistory = [60, 61, 62, 63]
+      stats.diskText = "100%"
+      stats.memoryPercent = 100
+      stats.cpuPercent = 100
+      temperature.parseTemperature(JSON.stringify({{ primary: {{ fahrenheit: 100 }} }}))
       finish.restart()
     }}
   }}
@@ -70,6 +82,12 @@ ShellRoot {{
         temperatureSpacing: temperature.contentSpacing,
         temperaturePadding: temperature.horizontalPadding,
         temperatureText: temperature.foreground.toString(),
+        statsValueWidth: stats.metricValueWidth,
+        temperatureValueWidth: temperature.temperatureValueWidth,
+        statsWidthAtMinimum: root.statsWidthAtMinimum,
+        statsWidthAtMaximum: stats.implicitWidth,
+        temperatureWidthAtMinimum: root.temperatureWidthAtMinimum,
+        temperatureWidthAtMaximum: temperature.implicitWidth,
         widthBeforeHistory: root.widthBeforeHistory,
         widthAfterHistory: stats.implicitWidth
       }}))
@@ -85,8 +103,13 @@ ShellRoot {{
         for prefix in ("stats", "temperature"):
             self.assertEqual(result[f"{prefix}IconSize"], 15)
             self.assertEqual(result[f"{prefix}TextSize"], 13)
-            self.assertEqual(result[f"{prefix}Spacing"], 6)
-            self.assertEqual(result[f"{prefix}Padding"], 7)
+            self.assertEqual(result[f"{prefix}Spacing"], 5)
             self.assertEqual(result[f"{prefix}Text"], "#eeeeee")
 
+        self.assertEqual(result["statsPadding"], 0)
+        self.assertEqual(result["temperaturePadding"], 2)
+        self.assertGreater(result["statsValueWidth"], 0)
+        self.assertGreater(result["temperatureValueWidth"], result["statsValueWidth"])
+        self.assertEqual(result["statsWidthAtMaximum"], result["statsWidthAtMinimum"])
+        self.assertEqual(result["temperatureWidthAtMaximum"], result["temperatureWidthAtMinimum"])
         self.assertEqual(result["widthAfterHistory"], result["widthBeforeHistory"])

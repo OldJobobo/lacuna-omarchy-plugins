@@ -23,6 +23,8 @@ Item {
   readonly property bool widgetEnabled: boolSetting("enabled", true)
   readonly property int maxTextLength: Math.max(8, Number(setting("maxTextLength", 22)))
   readonly property int iconSize: barSize >= 30 ? 15 : 13
+  readonly property int contentSpacing: 5
+  readonly property int horizontalPadding: vertical ? 0 : 5
   readonly property url iconSource: Qt.resolvedUrl("assets/tabler/palette.svg")
   readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")
   readonly property string colorsPath: stateHome + "/omarchy/current/theme/colors.toml"
@@ -119,8 +121,7 @@ Item {
   Item {
     id: button
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed || root.opened ? 1 : 0
-    readonly property int horizontalPadding: root.vertical ? 0 : 7
-    width: root.vertical ? root.barSize : content.implicitWidth + horizontalPadding * 2
+    width: root.vertical ? root.barSize : content.implicitWidth + root.horizontalPadding * 2
     height: root.vertical ? Math.max(root.barSize, content.implicitHeight + 10) : root.barSize
     implicitWidth: width
     implicitHeight: height
@@ -135,11 +136,11 @@ Item {
       id: content
       anchors.centerIn: parent
       rotation: root.vertical ? -90 : 0
-      spacing: 6
+      spacing: root.contentSpacing
 
       Item {
-        width: root.iconSize + 4
-        height: root.iconSize + 4
+        width: root.iconSize
+        height: root.iconSize
         anchors.verticalCenter: parent.verticalCenter
         Image {
           anchors.centerIn: parent

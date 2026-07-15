@@ -128,7 +128,7 @@ Item {
     accentText: false
     sweepActive: root.sweepOnPlaying && root.cssClass === "playing"
     sweepColor: root.background
-    contentHorizontalPadding: 14
+    contentHorizontalPadding: 10
     labelPixelSize: 12
     iconSize: root.barSize >= 30 ? 15 : 13
     fontFamily: bar ? bar.fontFamily : "Hack Nerd Font Propo"

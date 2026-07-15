@@ -21,8 +21,8 @@ Item {
   readonly property color seamColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.18)
   readonly property bool compact: !vertical && barSize <= 26
   readonly property int topbarTextSize: barSize <= 26 ? 12 : 13
-  readonly property int contentSpacing: 6
-  readonly property int horizontalPadding: vertical ? 0 : 7
+  readonly property int contentSpacing: 5
+  readonly property int horizontalPadding: vertical ? 0 : 5
   readonly property string normalFormat: setting("format", "ddd d h:mm AP")
   readonly property string activeFormat: vertical ? setting("verticalFormat", "HH\n—\nmm") : normalFormat
   readonly property string displayText: formatted(displayDate)

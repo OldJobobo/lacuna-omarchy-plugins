@@ -51,11 +51,13 @@ ShellRoot {{
         codexIconSize: codexWidget.topbarIconSize,
         codexTextSize: codexWidget.topbarTextSize,
         codexSpacing: codexWidget.contentSpacing,
+        codexPadding: codexWidget.horizontalPadding,
         codexText: codexWidget.textColor.toString(),
         codexSeamAlpha: codexWidget.seamColor.a,
         claudeIconSize: claudeWidget.topbarIconSize,
         claudeTextSize: claudeWidget.topbarTextSize,
         claudeSpacing: claudeWidget.contentSpacing,
+        claudePadding: claudeWidget.horizontalPadding,
         claudeText: claudeWidget.textColor.toString(),
         claudeSeamAlpha: claudeWidget.seamColor.a
       }}))
@@ -71,6 +73,7 @@ ShellRoot {{
         for prefix in ("codex", "claude"):
             self.assertEqual(result[f"{prefix}IconSize"], 13)
             self.assertEqual(result[f"{prefix}TextSize"], 12)
-            self.assertEqual(result[f"{prefix}Spacing"], 6)
+            self.assertEqual(result[f"{prefix}Spacing"], 5)
+            self.assertEqual(result[f"{prefix}Padding"], 5)
             self.assertEqual(result[f"{prefix}Text"], "#eeeeee")
             self.assertAlmostEqual(result[f"{prefix}SeamAlpha"], 0.18, places=2)

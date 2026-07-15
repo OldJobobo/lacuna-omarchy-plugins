@@ -22,8 +22,8 @@ Item {
   readonly property color seamColor: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.18)
   readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property int topbarTextSize: barSize <= 26 ? 12 : 13
-  readonly property int contentSpacing: 6
-  readonly property int horizontalPadding: vertical ? 0 : 7
+  readonly property int contentSpacing: 5
+  readonly property int horizontalPadding: vertical ? 0 : 5
   readonly property string weatherIcon: weatherState.icon
   readonly property string displayText: weatherState.barLabel
   readonly property bool shown: true
@@ -113,8 +113,8 @@ Item {
 
       Item {
         anchors.verticalCenter: parent.verticalCenter
-        width: root.topbarIconSize + 4
-        height: root.topbarIconSize + 4
+        width: root.topbarIconSize
+        height: root.topbarIconSize
 
         Text {
           anchors.centerIn: parent

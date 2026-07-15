@@ -5,6 +5,61 @@ from qml_harness import HAVE_SESSION, parse_behave, qml_url, require_no_qml_erro
 
 @unittest.skipUnless(HAVE_SESSION, "needs a quickshell binary and a Wayland session")
 class QmlColorProfileBehaviorTests(unittest.TestCase):
+    def test_theme_and_wallpaper_widgets_share_equal_bar_seam_spacing(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var themeWidget: null
+  property var wallpaperWidget: null
+
+  QtObject {{
+    id: mockBar
+    property bool vertical: false
+    property int barSize: 30
+    property color foreground: "#eeeeee"
+    property color background: "#101010"
+    property color accent: "#aaaa00"
+    property color urgent: "#ef1234"
+    property string position: "top"
+    property string fontFamily: "Hack Nerd Font Propo"
+    function showTooltip(owner, text) {{}}
+    function hideTooltip(owner) {{}}
+  }}
+
+  Component.onCompleted: {{
+    var theme = Qt.createComponent("{qml_url('lacuna.theme/Widget.qml')}", Component.PreferSynchronous)
+    var wallpaper = Qt.createComponent("{qml_url('lacuna.wallpaper/Widget.qml')}", Component.PreferSynchronous)
+    themeWidget = theme.createObject(root, {{ bar: mockBar, settings: {{ enabled: true }} }})
+    wallpaperWidget = wallpaper.createObject(root, {{ bar: mockBar, settings: {{ enabled: true }} }})
+    finish.restart()
+  }}
+
+  Timer {{
+    id: finish
+    interval: 40
+    onTriggered: {{
+      console.log("BEHAVE " + JSON.stringify({{
+        themeSpacing: themeWidget.contentSpacing,
+        themePadding: themeWidget.horizontalPadding,
+        wallpaperSpacing: wallpaperWidget.contentSpacing,
+        wallpaperPadding: wallpaperWidget.horizontalPadding
+      }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        result = parse_behave(output)[-1]
+
+        for prefix in ("theme", "wallpaper"):
+            self.assertEqual(result[f"{prefix}Spacing"], 5)
+            self.assertEqual(result[f"{prefix}Padding"], 5)
+
     def test_theme_and_wallpaper_profiles_color_roles_without_changing_foreground(self):
         qml = f"""
 import Quickshell

@@ -86,6 +86,6 @@ ShellRoot {{
         self.assertEqual(result["customTime"], "22:48")
         self.assertFalse(result["opened"])
         self.assertEqual(result["textSize"], 12)
-        self.assertEqual(result["spacing"], 6)
-        self.assertEqual(result["padding"], 7)
+        self.assertEqual(result["spacing"], 5)
+        self.assertEqual(result["padding"], 5)
         self.assertEqual(result["timeColor"], "#eeeeee")

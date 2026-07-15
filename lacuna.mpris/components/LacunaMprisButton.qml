@@ -23,10 +23,10 @@ Item {
   property real sweepPosition: -0.35
   property int barSize: 26
   property int minButtonWidth: Math.max(32, barSize)
-  property int contentHorizontalPadding: 14
+  property int contentHorizontalPadding: 10
   property int labelPixelSize: 12
   property int iconSize: barSize >= 30 ? 15 : 13
-  property int contentSpacing: 6
+  property int contentSpacing: 5
   property string fontFamily: "Hack Nerd Font Propo"
   property int labelFontWeight: active ? Font.DemiBold : Font.Normal
   property real hoverPulseAmount: 0
@@ -119,8 +119,8 @@ Item {
     Item {
       visible: root.iconName !== ""
       anchors.verticalCenter: parent.verticalCenter
-      width: root.iconSize + 4
-      height: root.iconSize + 4
+      width: root.iconSize
+      height: root.iconSize
 
       Shape {
         anchors.centerIn: parent

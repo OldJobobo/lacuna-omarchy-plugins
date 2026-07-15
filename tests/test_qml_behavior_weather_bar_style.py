@@ -77,6 +77,6 @@ ShellRoot {{
         self.assertEqual(result["text"], "66° F")
         self.assertEqual(result["iconSize"], 13)
         self.assertEqual(result["textSize"], 12)
-        self.assertEqual(result["spacing"], 6)
-        self.assertEqual(result["padding"], 7)
+        self.assertEqual(result["spacing"], 5)
+        self.assertEqual(result["padding"], 5)
         self.assertEqual(result["textColor"], "#eeeeee")
