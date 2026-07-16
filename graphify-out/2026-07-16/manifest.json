@@ -1,12 +1,12 @@
 {
   "config/settings.example.json": {
-    "mtime": 1783870820.461522,
-    "ast_hash": "4bbb9fcdca56fe155fe279c01fc8b8d2",
+    "mtime": 1782884948.089055,
+    "ast_hash": "d1ca7fe52b16f2741fd20050a39b2388",
     "semantic_hash": ""
   },
   "config/shell.lacuna-native-replacements.example.json": {
-    "mtime": 1784001314.2490194,
-    "ast_hash": "985293a958802aab99339c03993f1892",
+    "mtime": 1782441151.498877,
+    "ast_hash": "8c206f84e44ee81ca061502fbfd8b777",
     "semantic_hash": ""
   },
   "config/shell.phase1.example.json": {
@@ -25,8 +25,8 @@
     "semantic_hash": "7017dbf24816683fd261eb7e0a961ef1"
   },
   "lacuna.audio/manifest.json": {
-    "mtime": 1783878535.54137,
-    "ast_hash": "e2887c61f8aeb8cc17989d6c0177acfd",
+    "mtime": 1782399128.0095925,
+    "ast_hash": "b273820da6b251182a74d336e4def1ea",
     "semantic_hash": ""
   },
   "lacuna.aurora-drift/manifest.json": {
@@ -50,12 +50,12 @@
     "semantic_hash": "809cd33aaed43231fe1e0cb9e5a48c84"
   },
   "lacuna.bar-size-pill/scripts/bar-size-state": {
-    "mtime": 1783530172.7171397,
+    "mtime": 1782849986.841255,
     "ast_hash": "93520091728a99631a062cb95a150c3a",
     "semantic_hash": ""
   },
   "lacuna.bar/BarModel.js": {
-    "mtime": 1783810837.0,
+    "mtime": 1782240859.0,
     "ast_hash": "dbdc898d0f1f7e847b1d05cf89d86394",
     "semantic_hash": "dbdc898d0f1f7e847b1d05cf89d86394"
   },
@@ -65,8 +65,8 @@
     "semantic_hash": "226efc92b187f9dae3772900c706d2ca"
   },
   "lacuna.bluetooth/manifest.json": {
-    "mtime": 1783878535.54137,
-    "ast_hash": "80c9625164adb6b7d785f45350b33a8f",
+    "mtime": 1782399557.1144762,
+    "ast_hash": "b4d093a5f93c21870eca233bba963c58",
     "semantic_hash": ""
   },
   "lacuna.cinematic-light-overlay/manifest.json": {
@@ -80,14 +80,14 @@
     "semantic_hash": ""
   },
   "lacuna.claude-usage/scripts/claude-code-status.sh": {
-    "mtime": 1784184333.8478136,
-    "ast_hash": "f29edc40b6239733184336fa4c6ca3ca",
-    "semantic_hash": ""
+    "mtime": 1781984431.3721015,
+    "ast_hash": "9a565182b541e1e39337722285170b55",
+    "semantic_hash": "9a565182b541e1e39337722285170b55"
   },
   "lacuna.clock/manifest.json": {
-    "mtime": 1784001314.2500193,
-    "ast_hash": "d5d4cc67a07b59ef0477fcc7b1ffccd2",
-    "semantic_hash": ""
+    "mtime": 1781271526.8130193,
+    "ast_hash": "8043fb72925a55ac49bd2fe920c2d79e",
+    "semantic_hash": "8043fb72925a55ac49bd2fe920c2d79e"
   },
   "lacuna.codex-usage/manifest.json": {
     "mtime": 1781984431.3731015,
@@ -95,14 +95,14 @@
     "semantic_hash": "d0a0ea7681b74a315e44b9289068be69"
   },
   "lacuna.codex-usage/scripts/codex-weekly-left": {
-    "mtime": 1784184449.1044056,
-    "ast_hash": "57ffbbd1ed4dcc3202c09906c25a2f5b",
-    "semantic_hash": ""
+    "mtime": 1782057923.5836806,
+    "ast_hash": "60bf4b3bbfa3925351ef4873f5b66e94",
+    "semantic_hash": "60bf4b3bbfa3925351ef4873f5b66e94"
   },
   "lacuna.codex-usage/scripts/codex-weekly-status.sh": {
-    "mtime": 1784184290.920627,
-    "ast_hash": "50a9482849283c868255e2be93626f86",
-    "semantic_hash": ""
+    "mtime": 1782064583.5971243,
+    "ast_hash": "aae91117c678ad515dbeaf66708b0404",
+    "semantic_hash": "aae91117c678ad515dbeaf66708b0404"
   },
   "lacuna.compact-pill/manifest.json": {
     "mtime": 1781504860.747712,
@@ -135,14 +135,14 @@
     "semantic_hash": "56b7a0e1a08b59b7fb6461e5f68ff9ec"
   },
   "lacuna.idle-inhibitor/manifest.json": {
-    "mtime": 1783530172.7201397,
+    "mtime": 1782894211.4548311,
     "ast_hash": "5b1070b8c3db97ce05f71bea58acc7c9",
     "semantic_hash": ""
   },
   "lacuna.indicators/manifest.json": {
-    "mtime": 1783755239.42731,
-    "ast_hash": "e43df86bc7130888dd808621deb97596",
-    "semantic_hash": ""
+    "mtime": 1781271526.8138502,
+    "ast_hash": "6860f2ea0acd4340a150ddf2531336df",
+    "semantic_hash": "6860f2ea0acd4340a150ddf2531336df"
   },
   "lacuna.menu-button/manifest.json": {
     "mtime": 1781271526.8140118,
@@ -150,9 +150,9 @@
     "semantic_hash": "a37f055496c4b93837484df57a5edc29"
   },
   "lacuna.menu/manifest.json": {
-    "mtime": 1783740159.1367676,
-    "ast_hash": "c9c8e13f96fa4189f4598c541fcdeb2a",
-    "semantic_hash": ""
+    "mtime": 1781984431.3751016,
+    "ast_hash": "d0a20301d8e1b9d46a37749614ebc12e",
+    "semantic_hash": "d0a20301d8e1b9d46a37749614ebc12e"
   },
   "lacuna.menu/scripts/desktop-app-catalog.py": {
     "mtime": 1780982191.3623831,
@@ -160,7 +160,7 @@
     "semantic_hash": "b83517fd8d42246408a83449c0daed96"
   },
   "lacuna.menu/scripts/omarchy-shell-settings-state.py": {
-    "mtime": 1783530172.72414,
+    "mtime": 1782258331.7847385,
     "ast_hash": "fcbd438aa2321b9fc4c6770bed323c6f",
     "semantic_hash": ""
   },
@@ -170,8 +170,8 @@
     "semantic_hash": "2895136cdc6791833af110301424380a"
   },
   "lacuna.network/manifest.json": {
-    "mtime": 1783878535.54137,
-    "ast_hash": "2fdd53cd31523f3a4043b766b0956e21",
+    "mtime": 1782365432.5758922,
+    "ast_hash": "902b486fc86886bba63717d154ba7bdb",
     "semantic_hash": ""
   },
   "lacuna.nightlight/manifest.json": {
@@ -185,18 +185,18 @@
     "semantic_hash": "ef122a57f07dbdb22a2d14a012502c41"
   },
   "lacuna.power/manifest.json": {
-    "mtime": 1783878535.5423698,
-    "ast_hash": "e52b697933f5d70a9d45ea21907c807c",
+    "mtime": 1782399745.777106,
+    "ast_hash": "ecf98836d43bde802050af2136fbed46",
     "semantic_hash": ""
   },
   "lacuna.rainfall-overlay/manifest.json": {
-    "mtime": 1783530172.72414,
+    "mtime": 1782280796.6459594,
     "ast_hash": "aea37e73edaf1c35e7f67cedd93e049f",
     "semantic_hash": ""
   },
   "lacuna.screen-recording/manifest.json": {
-    "mtime": 1783755145.5983908,
-    "ast_hash": "15a541c8ec0d7ee405cfc75e4732c2c0",
+    "mtime": 1782401486.5505219,
+    "ast_hash": "2e608ddce68741ad0096817babb383ab",
     "semantic_hash": ""
   },
   "lacuna.script-pill/manifest.json": {
@@ -220,7 +220,7 @@
     "semantic_hash": "6b76a1e68425bf56d649938e366f3e2a"
   },
   "lacuna.shell-settings/scripts/omarchy-shell-settings-state.py": {
-    "mtime": 1783530172.72414,
+    "mtime": 1782258331.7847385,
     "ast_hash": "fcbd438aa2321b9fc4c6770bed323c6f",
     "semantic_hash": ""
   },
@@ -255,14 +255,14 @@
     "semantic_hash": "7e1c3845a48d15bbe54802b49694b461"
   },
   "lacuna.theme-preloader/scripts/refresh-theme-background.sh": {
-    "mtime": 1783530172.72714,
+    "mtime": 1782258332.5647392,
     "ast_hash": "98ece328406039de263fe31da427c96f",
     "semantic_hash": ""
   },
   "lacuna.theme/manifest.json": {
-    "mtime": 1783880544.8624825,
-    "ast_hash": "f43ab0807ce9a1d3382c27b22d4c5bf6",
-    "semantic_hash": ""
+    "mtime": 1781504860.750712,
+    "ast_hash": "6a3f6f1d9e48bf27ac7260fbda1ef1a4",
+    "semantic_hash": "6a3f6f1d9e48bf27ac7260fbda1ef1a4"
   },
   "lacuna.tray/manifest.json": {
     "mtime": 1780164128.9452639,
@@ -280,44 +280,79 @@
     "semantic_hash": "2e222458a9beab376eb824a59725f8be"
   },
   "lacuna.wallpaper/manifest.json": {
-    "mtime": 1783880544.8624825,
-    "ast_hash": "a28624a850d26132f6fa74b42b8fe7ab",
-    "semantic_hash": ""
+    "mtime": 1781504860.750712,
+    "ast_hash": "82e6b84c2a3157e3abbc1545e0b25e52",
+    "semantic_hash": "82e6b84c2a3157e3abbc1545e0b25e52"
   },
   "lacuna.weather/manifest.json": {
-    "mtime": 1784001314.2500193,
-    "ast_hash": "48b6d059ee76e1c2f660db14931d83a2",
-    "semantic_hash": ""
+    "mtime": 1781271526.816001,
+    "ast_hash": "ecf125c3808eeef4eb4704764d771bb8",
+    "semantic_hash": "ecf125c3808eeef4eb4704764d771bb8"
   },
   "lacuna.workspaces/manifest.json": {
     "mtime": 1781504860.750712,
     "ast_hash": "73bc473b92c5de164c6565dfc66d20a8",
     "semantic_hash": "73bc473b92c5de164c6565dfc66d20a8"
   },
+  "lacuna.youtube-music-video/manifest.json": {
+    "mtime": 1781984431.3831017,
+    "ast_hash": "1a5b1d36f2934d621bb72bead204fbe6",
+    "semantic_hash": "1a5b1d36f2934d621bb72bead204fbe6"
+  },
+  "lacuna.youtube-music/manifest.json": {
+    "mtime": 1781984431.3831017,
+    "ast_hash": "fc1d8fa29ecf1d8e79162e91467f9897",
+    "semantic_hash": "fc1d8fa29ecf1d8e79162e91467f9897"
+  },
+  "lacuna.youtube-music/scripts/youtube-music-background": {
+    "mtime": 1782950444.1812072,
+    "ast_hash": "3f382e67b694943d7762c60dd2bf632f",
+    "semantic_hash": ""
+  },
+  "lacuna.youtube-music/scripts/youtube-music-check": {
+    "mtime": 1781984431.3831017,
+    "ast_hash": "c5c12f5c7cf1a4e904a4281113177072",
+    "semantic_hash": "c5c12f5c7cf1a4e904a4281113177072"
+  },
+  "lacuna.youtube-music/scripts/youtube-music-control": {
+    "mtime": 1782947239.9855397,
+    "ast_hash": "acfab34fc667c8e51b46fd098e95706f",
+    "semantic_hash": ""
+  },
+  "lacuna.youtube-music/scripts/youtube-music-preview": {
+    "mtime": 1782950444.1812072,
+    "ast_hash": "f6bd94c28c0ef42d6a791b963c67ebad",
+    "semantic_hash": ""
+  },
+  "lacuna.youtube-music/scripts/youtube-music-search": {
+    "mtime": 1782943766.38331,
+    "ast_hash": "7a3b7a46093daf4014734a3be8de57fe",
+    "semantic_hash": ""
+  },
   "scripts/check.sh": {
-    "mtime": 1783313425.3238566,
+    "mtime": 1781313790.3234346,
     "ast_hash": "2a2dc4f8b17d59f7b1ff56a2df5e4825",
     "semantic_hash": "2a2dc4f8b17d59f7b1ff56a2df5e4825"
   },
   "scripts/lacuna": {
-    "mtime": 1784182141.2225955,
-    "ast_hash": "96e6255477c7f8bc13cdf8ccaa4a0ee2",
+    "mtime": 1782441151.375876,
+    "ast_hash": "47326c7ad9a4d233692136e4d46f5dcd",
     "semantic_hash": ""
   },
   "scripts/sync-vendored": {
-    "mtime": 1784001314.2510192,
-    "ast_hash": "14d6eac331808caa9b40e05b73a8d7ef",
-    "semantic_hash": ""
+    "mtime": 1781984431.3831017,
+    "ast_hash": "0355b90fd26deb485d36e7ab8cadaf3b",
+    "semantic_hash": "0355b90fd26deb485d36e7ab8cadaf3b"
   },
   "tests/fixtures/full-settings.json": {
-    "mtime": 1783870820.4665222,
-    "ast_hash": "c1bb14e998d49c09b1e984acff0f8aab",
+    "mtime": 1782884948.089055,
+    "ast_hash": "953f6753569972a7df00e75e5734204f",
     "semantic_hash": ""
   },
   "tests/test_bar_model.py": {
-    "mtime": 1783754816.7741644,
-    "ast_hash": "067f8ae5ea347f0a0db678de7bec20ff",
-    "semantic_hash": ""
+    "mtime": 1782020916.013079,
+    "ast_hash": "d52dc725dc11ec97ff56ebeb980d8a33",
+    "semantic_hash": "d52dc725dc11ec97ff56ebeb980d8a33"
   },
   "tests/test_desktop_app_catalog.py": {
     "mtime": 1781504860.750712,
@@ -325,13 +360,13 @@
     "semantic_hash": "fc9c40e309c1b1dd33f2e6b5ba500bb2"
   },
   "tests/test_docs_contracts.py": {
-    "mtime": 1784185360.6906323,
-    "ast_hash": "148e0d12a2188a0c0440e3de689b139d",
-    "semantic_hash": ""
+    "mtime": 1781984431.3841016,
+    "ast_hash": "5b10b59f8df4354abb5f6faae2cff6e8",
+    "semantic_hash": "5b10b59f8df4354abb5f6faae2cff6e8"
   },
   "tests/test_lacuna_installer.py": {
-    "mtime": 1784182141.2265954,
-    "ast_hash": "b15eafd3f9a9dcd703b63322fbb4676d",
+    "mtime": 1782441151.627878,
+    "ast_hash": "48099471886acb61ffa84ff6362c64b6",
     "semantic_hash": ""
   },
   "tests/test_live_behavior.py": {
@@ -345,33 +380,33 @@
     "semantic_hash": "93123d46f27d3be3abb2fae7628507b2"
   },
   "tests/test_manifest_contracts.py": {
-    "mtime": 1783530543.9894702,
+    "mtime": 1781397252.6320012,
     "ast_hash": "93b809885c2eea7b44392ccb142d05ac",
     "semantic_hash": "93b809885c2eea7b44392ccb142d05ac"
   },
   "tests/test_plugin_kind_contracts.py": {
-    "mtime": 1783530543.989712,
+    "mtime": 1781984431.3841016,
     "ast_hash": "01123fe2495faf652a483087a2848f8d",
     "semantic_hash": "01123fe2495faf652a483087a2848f8d"
   },
   "tests/test_plugin_load_smoke.py": {
-    "mtime": 1783530543.9899552,
+    "mtime": 1781504860.751712,
     "ast_hash": "a73e7df686a336042427347027ed9dc1",
     "semantic_hash": "a73e7df686a336042427347027ed9dc1"
   },
   "tests/test_qml_contracts.py": {
-    "mtime": 1784217216.4406629,
-    "ast_hash": "1706bfa4496b70c247e717e8dfd8c9b8",
+    "mtime": 1782963557.5468957,
+    "ast_hash": "0fde24befaba0486416fb59148e41ab1",
     "semantic_hash": ""
   },
   "tests/test_state_scripts.py": {
-    "mtime": 1783740215.1178977,
-    "ast_hash": "2be18f8609554d7c7bf624bddf62fe2e",
+    "mtime": 1782849986.842255,
+    "ast_hash": "7d2a912b638e0710c8cc5758be79704f",
     "semantic_hash": ""
   },
   "tests/test_status_scripts.py": {
-    "mtime": 1784184380.1910367,
-    "ast_hash": "58015e3d9288f3a0101d4232d9826f39",
+    "mtime": 1782950668.7229261,
+    "ast_hash": "8af610b734673aa07b358f73d5071d88",
     "semantic_hash": ""
   },
   "tests/test_vendored_files.py": {
@@ -395,9 +430,9 @@
     "semantic_hash": "6a77edcc2d33a4e188b8c0b0800debe8"
   },
   ".github/workflows/check.yml": {
-    "mtime": 1783790516.476194,
-    "ast_hash": "e5af7547251fba412ba597db8b2201c6",
-    "semantic_hash": ""
+    "mtime": 1781984431.3291013,
+    "ast_hash": "cb090a55d68027b59d88d133b18ff9a6",
+    "semantic_hash": "cb090a55d68027b59d88d133b18ff9a6"
   },
   ".github/workflows/release.yml": {
     "mtime": 1781984431.3291013,
@@ -410,18 +445,18 @@
     "semantic_hash": "b5a64fe14de91143c1de6ebb6e312ccf"
   },
   "AGENTS.md": {
-    "mtime": 1783740159.135639,
-    "ast_hash": "64a7b176971456f3f1c9eea11c81d38f",
+    "mtime": 1782963309.337189,
+    "ast_hash": "27d03a657207a9460b8e91f88b2f4882",
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1783530576.2707698,
+    "mtime": 1781504860.7459333,
     "ast_hash": "7022cc8bdd0d9f9788e613da0fa94c08",
     "semantic_hash": "7022cc8bdd0d9f9788e613da0fa94c08"
   },
   "CLAUDE.md": {
-    "mtime": 1783740159.1357844,
-    "ast_hash": "b23f40a667a6cee7debf2a25319f725d",
+    "mtime": 1782169359.1688607,
+    "ast_hash": "ed24508cff5318b3a79768bba8857204",
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
@@ -430,44 +465,44 @@
     "semantic_hash": "879829c535ceb970bf2f7fe42fd135db"
   },
   "README.md": {
-    "mtime": 1784146746.11303,
-    "ast_hash": "82f31bb9118ec5afe53fdabb8b60b997",
-    "semantic_hash": ""
+    "mtime": 1781984431.3301013,
+    "ast_hash": "2d6e3ff52e5e35413b2dc369af00d630",
+    "semantic_hash": "2d6e3ff52e5e35413b2dc369af00d630"
   },
   "docs/README.md": {
-    "mtime": 1783806348.2897637,
-    "ast_hash": "e9b987076f8aa9ccf1d410d5612492ea",
-    "semantic_hash": ""
+    "mtime": 1781984431.3301013,
+    "ast_hash": "06b1cdef2d9efbfce5ca622abc434e19",
+    "semantic_hash": "06b1cdef2d9efbfce5ca622abc434e19"
   },
   "docs/architecture/omarchy-integration.md": {
-    "mtime": 1783757423.6716738,
-    "ast_hash": "94d5214e3e3fc64b8251d6bd1a2f6449",
-    "semantic_hash": ""
+    "mtime": 1781984431.3301013,
+    "ast_hash": "627d733e11e5a2bf069de4c9e12fc4a1",
+    "semantic_hash": "627d733e11e5a2bf069de4c9e12fc4a1"
   },
   "docs/architecture/overview.md": {
-    "mtime": 1783870820.462522,
-    "ast_hash": "b42f311d33744a4d81ada32639d7126b",
-    "semantic_hash": ""
+    "mtime": 1781984431.3308372,
+    "ast_hash": "dfb98f92921c057cc70daa5913f14b83",
+    "semantic_hash": "dfb98f92921c057cc70daa5913f14b83"
   },
   "docs/architecture/plugin-contracts.md": {
-    "mtime": 1783878605.069653,
-    "ast_hash": "5a3e563f8595ce9dab1091fd67604462",
-    "semantic_hash": ""
+    "mtime": 1781984431.3308372,
+    "ast_hash": "ac45da4192b45ad2a3cc1d8273cdab71",
+    "semantic_hash": "ac45da4192b45ad2a3cc1d8273cdab71"
   },
   "docs/architecture/services-and-state.md": {
-    "mtime": 1783746291.3953805,
-    "ast_hash": "3aed0b454476b8f7d5e1668fa74804e4",
-    "semantic_hash": ""
+    "mtime": 1781984431.3308372,
+    "ast_hash": "734e31a27d7d2f80b56793ad4b4ea38b",
+    "semantic_hash": "734e31a27d7d2f80b56793ad4b4ea38b"
   },
   "docs/configuration.md": {
-    "mtime": 1784182141.2275956,
-    "ast_hash": "adcff18a47c4f735bb51a3c784213083",
-    "semantic_hash": ""
+    "mtime": 1781984431.3308372,
+    "ast_hash": "789635cdc95a55ec15156d70d7879d16",
+    "semantic_hash": "789635cdc95a55ec15156d70d7879d16"
   },
   "docs/development/release.md": {
-    "mtime": 1783875661.6466281,
-    "ast_hash": "425ca7d2849d789076485c482ba5bfcf",
-    "semantic_hash": ""
+    "mtime": 1781984431.3308372,
+    "ast_hash": "4328c3e18b887bca01f3007703ca4e93",
+    "semantic_hash": "4328c3e18b887bca01f3007703ca4e93"
   },
   "docs/development/setup.md": {
     "mtime": 1781984431.3310664,
@@ -475,9 +510,9 @@
     "semantic_hash": "d216f3f0a6d09e247d545bbfc4650eae"
   },
   "docs/development/testing.md": {
-    "mtime": 1783740215.1129181,
-    "ast_hash": "b974852c0d2ad6372961016c30fa0aaf",
-    "semantic_hash": ""
+    "mtime": 1781984431.3310664,
+    "ast_hash": "b3e8f2e30aa9bf3ac7fecbf193d5734e",
+    "semantic_hash": "b3e8f2e30aa9bf3ac7fecbf193d5734e"
   },
   "docs/development/troubleshooting.md": {
     "mtime": 1781984431.3310664,
@@ -485,9 +520,9 @@
     "semantic_hash": "042d5f4f50bfd0d6086487f3ed4d3ebc"
   },
   "docs/install.md": {
-    "mtime": 1784146746.1140301,
-    "ast_hash": "cf406c8f4c8667d5c94a11883065537c",
-    "semantic_hash": ""
+    "mtime": 1781984431.3311012,
+    "ast_hash": "c0aa2c1759e276a53c78ef83757d6f8b",
+    "semantic_hash": "c0aa2c1759e276a53c78ef83757d6f8b"
   },
   "docs/lacuna-design-system/00-philosophy.md": {
     "mtime": 1782228489.2881982,
@@ -495,9 +530,9 @@
     "semantic_hash": "5da9ca7f06f1a4a0e1b24b3935f04283"
   },
   "docs/lacuna-design-system/01-color.md": {
-    "mtime": 1783757423.6706738,
-    "ast_hash": "95c81a96f5817d049d914cf6b688734c",
-    "semantic_hash": ""
+    "mtime": 1781984431.3311012,
+    "ast_hash": "ec9ae2fbed22ac216274e4a746051801",
+    "semantic_hash": "ec9ae2fbed22ac216274e4a746051801"
   },
   "docs/lacuna-design-system/02-geometry.md": {
     "mtime": 1782228489.2881982,
@@ -505,14 +540,14 @@
     "semantic_hash": "3c7e6a7b51f30084a801e05d3795189a"
   },
   "docs/lacuna-design-system/03-motion.md": {
-    "mtime": 1783796126.0313323,
-    "ast_hash": "5987c88e4eb0be3e86e1a224d4009e5b",
-    "semantic_hash": ""
+    "mtime": 1781984431.3311012,
+    "ast_hash": "9a5d081d40ded8f4b4bdb15edd6784dc",
+    "semantic_hash": "9a5d081d40ded8f4b4bdb15edd6784dc"
   },
   "docs/lacuna-design-system/04-typography.md": {
-    "mtime": 1783919468.2983434,
-    "ast_hash": "2c7b52ce4baa31cf0450915778cfc35a",
-    "semantic_hash": ""
+    "mtime": 1781984431.3311012,
+    "ast_hash": "c354a7fed692b41212844abe445b7cf3",
+    "semantic_hash": "c354a7fed692b41212844abe445b7cf3"
   },
   "docs/lacuna-design-system/05-components.md": {
     "mtime": 1782228489.2881982,
@@ -530,8 +565,8 @@
     "semantic_hash": "8e49c9d333c8d1bafcd68d0dcee88221"
   },
   "docs/plans/README.md": {
-    "mtime": 1784185360.6886322,
-    "ast_hash": "57cf8bc38fc4dba730589547010c1441",
+    "mtime": 1782964123.2307508,
+    "ast_hash": "636a658bbdbbbff871ebb3b5a343677f",
     "semantic_hash": ""
   },
   "docs/plans/lacuna-bar-refactor-plan.md": {
@@ -575,9 +610,9 @@
     "semantic_hash": "5dc59dc4fbfa1d4821cf3190dad59d6e"
   },
   "docs/plans/lacuna-suite-improvement-plan.md": {
-    "mtime": 1783740215.1129181,
-    "ast_hash": "e894d4a29d99619c4c185b15874f5f43",
-    "semantic_hash": ""
+    "mtime": 1781984431.3321013,
+    "ast_hash": "d3fa27769e0f94154c715326ad8f4c84",
+    "semantic_hash": "d3fa27769e0f94154c715326ad8f4c84"
   },
   "docs/plans/lacuna-theme-preloader-plan.md": {
     "mtime": 1781984431.3321013,
@@ -600,9 +635,9 @@
     "semantic_hash": "0d348c3071372b2ff2eb9407ec809d8e"
   },
   "docs/plugins/bar.md": {
-    "mtime": 1784182141.2265954,
-    "ast_hash": "9add5b5a77e30afe9773035a6bcbf9a7",
-    "semantic_hash": ""
+    "mtime": 1781984431.3325436,
+    "ast_hash": "31d15bdc0cd1245052f62d85ef9cb6f3",
+    "semantic_hash": "31d15bdc0cd1245052f62d85ef9cb6f3"
   },
   "docs/plugins/menu.md": {
     "mtime": 1781984431.3325436,
@@ -615,9 +650,9 @@
     "semantic_hash": "4d9b10d72522503542f7562f87394e88"
   },
   "docs/plugins/widgets.md": {
-    "mtime": 1783755253.8064508,
-    "ast_hash": "8c7a38f853bde7c8c5eba94784667a38",
-    "semantic_hash": ""
+    "mtime": 1781984431.3325436,
+    "ast_hash": "f143cd9742c8a8b486f5f040848f33a0",
+    "semantic_hash": "f143cd9742c8a8b486f5f040848f33a0"
   },
   "docs/screenshots/reference/README.md": {
     "mtime": 1782228489.2881982,
@@ -765,12 +800,12 @@
     "semantic_hash": "a7f404308cd82d336b05328913b4ae85"
   },
   "lacuna.audio/AudioModel.js": {
-    "mtime": 1783530172.7161398,
+    "mtime": 1782399128.0095925,
     "ast_hash": "5e9c2796f766676cc5f664bbdfc99657",
     "semantic_hash": ""
   },
   "lacuna.bluetooth/BluetoothModel.js": {
-    "mtime": 1783530172.71814,
+    "mtime": 1782399557.1144762,
     "ast_hash": "266917d9df31df5aff31826e522d2cdf",
     "semantic_hash": ""
   },
@@ -785,28 +820,53 @@
     "semantic_hash": ""
   },
   "lacuna.network/NetworkModel.js": {
-    "mtime": 1783530172.7231398,
+    "mtime": 1782365432.5758922,
     "ast_hash": "3050392e4eb86ace08994ebd6bea8bb6",
     "semantic_hash": ""
   },
   "lacuna.power/PowerModel.js": {
-    "mtime": 1783530172.7231398,
+    "mtime": 1782399745.777106,
     "ast_hash": "50d5feb2397572b3692d69cfbb8d1ae2",
     "semantic_hash": ""
   },
+  "lacuna.youtube-music/scripts/youtube-music-auth": {
+    "mtime": 1782943766.3823102,
+    "ast_hash": "0a8c23601c957bdf86026a043444706e",
+    "semantic_hash": ""
+  },
+  "lacuna.youtube-music/scripts/youtube-music-info": {
+    "mtime": 1782884888.0710175,
+    "ast_hash": "3c1c0a83dd8d915531cb3db895e667a5",
+    "semantic_hash": ""
+  },
+  "lacuna.youtube-music/scripts/youtube-music-jellyfin-search": {
+    "mtime": 1782630760.6766946,
+    "ast_hash": "d6e422613924f0817d48876a178e766e",
+    "semantic_hash": ""
+  },
+  "lacuna.youtube-music/scripts/youtube-music-jellyfin-stream": {
+    "mtime": 1782630760.8006957,
+    "ast_hash": "5bf66b365294f571b40c545c939751c3",
+    "semantic_hash": ""
+  },
+  "lacuna.youtube-music/scripts/youtube-music-refresh-favorites": {
+    "mtime": 1782873295.9075806,
+    "ast_hash": "a5579ca3bf89c3dd20e84a4064f03966",
+    "semantic_hash": ""
+  },
   "scripts/dev": {
-    "mtime": 1783740215.1158977,
-    "ast_hash": "531179e3bba550f4fe2f5e09e3dfeb8f",
+    "mtime": 1782169222.5535474,
+    "ast_hash": "108779df417b5c64113dcaf95b53f217",
     "semantic_hash": ""
   },
   "tests/test_dev_tool.py": {
-    "mtime": 1783740215.1158977,
-    "ast_hash": "c5ca0336c4d4380381874d44b0026a2b",
+    "mtime": 1782169286.28316,
+    "ast_hash": "c945cc2522493869fd237208bc1b2ad3",
     "semantic_hash": ""
   },
   "docs/architecture/layer-stacking.md": {
-    "mtime": 1783749788.2862375,
-    "ast_hash": "df10145114645f7b52383f4cd4e99b4b",
+    "mtime": 1782963571.266042,
+    "ast_hash": "d06f696919d1aad588f840d0d7f49a00",
     "semantic_hash": ""
   },
   "docs/plans/lacuna-issue-creation-plan.md": {
@@ -815,348 +875,23 @@
     "semantic_hash": ""
   },
   "docs/plans/lacuna-layer-stacking-plan.md": {
-    "mtime": 1783749932.417335,
-    "ast_hash": "3782229cb8c72e97ca78f5efb0c3a185",
+    "mtime": 1782964114.673664,
+    "ast_hash": "17c37a98995266a8397a5b825d7cdf85",
     "semantic_hash": ""
   },
   "docs/plans/lacuna-media-player-rebrand-plan.md": {
-    "mtime": 1783783503.5138392,
-    "ast_hash": "269c519fbfc842283f5ea0dab5353bc4",
+    "mtime": 1782949869.1361783,
+    "ast_hash": "51d90509fa3afc53d8d75cf023d2552c",
     "semantic_hash": ""
   },
   "docs/plans/lacuna-youtube-video-transition-plan.md": {
-    "mtime": 1783783503.5138392,
-    "ast_hash": "358d85c8fcc06bdf0b5f32758df8d3dc",
+    "mtime": 1782949652.8993976,
+    "ast_hash": "62709bd61d96c895b8390804f7e25823",
     "semantic_hash": ""
   },
   "docs/screenshots/reference/ChatGPT Image Jun 23, 2026, 12_19_01 AM.png": {
     "mtime": 1782199141.1751146,
     "ast_hash": "8e10a1d8e294d3d37b64d3586bdfeffb",
-    "semantic_hash": ""
-  },
-  "config/quattro-compatibility.json": {
-    "mtime": 1784183185.9783142,
-    "ast_hash": "e8b172ce8ca42467dadaa328819f2067",
-    "semantic_hash": ""
-  },
-  "lacuna.bar/ScreenModel.js": {
-    "mtime": 1783754675.3197732,
-    "ast_hash": "840598344ce33a6554100c9a8575d24d",
-    "semantic_hash": ""
-  },
-  "lacuna.clock/CalendarModel.js": {
-    "mtime": 1784001314.2490194,
-    "ast_hash": "6a77d27503f3d6656ae00af91a84171b",
-    "semantic_hash": ""
-  },
-  "lacuna.media-player-video/manifest.json": {
-    "mtime": 1783870820.462522,
-    "ast_hash": "b260e758fc091586bbc3e97f36ce8a26",
-    "semantic_hash": ""
-  },
-  "lacuna.media-player/manifest.json": {
-    "mtime": 1783870820.4635222,
-    "ast_hash": "bd59d9527badb6c3b54c22b1ec137653",
-    "semantic_hash": ""
-  },
-  "lacuna.media-player/scripts/jellyfin-search": {
-    "mtime": 1783870820.4635222,
-    "ast_hash": "187de6c0df36022858ab721234f8b26e",
-    "semantic_hash": ""
-  },
-  "lacuna.media-player/scripts/jellyfin-stream": {
-    "mtime": 1783740159.1367676,
-    "ast_hash": "f3884625ec56c2b2e08a02cca0cdd2c6",
-    "semantic_hash": ""
-  },
-  "lacuna.media-player/scripts/media-player-background": {
-    "mtime": 1783740159.1367676,
-    "ast_hash": "3f382e67b694943d7762c60dd2bf632f",
-    "semantic_hash": ""
-  },
-  "lacuna.media-player/scripts/media-player-check": {
-    "mtime": 1783740159.1367676,
-    "ast_hash": "c5c12f5c7cf1a4e904a4281113177072",
-    "semantic_hash": ""
-  },
-  "lacuna.media-player/scripts/media-player-control": {
-    "mtime": 1783740159.1367676,
-    "ast_hash": "76b223efaff22fcb59ad41d463c3534b",
-    "semantic_hash": ""
-  },
-  "lacuna.media-player/scripts/media-player-info": {
-    "mtime": 1783740159.1367676,
-    "ast_hash": "3c1c0a83dd8d915531cb3db895e667a5",
-    "semantic_hash": ""
-  },
-  "lacuna.media-player/scripts/media-player-preview": {
-    "mtime": 1783740159.1367676,
-    "ast_hash": "f6bd94c28c0ef42d6a791b963c67ebad",
-    "semantic_hash": ""
-  },
-  "lacuna.media-player/scripts/media-player-refresh-favorites": {
-    "mtime": 1783740159.1367676,
-    "ast_hash": "ce1512e3549e69f26ba12a4f9f5576da",
-    "semantic_hash": ""
-  },
-  "lacuna.media-player/scripts/media-player-search": {
-    "mtime": 1783870820.4635222,
-    "ast_hash": "c189a961bbc795f87df09456f653ae78",
-    "semantic_hash": ""
-  },
-  "lacuna.media-player/scripts/media-player-worker": {
-    "mtime": 1783870820.4635222,
-    "ast_hash": "30d6aca7991a88e8a876eafa9b4933d6",
-    "semantic_hash": ""
-  },
-  "lacuna.media-player/scripts/youtube-auth": {
-    "mtime": 1783740159.1367676,
-    "ast_hash": "7a54a1b099ef747c68a1754301a011ba",
-    "semantic_hash": ""
-  },
-  "lacuna.menu/menu/MonitorPolicy.js": {
-    "mtime": 1783746146.2266362,
-    "ast_hash": "6d9a0508cfea664df28004276240d546",
-    "semantic_hash": ""
-  },
-  "lacuna.reminders/manifest.json": {
-    "mtime": 1783755192.666852,
-    "ast_hash": "9a27f03b18364ed2329ab741a35d207a",
-    "semantic_hash": ""
-  },
-  "lacuna.system-stats/scripts/system-stats-snapshot.py": {
-    "mtime": 1783899819.7322683,
-    "ast_hash": "faa8de9a9cf6fa229c8d739cb7037db0",
-    "semantic_hash": ""
-  },
-  "lacuna.temperature/scripts/thermal-snapshot.py": {
-    "mtime": 1783897101.0918274,
-    "ast_hash": "d1a1a3c47183f2766cffe389f3868cf2",
-    "semantic_hash": ""
-  },
-  "lacuna.weather/WeatherModel.js": {
-    "mtime": 1784001314.2500193,
-    "ast_hash": "8e0359864ab19b51006cb9fa5b6ef67a",
-    "semantic_hash": ""
-  },
-  "scripts/quattro-compatibility": {
-    "mtime": 1783878605.068653,
-    "ast_hash": "d82bc673058ada1034e11260ed6162dd",
-    "semantic_hash": ""
-  },
-  "scripts/quattro-p0-smoke": {
-    "mtime": 1783740215.1158977,
-    "ast_hash": "1feee6d1c20e6d620d9868435ee5cba2",
-    "semantic_hash": ""
-  },
-  "tests/fixtures/quattro-compatibility-mismatch.json": {
-    "mtime": 1783878605.069653,
-    "ast_hash": "9f5df55feb94557269c3eb29e7168f9f",
-    "semantic_hash": ""
-  },
-  "tests/qml_harness.py": {
-    "mtime": 1783530172.730131,
-    "ast_hash": "321a8d067c072957df97e642d75f1020",
-    "semantic_hash": ""
-  },
-  "tests/test_bar_screens.py": {
-    "mtime": 1783921423.329486,
-    "ast_hash": "4781c8a90407222709d93ac0ec3161cd",
-    "semantic_hash": ""
-  },
-  "tests/test_live_visual.py": {
-    "mtime": 1783796842.4662774,
-    "ast_hash": "8822cba5d019b171d44ba6bf7d21fd8c",
-    "semantic_hash": ""
-  },
-  "tests/test_media_player_worker.py": {
-    "mtime": 1783870820.4665222,
-    "ast_hash": "172c6d17200bab6b4cc0c4fe239f8241",
-    "semantic_hash": ""
-  },
-  "tests/test_monitor_policy.py": {
-    "mtime": 1783811127.6564364,
-    "ast_hash": "00cf9e26d02733b13afab95fd9b1899b",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_accessibility.py": {
-    "mtime": 1783870904.7873588,
-    "ast_hash": "5111ef2f8b4cbf8c07a85ce7e4e0e5e6",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_bar_icon_size.py": {
-    "mtime": 1783922686.4480336,
-    "ast_hash": "bdfbf81c8b4310fac343d25a69722b00",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_calendar.py": {
-    "mtime": 1784001314.2510192,
-    "ast_hash": "8e7a7b7ef72c75eecf94d89ed3f1c8ef",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_clock_bar_style.py": {
-    "mtime": 1784100781.6572595,
-    "ast_hash": "e77166cd3fff33d863dc5e9491e78f42",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_color_profile.py": {
-    "mtime": 1784100818.838687,
-    "ast_hash": "2c0a5a118d1f37abac35a43b5b876ae0",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_media_overlay.py": {
-    "mtime": 1783870820.4665222,
-    "ast_hash": "28cad08ea200ef0d876993ce363a6b8e",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_media_service.py": {
-    "mtime": 1783870820.4665222,
-    "ast_hash": "c5905788ce42506082a504544416d418",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_media_ui.py": {
-    "mtime": 1783870820.4665222,
-    "ast_hash": "784e912f9084e2a5ecaf508c675a137b",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_mpris_bar_style.py": {
-    "mtime": 1784100781.6582596,
-    "ast_hash": "6bd21bdeaa5e3988c384d2dec8249854",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_panels.py": {
-    "mtime": 1783808465.330634,
-    "ast_hash": "2e1799fd382efd7bb45236daa2e2deee",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_resource_bar_style.py": {
-    "mtime": 1784100900.7806244,
-    "ast_hash": "21029248cee43cb24e16d03c1faf43d1",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_usage_bar_style.py": {
-    "mtime": 1784184486.0886202,
-    "ast_hash": "36fb01f4de270c04132f9bc8a1af4477",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_video.py": {
-    "mtime": 1783870820.4675221,
-    "ast_hash": "cd6a054e8e9c2a51f79f3a55a0fd72a4",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_weather.py": {
-    "mtime": 1784001314.2510192,
-    "ast_hash": "99f4b0e3e5de92276567fa9216862b2a",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_weather_bar_style.py": {
-    "mtime": 1784100781.6582596,
-    "ast_hash": "b02703e56a5a27b6118bf469c011bdb4",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_behavior_workspace_bar_style.py": {
-    "mtime": 1783922058.3184373,
-    "ast_hash": "07f672b4e5d3595e66d7f6edd0fdd560",
-    "semantic_hash": ""
-  },
-  "tests/test_qml_geometry.py": {
-    "mtime": 1784001314.2520194,
-    "ast_hash": "f0a8f372dfdb18c03ef135f18de751d7",
-    "semantic_hash": ""
-  },
-  "tests/test_quattro_compatibility.py": {
-    "mtime": 1783878605.069653,
-    "ast_hash": "a7193eb6b6303d09d313143809a03f40",
-    "semantic_hash": ""
-  },
-  "tests/test_resource_snapshot_scripts.py": {
-    "mtime": 1783897101.0918274,
-    "ast_hash": "c4efe6907632eefe5c4e10debb9acadc",
-    "semantic_hash": ""
-  },
-  "DESIGN.md": {
-    "mtime": 1783882557.1122146,
-    "ast_hash": "667505257d996d02cccf684e6f1b2cef",
-    "semantic_hash": ""
-  },
-  "docs/architecture/media-player.md": {
-    "mtime": 1783870820.462522,
-    "ast_hash": "e482253393ed31d92eb9c7798e69837d",
-    "semantic_hash": ""
-  },
-  "docs/architecture/quattro-compatibility.md": {
-    "mtime": 1784183185.979314,
-    "ast_hash": "1dc3df80fc6531fe585ca80455b9059f",
-    "semantic_hash": ""
-  },
-  "docs/issues.md": {
-    "mtime": 1783530172.7029834,
-    "ast_hash": "c3c9b6410e49a220b774fe6bcf4a01c0",
-    "semantic_hash": ""
-  },
-  "docs/plans/lacuna-animation-pipeline-plan.md": {
-    "mtime": 1783530172.7031395,
-    "ast_hash": "5dcd3d8459bc8eeed0b0cd1cf1db8bcd",
-    "semantic_hash": ""
-  },
-  "docs/plans/lacuna-clock-calendar-flyout-plan.md": {
-    "mtime": 1784001314.2490194,
-    "ast_hash": "90e7a326cb70034953b82c63b94db540",
-    "semantic_hash": ""
-  },
-  "docs/plans/lacuna-shell-layout-presets-agent-orchestration-plan.md": {
-    "mtime": 1783783503.5128393,
-    "ast_hash": "af75c67efdf7865a115631898b646de6",
-    "semantic_hash": ""
-  },
-  "docs/plans/lacuna-surface-transition-pipeline-plan.md": {
-    "mtime": 1783795881.6120782,
-    "ast_hash": "5d1cf96a8f6187f9bd77430e15eab9bf",
-    "semantic_hash": ""
-  },
-  "docs/plans/lacuna-visual-regression-test-plan.md": {
-    "mtime": 1783740159.1357844,
-    "ast_hash": "dd1528bc592a6aa83d19642485f12046",
-    "semantic_hash": ""
-  },
-  "docs/plans/lacuna-weather-flyout-plan.md": {
-    "mtime": 1784001314.2490194,
-    "ast_hash": "da080c08e51084e8c64c4fd9d686f9ee",
-    "semantic_hash": ""
-  },
-  "docs/plans/quattro-p0-core-foundation-plan.md": {
-    "mtime": 1784185360.6886322,
-    "ast_hash": "9d79d302172791ca2e20efa5ede6fffd",
-    "semantic_hash": ""
-  },
-  "docs/plans/quattro-p1-product-integration-plan.md": {
-    "mtime": 1784185360.6896322,
-    "ast_hash": "b8663383f7dd537de7b57bbe600e0dcf",
-    "semantic_hash": ""
-  },
-  "docs/plans/quattro-p2-release-and-evolution-plan.md": {
-    "mtime": 1784185360.6896322,
-    "ast_hash": "4b16f82bfa21e07d16f571c97ef20e73",
-    "semantic_hash": ""
-  },
-  "docs/plans/sidebar-settings-flyout-stability-plan.md": {
-    "mtime": 1783811313.4007502,
-    "ast_hash": "d68648e5fed0f3da4edc586dc0fc7bdd",
-    "semantic_hash": ""
-  },
-  "docs/roadmap.md": {
-    "mtime": 1784185360.6886322,
-    "ast_hash": "c06671f17f868d9f35dd9ba2621c9fe3",
-    "semantic_hash": ""
-  },
-  "lacuna.theme/assets/tabler/palette.svg": {
-    "mtime": 1783881720.4679086,
-    "ast_hash": "9267198e899e8f9f3862456403875e4d",
-    "semantic_hash": ""
-  },
-  "lacuna.wallpaper/assets/tabler/photo.svg": {
-    "mtime": 1783881720.4679086,
-    "ast_hash": "dfb3314e7ec0f624588beaf39e61f4dd",
     "semantic_hash": ""
   }
 }

@@ -1,16 +1,16 @@
-# Graph Report - lacuna-omarchy-plugins  (2026-07-16)
+# Graph Report - lacuna-omarchy-plugins  (2026-07-01)
 
 ## Corpus Check
-- 199 files · ~420,815 words
+- 148 files · ~372,793 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2573 nodes · 3297 edges · 159 communities (138 shown, 21 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 124 edges (avg confidence: 0.81)
+- 2060 nodes · 2390 edges · 133 communities (117 shown, 16 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.87)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `acdff8b7`
+- Built from commit: `788c6c34`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -146,44 +146,18 @@
 - [[_COMMUNITY_Community 128|Community 128]]
 - [[_COMMUNITY_Community 129|Community 129]]
 - [[_COMMUNITY_Community 130|Community 130]]
-- [[_COMMUNITY_Community 133|Community 133]]
-- [[_COMMUNITY_Community 134|Community 134]]
-- [[_COMMUNITY_Community 135|Community 135]]
-- [[_COMMUNITY_Community 136|Community 136]]
-- [[_COMMUNITY_Community 137|Community 137]]
-- [[_COMMUNITY_Community 138|Community 138]]
-- [[_COMMUNITY_Community 139|Community 139]]
-- [[_COMMUNITY_Community 140|Community 140]]
-- [[_COMMUNITY_Community 141|Community 141]]
-- [[_COMMUNITY_Community 142|Community 142]]
-- [[_COMMUNITY_Community 143|Community 143]]
-- [[_COMMUNITY_Community 144|Community 144]]
-- [[_COMMUNITY_Community 145|Community 145]]
-- [[_COMMUNITY_Community 146|Community 146]]
-- [[_COMMUNITY_Community 147|Community 147]]
-- [[_COMMUNITY_Community 148|Community 148]]
-- [[_COMMUNITY_Community 149|Community 149]]
-- [[_COMMUNITY_Community 150|Community 150]]
-- [[_COMMUNITY_Community 151|Community 151]]
-- [[_COMMUNITY_Community 152|Community 152]]
-- [[_COMMUNITY_Community 153|Community 153]]
-- [[_COMMUNITY_Community 154|Community 154]]
-- [[_COMMUNITY_Community 155|Community 155]]
-- [[_COMMUNITY_Community 156|Community 156]]
-- [[_COMMUNITY_Community 157|Community 157]]
-- [[_COMMUNITY_Community 158|Community 158]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `QmlContractTests` - 103 edges
-2. `read()` - 98 edges
-3. `run()` - 46 edges
-4. `qml_url()` - 38 edges
-5. `parse_behave()` - 38 edges
-6. `require_no_qml_errors()` - 37 edges
-7. `MediaPlayerScriptTests` - 35 edges
-8. `LacunaInstallerTests` - 32 edges
-9. `write_exec()` - 28 edges
-10. `read_json()` - 23 edges
+1. `QmlContractTests` - 83 edges
+2. `read()` - 79 edges
+3. `run()` - 40 edges
+4. `YoutubeMusicScriptTests` - 32 edges
+5. `write_exec()` - 28 edges
+6. `LacunaInstallerTests` - 27 edges
+7. `read_json()` - 21 edges
+8. `load_installer_module()` - 16 edges
+9. `defaults` - 15 edges
+10. `Repository Guidelines` - 14 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Icon policy` --conceptually_related_to--> `Bar Widgets`  [INFERRED]
@@ -205,15 +179,15 @@
 - **Attached Flyout Contract** — lacuna_design_system_02_geometry_molding_connector, lacuna_design_system_02_geometry_attached_flyout_geometry, lacuna_design_system_02_geometry_fill_only_surfaces [EXTRACTED 1.00]
 - **Plugin Suite Architecture** — architecture_plugin_contracts_plugin_contracts, plugins_readme_metadata_contract, plugins_menu_lacuna_menu_bundle, plugins_bar_lacuna_bar [INFERRED 0.85]
 
-## Communities (159 total, 21 thin omitted)
+## Communities (133 total, 16 thin omitted)
 
 ### Community 1 - "Design System Core"
 Cohesion: 0.22
 Nodes (9): Absence has weight, Four Lacuna design principles, Lacuna gap metaphor, Reveal, dont appear, Show the seam, Reduced motion, Geometry-first reveal choreography, Elision as lacuna (+1 more)
 
 ### Community 2 - "Status Script Tests"
-Cohesion: 0.10
-Nodes (10): CompletedProcess, ClaudeCodeStatusTests, CodexWeeklyStatusTests, load_script(), MediaPlayerScriptTests, PreloadThemeSwitcherTests, Path, Execution tests for the bar-widget status shell scripts.  These scripts shell ou (+2 more)
+Cohesion: 0.11
+Nodes (10): CompletedProcess, ClaudeCodeStatusTests, CodexWeeklyStatusTests, load_script(), PreloadThemeSwitcherTests, Path, Execution tests for the bar-widget status shell scripts.  These scripts shell ou, run() (+2 more)
 
 ### Community 3 - "Widget Manifest Contracts"
 Cohesion: 0.06
@@ -244,7 +218,7 @@ Cohesion: 0.07
 Nodes (28): activation, author, defaults, chromaBleed, effectEnabled, foregroundOverlay, glitchAmount, intensity (+20 more)
 
 ### Community 10 - "Installer Tests"
-Cohesion: 0.10
+Cohesion: 0.12
 Nodes (4): LacunaInstallerTests, load_installer_module(), run_lacuna(), run_lacuna_unchecked()
 
 ### Community 11 - "Widget Manifest Contracts"
@@ -257,11 +231,11 @@ Nodes (27): activation, author, defaults, accentBlend, dropCount, effectEnabled,
 
 ### Community 13 - "Widget Manifest Contracts"
 Cohesion: 0.07
-Nodes (26): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+18 more)
+Nodes (27): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+19 more)
 
 ### Community 14 - "Widget Manifest Contracts"
 Cohesion: 0.07
-Nodes (26): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+18 more)
+Nodes (27): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+19 more)
 
 ### Community 15 - "Widget Manifest Contracts"
 Cohesion: 0.07
@@ -269,7 +243,7 @@ Nodes (26): activation, author, barWidget, allowMultiple, category, defaults, de
 
 ### Community 16 - "Widget Manifest Contracts"
 Cohesion: 0.07
-Nodes (27): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+19 more)
+Nodes (26): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+18 more)
 
 ### Community 17 - "Widget Manifest Contracts"
 Cohesion: 0.07
@@ -304,12 +278,12 @@ Cohesion: 0.07
 Nodes (28): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+20 more)
 
 ### Community 25 - "Widget Manifest Contracts"
-Cohesion: 0.07
-Nodes (27): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+19 more)
+Cohesion: 0.08
+Nodes (25): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+17 more)
 
 ### Community 26 - "Widget Manifest Contracts"
 Cohesion: 0.07
-Nodes (26): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+18 more)
+Nodes (27): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+19 more)
 
 ### Community 27 - "Widget Manifest Contracts"
 Cohesion: 0.08
@@ -321,7 +295,7 @@ Nodes (24): activation, author, barWidget, allowMultiple, category, defaults, de
 
 ### Community 29 - "Widget Manifest Contracts"
 Cohesion: 0.07
-Nodes (26): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+18 more)
+Nodes (27): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+19 more)
 
 ### Community 30 - "Widget Manifest Contracts"
 Cohesion: 0.08
@@ -341,7 +315,7 @@ Nodes (24): activation, author, barWidget, allowMultiple, category, defaults, de
 
 ### Community 34 - "Widget Manifest Contracts"
 Cohesion: 0.07
-Nodes (26): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+18 more)
+Nodes (27): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+19 more)
 
 ### Community 35 - "Desktop Clock Manifest"
 Cohesion: 0.08
@@ -353,15 +327,15 @@ Nodes (23): activation, author, barWidget, allowMultiple, category, defaults, de
 
 ### Community 37 - "Widget Manifest Contracts"
 Cohesion: 0.07
-Nodes (26): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+18 more)
+Nodes (27): activation, author, barWidget, allowMultiple, category, defaults, description, displayName (+19 more)
 
 ### Community 38 - "App Picker Manifest"
-Cohesion: 0.05
-Nodes (29): Any, TemporaryDirectory, parse_behave(), Path, qml_url(), Shared helpers for runtime QML behavior probes.  The default harness only create, require_no_qml_errors(), run_quickshell() (+21 more)
+Cohesion: 0.09
+Nodes (22): activation, author, defaults, audioOnly, maxResults, volume, description, entryPoints (+14 more)
 
 ### Community 39 - "Overlay Manifest"
-Cohesion: 0.14
-Nodes (34): areaInfo(), buildForecastDays(), buildLocationUrl(), buildWttrUrl(), celsiusToFahrenheit(), conditionDescription(), countryUsesImperial(), currentCondition() (+26 more)
+Cohesion: 0.10
+Nodes (20): activation, author, defaults, targetOutput, description, entryPoints, overlay, id (+12 more)
 
 ### Community 40 - "Overlay Manifest"
 Cohesion: 0.11
@@ -448,8 +422,8 @@ Cohesion: 0.70
 Nodes (4): app_dirs(), category_for(), main(), read_desktop()
 
 ### Community 64 - "Plugin Contracts"
-Cohesion: 0.13
-Nodes (15): Shell vs Bar Injection Rule, Directory Contract, Entry Points, Injection, Metadata, Plugin Contracts, Vendored Helpers, Bar Option Plugins (+7 more)
+Cohesion: 0.22
+Nodes (8): Shell vs Bar Injection Rule, Directory Contract, Entry Points, Injection, Metadata, Plugin Contracts, Vendored Helpers, Metadata Contract
 
 ### Community 65 - "Settings State Split"
 Cohesion: 0.50
@@ -460,12 +434,12 @@ Cohesion: 0.50
 Nodes (4): check.sh Validation Gate, Vendored sync tooling, Vendored File Parity Hook, Check CI Workflow
 
 ### Community 69 - "Overlay Runtime Rules"
-Cohesion: 0.11
-Nodes (15): Core Bundle, Geometry, Menu And Sidebar Plugins, Summon Compatibility, Current Overlay Family, Desktop Clock, Omarchy shell runtime, Overlay Plugins (+7 more)
+Cohesion: 0.29
+Nodes (6): Current Overlay Family, Desktop Clock, Omarchy shell runtime, Overlay Plugins, Runtime Rule, second Quickshell process
 
 ### Community 71 - "Native Widget Policy"
-Cohesion: 0.08
-Nodes (23): author, barWidget, allowMultiple, category, defaults, description, displayName, schema (+15 more)
+Cohesion: 0.33
+Nodes (5): Experiment Path, Local Status Widgets, Native-Replacement Widgets, Omarchy-native services and widgets, Widget Plugins
 
 ### Community 74 - "Community 74"
 Cohesion: 0.06
@@ -504,8 +478,8 @@ Cohesion: 0.14
 Nodes (13): Assumptions, Creation Method, Execution Checklist, Finding 5 / Finding 7 Consolidation, Issue 1: Persist per-style bar layout settings in Lacuna settings state, Issue 2: Normalize per-style bar layout entries consistently across menu and state services, Issue 3: Preserve JSON-safe metadata on bar layout entries instead of dropping valid fields, Issue 4: Handle string-form bar layout entries consistently or reject them explicitly (+5 more)
 
 ### Community 84 - "Community 84"
-Cohesion: 0.12
-Nodes (17): Canonical Contracts, Compatibility And Cleanup, Goal, Implementation Changes, Label Rules, Lacuna Media Player Rebrand Plan, Menu And Flyout QML, Out Of Scope (+9 more)
+Cohesion: 0.14
+Nodes (13): Compatibility Strategy, Documentation Updates, Goal, Lacuna Media Player Rebrand Plan, Naming Model, Plugin Directory Renames, QML File Renames, Script Renames (+5 more)
 
 ### Community 85 - "Community 85"
 Cohesion: 0.15
@@ -540,7 +514,7 @@ Cohesion: 0.20
 Nodes (9): Bar Limitation, Cohesive Shadow Strategy, Goal, Implementation Checkpoint, Implementation Phases, Lacuna Fake Fullscreen Frame Plan, Performance Rules, Rendering Model (+1 more)
 
 ### Community 95 - "Community 95"
-Cohesion: 0.25
+Cohesion: 0.22
 Nodes (8): Current Lacuna status, Native bar widgets (add via `shell.json` layout), Omarchy Integration, Policy (for new work), Services (via `shell.serviceFor(id)` / `shell.ensureService(id)`), Singletons (`import qs.Commons`), The injection rule (who can reach what), What Omarchy exposes
 
 ### Community 97 - "Community 97"
@@ -568,32 +542,32 @@ Cohesion: 0.29
 Nodes (6): Icon policy, Bar Option, Bar Plugins, Bar Widgets, Omarchy injected widget properties, Size Controls
 
 ### Community 103 - "Community 103"
-Cohesion: 0.20
-Nodes (10): LacunaGeometry, Attached flyout geometry, curveKappa single curve constant, Fill-only surfaces, Molding connector, Lacuna component primitives, Sidebar connector flyout surface assembly, Lacuna Bar host architecture (+2 more)
+Cohesion: 0.29
+Nodes (7): LacunaGeometry, curveKappa single curve constant, Fill-only surfaces, Molding connector, Lacuna component primitives, Sidebar connector flyout surface assembly, Lacuna seam/connector geometry
 
 ### Community 104 - "Community 104"
-Cohesion: 0.25
-Nodes (8): 03 · Motion — the reveal system, Closing, Easing, Interactive menu pipeline, One scale (the consolidation), Rules, The reveal choreography, Where motion is owned
+Cohesion: 0.29
+Nodes (7): 03 · Motion — the reveal system, Closing, Easing, One scale (the consolidation), Rules, The reveal choreography, Where motion is owned
 
 ### Community 105 - "Community 105"
-Cohesion: 0.25
-Nodes (8): 04 · Typography, Behavior, true to the metaphor, Color, weight, and rendering, Rules, The manuscript tie-in, The size scale, Tracking roles, Two faces
+Cohesion: 0.29
+Nodes (7): 04 · Typography, Behavior, true to the metaphor, Color, weight, and rendering, Rules, The manuscript tie-in, The size scale, Two faces
 
 ### Community 106 - "Community 106"
 Cohesion: 0.29
 Nodes (7): 05 · Components, Controls (`lacuna.menu/settings/`), Primitives (`lacuna.menu/components/`), Rules, Surfaces (`lacuna.menu/menu/`), The bar-widget "pill" vocabulary, The state law (read first)
 
 ### Community 107 - "Community 107"
-Cohesion: 0.28
-Nodes (5): MediaPlayerWorkerTests, Path, Behavior tests for the persistent Lacuna media backend worker., WorkerProcess, write_exec()
+Cohesion: 0.29
+Nodes (7): Bar Option Plugins, Bundle-Only Plugins, Lacuna Plugin Catalog, Plugin Areas, Reusable Extraction Candidates, Stability Tiers, Standalone A-La-Carte Plugins
 
 ### Community 108 - "Community 108"
 Cohesion: 0.33
 Nodes (5): Added, Changed, Changelog, Fixed, [Unreleased]
 
 ### Community 109 - "Community 109"
-Cohesion: 0.25
-Nodes (8): plugin-local QML primitives, bar.layout, lacuna.bar, lacuna.menu, Lacuna sidebar/menu bundle, lacuna.shell-settings, lacuna.state, Lacuna sidebar menu screenshot
+Cohesion: 0.33
+Nodes (6): plugin-local QML primitives, lacuna.menu, Lacuna sidebar/menu bundle, lacuna.shell-settings, lacuna.state, Lacuna sidebar menu screenshot
 
 ### Community 110 - "Community 110"
 Cohesion: 0.33
@@ -616,32 +590,32 @@ Cohesion: 0.33
 Nodes (5): Goal, Implementation Outline, Lacuna Panel Control Refactor Plan, Manual Test Checklist, Target Behavior
 
 ### Community 115 - "Community 115"
-Cohesion: 0.22
-Nodes (9): For Contributors, Install, Lacuna for Omarchy, License, Make It Yours, Pick Your Experience, Project Status, Safety And Recovery (+1 more)
+Cohesion: 0.33
+Nodes (6): Development, Documentation, Install, Lacuna Omarchy Plugins, License, Structure
 
 ### Community 116 - "Community 116"
-Cohesion: 0.43
+Cohesion: 0.47
 Nodes (3): DevToolTests, load_dev_module(), run_dev()
 
 ### Community 117 - "Community 117"
-Cohesion: 0.50
+Cohesion: 0.40
 Nodes (4): Layer Stacking Policy, Level assignments, Rules, Verifying live
 
 ### Community 118 - "Community 118"
-Cohesion: 0.33
-Nodes (5): Canonical settings shape, Lacuna Runtime Settings, Omarchy Settings, Persistent Services, Services And State
+Cohesion: 0.40
+Nodes (4): Lacuna Runtime Settings, Omarchy Settings, Persistent Services, Services And State
 
 ### Community 119 - "Community 119"
-Cohesion: 0.09
-Nodes (22): activation, author, defaults, audioOnly, maxResults, volume, description, entryPoints (+14 more)
+Cohesion: 0.40
+Nodes (5): Attached flyout geometry, Lacuna Bar host architecture, bar.layout, lacuna.bar, Settings flyout screenshot
 
 ### Community 120 - "Community 120"
-Cohesion: 0.10
-Nodes (20): activation, author, defaults, targetOutput, description, entryPoints, overlay, id (+12 more)
+Cohesion: 0.40
+Nodes (4): Core Bundle, Geometry, Menu And Sidebar Plugins, Summon Compatibility
 
 ### Community 122 - "Community 122"
-Cohesion: 0.22
-Nodes (8): Commit And PR Notes, Prepare, Promotion Discipline, Publish, Rehearse The Artifact, Release Classes, Release Workflow, Validate The Tree
+Cohesion: 0.50
+Nodes (3): Before Release, Commit And PR Notes, Release Notes
 
 ### Community 123 - "Community 123"
 Cohesion: 0.50
@@ -656,119 +630,35 @@ Cohesion: 0.50
 Nodes (3): Checklist, Plugins touched, Summary
 
 ### Community 126 - "Community 126"
-Cohesion: 0.10
-Nodes (21): 1. Required Outcome, 2. Existing Ownership — Preserve It, 3.1 Constants, 3.2 Menu and queued flyout sequence, 3.3 Reversal and completion safety, 3.4 Flyout switching policy, 3.5 Geometry API changes, 3.6 Reduced motion (+13 more)
+Cohesion: 0.50
+Nodes (3): Active Or Recently Canonical Trackers, Completed Or Superseded Plans, Lacuna Plans And Historical Notes
 
 ### Community 127 - "Community 127"
-Cohesion: 0.24
-Nodes (6): Architecture Overview, Ownership Rules, Runtime Shape, Captures, Lacuna UI Reference Screenshots, Notes
+Cohesion: 0.50
+Nodes (3): Captures, Lacuna UI Reference Screenshots, Notes
 
 ### Community 128 - "Community 128"
-Cohesion: 0.20
-Nodes (9): calendar_shadow_margins(), calendar_surface_geometry(), clamped_popup_x(), content_rect(), frame_border_geometry(), frame_geometry(), interpolated_flyout_geometry(), QmlGeometryTests (+1 more)
-
-### Community 133 - "Community 133"
-Cohesion: 0.10
-Nodes (20): 2026-07-02 repo revert of the ambience-host experiment, 2026-07-02 rollback to standalone visuals, 2026-07-02 T1 structural pass, 2026-07-02 T2 GPU migration slice, 2026-07-02 T3 architectural consolidation slice, 2026-07-02 T4 regression protection, 2026-07-02 visual parity correction, 2026-07-05 full revert of the remaining T1/T2 optimizations (+12 more)
-
-### Community 134 - "Community 134"
-Cohesion: 0.12
-Nodes (17): `0.1.0-beta.1` Acceptance Gates, `0.1.0-rc.1` Acceptance Gates, Core Quattro surface, Current Baseline, Deferred feature work, Delivery Phases, Lacuna Quattro Roadmap, Operating Rules (+9 more)
-
-### Community 135 - "Community 135"
-Cohesion: 0.29
-Nodes (11): lacuna_layers(), LiveVisualTests, pixel_luma(), Path, read_settings(), run(), set_frame_mode(), set_reduce_motion() (+3 more)
-
-### Community 136 - "Community 136"
-Cohesion: 0.13
-Nodes (15): Beta, Delivered Checkpoint — 2026-07-16, Dependencies, Goal, Progress Summary, Promotion Gates, Quattro P2 — Release And Evolution Plan, Release candidate (+7 more)
-
-### Community 137 - "Community 137"
-Cohesion: 0.14
-Nodes (13): Completion Criteria, Completion Record, Controller behavior, Geometry behavior, Live visual behavior, Phase 1 — Capture The Actual Transition, Phase 2 — Pin Failing Tests, Phase 3 — Correct Ownership (+5 more)
-
-### Community 138 - "Community 138"
-Cohesion: 0.17
-Nodes (11): Agent Orchestration dashboard, Assumptions, Auto-hide orchestration sidebar, Implementation Changes, Lacuna Shell Layout Presets and Agent Orchestration Mode, Per-monitor shell composition, Preset runtime and persistence, Public Interfaces (+3 more)
-
-### Community 139 - "Community 139"
-Cohesion: 0.17
-Nodes (12): Beta Exit Record, Delivered Checkpoint — 2026-07-16, Dependencies, Goal, Progress Summary, Quattro P1 — Product Integration Plan, Workstream 1 — Native service integration matrix, Workstream 2 — Settings and subsetting UX (+4 more)
-
-### Community 140 - "Community 140"
-Cohesion: 0.44
-Nodes (10): chooseFlyoutScreen(), chooseFocusedScreen(), choosePrimarySidebarScreen(), chooseSidebarScreen(), chooseSidebarScreens(), isSidebarScreen(), monitorOptions(), normalizeMonitorNames() (+2 more)
-
-### Community 141 - "Community 141"
-Cohesion: 0.18
-Nodes (11): Compatibility refresh — 2026-07-15, Completion record, Goal, Non-goals, Quattro P0 — Core Foundation Plan, Workstream 1 — Baseline and compatibility record, Workstream 2 — Canonical state and layout schema, Workstream 3 — Frame, seam, and layer contract (+3 more)
-
-### Community 142 - "Community 142"
-Cohesion: 0.42
-Nodes (8): dateKey(), localNoon(), monthCells(), monthStart(), normalizedDate(), sameDay(), shiftedMonth(), weekdayLabels()
-
-### Community 143 - "Community 143"
-Cohesion: 0.20
-Nodes (10): Bar face, Calendar flyout, Completion Boundary, Configuration And Compatibility, Implementation Changes, Implementation Result, Lacuna Clock And Calendar Flyout Plan, Product Behavior (+2 more)
-
-### Community 144 - "Community 144"
-Cohesion: 0.22
-Nodes (8): FILES TO CREATE, SUCCESS CRITERIA, T1. Runtime QML behavior harness + state-machine tests (highest value), T2. Geometry math tests (cheap, deterministic), T3. Live desktop probes (opt-in; encode the manual verification already proven), T4. Enforcement glue, TASK: Close the visual/UI regression test gaps, WHY THE CURRENT SUITE MISSES VISUAL REGRESSIONS
-
-### Community 145 - "Community 145"
-Cohesion: 0.25
-Nodes (7): Data Contract, Execution Checklist, Lacuna Weather Flyout, Outcome, Product Boundary, Surface Contract, Validation
-
-### Community 146 - "Community 146"
-Cohesion: 0.25
-Nodes (8): Active Release Tracks, Current Reference Set, Implemented Or Complete Work, Lacuna Plan Index, Release Planning Rule, Reverted Or Superseded Records, Separate Non-Blocking Proposals, Status Rules
-
-### Community 147 - "Community 147"
-Cohesion: 0.29
-Nodes (6): Closed Historical Issues, Issue Hygiene Rules, Labels, Lacuna Issue Map, M1: State model stabilization, Milestones
-
-### Community 148 - "Community 148"
-Cohesion: 0.52
-Nodes (6): Path, filesystem_rows(), load_cpu_info(), process_rows(), read_meminfo(), snapshot()
-
-### Community 149 - "Community 149"
-Cohesion: 0.43
-Nodes (3): MediaOverlayContractTests, MediaOverlayRuntimeTests, read_overlay()
-
-### Community 150 - "Community 150"
-Cohesion: 0.33
-Nodes (5): Media Player Architecture, Playback Clock, Presentation, Runtime Components, Search
-
-### Community 151 - "Community 151"
-Cohesion: 0.33
-Nodes (6): Compatibility check, Current tested host, Layer-order reconciliation, Multi-monitor policy, Quattro Compatibility Ledger, r1043 to r1054 review
-
-### Community 152 - "Community 152"
-Cohesion: 0.53
-Nodes (4): Path, read_sensors(), sensor_group(), snapshot()
-
-### Community 155 - "Community 155"
-Cohesion: 0.90
-Nodes (4): fallbackScreen(), hasScreen(), screenName(), validScreens()
+Cohesion: 0.67
+Nodes (3): Architecture Overview, Ownership Rules, Runtime Shape
 
 ## Knowledge Gaps
-- **1487 isolated node(s):** `schemaVersion`, `id`, `name`, `version`, `author` (+1482 more)
+- **1318 isolated node(s):** `schemaVersion`, `id`, `name`, `version`, `author` (+1313 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **21 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **16 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Lacuna Suite Improvement Plan` connect `Community 75` to `Community 96`?**
-  _High betweenness centrality (0.007) - this node is a cross-community bridge._
-- **Are the 36 inferred relationships involving `qml_url()` (e.g. with `.test_media_favorites_filter_and_sort_behavior()` and `.test_shared_icon_button_exposes_focus_and_accessibility_contract()`) actually correct?**
-  _`qml_url()` has 36 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `02 · Geometry — the seam language` connect `Community 90` to `Community 89`, `Community 103`?**
+  _High betweenness centrality (0.002) - this node is a cross-community bridge._
+- **Why does `Molding connector` connect `Community 103` to `Design System Core`, `Community 119`?**
+  _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **What connects `schemaVersion`, `id`, `name` to the rest of the system?**
-  _1497 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1326 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `QML Contract Tests` be split into smaller, more focused modules?**
-  _Cohesion score 0.0490506329113924 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06345848757271286 - nodes in this community are weakly interconnected._
 - **Should `Status Script Tests` be split into smaller, more focused modules?**
-  _Cohesion score 0.09728622631848438 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.10976430976430976 - nodes in this community are weakly interconnected._
 - **Should `Widget Manifest Contracts` be split into smaller, more focused modules?**
   _Cohesion score 0.0625 - nodes in this community are weakly interconnected._
 - **Should `Background Effect Manifest` be split into smaller, more focused modules?**
