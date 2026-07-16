@@ -102,7 +102,7 @@ Item {
   }
 
   function canForgetNetwork(row) {
-    return !!(row && row.known && isProtected(row.security) && !row.connected)
+    return !!(row && row.known && !row.connected)
   }
 
   function runNetworkAction(kindName, network, callback) {
