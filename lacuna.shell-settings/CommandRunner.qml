@@ -10,6 +10,8 @@ Item {
   property string stderrText: ""
   property var failureQueue: []
 
+  signal queueDrained()
+
   function quote(value) {
     return "'" + String(value).replace(/'/g, "'\\''") + "'"
   }
@@ -83,6 +85,7 @@ Item {
       }
 
       root.drain()
+      if (!proc.running && root.queue.length === 0) root.queueDrained()
     }
   }
 

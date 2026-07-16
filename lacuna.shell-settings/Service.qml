@@ -256,6 +256,12 @@ Item {
     scheduleRefresh()
   }
 
+  Connections {
+    target: root.commandRunner
+    ignoreUnknownSignals: true
+    function onQueueDrained() { root.scheduleRefresh() }
+  }
+
   function setDefault(kind, value) {
     var target = String(kind || "")
     if (target !== "terminal" && target !== "browser" && target !== "editor") return
