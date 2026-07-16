@@ -49,6 +49,12 @@ PopupWindow {
     else open = false
   }
 
+  function localFileUrl(path) {
+    var value = String(path || "")
+    if (value === "") return ""
+    return "file://" + encodeURIComponent(value).replace(/%2F/gi, "/")
+  }
+
   function loadFrameSettings(raw) {
     try {
       var frame = JSON.parse(String(raw || "{}")).frame || {}
@@ -174,7 +180,7 @@ PopupWindow {
           clip: true
           Image {
             anchors.fill: parent
-            source: root.backgroundPath ? "file://" + root.backgroundPath : ""
+            source: root.localFileUrl(root.backgroundPath)
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
             cache: false
