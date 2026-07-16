@@ -22,6 +22,7 @@ Item {
   property int leftPercent: 100
   property int usedPercent: 0
   property bool activeBlock: false
+  property bool sessionAvailable: false
   property bool pendingRefresh: false
   property bool loadedOnce: false
   property bool flyoutOpen: false
@@ -66,9 +67,12 @@ Item {
   readonly property url iconSource: Qt.resolvedUrl("assets/tabler/brand-openai.svg")
 
   // Cycling between the 5h block (mode 0) and the weekly window (mode 1).
-  // Weekly only joins the rotation once it has real data and the setting is on.
+  // An omitted provider window is suppressed until it is reported again.
+  readonly property bool sessionReady: loadedOnce && sessionAvailable
   readonly property bool weeklyReady: loadedOnce && showWeekly && weekActive
-  readonly property int activeMode: (weeklyReady && (displayCycle % 2 === 1)) ? 1 : 0
+  readonly property int activeMode: !sessionReady && weeklyReady
+    ? 1
+    : ((sessionReady && weeklyReady && (displayCycle % 2 === 1)) ? 1 : 0)
   readonly property string activeClass: activeMode === 1 ? weekClass : cssClass
   readonly property bool hiddenState: activeClass === "hidden"
   readonly property int activeUsedPercent: activeMode === 1 ? weekUsedPercent : usedPercent
@@ -134,6 +138,9 @@ Item {
       root.leftPercent = boundedPercent(payload.leftPercent, 100)
       root.usedPercent = boundedPercent(payload.usedPercent, Math.max(0, 100 - leftPercent))
       root.activeBlock = payload.active === true
+      var sessionWasAvailable = root.sessionAvailable
+      root.sessionAvailable = payload.sessionAvailable === true
+      if (!sessionWasAvailable && root.sessionAvailable) root.displayCycle = 0
       root.resetText = String(payload.resetText || "")
       root.planText = String(payload.planText || "")
       root.sourceText = String(payload.source || "")
@@ -179,7 +186,7 @@ Item {
   // change under the pointer.
   Timer {
     interval: root.cycleMs
-    running: root.weeklyReady && !root.flyoutOpen && !mouseArea.containsMouse
+    running: root.sessionReady && root.weeklyReady && !root.flyoutOpen && !mouseArea.containsMouse
     repeat: true
     onTriggered: root.displayCycle = (root.displayCycle + 1) % 2
   }
@@ -344,6 +351,7 @@ Item {
     leftPercent: root.leftPercent
     usedPercent: root.usedPercent
     activeBlock: root.activeBlock
+    sessionAvailable: root.sessionAvailable
     resetText: root.resetText
     planText: root.planText
     sourceText: root.sourceText

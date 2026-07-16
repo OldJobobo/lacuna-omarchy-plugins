@@ -3629,23 +3629,33 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("Canvas {", read("lacuna.system-stats/TelemetryFlyout.qml"))
         self.assertIn("Canvas {", read("lacuna.temperature/ThermalFlyout.qml"))
 
-    def test_codex_usage_rotates_between_5h_and_weekly_windows(self):
-        qml = read("lacuna.codex-usage/Widget.qml")
-        self.assertIn("property int displayCycle: 0", qml)
-        self.assertIn("readonly property bool weeklyReady: loadedOnce && showWeekly && weekActive", qml)
-        self.assertIn("readonly property int activeMode: (weeklyReady && (displayCycle % 2 === 1)) ? 1 : 0", qml)
-        self.assertIn("readonly property string primaryText: activeMode === 1 ? weekPrimary : sessionPrimary", qml)
-        self.assertIn("running: root.weeklyReady && !root.flyoutOpen && !mouseArea.containsMouse", qml)
-        self.assertIn("BarCycleText {", qml)
-        self.assertIn("text: root.primaryText", qml)
-        self.assertIn("weekActive = payload.weekActive === true", qml)
-        self.assertIn("weekUsedPercent = boundedPercent(payload.weekUsedPercent", qml)
+    def test_usage_widgets_suppress_absent_5h_window_and_restore_rotation(self):
+        for plugin in ["lacuna.codex-usage", "lacuna.claude-usage"]:
+            qml = read(f"{plugin}/Widget.qml")
+            self.assertIn("property int displayCycle: 0", qml)
+            self.assertIn("readonly property bool sessionReady: loadedOnce && sessionAvailable", qml)
+            self.assertIn("readonly property bool weeklyReady: loadedOnce && showWeekly && weekActive", qml)
+            self.assertIn("readonly property int activeMode: !sessionReady && weeklyReady", qml)
+            self.assertIn("readonly property string primaryText: activeMode === 1 ? weekPrimary : sessionPrimary", qml)
+            self.assertIn("running: root.sessionReady && root.weeklyReady && !root.flyoutOpen && !mouseArea.containsMouse", qml)
+            self.assertIn("BarCycleText {", qml)
+            self.assertIn("text: root.primaryText", qml)
+            self.assertIn("weekActive = payload.weekActive === true", qml)
+            self.assertIn("weekUsedPercent = boundedPercent(payload.weekUsedPercent", qml)
+            self.assertIn("sessionAvailable:", qml)
 
-        flyout = read("lacuna.codex-usage/CodexUsageFlyout.qml")
-        self.assertIn("property bool weekActive: false", flyout)
-        self.assertIn("property int weekUsedPercent: 0", flyout)
-        self.assertIn('text: "5h limit"', flyout)
-        self.assertIn('text: "Weekly limit"', flyout)
+        codex_flyout = read("lacuna.codex-usage/CodexUsageFlyout.qml")
+        self.assertIn("property bool sessionAvailable: false", codex_flyout)
+        self.assertIn('text: "5h limit"', codex_flyout)
+        self.assertIn('text: "Weekly limit"', codex_flyout)
+        self.assertIn(': "suppressed"', codex_flyout)
+        self.assertIn("opacity: root.sessionAvailable ? 1 : 0.38", codex_flyout)
+
+        claude_flyout = read("lacuna.claude-usage/ClaudeUsageFlyout.qml")
+        self.assertIn("property bool sessionAvailable: true", claude_flyout)
+        self.assertIn("property bool available: true", claude_flyout)
+        self.assertIn(': "suppressed"', claude_flyout)
+        self.assertIn("opacity: available ? 1 : 0.38", claude_flyout)
 
     def test_usage_flyout_shadows_reserve_bottom_render_padding(self):
         for path in [

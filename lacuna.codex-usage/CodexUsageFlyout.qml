@@ -19,6 +19,7 @@ PopupWindow {
   property int leftPercent: 100
   property int usedPercent: 0
   property bool activeBlock: false
+  property bool sessionAvailable: false
   property string resetText: ""
   property string planText: ""
   property string sourceText: ""
@@ -249,7 +250,9 @@ PopupWindow {
             Text {
               id: chipText
               anchors.centerIn: parent
-              text: root.activeBlock ? (root.leftPercent + "% 5h") : (root.leftPercent + "% left")
+              text: root.sessionAvailable
+                ? (root.activeBlock ? (root.leftPercent + "% 5h") : (root.leftPercent + "% left"))
+                : "weekly only"
               color: root.accentColor
               font.family: root.fontFamily
               font.pixelSize: 11
@@ -262,6 +265,7 @@ PopupWindow {
         Column {
           width: parent.width
           spacing: 5
+          opacity: root.sessionAvailable ? 1 : 0.38
 
           Item {
             width: parent.width
@@ -280,7 +284,7 @@ PopupWindow {
 
             Text {
               anchors.right: parent.right
-              text: root.activeBlock ? (root.usedPercent + "% used") : "idle"
+              text: root.sessionAvailable ? (root.activeBlock ? (root.usedPercent + "% used") : "idle") : "suppressed"
               color: root.accentColor
               font.family: root.fontFamily
               font.pixelSize: 11
@@ -299,7 +303,7 @@ PopupWindow {
               anchors.left: parent.left
               anchors.top: parent.top
               anchors.bottom: parent.bottom
-              width: root.activeBlock ? Math.max(height, Math.round(parent.width * root.usedPercent / 100)) : 0
+              width: root.sessionAvailable && root.activeBlock ? Math.max(height, Math.round(parent.width * root.usedPercent / 100)) : 0
               radius: 3.5
               color: root.accentColor
               opacity: 0.92
@@ -314,7 +318,7 @@ PopupWindow {
             Text {
               id: meterLeft
               anchors.left: parent.left
-              text: root.activeBlock ? (root.leftPercent + "% left") : "idle"
+              text: root.sessionAvailable ? (root.activeBlock ? (root.leftPercent + "% left") : "idle") : "not reported"
               color: root.mutedColor
               font.family: root.fontFamily
               font.pixelSize: 11
@@ -323,7 +327,7 @@ PopupWindow {
 
             Text {
               anchors.right: parent.right
-              text: root.activeBlock ? ("resets " + root.resetLabel) : ""
+              text: root.sessionAvailable && root.activeBlock ? ("resets " + root.resetLabel) : ""
               color: root.mutedColor
               font.family: root.fontFamily
               font.pixelSize: 11

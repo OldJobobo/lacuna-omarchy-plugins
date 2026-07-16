@@ -101,6 +101,8 @@ class ClaudeCodeStatusTests(unittest.TestCase):
         self.assertEqual(payload["usedPercent"], 10)
         self.assertEqual(payload["leftPercent"], 90)
         self.assertTrue(payload["active"])
+        self.assertTrue(payload["sessionAvailable"])
+        self.assertFalse(payload["sessionAvailabilityKnown"])
         self.assertEqual(payload["class"], "normal")
         self.assertEqual(payload["source"], "ccusage (calibrated)")
 
@@ -108,6 +110,59 @@ class ClaudeCodeStatusTests(unittest.TestCase):
         self.assertEqual(payload["weekUsedPercent"], 10)
         self.assertEqual(payload["weekText"], "10% wk")
         self.assertIn("7-day", payload["tooltip"])
+
+    def test_uses_provider_windows_and_reports_session_capability(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stub = self._stub_ccusage(tmp, self.BLOCKS_STUB)
+            api_file = Path(tmp) / "usage.json"
+            api_file.write_text(
+                json.dumps(
+                    {
+                        "five_hour": {"utilization": 0.24, "resets_at": "2026-07-15T23:00:00Z"},
+                        "seven_day": {"utilization": 0.41, "resets_at": "2026-07-20T18:00:00Z"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            env = self._env(tmp, stub)
+            env["CLAUDE_USAGE_API_FILE"] = str(api_file)
+            result = run([str(self.SCRIPT)], env)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["source"], "Claude usage API")
+        self.assertTrue(payload["sessionAvailabilityKnown"])
+        self.assertTrue(payload["sessionAvailable"])
+        self.assertEqual(payload["usedPercent"], 24)
+        self.assertEqual(payload["weekUsedPercent"], 41)
+        self.assertNotIn("suppressed", payload["tooltip"])
+
+    def test_provider_omission_suppresses_session_but_keeps_weekly(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stub = self._stub_ccusage(tmp, self.BLOCKS_STUB)
+            api_file = Path(tmp) / "usage.json"
+            api_file.write_text(
+                json.dumps(
+                    {
+                        "five_hour": None,
+                        "seven_day": {"utilization": 0.41, "resets_at": "2026-07-20T18:00:00Z"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            env = self._env(tmp, stub)
+            env["CLAUDE_USAGE_API_FILE"] = str(api_file)
+            result = run([str(self.SCRIPT)], env)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["sessionAvailabilityKnown"])
+        self.assertFalse(payload["sessionAvailable"])
+        self.assertFalse(payload["active"])
+        self.assertEqual(payload["text"], "41% used")
+        self.assertTrue(payload["weekActive"])
+        self.assertEqual(payload["weekUsedPercent"], 41)
+        self.assertIn("5h block: suppressed", payload["tooltip"])
 
     def test_serves_cache_when_ccusage_later_fails(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -161,6 +216,7 @@ class CodexWeeklyStatusTests(unittest.TestCase):
         self.assertEqual(payload["leftPercent"], 88)
         self.assertEqual(payload["usedPercent"], 12)
         self.assertIs(payload["active"], True)
+        self.assertIs(payload["sessionAvailable"], True)
         self.assertEqual(payload["resetText"], "2026-06-18 02:00 PM")
         self.assertIs(payload["weekActive"], True)
         self.assertEqual(payload["weekText"], "63% wk")
@@ -180,6 +236,7 @@ class CodexWeeklyStatusTests(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(payload["text"], "95% used")
         self.assertEqual(payload["class"], "alert")
+        self.assertIs(payload["sessionAvailable"], False)
 
     def test_hides_when_helper_emits_no_weekly_line(self):
         helper = "#!/usr/bin/env bash\nprintf 'nothing useful here\\n'\n"
@@ -303,6 +360,47 @@ class CodexWeeklyStatusTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("5h used: 12.0%", result.stdout)
         self.assertIn("Weekly used: 9.0%", result.stdout)
+
+    def test_weekly_left_drops_stale_five_hour_window_after_canonical_omission(self):
+        def event(timestamp, minutes, used, reset):
+            return {
+                "timestamp": timestamp,
+                "type": "event_msg",
+                "payload": {
+                    "type": "token_count",
+                    "rate_limits": {
+                        "limit_id": "codex",
+                        "plan_type": "prolite",
+                        "primary": {
+                            "used_percent": used,
+                            "resets_at": reset,
+                            "window_minutes": minutes,
+                        },
+                        "secondary": None,
+                    },
+                },
+            }
+
+        future = int(datetime.now().timestamp()) + 86400
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            sessions = home / ".codex" / "sessions" / "2026" / "07" / "15"
+            sessions.mkdir(parents=True)
+            (sessions / "session.jsonl").write_text(
+                "\n".join(
+                    [
+                        json.dumps(event("2026-07-14T20:00:00Z", 300, 56.0, future)),
+                        json.dumps(event("2026-07-15T20:00:00Z", 10080, 6.0, future)),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            result = run([str(self.LEFT_SCRIPT)], {"HOME": str(home)})
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("5h used", result.stdout)
+        self.assertIn("Weekly used: 6.0%", result.stdout)
 
 
 class PreloadThemeSwitcherTests(unittest.TestCase):

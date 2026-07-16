@@ -2,12 +2,9 @@
 
 set -euo pipefail
 
-# Usage % calibrated against Claude Code's own `/usage`. The real session/week
-# limit %s are computed server-side and aren't in any local file, so we can't read
-# them directly. Instead we use ccusage's accurate *cost* (weighted by real token
-# pricing, which tracks Anthropic's limit metric) and divide by a calibrated
-# budget so the displayed % lines up with `/usage`. Re-anchor by running `/usage`
-# and setting the two *_BUDGET values below.
+# Prefer Claude's authenticated usage endpoint so optional provider windows can
+# be detected directly. If it is unavailable, fall back to ccusage's calibrated
+# cost estimates without claiming that a missing window has been suppressed.
 #
 #   session% = active-5h-block cost  / SESSION_BUDGET
 #   week%    = trailing-7-day cost    / WEEK_BUDGET
@@ -77,6 +74,7 @@ import html
 import json
 import os
 import sys
+import urllib.request
 
 claude_home = os.environ["CLAUDE_HOME"]
 session_budget = max(0.01, float(os.environ.get("SESSION_BUDGET") or 0) or 0.01)
@@ -109,6 +107,53 @@ def parse(value):
 
 def local_time(value, fmt="%-I:%M %p"):
     return value.astimezone().strftime(fmt) if value else ""
+
+
+def usage_api_payload():
+    fixture = os.environ.get("CLAUDE_USAGE_API_FILE", "").strip()
+    if fixture:
+        try:
+            with open(fixture, encoding="utf-8") as handle:
+                payload = json.load(handle)
+            return payload if isinstance(payload, dict) else None
+        except Exception:
+            return None
+
+    if os.environ.get("CLAUDE_USAGE_API_DISABLE") == "1":
+        return None
+
+    try:
+        with open(os.path.join(claude_home, ".credentials.json"), encoding="utf-8") as handle:
+            credentials = json.load(handle)
+        oauth = credentials.get("claudeAiOauth") or {}
+        access_token = str(oauth.get("accessToken") or "")
+        expires_at = float(oauth.get("expiresAt") or 0) / 1000
+        if not access_token or (expires_at and expires_at <= now.timestamp()):
+            return None
+
+        request = urllib.request.Request(
+            "https://api.anthropic.com/api/oauth/usage",
+            headers={
+                "Authorization": "Bearer " + access_token,
+                "anthropic-version": "2023-06-01",
+                "User-Agent": "lacuna-claude-usage",
+            },
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            payload = json.load(response)
+        return payload if isinstance(payload, dict) else None
+    except Exception:
+        return None
+
+
+def utilization_percent(window):
+    try:
+        value = float(window.get("utilization"))
+    except (AttributeError, TypeError, ValueError):
+        return 0
+    if value <= 1:
+        value *= 100
+    return max(0, min(100, round(value)))
 
 
 session_cost = 0.0
@@ -174,23 +219,50 @@ def live_session_count():
 session_used = pct(session_cost, session_budget)
 week_used = pct(week_cost, week_budget)
 session_active = session_end is not None
+session_available = True
+week_available = True
+availability_known = False
 session_reset = local_time(session_end)
 week_reset = next_weekly_reset().strftime("%a %-I %p")
+source = "ccusage (calibrated)"
+
+api_payload = usage_api_payload()
+if api_payload is not None:
+    availability_known = True
+    session_window = api_payload.get("five_hour")
+    week_window = api_payload.get("seven_day")
+    session_available = isinstance(session_window, dict)
+    week_available = isinstance(week_window, dict)
+    session_used = utilization_percent(session_window) if session_available else 0
+    week_used = utilization_percent(week_window) if week_available else 0
+    session_end = parse(session_window.get("resets_at")) if session_available else None
+    week_end = parse(week_window.get("resets_at")) if week_available else None
+    session_reset = local_time(session_end)
+    week_reset = local_time(week_end, "%a %-I %p")
+    session_active = session_available
+    source = "Claude usage API"
+
+session_left = max(0, 100 - session_used)
+week_left = max(0, 100 - week_used)
+active_used = session_used if session_available else week_used
+active_class = class_for(active_used)
 session_count = live_session_count()
 
 payload = {
-    "text": f"{session_used}% used",
-    "shortText": f"{session_used}%",
+    "text": f"{active_used}% used",
+    "shortText": f"{active_used}%",
     "tooltip": "",
-    "class": class_for(session_used) if session_active else "idle",
-    "leftPercent": max(0, 100 - session_used),
+    "class": active_class if session_available else class_for(week_used),
+    "leftPercent": session_left,
     "usedPercent": session_used,
     "active": session_active,
+    "sessionAvailable": session_available,
+    "sessionAvailabilityKnown": availability_known,
     "resetText": session_reset,
     "sessionCount": session_count,
-    "source": "ccusage (calibrated)",
-    "weekActive": True,
-    "weekLeftPercent": max(0, 100 - week_used),
+    "source": source,
+    "weekActive": week_available,
+    "weekLeftPercent": week_left,
     "weekUsedPercent": week_used,
     "weekClass": class_for(week_used),
     "weekText": f"{week_used}% wk",
@@ -201,13 +273,18 @@ payload = {
 su = html.escape(str(session_used))
 wu = html.escape(str(week_used))
 lines = ["<b>Claude Code Usage</b>"]
-lines.append(f"<b>{su}% used</b> · 5h block")
-if session_reset:
-    lines.append(f"Resets: {html.escape(session_reset)}")
-lines.append(f"<b>{wu}% used</b> · 7-day")
-lines.append(f"Resets: {html.escape(week_reset)}")
+if session_available:
+    lines.append(f"<b>{su}% used</b> · 5h block")
+    if session_reset:
+        lines.append(f"Resets: {html.escape(session_reset)}")
+elif availability_known:
+    lines.append("5h block: suppressed")
+if week_available:
+    lines.append(f"<b>{wu}% used</b> · 7-day")
+    if week_reset:
+        lines.append(f"Resets: {html.escape(week_reset)}")
 lines.append(f"Sessions: {session_count}")
-lines.append("Source: ccusage (calibrated)")
+lines.append("Source: " + html.escape(source))
 payload["tooltip"] = "<br/>".join(lines)
 emit(payload)
 PYEOF

@@ -95,7 +95,7 @@ active_left = session_left if session_active else week_left
 active_used = session_used if session_active else week_used
 left_text = f"{active_left:g}%"
 used_text = f"{active_used:g}%"
-reset_text = clean_reset(data.get("5h resets") or data.get("resets") or data.get("weekly resets") or "unknown")
+reset_text = clean_reset(data.get("5h resets") or data.get("resets") or "")
 week_reset_text = clean_reset(data.get("weekly resets") or data.get("resets") or "")
 plan_text = clean_plan(data.get("plan", "unknown"))
 event_text = clean_event_time(data.get("source event", ""))
@@ -159,6 +159,7 @@ payload = {
     "leftPercent": round(active_left),
     "usedPercent": round(active_used),
     "active": session_active,
+    "sessionAvailable": session_active,
     "resetText": reset_text,
     "planText": plan_text,
     "sourceEventText": event_text,

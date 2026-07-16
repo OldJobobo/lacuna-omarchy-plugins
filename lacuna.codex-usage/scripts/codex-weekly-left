@@ -7,6 +7,7 @@ from pathlib import Path
 
 
 SESSIONS_DIR = Path.home() / ".codex" / "sessions"
+WINDOW_COHERENCE_SECONDS = 15 * 60
 
 
 def iter_session_files():
@@ -30,8 +31,15 @@ def is_canonical_codex_limit(payload):
 def candidate_rank(candidate):
     return (
         1 if is_canonical_codex_limit(candidate["payload"]) else 0,
-        candidate["timestamp"],
+        candidate["timestamp_epoch"],
     )
+
+
+def parse_timestamp(value):
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+    except (TypeError, ValueError):
+        return None
 
 
 def parse_latest_token_count():
@@ -60,9 +68,13 @@ def parse_latest_token_count():
                     timestamp = event.get("timestamp")
                     if not timestamp:
                         continue
+                    timestamp_epoch = parse_timestamp(timestamp)
+                    if timestamp_epoch is None:
+                        continue
 
                     candidate = {
                         "timestamp": timestamp,
+                        "timestamp_epoch": timestamp_epoch,
                         "path": path,
                         "payload": payload,
                     }
@@ -75,7 +87,7 @@ def parse_latest_token_count():
 
 
 def parse_latest_windows():
-    best = {300: None, 10080: None}
+    candidates = []
     now = datetime.now(tz=timezone.utc).timestamp()
 
     for path in iter_session_files():
@@ -89,7 +101,9 @@ def parse_latest_windows():
                     if event.get("type") != "event_msg":
                         continue
                     payload = event.get("payload") or {}
-                    if payload.get("type") != "token_count" or not event.get("timestamp"):
+                    timestamp = event.get("timestamp")
+                    timestamp_epoch = parse_timestamp(timestamp)
+                    if payload.get("type") != "token_count" or timestamp_epoch is None:
                         continue
 
                     rate_limits = payload.get("rate_limits") or {}
@@ -100,22 +114,40 @@ def parse_latest_windows():
                         minutes = window.get("window_minutes")
                         if minutes is None:
                             minutes = legacy_minutes
-                        if minutes not in best:
+                        if minutes not in (300, 10080):
                             continue
                         resets_at = window.get("resets_at")
                         if resets_at is not None and float(resets_at) < now:
                             continue
                         candidate = {
-                            "timestamp": event["timestamp"],
+                            "timestamp": timestamp,
+                            "timestamp_epoch": timestamp_epoch,
                             "path": path,
                             "payload": payload,
                             "window": window,
+                            "minutes": minutes,
                         }
-                        current = best[minutes]
-                        if current is None or candidate_rank(candidate) > candidate_rank(current):
-                            best[minutes] = candidate
+                        candidates.append(candidate)
         except OSError:
             continue
+
+    best = {300: None, 10080: None}
+    if not candidates:
+        return best
+
+    canonical = [candidate for candidate in candidates if is_canonical_codex_limit(candidate["payload"])]
+    anchor = max(canonical or candidates, key=lambda candidate: candidate["timestamp_epoch"])
+
+    # Codex may report the 5h and weekly windows in adjacent token_count events.
+    # Combine those fresh split streams, but never resurrect an old 5h window
+    # after the latest canonical event has stopped reporting it.
+    for candidate in candidates:
+        if abs(candidate["timestamp_epoch"] - anchor["timestamp_epoch"]) > WINDOW_COHERENCE_SECONDS:
+            continue
+        minutes = candidate["minutes"]
+        current = best[minutes]
+        if current is None or candidate_rank(candidate) > candidate_rank(current):
+            best[minutes] = candidate
 
     return best
 

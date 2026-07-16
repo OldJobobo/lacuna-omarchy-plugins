@@ -29,6 +29,8 @@ PopupWindow {
   property int sessionCount: 0
   property int entriesCount: 0
   property bool activeBlock: false
+  property bool sessionAvailable: true
+  property bool sessionAvailabilityKnown: false
   property string resetText: ""
   property string startText: ""
   property string latestText: ""
@@ -104,8 +106,10 @@ PopupWindow {
     property int usedPercent: 0
     property string detail: ""
     property color accent: root.accentColor
+    property bool available: true
 
     spacing: 5
+    opacity: available ? 1 : 0.38
 
     Item {
       width: parent.width
@@ -143,7 +147,7 @@ PopupWindow {
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        width: Math.max(height, Math.round(parent.width * usedPercent / 100))
+        width: available ? Math.max(height, Math.round(parent.width * usedPercent / 100)) : 0
         radius: 3.5
         color: accent
         opacity: 0.92
@@ -161,7 +165,7 @@ PopupWindow {
       Text {
         id: meterUsed
         anchors.left: parent.left
-        text: usedPercent + "% used"
+        text: available ? (usedPercent + "% used") : "not reported"
         color: root.mutedColor
         font.family: root.fontFamily
         font.pixelSize: 11
@@ -170,7 +174,7 @@ PopupWindow {
 
       Text {
         anchors.right: parent.right
-        text: detail + " tokens"
+        text: available && detail.length > 0 ? (detail + " tokens") : ""
         color: root.mutedColor
         font.family: root.fontFamily
         font.pixelSize: 11
@@ -362,7 +366,9 @@ PopupWindow {
           Text {
             id: chipText
             anchors.centerIn: parent
-            text: root.activeBlock ? (root.usedPercent + "% used") : "idle"
+            text: root.sessionAvailabilityKnown && !root.sessionAvailable
+              ? "weekly only"
+              : (root.activeBlock ? (root.usedPercent + "% used") : "idle")
             color: root.accentColor
             font.family: root.fontFamily
             font.pixelSize: 11
@@ -376,10 +382,11 @@ PopupWindow {
       UsageMeter {
         width: parent.width
         title: "5h block"
-        leftLabel: root.activeBlock ? (root.usedPercent + "% used") : "idle"
+        leftLabel: root.sessionAvailable ? (root.activeBlock ? (root.usedPercent + "% used") : "idle") : "suppressed"
         usedPercent: root.usedPercent
         detail: root.resetText.length > 0 ? ("resets " + root.resetText) : ""
         accent: root.accentColor
+        available: root.sessionAvailable
       }
 
       // 7-day window meter.

@@ -26,6 +26,8 @@ Item {
   property int entriesCount: 0
   property var modelsList: []
   property bool activeBlock: false
+  property bool sessionAvailable: true
+  property bool sessionAvailabilityKnown: false
   property bool pendingRefresh: false
   property bool loadedOnce: false
   property bool flyoutOpen: false
@@ -72,10 +74,13 @@ Item {
   readonly property string scriptPath: localPath(Qt.resolvedUrl("scripts/claude-code-status.sh"))
   readonly property url iconSource: Qt.resolvedUrl("assets/claude-ai.svg")
 
-  // Cycling between the 5h block (mode 0) and the 7-day window (mode 1). Weekly
-  // only joins the rotation once it has real data and the setting is on.
+  // Cycling between the 5h block (mode 0) and the 7-day window (mode 1).
+  // Explicit provider absence suppresses the session window until it returns.
+  readonly property bool sessionReady: loadedOnce && sessionAvailable
   readonly property bool weeklyReady: loadedOnce && showWeekly && weekActive
-  readonly property int activeMode: (weeklyReady && (displayCycle % 2 === 1)) ? 1 : 0
+  readonly property int activeMode: !sessionReady && weeklyReady
+    ? 1
+    : ((sessionReady && weeklyReady && (displayCycle % 2 === 1)) ? 1 : 0)
   readonly property string activeClass: activeMode === 1 ? weekClass : cssClass
   readonly property bool actionableState: activeClass === "alert" || activeClass === "low" || activeClass === "over"
   readonly property bool hiddenState: cssClass === "hidden" || (!showIdle && cssClass === "idle" && !weeklyReady)
@@ -145,6 +150,10 @@ Item {
       tokenLimit = Math.max(0, Math.round(Number(payload.limit || 0)))
       sessionCount = Math.max(0, Math.round(Number(payload.sessionCount || 0)))
       activeBlock = payload.active === true
+      var sessionWasAvailable = sessionAvailable
+      sessionAvailable = payload.sessionAvailable !== false
+      sessionAvailabilityKnown = payload.sessionAvailabilityKnown === true
+      if (!sessionWasAvailable && sessionAvailable) displayCycle = 0
       resetText = String(payload.resetText || "")
       startText = String(payload.startText || "")
       latestText = String(payload.latestText || "")
@@ -193,7 +202,7 @@ Item {
   // under them mid-read.
   Timer {
     interval: root.cycleMs
-    running: root.weeklyReady && !root.flyoutOpen && !mouseArea.containsMouse
+    running: root.sessionReady && root.weeklyReady && !root.flyoutOpen && !mouseArea.containsMouse
     repeat: true
     onTriggered: root.displayCycle = (root.displayCycle + 1) % 2
   }
@@ -363,6 +372,8 @@ Item {
     sessionCount: root.sessionCount
     entriesCount: root.entriesCount
     activeBlock: root.activeBlock
+    sessionAvailable: root.sessionAvailable
+    sessionAvailabilityKnown: root.sessionAvailabilityKnown
     resetText: root.resetText
     startText: root.startText
     latestText: root.latestText
