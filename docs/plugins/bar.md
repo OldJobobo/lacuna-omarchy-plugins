@@ -16,6 +16,11 @@ omarchy plugin bar use lacuna.bar
 It owns the Lacuna frame/sidebar choreography and applies a Lacuna module layout
 instead of the stock Omarchy bar plugin set. It is not placed in `bar.layout`.
 
+The Lacuna bar is deliberately opaque so its bar, frame, sidebar, connectors,
+and attached flyouts read as one unified surface. Activating `lacuna.bar`
+normalizes `bar.transparent` to `false`; the stock bar's double-click
+transparency gesture is not part of the Lacuna bar contract.
+
 ## Bar Widgets
 
 Bar widgets are placed in `bar.layout` and receive `bar`, `moduleName`, and

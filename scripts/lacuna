@@ -779,6 +779,10 @@ def apply_lacuna_bar_layout_to_config(config: dict, available: set[str]) -> None
         target.insert(min(index, len(target)), entry)
     pin_bar_size_toggle_last(layout["right"])
     config["bar"]["centerAnchor"] = "lacuna.clock"
+    # Lacuna's unified bar/frame surface is deliberately opaque. Keep the
+    # persisted shell setting aligned with the behavior instead of retaining a
+    # stock-bar transparency request that Lacuna does not implement.
+    config["bar"]["transparent"] = False
 
 
 def pin_bar_size_toggle_last(entries: list[dict]) -> None:

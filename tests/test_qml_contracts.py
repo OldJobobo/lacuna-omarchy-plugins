@@ -310,9 +310,12 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('return "Hack Nerd Font Propo"', bar)
         self.assertIn('return "BlexMono Nerd Font Propo"', bar)
         self.assertIn('return "JetBrainsMono Nerd Font Propo"', bar)
-        self.assertIn("requestedTransparent = false", bar)
         self.assertIn("color: root.background", bar)
         self.assertNotIn('root.transparent ? "transparent" : root.background', bar)
+        self.assertNotIn("function toggleTransparency", bar)
+        self.assertNotIn("function setRequestedTransparency", bar)
+        self.assertNotIn("CenterGestureArea", bar)
+        self.assertNotIn("omarchy-bar-text-color", bar)
 
     def test_lacuna_panel_surface_geometry_is_owned_by_surface_components(self):
         host = read("lacuna.menu/menu/LacunaPanelHost.qml")
@@ -3853,7 +3856,7 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn(snippet, adapter)
             self.assertIn(snippet, implementation)
         self.assertIn("function findPanelWidget(pluginId)", implementation)
-        self.assertIn('"omarchy-bar-text-color"', implementation)
+        self.assertNotIn('"omarchy-bar-text-color"', implementation)
         self.assertNotIn('"omarchy-shell-bar-text-color"', implementation)
 
     def test_simple_bar_helpers_match_canonical_vendored_templates(self):

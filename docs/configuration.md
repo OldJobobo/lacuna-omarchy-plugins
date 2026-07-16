@@ -22,7 +22,9 @@ NotificationCenter, Indicators, Audio, Network, Bluetooth, and Power.
 
 Activating `lacuna.bar` through the installer applies the Lacuna-owned host
 layout automatically and removes stock `omarchy.*` bar modules from that
-layout.
+layout. It also writes `bar.transparent` as `false`: Lacuna's unified
+bar/frame/sidebar surface is intentionally opaque and does not expose the
+stock bar's transparency toggle.
 
 ## Lacuna Runtime State
 

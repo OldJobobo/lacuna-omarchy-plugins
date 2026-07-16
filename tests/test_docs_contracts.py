@@ -87,6 +87,16 @@ class DocsContractTests(unittest.TestCase):
             self.assertIn(f"- `{plugin_id}`", docs)
         self.assertIn("keep the current plugin IDs", docs)
 
+    def test_lacuna_bar_docs_define_the_opaque_surface_contract(self):
+        bar = (ROOT / "docs" / "plugins" / "bar.md").read_text(encoding="utf-8")
+        configuration = (ROOT / "docs" / "configuration.md").read_text(encoding="utf-8")
+
+        self.assertIn("The Lacuna bar is deliberately opaque", bar)
+        self.assertIn("normalizes `bar.transparent` to `false`", bar)
+        self.assertIn("stock bar's double-click", bar)
+        self.assertIn("transparency gesture is not part of the Lacuna bar contract", bar)
+        self.assertIn("writes `bar.transparent` as `false`", configuration)
+
     def test_completed_panel_and_frame_plans_are_not_left_active(self):
         for path in [
             ROOT / "docs" / "plans" / "lacuna-panel-ui-overhaul-plan.md",

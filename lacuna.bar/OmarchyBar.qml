@@ -43,9 +43,6 @@ Item {
   })
   property var layoutConfig: fallbackBarConfig.layout
   property string centerAnchor: ""
-  property bool requestedTransparent: false
-  property bool useTransparentForeground: false
-  property bool transparent: false
   property bool centerSectionHovered: false
   property bool centerSectionRevealHeld: false
   property bool centerHoverRevealSuppressed: false
@@ -59,11 +56,8 @@ Item {
   // Bound to the central Color singleton so the bar tracks shell.toml's
   // [bar] section. Property names kept for the rest of this file's bindings.
   property color themeForeground: Color.bar.text
-  property color themeContrastForeground: Color.background
-  property color transparentForeground: Color.bar.text
   property color foreground: themeForeground
-  property color barForeground: useTransparentForeground ? transparentForeground : themeForeground
-  property bool foregroundAnimationEnabled: true
+  property color barForeground: themeForeground
   property color background: opaqueColor(Color.bar.background)
   property color urgent: Color.bar.active
   // Theme accent, exposed to bar widgets (e.g. lacuna.bar-seam breathing glow,
@@ -82,7 +76,7 @@ Item {
     return text
   }
 
-  Behavior on barForeground { enabled: root.foregroundAnimationEnabled; ColorAnimation { duration: 420; easing.type: Easing.InOutCubic } }
+  Behavior on barForeground { ColorAnimation { duration: 420; easing.type: Easing.InOutCubic } }
   Behavior on background { ColorAnimation { duration: 420; easing.type: Easing.InOutCubic } }
   Behavior on urgent { ColorAnimation { duration: 420; easing.type: Easing.InOutCubic } }
   property var tooltipTarget: null
@@ -404,7 +398,6 @@ Item {
     var config = Util.isPlainObject(barConfig) ? barConfig : fallbackBarConfig
 
     position = normalizePosition(config.position)
-    setRequestedTransparency(config.transparent === true)
     centerAnchor = Util.canonicalWidgetId(config.centerAnchor || "")
     layoutConfig = normalizeLayout(config.layout)
     barConfigSerial++
@@ -572,18 +565,6 @@ Item {
       return true
     }
     return false
-  }
-
-  function toggleTransparency() {
-    var nextTransparent = !(root.requestedTransparent === true)
-    if (root.shell && typeof root.shell.mutateShellConfig === "function") {
-      root.shell.mutateShellConfig(function(config) {
-        if (!Util.isPlainObject(config.bar)) config.bar = {}
-        config.bar.transparent = nextTransparent
-      })
-    } else {
-      root.setRequestedTransparency(nextTransparent)
-    }
   }
 
   function rawLayoutSection(config, region) {
@@ -763,93 +744,10 @@ Item {
     return true
   }
 
-  function colorHex(colorValue) {
-    var c = colorValue
-    if (typeof c === "string") c = Qt.color(c)
-    function hexChannel(value) {
-      var s = Math.round(Util.clamp(value, 0, 1) * 255).toString(16)
-      return s.length < 2 ? "0" + s : s
-    }
-    return "#" + hexChannel(c.r) + hexChannel(c.g) + hexChannel(c.b)
-  }
-
   function opaqueColor(colorValue) {
     var c = colorValue
     if (typeof c === "string") c = Qt.color(c)
     return Qt.rgba(c.r, c.g, c.b, 1)
-  }
-
-  function setRequestedTransparency(value) {
-    requestedTransparent = false
-    foregroundAnimationEnabled = false
-    useTransparentForeground = false
-    transparent = false
-    transparentForeground = themeForeground
-    restoreForegroundAnimation()
-  }
-
-  function restoreForegroundAnimation() {
-    Qt.callLater(function() {
-      Qt.callLater(function() { root.foregroundAnimationEnabled = true })
-    })
-  }
-
-  function scheduleTransparentForegroundRefresh() {
-    if (!requestedTransparent) {
-      transparentForeground = themeForeground
-      return
-    }
-    transparentForegroundTimer.restart()
-  }
-
-  function refreshTransparentForeground() {
-    if (!requestedTransparent || transparentForegroundProc.running) return
-
-    transparentForegroundProc.command = [
-      "omarchy-bar-text-color",
-      root.position,
-      String(root.barSize),
-      colorHex(root.themeForeground),
-      colorHex(root.themeContrastForeground)
-    ]
-    transparentForegroundProc.running = true
-  }
-
-  onRequestedTransparentChanged: scheduleTransparentForegroundRefresh()
-  onPositionChanged: scheduleTransparentForegroundRefresh()
-  onThemeForegroundChanged: scheduleTransparentForegroundRefresh()
-  onThemeContrastForegroundChanged: scheduleTransparentForegroundRefresh()
-
-  Timer {
-    id: transparentForegroundTimer
-    interval: 120
-    repeat: false
-    onTriggered: root.refreshTransparentForeground()
-  }
-
-  Process {
-    id: transparentForegroundProc
-    stdout: SplitParser {
-      onRead: function(line) {
-        var value = String(line || "").trim()
-        if (!/^#[0-9A-Fa-f]{6}$/.test(value)) return
-
-        root.foregroundAnimationEnabled = false
-        root.transparentForeground = value
-        if (root.requestedTransparent) {
-          root.useTransparentForeground = true
-          root.transparent = true
-        }
-        root.restoreForegroundAnimation()
-      }
-    }
-  }
-
-  FileView {
-    path: root.home + "/.config/omarchy/current"
-    watchChanges: true
-    printErrors: false
-    onFileChanged: root.scheduleTransparentForegroundRefresh()
   }
 
   function runProcess(process) {
@@ -1179,8 +1077,6 @@ Item {
       Item {
         anchors.fill: parent
 
-        CenterGestureArea { anchors.fill: parent }
-
         HoverHandler {
           onHoveredChanged: root.setCenterSectionHovered(hovered)
         }
@@ -1235,8 +1131,6 @@ Item {
       Item {
         anchors.fill: parent
 
-        CenterGestureArea { anchors.fill: parent }
-
         HoverHandler {
           onHoveredChanged: root.setCenterSectionHovered(hovered)
         }
@@ -1282,17 +1176,6 @@ Item {
           anchors.top: centerAnchorModule.bottom
           anchors.horizontalCenter: centerAnchorModule.horizontalCenter
         }
-      }
-    }
-  }
-
-  component CenterGestureArea: MouseArea {
-    acceptedButtons: Qt.LeftButton
-
-    onDoubleClicked: function(mouse) {
-      if (mouse.button === Qt.LeftButton) {
-        root.toggleTransparency()
-        mouse.accepted = true
       }
     }
   }

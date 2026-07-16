@@ -562,6 +562,7 @@ class LacunaInstallerTests(unittest.TestCase):
 
         self.assertEqual(result, 0)
         self.assertEqual(data["bar"]["id"], "lacuna.bar")
+        self.assertIs(data["bar"]["transparent"], False)
         self.assertEqual(
             ["lacuna.bluetooth", "lacuna.network", "lacuna.audio", "lacuna.power"],
             [plugin_id for plugin_id in layout_ids if plugin_id in {"lacuna.bluetooth", "lacuna.network", "lacuna.audio", "lacuna.power"}],
@@ -576,6 +577,21 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertIn({"id": "lacuna.temperature", "mode": "compact"}, data["bar"]["layout"]["right"])
         self.assertIn({"id": "lacuna.power", "showPercent": True}, data["bar"]["layout"]["right"])
         self.assertEqual("lacuna.bar-size-pill", data["bar"]["layout"]["right"][-1]["id"])
+
+    def test_lacuna_bar_layout_normalizes_transparency_off(self):
+        module = load_installer_module()
+        config = module.ensure_shell_config_shape(
+            {
+                "bar": {
+                    "transparent": True,
+                    "layout": {"left": [], "center": [], "right": []},
+                }
+            }
+        )
+
+        module.apply_lacuna_bar_layout_to_config(config, set())
+
+        self.assertIs(config["bar"]["transparent"], False)
 
     def test_lacuna_bar_layout_uses_available_modules_and_preserves_entry_settings(self):
         module = load_installer_module()
