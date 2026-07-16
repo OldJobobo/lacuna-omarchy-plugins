@@ -1,6 +1,6 @@
 # Lacuna Quattro Roadmap
 
-Status: active project control (updated 2026-07-12)
+Status: active project control (updated 2026-07-15)
 
 This is the canonical roadmap for turning Lacuna into a first-class desktop
 enhancement for Omarchy Quattro. It is intentionally narrower than the full
@@ -225,9 +225,9 @@ true:
 - Target environment: Omarchy 4.0.0 alpha/Quattro development builds.
 - Runtime model: one long-running Quickshell process with top-level Lacuna
   plugin directories.
-- Validation on 2026-07-12 reports 265 passing tests and 3 environment skips.
+- Validation on 2026-07-15 reports 301 passing tests and 3 environment skips.
   Treat this as a dated observation, not a pinned expected count.
 - `scripts/quattro-compatibility --check` reports compatibility with Omarchy
-  `4.0.0.r1043.g17efd5e-1` and Quickshell `0.3.0-2` on the current machine.
+  `4.0.0.r1054.g2f7a07e-1` and Quickshell `0.3.0-2` on the current machine.
 - The suite and all manifests currently report `0.1.0`; the next publishable
   artifact is `0.1.0-beta.1`, not `0.0.1-beta`.

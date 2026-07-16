@@ -1,6 +1,6 @@
 # Quattro Compatibility Ledger
 
-Status: reference (updated 2026-07-12)
+Status: reference (updated 2026-07-15)
 
 This is the compatibility record for the Lacuna core bundle on Omarchy
 Quattro. It is intentionally a ledger, not a promise that every future
@@ -10,12 +10,12 @@ Omarchy development build is supported.
 
 | Component | Observed value |
 | --- | --- |
-| Omarchy package | `omarchy-dev 4.0.0.r1043.g17efd5e-1` |
+| Omarchy package | `omarchy-dev 4.0.0.r1054.g2f7a07e-1` |
 | Quickshell package | `quickshell 0.3.0-2` |
 | Omarchy path | `/usr/share/omarchy` |
 | Upstream bar source | `/usr/share/omarchy/shell/plugins/bar/` |
-| Bar source revision | package revision `17efd5e` (encoded in the Omarchy package version) |
-| Target date | 2026-07-12 |
+| Bar source revision | package revision `2f7a07e` (encoded in the Omarchy package version) |
+| Target date | 2026-07-15 |
 
 The current upstream bar source is package-managed rather than a Git checkout,
 so the package version and source hashes are the authoritative revision record
@@ -23,7 +23,7 @@ on this machine:
 
 | File | SHA-256 |
 | --- | --- |
-| `shell/plugins/bar/Bar.qml` | `6e18f9b249acf3d64a51f34004907ee77be76c780cba989d8be3869a65bb74e9` |
+| `shell/plugins/bar/Bar.qml` | `d566f03cc57c38f552eed05748250027d6b9daee6b8cdb695eadc60fd684eb93` |
 | `shell/plugins/bar/BarModel.js` | `729f86bc475ad3b6383bfff4b44a64132da2a5cd36e5470ca4d6bec9ee3712c0` |
 | `shell/shell.qml` | `1aa87fad78f7edaa5e40f4603a1e115f5036235ae26b631ade4d8fecf016690c` |
 
@@ -31,6 +31,17 @@ on this machine:
 `lacuna.bar/OmarchyBar.qml` is intentionally Lacuna-owned and diverges from
 the upstream `Bar.qml`; that divergence is declared in
 `lacuna.bar/manifest.json` and must not be silently synchronized.
+
+### r1043 to r1054 review
+
+The cached r1043 and r1054 packages differ in exactly one reviewed bar-host
+line: upstream `Bar.qml` adds `surfaceFormat.opaque: false`. Upstream
+`BarModel.js` and `shell.qml` are byte-identical across the two packages. The
+new surface-format declaration supports the stock bar's transparent mode; it
+does not change Lacuna's host, injection, layout, slot-measurement, registry,
+geometry, or layer contracts. No source port is required because `lacuna.bar`
+deliberately renders an opaque unified bar/frame/sidebar surface and activation
+normalizes `bar.transparent` to `false`.
 
 ## Compatibility check
 

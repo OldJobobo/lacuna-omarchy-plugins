@@ -1,3 +1,4 @@
+import json
 import unittest
 from pathlib import Path
 
@@ -113,7 +114,7 @@ class DocsContractTests(unittest.TestCase):
         plans_index = (ROOT / "docs" / "plans" / "README.md").read_text(encoding="utf-8")
         historical_tracker = (ROOT / "docs" / "plans" / "lacuna-suite-improvement-plan.md").read_text(encoding="utf-8")
 
-        self.assertIn("Status: active project control (updated 2026-07-12)", roadmap)
+        self.assertIn("Status: active project control (updated 2026-07-15)", roadmap)
         self.assertIn("`lacuna.bar` is the intentional custom bar host", roadmap)
         self.assertIn("P0 — Core foundation", roadmap)
         self.assertIn("P1 — Product integration", roadmap)
@@ -168,6 +169,19 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("Status: in progress; beta/RC release-readiness track", p2)
         self.assertIn("P2 runs alongside P1", p2)
         self.assertIn("0.1.0-beta.N -> 0.1.0-rc.N -> 0.1.0", release)
+
+    def test_quattro_compatibility_docs_match_reviewed_baseline(self):
+        compatibility = json.loads((ROOT / "config" / "quattro-compatibility.json").read_text(encoding="utf-8"))
+        ledger = (ROOT / "docs" / "architecture" / "quattro-compatibility.md").read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
+
+        version = compatibility["reviewedOmarchyVersion"]
+        self.assertIn(version, ledger)
+        self.assertIn(version, roadmap)
+        for digest in compatibility["upstreamFiles"].values():
+            self.assertIn(digest, ledger)
+        self.assertIn("r1043 to r1054 review", ledger)
+        self.assertIn("`surfaceFormat.opaque: false`", ledger)
 
     def test_distribution_scaffolding_exists(self):
         for name in [
