@@ -2719,6 +2719,32 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("Nightlight", panel)
         self.assertIn("setManagedToggles", panel)
 
+    def test_review_regressions_are_guarded(self):
+        network = read("lacuna.network/Service.qml")
+        self.assertIn("return !!(row && row.known && !row.connected)", network)
+        self.assertNotIn("row.known && isProtected(row.security) && !row.connected", network)
+
+        wallpaper = read("lacuna.wallpaper/WallpaperFlyout.qml")
+        self.assertIn("function localFileUrl(path)", wallpaper)
+        self.assertIn('encodeURIComponent(value).replace(/%2F/gi, "/")', wallpaper)
+        self.assertIn("source: root.localFileUrl(root.backgroundPath)", wallpaper)
+        self.assertNotIn('source: root.backgroundPath ? "file://" + root.backgroundPath : ""', wallpaper)
+
+        for path in [
+            "lacuna.shell-settings/CommandRunner.qml",
+            "lacuna.menu/services/CommandRunner.qml",
+        ]:
+            runner = read(path)
+            self.assertIn("signal queueDrained()", runner, path)
+            self.assertIn("if (!proc.running && root.queue.length === 0) root.queueDrained()", runner, path)
+
+        for path in [
+            "lacuna.shell-settings/Service.qml",
+            "lacuna.menu/services/OmarchyShellSettingsService.qml",
+        ]:
+            service = read(path)
+            self.assertIn("function onQueueDrained() { root.scheduleRefresh() }", service, path)
+
     def test_shell_settings_service_uses_omarchy_4_toggle_contracts(self):
         for path in [
             "lacuna.shell-settings/Service.qml",
