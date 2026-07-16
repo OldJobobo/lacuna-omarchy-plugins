@@ -1,6 +1,6 @@
 # Lacuna Quattro Roadmap
 
-Status: active project control (updated 2026-07-15)
+Status: active project control (updated 2026-07-16)
 
 This is the canonical roadmap for turning Lacuna into a first-class desktop
 enhancement for Omarchy Quattro. It is intentionally narrower than the full
@@ -120,6 +120,8 @@ Lacuna's identity.
 Deliverables:
 
 - native-service integration matrix
+- provider-capability-aware usage widgets that distinguish unavailable,
+  suppressed, and temporarily unknown quota windows
 - pointer-first interaction that preserves focus for the active application
 - settings UI completeness and subsetting round trips
 - media lifecycle and provider failure recovery
@@ -225,9 +227,16 @@ true:
 - Target environment: Omarchy 4.0.0 alpha/Quattro development builds.
 - Runtime model: one long-running Quickshell process with top-level Lacuna
   plugin directories.
-- Validation on 2026-07-15 reports 301 passing tests and 3 environment skips.
+- Validation on 2026-07-16 reports 305 passing tests and 3 environment skips.
   Treat this as a dated observation, not a pinned expected count.
 - `scripts/quattro-compatibility --check` reports compatibility with Omarchy
   `4.0.0.r1054.g2f7a07e-1` and Quickshell `0.3.0-2` on the current machine.
+- The r1054 review is accepted: its only reviewed bar-host delta is the stock
+  transparent-surface declaration, which does not change Lacuna's deliberately
+  opaque custom bar contract.
+- Codex currently reports a weekly-only quota window, so its 5-hour readout is
+  suppressed in the bar and dimmed in the flyout. Claude currently reports both
+  session and weekly windows through its authenticated usage endpoint. Both
+  widgets restore a provider window automatically if it reappears.
 - The suite and all manifests currently report `0.1.0`; the next publishable
   artifact is `0.1.0-beta.1`, not `0.0.1-beta`.

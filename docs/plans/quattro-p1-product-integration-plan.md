@@ -1,6 +1,6 @@
 # Quattro P1 — Product Integration Plan
 
-Status: in progress; beta product-readiness track (reviewed 2026-07-12)
+Status: in progress; beta product-readiness track (reviewed 2026-07-16)
 
 P1 builds on the P0 core foundation and makes Lacuna feel like a complete,
 native Quattro desktop layer while preserving its custom bar and frame.
@@ -21,7 +21,7 @@ native Omarchy integration boundary, and a predictable failure mode.
 
 | Workstream | Status | Current evidence | Remaining beta boundary |
 | --- | --- | --- | --- |
-| Native service integration | Mostly complete | Ownership policy and service implementations exist. | Finish the complete owner/action/failure matrix and coexistence checks. |
+| Native service integration | Mostly complete | Ownership policy, service implementations, and capability-aware Codex/Claude quota states exist. | Finish the complete owner/action/failure matrix and coexistence checks. |
 | Settings and subsettings | In progress | Versioned state, migration, corrupt-state recovery, and nested helpers exist. | Inventory every control/key and close deterministic round-trip gaps. |
 | Interaction and focus safety | In progress; general keyboard navigation removed from scope | Pointer interaction, semantic labels, Media Search text entry, Escape dismissal, and click-away dismissal exist. | Keep passive sidebar use pointer-driven, scope keyboard focus to intentional text entry, and prove focus restoration and dismissal without turning the sidebar into a keyboard-navigated surface. |
 | Media reliability | In progress | Playback services, provider scripts, video transition behavior, and failure tests exist. | Document ownership; cover provider cancellation, redaction, restart, and fallback. |
@@ -42,6 +42,11 @@ Tasks:
   state, and other user-visible side effects.
 - Verify simple bar widgets use the correct injected properties and direct
   Quickshell service access.
+- Treat optional provider quota windows as capabilities: suppress absent windows
+  in the bar, retain a clearly unavailable flyout row, and restore the window
+  automatically if the provider reports it again.
+- Distinguish an explicitly absent provider window from an unknown state caused
+  by expired authentication, unavailable endpoints, or local probe failures.
 
 Primary files:
 
@@ -62,6 +67,9 @@ Acceptance:
 - Native widgets can coexist with the Lacuna bar without duplicate output.
 - Service failures degrade to a clear unavailable state rather than breaking
   the bar or menu.
+- Provider-dependent usage widgets never present stale historical windows as
+  current limits and never claim suppression when provider capability is merely
+  unknown.
 
 ## Workstream 2 — Settings and subsetting UX
 
@@ -232,6 +240,22 @@ omarchy-shell shell summon lacuna.menu "{}"
 
 P1 is complete when core workflows, native services, settings, pointer/focus
 safety, and media recovery behave as one coherent product.
+
+## Delivered Checkpoint — 2026-07-16
+
+- `lacuna.codex-usage` now rejects stale historical 5-hour windows, switches the
+  bar to weekly-only when the current provider payload omits the session window,
+  and dims the retained flyout row as suppressed.
+- `lacuna.claude-usage` now reads the authenticated provider usage endpoint when
+  available, distinguishes explicit window absence from probe uncertainty, and
+  falls back to calibrated local estimates without making a false suppression
+  claim.
+- Both widgets automatically restore normal session/weekly rotation when the
+  provider reports the session window again.
+- Runtime behavior, QML contracts, script fixtures, live deployment, and
+  installed-copy verification cover the transition in both directions.
+- This closes the usage-widget capability-state slice of Workstream 1. It does
+  not close the remaining native integration matrix or the P1 beta exit gate.
 
 ## Beta Exit Record
 

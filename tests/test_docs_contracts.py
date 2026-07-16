@@ -114,7 +114,7 @@ class DocsContractTests(unittest.TestCase):
         plans_index = (ROOT / "docs" / "plans" / "README.md").read_text(encoding="utf-8")
         historical_tracker = (ROOT / "docs" / "plans" / "lacuna-suite-improvement-plan.md").read_text(encoding="utf-8")
 
-        self.assertIn("Status: active project control (updated 2026-07-15)", roadmap)
+        self.assertIn("Status: active project control (updated 2026-07-16)", roadmap)
         self.assertIn("`lacuna.bar` is the intentional custom bar host", roadmap)
         self.assertIn("P0 — Core foundation", roadmap)
         self.assertIn("P1 — Product integration", roadmap)
@@ -125,6 +125,8 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("The semi-persistent sidebar remains pointer-driven", roadmap)
         self.assertIn("Media Search may take scoped focus", roadmap)
         self.assertIn("canonical omakase setup", roadmap)
+        self.assertIn("provider-capability-aware usage widgets", roadmap)
+        self.assertIn("Codex currently reports a weekly-only quota window", roadmap)
         self.assertNotIn("`core`, `native`, and `advanced` profiles have documented boundaries", roadmap)
         self.assertIn("## Active Release Tracks", plans_index)
         self.assertIn("## Separate Non-Blocking Proposals", plans_index)
@@ -158,6 +160,9 @@ class DocsContractTests(unittest.TestCase):
         p2 = (ROOT / "docs" / "plans" / "quattro-p2-release-and-evolution-plan.md").read_text(encoding="utf-8")
         release = (ROOT / "docs" / "development" / "release.md").read_text(encoding="utf-8")
         self.assertIn("Status: in progress; beta product-readiness track", p1)
+        self.assertIn("Delivered Checkpoint — 2026-07-16", p1)
+        self.assertIn("never present stale historical windows", p1)
+        self.assertIn("never claim suppression", p1)
         self.assertIn("General keyboard navigation and Tab traversal", p1)
         self.assertIn("Media Search field may receive keyboard input", p1)
         self.assertIn("Escape may close an active flyout", p1)
@@ -168,6 +173,8 @@ class DocsContractTests(unittest.TestCase):
         self.assertNotIn("tests/test_media_player_worker.py", p1)
         self.assertIn("Status: in progress; beta/RC release-readiness track", p2)
         self.assertIn("P2 runs alongside P1", p2)
+        self.assertIn("Current development target accepted", p2)
+        self.assertIn("Accepted Omarchy `4.0.0.r1054.g2f7a07e-1`", p2)
         self.assertIn("0.1.0-beta.N -> 0.1.0-rc.N -> 0.1.0", release)
 
     def test_quattro_compatibility_docs_match_reviewed_baseline(self):

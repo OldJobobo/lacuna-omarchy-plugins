@@ -211,3 +211,15 @@ scripts/quattro-p0-smoke                    PASS
 live deploy                                 lacuna.bar, lacuna.menu, lacuna.state verified
 live focused-output smoke                   sidebar followed focused DP-3
 ```
+
+### Compatibility refresh — 2026-07-15
+
+- Reviewed the Omarchy r1043-to-r1054 bar-host delta and accepted
+  `4.0.0.r1054.g2f7a07e-1` with Quickshell `0.3.0-2` as the current development
+  baseline.
+- Confirmed the only reviewed upstream bar change is
+  `surfaceFormat.opaque: false`, which supports the stock transparent bar and
+  does not alter Lacuna's injection, layout, registry, geometry, layer, or
+  deliberately opaque surface contracts.
+- Updated the compatibility hashes and executable ledger check; the live
+  checker reports `compatible`.

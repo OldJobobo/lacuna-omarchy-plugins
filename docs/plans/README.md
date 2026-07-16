@@ -1,6 +1,6 @@
 # Lacuna Plan Index
 
-Status: current planning ledger (reviewed 2026-07-12)
+Status: current planning ledger (reviewed 2026-07-16)
 
 This is the meta index for every document in `docs/plans/`. It records which
 plans are proposed, complete, implemented, reverted, or superseded. The
@@ -12,8 +12,8 @@ an entry here does not make a historical plan active again.
 | Plan | State | Role and next boundary |
 | --- | --- | --- |
 | [Sidebar And Settings Flyout Stability](./sidebar-settings-flyout-stability-plan.md) | Completed and user-verified | Keeps the shared layer-shell surface at a fixed width so settings flyouts cannot squeeze or redraw the persistent sidebar. |
-| [Quattro P1 — Product Integration](./quattro-p1-product-integration-plan.md) | In progress; beta product readiness | Close settings, sidebar focus safety, media recovery, native integration, and the canonical omakase setup. General keyboard navigation is excluded; scoped Media Search typing and Escape/click-away dismissal remain supported. |
-| [Quattro P2 — Release And Evolution](./quattro-p2-release-and-evolution-plan.md) | In progress alongside P1 | Close compatibility, diagnostics, packaging, migration, documentation, beta, and RC gates. |
+| [Quattro P1 — Product Integration](./quattro-p1-product-integration-plan.md) | In progress; beta product readiness | Capability-aware Codex/Claude usage states are implemented and live-verified. Remaining work closes the full native ownership matrix, settings, sidebar focus safety, media recovery, and canonical omakase setup. General keyboard navigation is excluded; scoped Media Search typing and Escape/click-away dismissal remain supported. |
+| [Quattro P2 — Release And Evolution](./quattro-p2-release-and-evolution-plan.md) | In progress alongside P1 | The r1054 compatibility baseline is accepted. Remaining work closes the multi-target support declaration, diagnostics, packaging, migration, documentation, beta, and RC gates. |
 
 ## Separate Non-Blocking Proposals
 
@@ -31,7 +31,7 @@ These documents are not part of the beta or RC critical path.
 | --- | --- | --- |
 | [Weather Flyout](./lacuna-weather-flyout-plan.md) | Implemented and live-verified 2026-07-13 | Current conditions, three future days, resilient shared data state, popout coordination, and four-edge molded geometry. |
 | [Clock And Calendar Flyout](./lacuna-clock-calendar-flyout-plan.md) | Implemented and live-verified 2026-07-13 | Adaptive date/time face, read-only month grid, popout coordination, and four-edge molded geometry; calendar providers remain excluded. |
-| [Quattro P0 — Core Foundation](./quattro-p0-core-foundation-plan.md) | Complete; validated 2026-07-10 | Foundation checkpoint for settings, geometry, installation, recovery, and validation. |
+| [Quattro P0 — Core Foundation](./quattro-p0-core-foundation-plan.md) | Complete; validated 2026-07-10, compatibility refreshed 2026-07-15 | Foundation checkpoint for settings, geometry, installation, recovery, and the accepted Omarchy r1054 baseline. |
 | [Lacuna Bar Refactor](./lacuna-bar-refactor-plan.md) | Complete | Current custom bar-host composition; living behavior is in source and architecture docs. |
 | [Bar Size Mode](./lacuna-bar-size-mode-plan.md) | Implemented | Retained as design notes and a manual smoke checklist. |
 | [Fake Fullscreen Frame](./lacuna-fake-fullscreen-frame-plan.md) | Complete | Frame implementation record; current geometry and stacking rules live in architecture/design-system docs. |

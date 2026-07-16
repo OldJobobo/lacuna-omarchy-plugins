@@ -1,6 +1,6 @@
 # Quattro P2 — Release And Evolution Plan
 
-Status: in progress; beta/RC release-readiness track (reviewed 2026-07-11)
+Status: in progress; beta/RC release-readiness track (reviewed 2026-07-16)
 
 P2 makes the suite maintainable across Quattro updates and safe to extend
 after the core shell and product integration contracts are stable.
@@ -25,10 +25,10 @@ release rehearsal should not wait for all product work to finish.
 
 | Workstream | Status | Current evidence | Remaining release boundary |
 | --- | --- | --- | --- |
-| Compatibility | Mostly complete for one target | Executable ledger check, vendored parity, and plugin checks exist. | Declare minimum/current/release-tested targets and record release results. |
+| Compatibility | Current development target accepted | The r1054 delta was reviewed; executable ledger, hashes, vendored parity, plugin checks, and live compatibility pass. | Declare minimum and release-tested targets, then record beta/RC results. |
 | Diagnostics | In progress | `scripts/lacuna status` distinguishes staged/enabled versions. | Add core health, active host, migration, monitor policy, failures, and recovery actions. |
 | Release and migration | In progress | Version parity tests, changelog, rollback-capable installer, and tag workflow exist. | Add one bump/rehearsal procedure, inventory, migration notes, and committed-tree archive verification. |
-| Documentation consistency | In progress | Canonical roadmap/index and docs contracts exist. | Remove drift and validate release claims/links/commands. |
+| Documentation consistency | In progress | Canonical roadmap/index, phase status, current r1054 baseline, and docs contracts agree. | Continue removing drift and validate release claims, links, and commands. |
 | Structural evolution | Deferred | Existing behavior tests permit later bounded cleanup. | Not a beta/RC gate unless required to fix a blocker. |
 | P2 validation | Pending | Local checks and compatibility pass. | Run beta and RC artifact rehearsals. |
 
@@ -172,6 +172,17 @@ omarchy-shell shell listShellConfig
 
 P2 is complete when a release can be installed, diagnosed, upgraded, rolled
 back, and understood without relying on private project knowledge.
+
+## Delivered Checkpoint — 2026-07-16
+
+- Accepted Omarchy `4.0.0.r1054.g2f7a07e-1` with Quickshell `0.3.0-2` as the
+  current development target after reviewing the r1043-to-r1054 source delta.
+- Recorded the current upstream hashes and the Lacuna-specific decision not to
+  port the stock transparent-surface declaration into the opaque custom host.
+- Re-ran the executable compatibility check successfully.
+- This advances Workstream 1 for the current target only. Minimum-supported and
+  release-tested target declarations plus beta/RC artifact rehearsals remain
+  open.
 
 ## Promotion Gates
 
