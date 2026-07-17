@@ -17,13 +17,20 @@ native Omarchy integration boundary, and a predictable failure mode.
 - P0 geometry and monitor policy
 - P0 installer/recovery workflow
 
+## Closeout Execution
+
+The ordered subagent implementation, review, deployment, and beta-evidence
+workflow is defined in the
+[Quattro P1 Closeout Execution Plan](quattro-p1-closeout-execution-plan.md).
+This document remains the product and acceptance authority.
+
 ## Progress Summary
 
 | Workstream | Status | Current evidence | Remaining beta boundary |
 | --- | --- | --- | --- |
 | Native service integration | Mostly complete | Ownership policy, service implementations, and capability-aware Codex/Claude quota states exist. | Finish the complete owner/action/failure matrix and coexistence checks. |
 | Settings and subsettings | In progress | Versioned state, migration, corrupt-state recovery, and nested helpers exist. | Inventory every control/key and close deterministic round-trip gaps. |
-| Interaction and focus safety | In progress; general keyboard navigation removed from scope | Pointer interaction, semantic labels, Media Search text entry, Escape dismissal, and click-away dismissal exist. | Keep passive sidebar use pointer-driven, scope keyboard focus to intentional text entry, and prove focus restoration and dismissal without turning the sidebar into a keyboard-navigated surface. |
+| Interaction and focus safety | In progress; general keyboard navigation removed from scope | Pointer interaction, semantic labels, scoped text entry, Escape dismissal, and click-away dismissal exist. | Keep the passive sidebar pointer-driven, allow bounded flyout focus for dismissal and intentional text entry, add Backspace dismissal outside text editing, and prove focus restoration without turning flyouts into keyboard-navigated surfaces. |
 | Media reliability | In progress | Playback services, provider scripts, video transition behavior, and failure tests exist. | Document ownership; cover provider cancellation, redaction, restart, and fallback. |
 | Omakase setup and customization | In progress | The installer already has a full default, manifest metadata, and catalog grouping. | Define one canonical designed setup and prove safe customization and reset behavior. |
 | P1 validation | Pending | Repository and P0 checks pass. | Complete the beta product matrix and live smoke record. |
@@ -108,31 +115,38 @@ Acceptance:
 ## Workstream 3 — Pointer interaction and focus safety
 
 Product decision: the Lacuna sidebar is a semi-persistent desktop surface, not
-a modal application window. General keyboard navigation and Tab traversal
-inside the sidebar or its attached flyouts are out of scope. Intentional text
-entry remains supported: the Media Search field may receive keyboard input,
-Escape may close an active flyout, and clicking outside may dismiss it. The
-surface must not take keyboard focus merely because it or a flyout is visible.
+a keyboard-navigated application window. General keyboard navigation, Tab
+traversal, arrow-key traversal, and keyboard activation of ordinary flyout
+controls are out of scope. A mapped sidebar without an interactive flyout must
+remain pointer-driven and must not acquire keyboard focus. An open interactive
+flyout may temporarily acquire bounded compositor focus only to support
+click-away dismissal, `Escape` or `Backspace` dismissal, focus restoration, and
+intentional text entry. Backspace edits text when consumed by an active text
+field; otherwise it dismisses the flyout.
 
 Tasks:
 
-- Keep passive sidebar and flyout use at `WlrKeyboardFocus.None`.
-- Allow a scoped keyboard-focus state for an explicitly activated text-entry
-  control such as Media Search; end that state immediately when the flyout is
-  dismissed or the search interaction ends.
-- Support Escape dismissal while a flyout owns scoped keyboard focus.
-- Preserve click-away dismissal for interactive flyouts, with any focus grab
-  limited to that dismissal lifecycle and never activated solely because the
+- Keep the mapped sidebar at `WlrKeyboardFocus.None` when no interactive flyout
+  is open.
+- Allow an interactive flyout to use bounded `WlrKeyboardFocus.OnDemand` and a
+  focus grab for dismissal; end that lifecycle immediately when the flyout
+  closes.
+- Allow a scoped text-entry focus state for explicitly activated fields such as
+  Media Search; do not turn that state into general control navigation.
+- Support `Escape` dismissal for every interactive flyout and `Backspace`
+  dismissal whenever an active text field does not consume the key.
+- Preserve click-away dismissal for interactive flyouts, with the focus grab
+  limited to the flyout lifecycle and never activated solely because the
   persistent sidebar is mapped.
-- Restore focus to the previously active application after Escape, click-away,
-  or explicit close.
-- Retain meaningful accessible names and roles where they do not make controls
-  keyboard-focusable or change compositor focus policy.
+- Restore focus to the previously active application after Escape, Backspace,
+  click-away, or explicit close.
+- Retain meaningful accessible names and roles without enabling Tab, arrow-key,
+  or keyboard-activation paths for ordinary pointer controls.
 - Keep tooltip targets and hover affordances understandable through visible
   labels or pointer-accessible controls.
 - Move workflows requiring broader keyboard navigation than direct text entry
   into a separate transient/modal surface with an explicit focus lifecycle; do
-  not turn the persistent sidebar host into a Tab-navigated surface.
+  not turn the persistent sidebar host into a keyboard-navigated surface.
 - Ensure click-through frame and overlay surfaces do not steal input.
 
 Primary files:
@@ -150,15 +164,18 @@ Testing boundary:
 
 Acceptance:
 
-- Opening the sidebar or a non-text flyout does not steal keyboard focus from
-  the active application.
-- Activating Media Search accepts typing; Escape, click-away, and explicit
-  close dismiss the flyout and restore application focus.
-- Layer-shell keyboard focus changes only for the bounded text-entry lifecycle,
-  not for passive pointer interaction or general flyout visibility.
-- Pointer-operated controls have meaningful labels and reliable hit regions.
-- Input masks, outside-click behavior, and layer-shell focus policy are covered
-  by runtime smoke tests.
+- Opening the sidebar without an interactive flyout does not steal keyboard
+  focus from the active application.
+- Interactive flyouts use focus only for their bounded dismissal lifecycle and
+  intentional text entry, never for general keyboard navigation.
+- Escape, unconsumed Backspace, click-away, and explicit close dismiss an
+  interactive flyout and restore application focus.
+- Active text fields consume Backspace normally instead of dismissing their
+  flyout.
+- Pointer-operated controls have meaningful labels and reliable hit regions
+  without becoming generally keyboard-navigable.
+- Input masks, outside-click behavior, dismissal keys, and layer-shell focus
+  policy are covered by runtime smoke tests.
 
 ## Workstream 4 — Media lifecycle and provider reliability
 

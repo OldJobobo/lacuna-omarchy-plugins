@@ -154,9 +154,10 @@ Beta is ready when:
 - P0 remains green on the declared Omarchy/Quickshell pair.
 - Core settings have an inventory and deterministic persistence coverage.
 - The semi-persistent sidebar remains pointer-driven and does not acquire
-  keyboard focus merely because it or a flyout is visible. Explicit text-entry
-  controls such as Media Search may take scoped focus; Escape and click-away
-  dismissal must close the flyout and restore the prior application focus.
+  keyboard focus merely because it is visible. Interactive flyouts may take
+  bounded focus for click-away, Escape, unconsumed Backspace, and explicit-close
+  dismissal plus intentional text entry, but must not expose general keyboard
+  navigation; dismissal restores the prior application focus.
 - Media is either covered by its documented failure/recovery contract or
   explicitly kept outside the core release profile.
 - A clean install activates the canonical omakase setup without asking the user
