@@ -20,6 +20,9 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
   `Date.now()` arithmetic.
 - Theme parse fallbacks now emit diagnostics via the new `LacunaLog` helper
   instead of failing silently.
+- Media-player worker shutdown now reaps provider subprocesses, preventing the
+  process-group lifecycle check from failing under container PID 1.
+- GitHub release jobs now run the complete project gate before publishing.
 
 ### Changed
 - The Bézier corner constant `curveKappa` is defined once in a shared
@@ -45,5 +48,7 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
 - Test coverage for the ambience overlays, desktop clock,
   settings-persistence, script pill, and `desktop-app-catalog.py`; CI now
   installs pytest and reports coverage.
+- AUR packaging scaffold for `lacuna-omarchy-plugins`, including synchronized
+  `.SRCINFO`, package validation, system payload layout, and maintainer docs.
 
 [Unreleased]: https://github.com/jsbrown7/lacuna-omarchy-plugins/compare/HEAD

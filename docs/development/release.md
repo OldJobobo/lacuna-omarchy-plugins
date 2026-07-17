@@ -29,9 +29,12 @@ from the repository's existing `0.1.0` version.
    stable version.
 3. Move relevant changelog entries from `Unreleased` into the target version;
    record migrations, known limitations, and supported environment.
-4. Confirm installer profiles match `docs/plugins/README.md` and generate or
+4. Update `packaging/aur/PKGBUILD` and regenerate `packaging/aur/.SRCINFO`;
+   `_upstream_version` must match `VERSION` exactly (`pkgver` removes SemVer's
+   prerelease hyphen to satisfy Arch version syntax).
+5. Confirm installer profiles match `docs/plugins/README.md` and generate or
    review the release plugin inventory.
-5. Confirm user-visible changes have current screenshots when useful.
+6. Confirm user-visible changes have current screenshots when useful.
 
 ## Validate The Tree
 
@@ -70,9 +73,12 @@ private project knowledge.
 1. Commit the prepared release tree.
 2. Tag the exact commit as `v$(cat VERSION)`.
 3. Push the commit and tag.
-4. Verify the release workflow checks tag/version and manifest/version parity,
-   builds the archive and checksum, and creates the GitHub release.
-5. Install the published artifact once; do not treat workflow success alone as
+4. Verify the release workflow runs the full project gate, checks tag/version
+   and manifest/version parity, builds the archive and checksum, and creates the
+   GitHub release.
+5. Copy the validated AUR recipe into its dedicated AUR repository and build it
+   in a clean Arch chroot before publishing.
+6. Install the published artifact once; do not treat workflow success alone as
    runtime validation.
 
 ## Promotion Discipline

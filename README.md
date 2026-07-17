@@ -59,7 +59,8 @@ Omarchy's native bar widgets:
 ```
 
 See [Install and update](docs/install.md) for custom plugin selection, manual
-Omarchy source installation, updates, rollback behavior, and uninstalling.
+Omarchy source installation, updates, rollback behavior, uninstalling, and the
+release-gated AUR package workflow.
 
 ## Make It Yours
 

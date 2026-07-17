@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+pkgbuild="packaging/aur/PKGBUILD"
+srcinfo="packaging/aur/.SRCINFO"
+version="$(<VERSION)"
+
+bash -n "$pkgbuild"
+
+readarray -t package_versions < <(bash -c 'source "$1"; printf "%s\n%s\n" "$_upstream_version" "$pkgver"' _ "$pkgbuild")
+upstream_version="${package_versions[0]}"
+pkgver="${package_versions[1]}"
+expected_pkgver="${version//-/}"
+if [[ "$upstream_version" != "$version" || "$pkgver" != "$expected_pkgver" ]]; then
+  printf 'AUR versions (%s -> %s) do not match VERSION %s\n' "$upstream_version" "$pkgver" "$version" >&2
+  exit 1
+fi
+
+if command -v makepkg >/dev/null 2>&1; then
+  generated="$(mktemp)"
+  trap 'rm -f "$generated"' EXIT
+  if [[ "$(id -u)" -eq 0 ]]; then
+    # The inner shell expands its positional path after dropping privileges.
+    # shellcheck disable=SC2016
+    runuser -u nobody -- bash -c 'cd "$1" && makepkg --printsrcinfo' _ "$PWD/packaging/aur" >"$generated"
+  else
+    (cd packaging/aur && makepkg --printsrcinfo) >"$generated"
+  fi
+  diff -u "$srcinfo" "$generated"
+else
+  grep -Fq "pkgver = $expected_pkgver" "$srcinfo"
+  grep -Fq "#tag=v$version" "$srcinfo"
+  printf 'warning: makepkg not found; performed static AUR metadata checks only\n' >&2
+fi

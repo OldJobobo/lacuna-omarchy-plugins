@@ -58,6 +58,32 @@ Stage a full install without enabling it:
 ./scripts/lacuna install --profile full --no-activate --keep-layout
 ```
 
+## Arch Linux And AUR Packages
+
+The repository maintains an AUR publication scaffold in `packaging/aur/`.
+Once a matching tagged package has been published, install it with an AUR
+helper or build its `PKGBUILD` in a clean Arch environment. The package places
+the versioned payload under `/usr/share/lacuna-omarchy-plugins` and provides
+the `lacuna-omarchy` command; package installation itself never edits a user's
+Omarchy configuration.
+
+Choose a profile after installing the package:
+
+```bash
+lacuna-omarchy install --profile full
+```
+
+After a package upgrade, explicitly copy the new payload into the active
+Omarchy plugin installation:
+
+```bash
+lacuna-omarchy update --yes
+```
+
+This explicit step preserves the installer's snapshots, validation, and
+rollback behavior instead of mutating user state from a pacman transaction.
+See `packaging/aur/README.md` for the maintainer publication procedure.
+
 ## Update
 
 Update already-installed Lacuna plugins from this checkout:

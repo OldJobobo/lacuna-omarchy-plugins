@@ -11,16 +11,33 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     container: archlinux:latest
+    env:
+      OMARCHY_PATH: ${{ github.workspace }}/.ci/omarchy
     steps:
       - name: Install tools
         run: |
           pacman -Syu --noconfirm --needed \
+            base-devel \
             git \
+            nodejs \
             python \
-            python-pytest
+            python-pytest \
+            qt6-declarative \
+            shellcheck
 
       - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: basecamp/omarchy
+          ref: 3d4bb9ab813d9dc469dd6311216425c7aff18199
+          path: .ci/omarchy
+      - name: Configure Qt tools
+        run: echo "/usr/lib/qt6/bin" >> "$GITHUB_PATH"
+
+      - name: Run release checks
+        run: ./scripts/check.sh
 
       - name: Verify tag matches VERSION
         run: |
@@ -39,7 +56,7 @@ jobs:
           version="$(cat VERSION)"
           name="lacuna-omarchy-plugins-${version}"
           tar --exclude-vcs --exclude='__pycache__' -czf "${name}.tar.gz" \
-            lacuna.* shared scripts docs config \
+            lacuna.* shared scripts docs config packaging \
             README.md LICENSE VERSION CHANGELOG.md AGENTS.md
           sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256"
 

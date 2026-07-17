@@ -4,9 +4,17 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     container: archlinux:latest
     env:
       OMARCHY_PATH: ${{ github.workspace }}/.ci/omarchy
@@ -14,6 +22,7 @@ jobs:
       - name: Install tools
         run: |
           pacman -Syu --noconfirm --needed \
+            base-devel \
             git \
             nodejs \
             python \

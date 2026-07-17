@@ -20,6 +20,7 @@ fi
 
 if command -v shellcheck >/dev/null 2>&1; then
   shellcheck scripts/check.sh \
+    scripts/check-aur-package \
     lacuna.theme-preloader/scripts/*.sh \
     lacuna.claude-usage/scripts/claude-code-status.sh \
     lacuna.codex-usage/scripts/*.sh
@@ -28,6 +29,7 @@ else
 fi
 
 scripts/sync-vendored --check
+scripts/check-aur-package
 
 if python3 -c 'import pytest' >/dev/null 2>&1; then
   python3 -m pytest
