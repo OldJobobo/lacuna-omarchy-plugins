@@ -6,6 +6,7 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
 import "BarModel.js" as BarModel
+import "PortraitBarModel.js" as PortraitBarModel
 import "ScreenModel.js" as ScreenModel
 
 Item {
@@ -28,6 +29,7 @@ Item {
   // diagnostics; the built-in bar does not otherwise need it.
   property var manifest: null
   property var menuToggleHandler: null
+  property bool portraitSplitEnabled: true
   readonly property bool lacunaFrameHost: true
   // Mirrors the on-disk `bar-off` flag so the user can hide the bar without
   // killing the entire shell. Wired to BarPanel.visible below; updated by the
@@ -110,9 +112,10 @@ Item {
     return ScreenModel.screenName(screen)
   }
 
-  function popupContext(anchorItem, moduleId) {
+  function popupContextFor(surfacePosition, anchorItem, moduleId, owningScreen) {
     var window = targetWindow(anchorItem)
-    var screen = window && window.screen ? window.screen : ScreenModel.fallbackScreen(validBarScreens, activeInteractionScreenName)
+    var screen = window && window.screen ? window.screen : owningScreen
+    if (!screen) screen = ScreenModel.fallbackScreen(validBarScreens, activeInteractionScreenName)
     var point = { x: 0, y: 0 }
     if (anchorItem && window && window.contentItem) {
       try {
@@ -128,18 +131,26 @@ Item {
         width: Math.max(0, Math.round(anchorItem ? anchorItem.width : 0)),
         height: Math.max(0, Math.round(anchorItem ? anchorItem.height : 0))
       },
-      barPosition: position,
-      vertical: vertical,
+      barPosition: surfacePosition,
+      vertical: surfacePosition === "left" || surfacePosition === "right",
       moduleId: String(moduleId || "")
     }
   }
 
-  function activateInteraction(anchorItem, moduleId) {
-    var context = popupContext(anchorItem, moduleId)
+  function popupContext(anchorItem, moduleId) {
+    return popupContextFor(position, anchorItem, moduleId)
+  }
+
+  function activateInteractionFor(surfacePosition, anchorItem, moduleId, owningScreen) {
+    var context = popupContextFor(surfacePosition, anchorItem, moduleId, owningScreen)
     activeInteractionScreenName = context.screenName
     activePopupContext = context
     clearTooltip()
     return context
+  }
+
+  function activateInteraction(anchorItem, moduleId) {
+    return activateInteractionFor(position, anchorItem, moduleId)
   }
 
   function toggleMenu(payloadJson) {
@@ -241,6 +252,9 @@ Item {
       out.push({
         id: slot.moduleName,
         section: slot.region,
+        band: slot.band,
+        screenName: slot.surfaceScreenName,
+        barPosition: slot.surfaceContext ? slot.surfaceContext.position : root.position,
         registered: slot.registered === true,
         qmlCustom: slot.qmlCustom === true,
         commandCustom: slot.commandCustom === true,
@@ -349,16 +363,20 @@ Item {
     }, Qt.size(grabWidth, grabHeight))
   }
 
-  function requestPopout(owner, anchorItem, moduleId) {
+  function requestPopoutFor(surfacePosition, owner, anchorItem, moduleId, owningScreen) {
     var anchor = anchorItem || (owner && owner.anchorItem ? owner.anchorItem : null)
     var ownerModule = moduleId || (owner && owner.owner && owner.owner.moduleName ? owner.owner.moduleName : "")
-    activateInteraction(anchor, ownerModule)
+    activateInteractionFor(surfacePosition, anchor, ownerModule, owningScreen)
     if (activePopout === owner) return
     if (activePopout) {
       if ("closeForPopoutSwitch" in activePopout) activePopout.closeForPopoutSwitch()
       else if ("close" in activePopout) activePopout.close()
     }
     activePopout = owner
+  }
+
+  function requestPopout(owner, anchorItem, moduleId) {
+    requestPopoutFor(position, owner, anchorItem, moduleId)
   }
 
   function releasePopout(owner) {
@@ -411,7 +429,20 @@ Item {
     return Array.isArray(entries) ? entries : []
   }
 
-  function panelNavigationSlots(region) {
+  readonly property var portraitLayouts: {
+    var serial = barConfigSerial
+    return PortraitBarModel.routeLayout(layoutConfig, function(value) { return root.canonicalWidgetId(value) })
+  }
+
+  function portraitSplitEffective(screen) {
+    return portraitSplitEnabled && !vertical && ScreenModel.isPortrait(screen)
+  }
+
+  function oppositeHorizontalPosition() {
+    return position === "bottom" ? "top" : "bottom"
+  }
+
+  function panelNavigationSlots(region, screenNameValue, bandValue) {
     var entries = layoutEntries(region)
     var slots = []
     for (var i = 0; i < entries.length; i++) {
@@ -419,6 +450,8 @@ Item {
       for (var j = 0; j < debugModuleSlots.length; j++) {
         var slot = debugModuleSlots[j]
         if (!slot || slot.region !== region || slot.moduleName !== id) continue
+        if (screenNameValue && slot.surfaceScreenName !== screenNameValue) continue
+        if (bandValue && slot.band !== bandValue) continue
         var item = slot.activeItem
         if (!item || item.visible !== true || slot.visible !== true || slot.width <= 0 || slot.height <= 0) continue
         if (typeof item.open !== "function" || typeof item.close !== "function" || item.opened === undefined) continue
@@ -442,7 +475,7 @@ Item {
     }
     if (!currentSlot) return false
 
-    var slots = panelNavigationSlots(currentSlot.region)
+    var slots = panelNavigationSlots(currentSlot.region, currentSlot.surfaceScreenName, currentSlot.band)
     if (slots.length < 2) return false
 
     var currentIndex = -1
@@ -646,7 +679,7 @@ Item {
     var sourceWindow = root.slotWindow(sourceSlot) || root.barDragWindow
     for (var i = 0; i < debugModuleSlots.length; i++) {
       var slot = debugModuleSlots[i]
-      if (!slot || slot === sourceSlot || !slot.visible || slot.width <= 0 || slot.height <= 0) continue
+      if (!slot || slot === sourceSlot || !slot.dragEnabled || slot.band !== sourceSlot.band || !slot.visible || slot.width <= 0 || slot.height <= 0) continue
       if (sourceWindow && !root.sameWindow(root.slotWindow(slot), sourceWindow)) continue
 
       var slotPoint = { x: slot.x, y: slot.y }
@@ -671,7 +704,7 @@ Item {
     var sourceWindow = root.slotWindow(sourceSlot) || root.barDragWindow
     for (var i = 0; i < debugModuleSlots.length; i++) {
       var slot = debugModuleSlots[i]
-      if (!slot || slot === sourceSlot || slot.region !== region || slot.moduleName !== name ||
+      if (!slot || slot === sourceSlot || slot.band !== sourceSlot.band || slot.region !== region || slot.moduleName !== name ||
           !slot.visible || slot.width <= 0 || slot.height <= 0) continue
       if (sourceWindow && !root.sameWindow(root.slotWindow(slot), sourceWindow)) continue
       return slot
@@ -739,7 +772,7 @@ Item {
     var target = moduleClickTargetAt(slot, localX, localY)
     if (!target) return false
 
-    root.activateInteraction(slot.activeItem || slot, slot.moduleName)
+    slot.surfaceContext.activateInteraction(slot.activeItem || slot, slot.moduleName)
     target.triggerPress(button)
     return true
   }
@@ -831,6 +864,32 @@ Item {
         required property var modelData
 
         screen: modelData
+        surfacePosition: root.position
+        surfaceLayout: root.portraitSplitEffective(modelData) ? root.portraitLayouts.primary : root.layoutConfig
+        band: "primary"
+        splitActive: true
+        dragEnabled: true
+        centerAnchorEnabled: true
+      }
+    }
+  }
+
+  // Kept mapped on every valid output. Inactive companion instances have no
+  // paint, input region, or exclusive zone, preserving same-layer map order.
+  Variants {
+    model: root.validBarScreens
+
+    delegate: Component {
+      BarPanel {
+        required property var modelData
+
+        screen: modelData
+        surfacePosition: root.oppositeHorizontalPosition()
+        surfaceLayout: root.portraitLayouts.companion
+        band: "companion"
+        splitActive: root.portraitSplitEffective(modelData)
+        dragEnabled: false
+        centerAnchorEnabled: false
       }
     }
   }
@@ -848,27 +907,100 @@ Item {
     }
   }
 
+  component SurfaceBarContext: QtObject {
+    required property string surfacePosition
+    property var owningScreen: null
+
+    readonly property string position: surfacePosition
+    readonly property bool vertical: position === "left" || position === "right"
+    readonly property int barSize: root.barSize
+    readonly property color foreground: root.foreground
+    readonly property color barForeground: root.barForeground
+    readonly property color background: root.background
+    readonly property color accent: root.accent
+    readonly property color urgent: root.urgent
+    readonly property string fontFamily: root.fontFamily
+    readonly property var shell: root.shell
+    readonly property string omarchyPath: root.omarchyPath
+    readonly property var manifest: root.manifest
+    readonly property var activePopout: root.activePopout
+    readonly property bool editMode: root.editMode
+    readonly property bool lacunaFrameHost: root.lacunaFrameHost
+    readonly property var layout: root.layoutConfig
+
+    function popupContext(anchorItem, moduleId) {
+      return root.popupContextFor(position, anchorItem, moduleId, owningScreen)
+    }
+
+    function activateInteraction(anchorItem, moduleId) {
+      return root.activateInteractionFor(position, anchorItem, moduleId, owningScreen)
+    }
+
+    function requestPopout(owner, anchorItem, moduleId) {
+      return root.requestPopoutFor(position, owner, anchorItem, moduleId, owningScreen)
+    }
+
+    function registerClickTarget(target) { root.registerClickTarget(target) }
+    function unregisterClickTarget(target) { root.unregisterClickTarget(target) }
+    function releasePopout(owner) { root.releasePopout(owner) }
+    function showTooltip(target, text) { root.showTooltip(target, text) }
+    function hideTooltip(target) { root.hideTooltip(target) }
+    function run(command) { root.run(command) }
+    function switchPanelFrom(owner, direction) { return root.switchPanelFrom(owner, direction) }
+    function toggleMenu(payloadJson) { return root.toggleMenu(payloadJson) }
+    function openConfigPanel() { return root.openConfigPanel() }
+    function enterEditMode() { root.enterEditMode() }
+    function exitEditMode() { root.exitEditMode() }
+  }
+
   component BarPanel: PanelWindow {
     id: barWindow
 
-    visible: !root.barHidden
+    required property string surfacePosition
+    required property var surfaceLayout
+    required property string band
+    property bool splitActive: false
+    property bool dragEnabled: true
+    property bool centerAnchorEnabled: true
+    readonly property bool surfaceVertical: surfacePosition === "left" || surfacePosition === "right"
+    readonly property bool surfaceActive: band === "primary" ? !root.barHidden : splitActive && !root.barHidden
+    readonly property string surfaceScreenName: root.screenName(screen)
+
+    visible: band === "companion" ? true : !root.barHidden
 
     anchors {
-      top: root.position === "top" || root.vertical
-      bottom: root.position === "bottom" || root.vertical
-      left: root.position === "left" || !root.vertical
-      right: root.position === "right" || !root.vertical
+      top: barWindow.surfacePosition === "top" || barWindow.surfaceVertical
+      bottom: barWindow.surfacePosition === "bottom" || barWindow.surfaceVertical
+      left: barWindow.surfacePosition === "left" || !barWindow.surfaceVertical
+      right: barWindow.surfacePosition === "right" || !barWindow.surfaceVertical
     }
 
-    implicitWidth: root.vertical ? root.barSize : 0
-    implicitHeight: root.vertical ? 0 : root.barSize
-    color: root.background
-    WlrLayershell.namespace: "omarchy-bar"
+    implicitWidth: barWindow.surfaceVertical ? (barWindow.surfaceActive ? root.barSize : 0) : 0
+    implicitHeight: barWindow.surfaceVertical ? 0 : (barWindow.surfaceActive ? root.barSize : 0)
+    color: barWindow.surfaceActive ? root.background : "transparent"
+    WlrLayershell.namespace: band === "companion" ? "lacuna-bar-portrait-companion" : "omarchy-bar"
     WlrLayershell.layer: WlrLayer.Top
+    WlrLayershell.exclusionMode: barWindow.surfaceActive ? ExclusionMode.Auto : ExclusionMode.Ignore
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+    mask: Region {
+      Region {
+        width: barWindow.surfaceActive ? barWindow.width : 0
+        height: barWindow.surfaceActive ? barWindow.height : 0
+      }
+    }
+
+    SurfaceBarContext {
+      id: surfaceBarContext
+      surfacePosition: barWindow.surfacePosition
+      owningScreen: barWindow.screen
+    }
 
     Loader {
       anchors.fill: parent
-      sourceComponent: root.vertical ? verticalBar : horizontalBar
+      active: barWindow.band === "primary" || barWindow.surfaceActive
+      visible: barWindow.surfaceActive
+      sourceComponent: barWindow.surfaceVertical ? verticalBar : horizontalBar
     }
 
     PopupWindow {
@@ -897,12 +1029,12 @@ Item {
           var localX = target.width / 2 - popupWidth / 2
           var localY = target.height + 6
 
-          if (root.position === "bottom") {
+          if (barWindow.surfacePosition === "bottom") {
             localY = -popupHeight - 6
-          } else if (root.position === "left") {
+          } else if (barWindow.surfacePosition === "left") {
             localX = target.width + 6
             localY = target.height / 2 - popupHeight / 2
-          } else if (root.position === "right") {
+          } else if (barWindow.surfacePosition === "right") {
             localX = -popupWidth - 6
             localY = target.height / 2 - popupHeight / 2
           }
@@ -944,12 +1076,27 @@ Item {
         readonly property int centerReserve: root.compactBar ? Math.max(104, Math.round(width * 0.11)) : Math.max(180, Math.round(width * 0.16))
         readonly property int sideBudget: Math.max(root.barSize, Math.floor((width - root.outerMargin * 2 - centerReserve - root.sectionGap * 2) / 2))
 
-        CenterModules { anchors.fill: parent }
+        CenterModules {
+          anchors.fill: parent
+          entries: barWindow.surfaceLayout.center
+          surfaceContext: surfaceBarContext
+          band: barWindow.band
+          dragEnabled: barWindow.dragEnabled
+          centerAnchorEnabled: barWindow.centerAnchorEnabled
+          surfaceVertical: barWindow.surfaceVertical
+          surfaceScreenName: barWindow.surfaceScreenName
+        }
 
         LeftModules {
           anchors.left: parent.left
           anchors.leftMargin: root.outerMargin
           anchors.verticalCenter: parent.verticalCenter
+          entries: barWindow.surfaceLayout.left
+          surfaceContext: surfaceBarContext
+          band: barWindow.band
+          dragEnabled: barWindow.dragEnabled
+          surfaceVertical: barWindow.surfaceVertical
+          surfaceScreenName: barWindow.surfaceScreenName
           availableLength: horizontalRoot.sideBudget
         }
 
@@ -957,6 +1104,12 @@ Item {
           anchors.right: parent.right
           anchors.rightMargin: root.outerMargin
           anchors.verticalCenter: parent.verticalCenter
+          entries: barWindow.surfaceLayout.right
+          surfaceContext: surfaceBarContext
+          band: barWindow.band
+          dragEnabled: barWindow.dragEnabled
+          surfaceVertical: barWindow.surfaceVertical
+          surfaceScreenName: barWindow.surfaceScreenName
           availableLength: horizontalRoot.sideBudget
         }
       }
@@ -968,18 +1121,39 @@ Item {
       Item {
         anchors.fill: parent
 
-        CenterModules { anchors.fill: parent }
+        CenterModules {
+          anchors.fill: parent
+          entries: barWindow.surfaceLayout.center
+          surfaceContext: surfaceBarContext
+          band: barWindow.band
+          dragEnabled: barWindow.dragEnabled
+          centerAnchorEnabled: barWindow.centerAnchorEnabled
+          surfaceVertical: barWindow.surfaceVertical
+          surfaceScreenName: barWindow.surfaceScreenName
+        }
 
         LeftModules {
           anchors.top: parent.top
           anchors.topMargin: root.outerMargin
           anchors.horizontalCenter: parent.horizontalCenter
+          entries: barWindow.surfaceLayout.left
+          surfaceContext: surfaceBarContext
+          band: barWindow.band
+          dragEnabled: barWindow.dragEnabled
+          surfaceVertical: barWindow.surfaceVertical
+          surfaceScreenName: barWindow.surfaceScreenName
         }
 
         RightModules {
           anchors.bottom: parent.bottom
           anchors.bottomMargin: root.outerMargin
           anchors.horizontalCenter: parent.horizontalCenter
+          entries: barWindow.surfaceLayout.right
+          surfaceContext: surfaceBarContext
+          band: barWindow.band
+          dragEnabled: barWindow.dragEnabled
+          surfaceVertical: barWindow.surfaceVertical
+          surfaceScreenName: barWindow.surfaceScreenName
         }
       }
     }
@@ -1043,32 +1217,31 @@ Item {
     }
   }
 
-  function findCenterAnchorEntry() {
-    var entries = root.layoutEntries("center")
-    var idx = root.entryIndex(entries, root.centerAnchor)
-    return idx === -1 ? null : entries[idx]
-  }
-
   component LeftModules: ModuleList {
-    entries: root.layoutEntries("left")
     region: "left"
   }
 
   component RightModules: ModuleList {
-    entries: root.layoutEntries("right")
     region: "right"
   }
 
   component CenterModules: Item {
     id: centerRoot
 
-    property var entries: root.layoutEntries("center")
-    readonly property bool hasAnchor: root.entryIndex(entries, root.centerAnchor) !== -1
-    readonly property var anchorEntry: root.findCenterAnchorEntry()
+    required property var entries
+    required property var surfaceContext
+    required property string band
+    required property bool dragEnabled
+    required property bool centerAnchorEnabled
+    required property bool surfaceVertical
+    required property string surfaceScreenName
+    readonly property bool hasAnchor: centerAnchorEnabled && root.entryIndex(entries, root.centerAnchor) !== -1
+    readonly property int anchorIndex: root.entryIndex(entries, root.centerAnchor)
+    readonly property var anchorEntry: anchorIndex === -1 ? null : entries[anchorIndex]
 
     Loader {
       anchors.fill: parent
-      sourceComponent: root.vertical ? verticalCenterModules : horizontalCenterModules
+      sourceComponent: centerRoot.surfaceVertical ? verticalCenterModules : horizontalCenterModules
     }
 
     Component {
@@ -1085,6 +1258,11 @@ Item {
           visible: !centerRoot.hasAnchor
           entries: centerRoot.entries
           region: "center"
+          surfaceContext: centerRoot.surfaceContext
+          band: centerRoot.band
+          dragEnabled: centerRoot.dragEnabled
+          surfaceVertical: centerRoot.surfaceVertical
+          surfaceScreenName: centerRoot.surfaceScreenName
           anchors.centerIn: parent
           availableLength: root.compactBar ? Math.max(root.barSize, Math.round(parent.width * 0.18)) : 0
         }
@@ -1093,6 +1271,11 @@ Item {
           visible: centerRoot.hasAnchor && !root.compactBar
           entries: root.entriesBefore(centerRoot.entries, root.centerAnchor)
           region: "center"
+          surfaceContext: centerRoot.surfaceContext
+          band: centerRoot.band
+          dragEnabled: centerRoot.dragEnabled
+          surfaceVertical: centerRoot.surfaceVertical
+          surfaceScreenName: centerRoot.surfaceScreenName
           anchors.right: centerConfigControl.visible ? centerConfigControl.left : centerAnchorModule.left
           anchors.verticalCenter: centerAnchorModule.verticalCenter
         }
@@ -1102,6 +1285,11 @@ Item {
           visible: centerRoot.hasAnchor
           entry: centerRoot.anchorEntry
           region: "center"
+          surfaceContext: centerRoot.surfaceContext
+          band: centerRoot.band
+          dragEnabled: centerRoot.dragEnabled
+          surfaceVertical: centerRoot.surfaceVertical
+          surfaceScreenName: centerRoot.surfaceScreenName
           anchors.centerIn: parent
         }
 
@@ -1119,6 +1307,11 @@ Item {
           visible: centerRoot.hasAnchor && !root.compactBar
           entries: root.entriesAfter(centerRoot.entries, root.centerAnchor)
           region: "center"
+          surfaceContext: centerRoot.surfaceContext
+          band: centerRoot.band
+          dragEnabled: centerRoot.dragEnabled
+          surfaceVertical: centerRoot.surfaceVertical
+          surfaceScreenName: centerRoot.surfaceScreenName
           anchors.left: centerAnchorModule.right
           anchors.verticalCenter: centerAnchorModule.verticalCenter
         }
@@ -1139,6 +1332,11 @@ Item {
           visible: !centerRoot.hasAnchor
           entries: centerRoot.entries
           region: "center"
+          surfaceContext: centerRoot.surfaceContext
+          band: centerRoot.band
+          dragEnabled: centerRoot.dragEnabled
+          surfaceVertical: centerRoot.surfaceVertical
+          surfaceScreenName: centerRoot.surfaceScreenName
           anchors.centerIn: parent
           availableLength: 0
         }
@@ -1147,6 +1345,11 @@ Item {
           visible: centerRoot.hasAnchor
           entries: root.entriesBefore(centerRoot.entries, root.centerAnchor)
           region: "center"
+          surfaceContext: centerRoot.surfaceContext
+          band: centerRoot.band
+          dragEnabled: centerRoot.dragEnabled
+          surfaceVertical: centerRoot.surfaceVertical
+          surfaceScreenName: centerRoot.surfaceScreenName
           anchors.bottom: centerConfigControl.visible ? centerConfigControl.top : centerAnchorModule.top
           anchors.horizontalCenter: centerAnchorModule.horizontalCenter
         }
@@ -1156,6 +1359,11 @@ Item {
           visible: centerRoot.hasAnchor
           entry: centerRoot.anchorEntry
           region: "center"
+          surfaceContext: centerRoot.surfaceContext
+          band: centerRoot.band
+          dragEnabled: centerRoot.dragEnabled
+          surfaceVertical: centerRoot.surfaceVertical
+          surfaceScreenName: centerRoot.surfaceScreenName
           anchors.centerIn: parent
         }
 
@@ -1173,6 +1381,11 @@ Item {
           visible: centerRoot.hasAnchor
           entries: root.entriesAfter(centerRoot.entries, root.centerAnchor)
           region: "center"
+          surfaceContext: centerRoot.surfaceContext
+          band: centerRoot.band
+          dragEnabled: centerRoot.dragEnabled
+          surfaceVertical: centerRoot.surfaceVertical
+          surfaceScreenName: centerRoot.surfaceScreenName
           anchors.top: centerAnchorModule.bottom
           anchors.horizontalCenter: centerAnchorModule.horizontalCenter
         }
@@ -1262,11 +1475,16 @@ Item {
 
     property var entries: []
     property string region: ""
+    property var surfaceContext: null
+    property string band: "primary"
+    property bool dragEnabled: true
+    property bool surfaceVertical: root.vertical
+    property string surfaceScreenName: ""
     property real availableLength: 0
     property int overflowSerial: 0
 
     visible: entries.length > 0
-    sourceComponent: root.vertical ? verticalModuleList : horizontalModuleList
+    sourceComponent: moduleListRoot.surfaceVertical ? verticalModuleList : horizontalModuleList
     width: item ? item.implicitWidth : 0
     height: item ? item.implicitHeight : 0
 
@@ -1290,7 +1508,7 @@ Item {
         var slot = repeater.itemAt(i)
         if (!slot) continue
 
-        var natural = root.vertical ? Math.ceil(slot.naturalHeight) : Math.ceil(slot.naturalWidth)
+        var natural = moduleListRoot.surfaceVertical ? Math.ceil(slot.naturalHeight) : Math.ceil(slot.naturalWidth)
         if (!slot.contentVisible || natural <= 0) {
           slot.overflowVisible = false
           continue
@@ -1306,7 +1524,7 @@ Item {
       }
 
       var limit = Math.floor(Number(availableLength || 0))
-      if (root.vertical || !root.compactBar || limit <= 0 || total <= limit) {
+      if (moduleListRoot.surfaceVertical || !root.compactBar || limit <= 0 || total <= limit) {
         for (var showIndex = 0; showIndex < slots.length; showIndex++) slots[showIndex].slot.overflowVisible = true
         return
       }
@@ -1350,6 +1568,11 @@ Item {
             entry: modelData
             region: moduleListRoot.region
             moduleList: moduleListRoot
+            surfaceContext: moduleListRoot.surfaceContext
+            band: moduleListRoot.band
+            dragEnabled: moduleListRoot.dragEnabled
+            surfaceVertical: moduleListRoot.surfaceVertical
+            surfaceScreenName: moduleListRoot.surfaceScreenName
           }
         }
       }
@@ -1373,6 +1596,11 @@ Item {
             entry: modelData
             region: moduleListRoot.region
             moduleList: moduleListRoot
+            surfaceContext: moduleListRoot.surfaceContext
+            band: moduleListRoot.band
+            dragEnabled: moduleListRoot.dragEnabled
+            surfaceVertical: moduleListRoot.surfaceVertical
+            surfaceScreenName: moduleListRoot.surfaceScreenName
           }
         }
       }
@@ -1383,8 +1611,13 @@ Item {
     id: slot
 
     required property var entry
+    required property var surfaceContext
     property string region: ""
     property var moduleList: null
+    property string band: "primary"
+    property bool dragEnabled: true
+    property bool surfaceVertical: root.vertical
+    property string surfaceScreenName: ""
     property bool overflowVisible: true
     readonly property string moduleName: root.entryId(entry)
     readonly property var moduleSettings: root.entrySettings(entry)
@@ -1419,11 +1652,11 @@ Item {
     readonly property real itemImplicitWidth: activeItem ? Number(activeItem.implicitWidth || 0) : 0
     readonly property real itemImplicitHeight: activeItem ? Number(activeItem.implicitHeight || 0) : 0
     readonly property bool contentVisible: activeItem && (itemImplicitWidth > 0 || itemImplicitHeight > 0)
-    readonly property real naturalWidth: contentVisible ? (root.vertical ? root.barSize : itemImplicitWidth) : 0
+    readonly property real naturalWidth: contentVisible ? (surfaceVertical ? root.barSize : itemImplicitWidth) : 0
     readonly property real naturalHeight: contentVisible ? itemImplicitHeight : 0
 
     visible: overflowVisible && contentVisible
-    implicitWidth: contentVisible ? (root.vertical ? root.barSize : naturalWidth) : 0
+    implicitWidth: contentVisible ? (surfaceVertical ? root.barSize : naturalWidth) : 0
     implicitHeight: contentVisible ? naturalHeight : 0
     width: implicitWidth
     height: implicitHeight
@@ -1442,7 +1675,7 @@ Item {
     HoverHandler { id: moduleHover }
 
     BorderSurface {
-      visible: root.editMode || slot.dragSource
+      visible: slot.dragEnabled && (root.editMode || slot.dragSource)
       anchors.fill: parent
       anchors.margins: Style.space(1)
       color: root.background
@@ -1496,14 +1729,14 @@ Item {
       opacity: slot.panelOpen && !slot.dragSource ? 0.9 : 0
       color: Color.accent
       radius: Math.min(width, height) / 2
-      width: root.vertical ? Style.space(2) : Math.max(Style.space(10), Math.round(parent.width * 0.55))
-      height: root.vertical ? Math.max(Style.space(10), Math.round(parent.height * 0.55)) : Style.space(2)
-      x: root.vertical
-        ? (root.position === "left" ? parent.width - width - inset : inset)
+      width: slot.surfaceVertical ? Style.space(2) : Math.max(Style.space(10), Math.round(parent.width * 0.55))
+      height: slot.surfaceVertical ? Math.max(Style.space(10), Math.round(parent.height * 0.55)) : Style.space(2)
+      x: slot.surfaceVertical
+        ? (slot.surfaceContext.position === "left" ? parent.width - width - inset : inset)
         : (slot.openIndicatorInlineOffset === 0 ? Math.round((parent.width - width) / 2) : (parent.width - width) / 2 + slot.openIndicatorInlineOffset)
-      y: root.vertical
+      y: slot.surfaceVertical
         ? (slot.openIndicatorInlineOffset === 0 ? Math.round((parent.height - height) / 2) : (parent.height - height) / 2 + slot.openIndicatorInlineOffset)
-        : (root.position === "top" ? parent.height - height - inset : inset)
+        : (slot.surfaceContext.position === "top" ? parent.height - height - inset : inset)
       z: 50
 
       Behavior on opacity {
@@ -1512,7 +1745,7 @@ Item {
     }
 
     Rectangle {
-      visible: !root.vertical && root.barDragTarget === slot && !root.barDragAfter
+      visible: !slot.surfaceVertical && root.barDragTarget === slot && !root.barDragAfter
       anchors {
         left: parent.left
         top: parent.top
@@ -1524,7 +1757,7 @@ Item {
     }
 
     Rectangle {
-      visible: !root.vertical && root.barDragTarget === slot && root.barDragAfter
+      visible: !slot.surfaceVertical && root.barDragTarget === slot && root.barDragAfter
       anchors {
         right: parent.right
         top: parent.top
@@ -1536,7 +1769,7 @@ Item {
     }
 
     Rectangle {
-      visible: root.vertical && root.barDragTarget === slot && !root.barDragAfter
+      visible: slot.surfaceVertical && root.barDragTarget === slot && !root.barDragAfter
       anchors {
         left: parent.left
         right: parent.right
@@ -1548,7 +1781,7 @@ Item {
     }
 
     Rectangle {
-      visible: root.vertical && root.barDragTarget === slot && root.barDragAfter
+      visible: slot.surfaceVertical && root.barDragTarget === slot && root.barDragAfter
       anchors {
         left: parent.left
         right: parent.right
@@ -1566,7 +1799,7 @@ Item {
       property bool suppressClick: false
       property real pressedX: 0
       property real pressedY: 0
-      readonly property bool canReorder: root.editMode && root.shell && typeof root.shell.mutateShellConfig === "function"
+      readonly property bool canReorder: slot.dragEnabled && root.editMode && root.shell && typeof root.shell.mutateShellConfig === "function"
       readonly property real dragThreshold: Style.space(4)
 
       anchors.fill: parent
@@ -1658,7 +1891,7 @@ Item {
     function injectProps() {
       var target = activeItem
       if (!target) return
-      if ("bar" in target) target.bar = root
+      if ("bar" in target) target.bar = surfaceContext
       if ("moduleName" in target) target.moduleName = moduleName
       if ("settings" in target) target.settings = moduleSettings
     }
@@ -1693,7 +1926,7 @@ Item {
       outputActive = klass === "active" || (Array.isArray(klass) && klass.indexOf("active") !== -1)
     }
 
-    bar: root
+    bar: slot.surfaceContext
     text: outputText || String(setting("text", ""))
     tooltipText: outputTooltip || String(setting("tooltip", ""))
     active: outputActive

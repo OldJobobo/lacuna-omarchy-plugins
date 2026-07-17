@@ -21,6 +21,12 @@ function validScreens(screens) {
   return out
 }
 
+function isPortrait(screen) {
+  var width = Number(screen && screen.width)
+  var height = Number(screen && screen.height)
+  return isFinite(width) && isFinite(height) && width > 0 && height > 0 && height > width
+}
+
 function hasScreen(screens, name) {
   var target = String(name || "")
   if (!target) return false
@@ -44,6 +50,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     screenName: screenName,
     validScreens: validScreens,
+    isPortrait: isPortrait,
     hasScreen: hasScreen,
     fallbackScreen: fallbackScreen
   }

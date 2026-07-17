@@ -31,6 +31,7 @@ Item {
   property string frameReserveMode: "auto"
   property bool frameShadow: false
   property bool frameBorder: false
+  property bool portraitSplit: true
   property var mediaProviders: ({})
   property var backgroundEffects: ({})
   property var backgroundVignette: ({})

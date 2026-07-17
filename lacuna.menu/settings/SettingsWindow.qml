@@ -373,6 +373,8 @@ Item {
           { value: "compact", label: "Compact" },
           { value: "full", label: "Full" }
         ], root.registry.barSizeMode, "set-bar-size-mode-"),
+        section("Portrait Outputs", "Selected widgets are redistributed automatically; edit the canonical layout in Omarchy Settings.", "lacuna"),
+        row("monitor", "Portrait split bar", "Use an opposite-edge companion on portrait outputs", root.registry.portraitSplit ? "On" : "Off", "lacuna", "toggle-portrait-split", "toggle", root.registry.portraitSplit),
         row("sidebar-toggle", "Sidebar Default", root.registry.sidebarDefaultModeHint(), sidebarDefaultModeName(), "lacuna", "", "segments", false, [
           { value: "off", label: "Off" },
           { value: "full", label: "Full" },

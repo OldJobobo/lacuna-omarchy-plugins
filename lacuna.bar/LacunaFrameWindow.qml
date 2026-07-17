@@ -21,6 +21,8 @@ PanelWindow {
   property real shadowOpacity: 0.62
   property real shadowBlur: 0.85
   property int shadowBlurMax: 28
+  property bool topEdgeOccupied: false
+  property bool bottomEdgeOccupied: false
   property bool leftEdgeOccupied: false
   property bool rightEdgeOccupied: false
   property real leftOccupiedWidth: 0
@@ -34,8 +36,8 @@ PanelWindow {
   readonly property bool bottomBar: barPosition === "bottom"
   readonly property bool leftBar: barPosition === "left"
   readonly property bool rightBar: barPosition === "right"
-  readonly property int topInset: topBar ? Math.max(0, barSize) : t
-  readonly property int bottomInset: bottomBar ? Math.max(0, barSize) : t
+  readonly property int topInset: topBar || topEdgeOccupied ? Math.max(0, barSize) : t
+  readonly property int bottomInset: bottomBar || bottomEdgeOccupied ? Math.max(0, barSize) : t
   readonly property int leftInset: leftBar ? Math.max(0, barSize) : t
   readonly property int rightInset: rightBar ? Math.max(0, barSize) : t
   // The frame never paints the strip occupied by the bar: the bar itself is
@@ -43,9 +45,9 @@ PanelWindow {
   // ours to control, so bar-over-frame correctness must come from geometry,
   // not stacking.
   readonly property real outerX: leftBar ? Math.max(0, barSize) : 0
-  readonly property real outerY: topBar ? Math.max(0, barSize) : 0
+  readonly property real outerY: topBar || topEdgeOccupied ? Math.max(0, barSize) : 0
   readonly property real outerRight: rightBar ? Math.max(outerX + 1, width - Math.max(0, barSize)) : width
-  readonly property real outerBottom: bottomBar ? Math.max(outerY + 1, height - Math.max(0, barSize)) : height
+  readonly property real outerBottom: bottomBar || bottomEdgeOccupied ? Math.max(outerY + 1, height - Math.max(0, barSize)) : height
   readonly property real holeX: Math.max(0, leftEdgeOccupied ? leftOcclusion : leftInset)
   readonly property real holeY: Math.max(0, topInset)
   readonly property real holeRight: Math.max(holeX + 1, width - (rightEdgeOccupied ? rightOcclusion : rightInset))
@@ -58,9 +60,9 @@ PanelWindow {
   // so the bar still casts its shadow — the bar's shadow must not depend on
   // the frame or on the menu being open.
   readonly property real casterHoleX: isRenderable ? holeX : (leftBar ? Math.max(0, barSize) : 0)
-  readonly property real casterHoleY: isRenderable ? holeY : (topBar ? Math.max(0, barSize) : 0)
+  readonly property real casterHoleY: isRenderable ? holeY : (topBar || topEdgeOccupied ? Math.max(0, barSize) : 0)
   readonly property real casterHoleRight: isRenderable ? holeRight : (rightBar ? Math.max(casterHoleX + 1, width - Math.max(0, barSize)) : width)
-  readonly property real casterHoleBottom: isRenderable ? holeBottom : (bottomBar ? Math.max(casterHoleY + 1, height - Math.max(0, barSize)) : height)
+  readonly property real casterHoleBottom: isRenderable ? holeBottom : (bottomBar || bottomEdgeOccupied ? Math.max(casterHoleY + 1, height - Math.max(0, barSize)) : height)
   readonly property real casterHoleRadius: isRenderable ? holeRadius : minArcRadius
   readonly property real minArcRadius: 0.01
   readonly property real holeRadius: cornerPieces ? Math.max(minArcRadius, Math.min(r, holeWidth / 2, holeHeight / 2)) : minArcRadius

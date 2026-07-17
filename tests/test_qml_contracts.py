@@ -555,7 +555,14 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn('if (typeof value === "string")', qml)
             self.assertIn("return stringId === \"\" ? null : { id: stringId }", qml)
             self.assertIn("next.version = root.settingsSchemaVersion", qml)
+            self.assertIn("barPresentation: {", qml)
+            self.assertIn("portraitSplit: true", qml)
+            self.assertIn('typeof source.barPresentation.portraitSplit === "boolean"', qml)
+            self.assertIn("preserveUnknownJson(next.barPresentation, source.barPresentation", qml)
 
+        self.assertTrue(example["barPresentation"]["portraitSplit"])
+        self.assertFalse(fixture["barPresentation"]["portraitSplit"])
+        self.assertEqual({"keep": True}, fixture["barPresentation"]["futurePresentationField"])
         self.assertEqual({"lacuna": {}, "omarchy": {}, "material": {}}, example["designStyles"])
         self.assertEqual("auto", example["sidebar"]["monitorPolicy"])
         self.assertEqual([], example["sidebar"]["monitorNames"])
@@ -567,6 +574,16 @@ class QmlContractTests(unittest.TestCase):
             {"role": "time", "weights": [1, 2, 3]},
             fixture["designStyles"]["lacuna"]["bar"]["layout"]["center"][0]["futureMetadata"],
         )
+
+        menu_window = read("lacuna.menu/menu/MenuWindow.qml")
+        registry = read("lacuna.menu/menu/MenuRegistry.qml")
+        settings_window = read("lacuna.menu/settings/SettingsWindow.qml")
+        self.assertIn("readonly property bool portraitSplit", menu_window)
+        self.assertIn("function setPortraitSplit(enabled)", menu_window)
+        self.assertIn('entry.action === "toggle-portrait-split"', menu_window)
+        self.assertIn("property bool portraitSplit: true", registry)
+        self.assertIn('"Portrait split bar"', settings_window)
+        self.assertIn("Selected widgets are redistributed automatically", settings_window)
 
     def test_curve_kappa_constant_has_single_definition(self):
         # The Bezier circular-arc kappa is defined once in LacunaGeometry and
@@ -2159,9 +2176,9 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("source: frameShadowCaster", frame)
         self.assertNotIn("source: frameSource", frame)
         self.assertIn("readonly property real casterHoleX: isRenderable ? holeX : (leftBar ? Math.max(0, barSize) : 0)", frame)
-        self.assertIn("readonly property real casterHoleY: isRenderable ? holeY : (topBar ? Math.max(0, barSize) : 0)", frame)
+        self.assertIn("readonly property real casterHoleY: isRenderable ? holeY : (topBar || topEdgeOccupied ? Math.max(0, barSize) : 0)", frame)
         self.assertIn("readonly property real casterHoleRight: isRenderable ? holeRight : (rightBar ? Math.max(casterHoleX + 1, width - Math.max(0, barSize)) : width)", frame)
-        self.assertIn("readonly property real casterHoleBottom: isRenderable ? holeBottom : (bottomBar ? Math.max(casterHoleY + 1, height - Math.max(0, barSize)) : height)", frame)
+        self.assertIn("readonly property real casterHoleBottom: isRenderable ? holeBottom : (bottomBar || bottomEdgeOccupied ? Math.max(casterHoleY + 1, height - Math.max(0, barSize)) : height)", frame)
         self.assertIn("readonly property real casterHoleRadius: isRenderable ? holeRadius : minArcRadius", frame)
 
         # The rendered shadow is clipped to the content side of the chrome,
@@ -2239,6 +2256,25 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("property bool frameReservesReady: false", bar)
         self.assertIn("&& root.frameReservesReady", bar)
         self.assertIn("id: frameReserveSettleTimer", bar)
+
+        omarchy_bar = read("lacuna.bar/OmarchyBar.qml")
+        self.assertIn('"lacuna-bar-portrait-companion"', omarchy_bar)
+        self.assertIn('visible: band === "companion" ? true : !root.barHidden', omarchy_bar)
+        self.assertIn("WlrLayershell.exclusionMode: barWindow.surfaceActive ? ExclusionMode.Auto : ExclusionMode.Ignore", omarchy_bar)
+        self.assertNotIn("exclusiveZone:", omarchy_bar)
+        self.assertIn("width: barWindow.surfaceActive ? barWindow.width : 0", omarchy_bar)
+        self.assertIn("dragEnabled: false", omarchy_bar)
+        self.assertIn("slot.band !== sourceSlot.band", omarchy_bar)
+        self.assertIn("!slot.dragEnabled", omarchy_bar)
+        self.assertIn('if ("bar" in target) target.bar = surfaceContext', omarchy_bar)
+        for forwarded in ["barSize", "foreground", "background", "accent", "urgent", "fontFamily", "shell", "activePopout"]:
+            self.assertIn(f"readonly property", omarchy_bar)
+            self.assertIn(forwarded, omarchy_bar)
+        self.assertIn("function activateInteractionFor(surfacePosition, anchorItem, moduleId, owningScreen)", omarchy_bar)
+        self.assertIn("function requestPopoutFor(surfacePosition, owner, anchorItem, moduleId, owningScreen)", omarchy_bar)
+        self.assertIn("root.popupContextFor(position, anchorItem, moduleId, owningScreen)", omarchy_bar)
+        self.assertIn("function registerClickTarget(target) { root.registerClickTarget(target) }", omarchy_bar)
+        self.assertIn("function unregisterClickTarget(target) { root.unregisterClickTarget(target) }", omarchy_bar)
 
     def test_media_player_video_waits_for_high_res_background_stream(self):
         overlay = read("lacuna.media-player-video/Overlay.qml")
@@ -3455,12 +3491,12 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property real holeRight: Math.max(holeX + 1, width - (rightEdgeOccupied ? rightOcclusion : rightInset))", frame)
         self.assertIn("readonly property real holeRadius: cornerPieces ? Math.max(minArcRadius, Math.min(r, holeWidth / 2, holeHeight / 2)) : minArcRadius", frame)
         self.assertIn("property bool shadowEnabled: false", frame)
-        self.assertIn("readonly property int topInset: topBar ? Math.max(0, barSize) : t", frame)
+        self.assertIn("readonly property int topInset: topBar || topEdgeOccupied ? Math.max(0, barSize) : t", frame)
         self.assertIn("readonly property int leftInset: leftBar ? Math.max(0, barSize) : t", frame)
         # The frame must never paint under the bar: bar-over-frame rendering
         # is guaranteed by geometry because the vendored bar window's map
         # order (and therefore same-layer stacking) is not ours to control.
-        self.assertIn("readonly property real outerY: topBar ? Math.max(0, barSize) : 0", frame)
+        self.assertIn("readonly property real outerY: topBar || topEdgeOccupied ? Math.max(0, barSize) : 0", frame)
         self.assertIn("readonly property real outerX: leftBar ? Math.max(0, barSize) : 0", frame)
         self.assertIn("startY: root.isRenderable ? root.outerY : -1", frame)
         self.assertIn("readonly property color effectiveFrameColor", frame)
@@ -3471,7 +3507,7 @@ class QmlContractTests(unittest.TestCase):
         # the bar in every frame mode without painting over the bar.
         self.assertIn("id: frameShadowCaster", frame)
         self.assertIn("source: frameShadowCaster", frame)
-        self.assertIn("readonly property real casterHoleY: isRenderable ? holeY : (topBar ? Math.max(0, barSize) : 0)", frame)
+        self.assertIn("readonly property real casterHoleY: isRenderable ? holeY : (topBar || topEdgeOccupied ? Math.max(0, barSize) : 0)", frame)
         self.assertIn("shadowEnabled: root.shadowEnabled && root.width > 0 && root.height > 0", frame)
         self.assertIn("id: shadowClip", frame)
         self.assertIn("Shape {", frame)

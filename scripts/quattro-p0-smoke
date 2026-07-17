@@ -50,7 +50,7 @@ def check_layers(monitors: list[dict], layers: str) -> list[str]:
             failures.append(f"missing hyprctl layers section for {name}")
             continue
         block = match.group(1)
-        for namespace in ("lacuna-bar-frame", "lacuna-bar-frame-border"):
+        for namespace in ("lacuna-bar-frame", "lacuna-bar-frame-border", "lacuna-bar-portrait-companion"):
             if f"namespace: {namespace}" not in block:
                 failures.append(f"{name} is missing {namespace}")
     return failures

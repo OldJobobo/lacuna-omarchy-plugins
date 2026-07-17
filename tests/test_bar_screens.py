@@ -51,6 +51,31 @@ class BarScreenModelTests(unittest.TestCase):
         self.assertEqual("DP-1", data["fallback"])
         self.assertIsNone(data["empty"])
 
+    def test_portrait_detection_uses_finite_positive_logical_geometry(self):
+        node = shutil.which("node")
+        if not node:
+            raise unittest.SkipTest("node is not installed")
+        script = textwrap.dedent(
+            """
+            const model = require("./lacuna.bar/ScreenModel.js");
+            const values = [
+              { width: 1080, height: 1920 },
+              { width: 1920, height: 1080 },
+              { width: 1080, height: 1080 },
+              { width: 0, height: 1920 },
+              { width: -1, height: 1920 },
+              { width: NaN, height: 1920 },
+              { width: 1080, height: Infinity },
+              { width: 900, height: 1600, transform: 3 }
+            ];
+            console.log(JSON.stringify(values.map(model.isPortrait)));
+            """
+        )
+        result = subprocess.run([node, "-e", script], cwd=ROOT, text=True, capture_output=True, check=False)
+        if result.returncode != 0:
+            raise AssertionError(result.stderr or result.stdout)
+        self.assertEqual([True, False, False, False, False, False, False, True], json.loads(result.stdout))
+
     def test_bar_uses_shared_valid_screen_and_popup_context_contracts(self):
         qml = (ROOT / "lacuna.bar" / "OmarchyBar.qml").read_text(encoding="utf-8")
         host = (ROOT / "lacuna.bar" / "Bar.qml").read_text(encoding="utf-8")
@@ -60,8 +85,9 @@ class BarScreenModelTests(unittest.TestCase):
         self.assertIn("function activateInteraction(anchorItem, moduleId)", qml)
         self.assertIn("function reconcileScreens()", qml)
         self.assertIn("function toggleMenu(payloadJson)", qml)
-        self.assertIn("root.activateInteraction(slot.activeItem || slot, slot.moduleName)", qml)
-        self.assertEqual(2, qml.count("model: root.validBarScreens"))
+        self.assertIn("slot.surfaceContext.activateInteraction(slot.activeItem || slot, slot.moduleName)", qml)
+        self.assertIn("function popupContextFor(surfacePosition, anchorItem, moduleId, owningScreen)", qml)
+        self.assertEqual(3, qml.count("model: root.validBarScreens"))
         self.assertEqual(2, host.count("model: root.validBarScreens"))
 
     def test_edit_mode_gates_dragging_and_cleans_up(self):

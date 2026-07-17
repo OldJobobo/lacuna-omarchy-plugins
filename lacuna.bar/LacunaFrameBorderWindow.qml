@@ -16,6 +16,8 @@ PanelWindow {
   property bool cornerPieces: true
   property color borderColor: Qt.rgba(1, 1, 1, 0.18)
   property real borderWidth: 1
+  property bool topEdgeOccupied: false
+  property bool bottomEdgeOccupied: false
   property bool leftEdgeOccupied: false
   property bool rightEdgeOccupied: false
   property real leftOccupiedWidth: 0
@@ -32,8 +34,8 @@ PanelWindow {
   readonly property bool bottomBar: barPosition === "bottom"
   readonly property bool leftBar: barPosition === "left"
   readonly property bool rightBar: barPosition === "right"
-  readonly property int topInset: topBar ? Math.max(0, barSize) : t
-  readonly property int bottomInset: bottomBar ? Math.max(0, barSize) : t
+  readonly property int topInset: topBar || topEdgeOccupied ? Math.max(0, barSize) : t
+  readonly property int bottomInset: bottomBar || bottomEdgeOccupied ? Math.max(0, barSize) : t
   readonly property int leftInset: leftBar ? Math.max(0, barSize) : t
   readonly property int rightInset: rightBar ? Math.max(0, barSize) : t
   readonly property real holeX: Math.max(0, leftEdgeOccupied ? leftOcclusion : leftInset)

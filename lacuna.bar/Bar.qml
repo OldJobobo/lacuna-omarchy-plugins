@@ -24,6 +24,8 @@ Item {
   readonly property var lacunaSettings: lacunaState && lacunaState.data ? lacunaState.data : ({})
   readonly property var frameSettings: lacunaSettings && lacunaSettings.frame ? lacunaSettings.frame : ({})
   readonly property var sidebarSettings: lacunaSettings && lacunaSettings.sidebar ? lacunaSettings.sidebar : ({})
+  readonly property var barPresentationSettings: lacunaSettings && lacunaSettings.barPresentation ? lacunaSettings.barPresentation : ({})
+  readonly property bool portraitSplitEnabled: barPresentationSettings.portraitSplit !== false
   readonly property string frameMode: validFrameMode(frameSettings.mode)
   readonly property bool frameEnabled: frameMode === "fullframe"
   readonly property int frameThickness: positiveInt(frameSettings.thickness, 8)
@@ -53,7 +55,9 @@ Item {
     hostedSidebarVisible,
     hostedSidebarFrameOcclusionWidth,
     hostedMenu.panelOnRight,
-    hostedMenu.sidebarScreen ? String(hostedMenu.sidebarScreen.name || "") : ""
+    hostedMenu.sidebarScreen ? String(hostedMenu.sidebarScreen.name || "") : "",
+    portraitSplitEnabled,
+    portraitSplitGeometrySignature()
   ].join("|")
   readonly property string lacunaBarSourceDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : ""
   readonly property string lacunaRepoDir: lacunaBarSourceDir.replace(/\/lacuna\.bar\/?$/, "")
@@ -98,6 +102,25 @@ Item {
     return isFinite(parsed) ? Math.round(parsed) : fallback
   }
 
+  function portraitSplitEffective(screen) {
+    return root.portraitSplitEnabled && !root.vertical && ScreenModel.isPortrait(screen)
+  }
+
+  function portraitCompanionEdge(screen) {
+    if (!root.portraitSplitEffective(screen)) return ""
+    return root.position === "top" ? "bottom" : "top"
+  }
+
+  function portraitSplitGeometrySignature() {
+    var values = []
+    var screens = root.validBarScreens || []
+    for (var i = 0; i < screens.length; i++) {
+      values.push(ScreenModel.screenName(screens[i]) + ":" + root.portraitCompanionEdge(screens[i]))
+    }
+    values.sort()
+    return values.join(",")
+  }
+
   function hostedSidebarOccupiesEdge(edge, screen) {
     if (!hostedSidebarVisibleOnScreen(screen)) return false
     return (edge === "left" && hostedSidebarOnLeft) || (edge === "right" && hostedSidebarOnRight)
@@ -123,8 +146,9 @@ Item {
     var screenWidth = screen && screen.width !== undefined ? Number(screen.width) : 0
     var screenHeight = screen && screen.height !== undefined ? Number(screen.height) : 0
     var t = Math.max(1, root.frameThickness)
-    var topInset = root.position === "top" ? Math.max(0, root.barSize) : t
-    var bottomInset = root.position === "bottom" ? Math.max(0, root.barSize) : t
+    var companionEdge = root.portraitCompanionEdge(screen)
+    var topInset = root.position === "top" || companionEdge === "top" ? Math.max(0, root.barSize) : t
+    var bottomInset = root.position === "bottom" || companionEdge === "bottom" ? Math.max(0, root.barSize) : t
     var leftInset = root.position === "left" ? Math.max(0, root.barSize) : t
     var rightInset = root.position === "right" ? Math.max(0, root.barSize) : t
     var sidebarOnThisScreen = root.hostedSidebarVisibleOnScreen(screen)
@@ -235,6 +259,8 @@ Item {
       shadowEnabled: root.frameShadow
       shadowOffsetX: root.frameShadowOffsetX
       shadowOffsetY: root.frameShadowOffsetY
+      topEdgeOccupied: root.portraitCompanionEdge(modelData) === "top"
+      bottomEdgeOccupied: root.portraitCompanionEdge(modelData) === "bottom"
       leftEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && !hostedMenu.panelOnRight
       rightEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && hostedMenu.panelOnRight
       leftOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
@@ -256,6 +282,8 @@ Item {
       frameRadius: root.frameRadius
       cornerPieces: root.cornerPieces
       borderColor: barTheme.seam
+      topEdgeOccupied: root.portraitCompanionEdge(modelData) === "top"
+      bottomEdgeOccupied: root.portraitCompanionEdge(modelData) === "bottom"
       leftEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && !hostedMenu.panelOnRight
       rightEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && hostedMenu.panelOnRight
       leftOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
@@ -275,6 +303,7 @@ Item {
     pluginRegistry: root.pluginRegistry
     barWidgetRegistry: root.barWidgetRegistry
     barConfig: root.barConfig
+    portraitSplitEnabled: root.portraitSplitEnabled
     menuToggleHandler: function(payloadJson, popupContext) {
       return root.toggleMenu(root.contextualMenuPayload(payloadJson, popupContext))
     }
@@ -326,6 +355,7 @@ Item {
           active: root.frameEnabled
             && root.frameReservesReady
             && edgeName !== root.position
+            && edgeName !== root.portraitCompanionEdge(frameReserveScreen.screenData)
             && !root.hostedSidebarOccupiesEdge(edgeName, frameReserveScreen.screenData)
           edge: edgeName
           reserveSize: root.frameThickness

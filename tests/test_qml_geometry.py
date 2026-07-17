@@ -23,6 +23,8 @@ def frame_geometry(
     radius: int,
     left_occupied: int = 0,
     right_occupied: int = 0,
+    top_occupied: bool = False,
+    bottom_occupied: bool = False,
 ) -> dict[str, float]:
     t = max(1, thickness)
     r = max(t, radius)
@@ -30,14 +32,14 @@ def frame_geometry(
     bottom_bar = bar_position == "bottom"
     left_bar = bar_position == "left"
     right_bar = bar_position == "right"
-    top_inset = max(0, bar_size) if top_bar else t
-    bottom_inset = max(0, bar_size) if bottom_bar else t
+    top_inset = max(0, bar_size) if top_bar or top_occupied else t
+    bottom_inset = max(0, bar_size) if bottom_bar or bottom_occupied else t
     left_inset = max(0, bar_size) if left_bar else t
     right_inset = max(0, bar_size) if right_bar else t
     outer_x = max(0, bar_size) if left_bar else 0
-    outer_y = max(0, bar_size) if top_bar else 0
+    outer_y = max(0, bar_size) if top_bar or top_occupied else 0
     outer_right = max(outer_x + 1, width - max(0, bar_size)) if right_bar else width
-    outer_bottom = max(outer_y + 1, height - max(0, bar_size)) if bottom_bar else height
+    outer_bottom = max(outer_y + 1, height - max(0, bar_size)) if bottom_bar or bottom_occupied else height
     hole_x = max(0, left_occupied if left_occupied > 0 else left_inset)
     hole_y = max(0, top_inset)
     hole_right = max(hole_x + 1, width - (right_occupied if right_occupied > 0 else right_inset))
@@ -48,7 +50,7 @@ def frame_geometry(
     hole_radius = max(min_arc_radius, min(r, hole_width / 2, hole_height / 2))
     is_renderable = active and width > 0 and height > 0 and hole_width > 0 and hole_height > 0
     caster_hole_x = hole_x if is_renderable else (max(0, bar_size) if left_bar else 0)
-    caster_hole_y = hole_y if is_renderable else (max(0, bar_size) if top_bar else 0)
+    caster_hole_y = hole_y if is_renderable else (max(0, bar_size) if top_bar or top_occupied else 0)
     caster_hole_right = (
         hole_right
         if is_renderable
@@ -57,7 +59,7 @@ def frame_geometry(
     caster_hole_bottom = (
         hole_bottom
         if is_renderable
-        else (max(caster_hole_y + 1, height - max(0, bar_size)) if bottom_bar else height)
+        else (max(caster_hole_y + 1, height - max(0, bar_size)) if bottom_bar or bottom_occupied else height)
     )
     return {
         "outerX": outer_x,
@@ -88,10 +90,11 @@ def content_rect(
     corner_pieces: bool = True,
     sidebar_on_left: int = 0,
     sidebar_on_right: int = 0,
+    companion_edge: str = "",
 ) -> dict[str, float | bool]:
     t = max(1, thickness)
-    top_inset = max(0, bar_size) if position == "top" else t
-    bottom_inset = max(0, bar_size) if position == "bottom" else t
+    top_inset = max(0, bar_size) if position == "top" or companion_edge == "top" else t
+    bottom_inset = max(0, bar_size) if position == "bottom" or companion_edge == "bottom" else t
     left_inset = max(0, bar_size) if position == "left" else t
     right_inset = max(0, bar_size) if position == "right" else t
     x = max(0, sidebar_on_left if sidebar_on_left > 0 else left_inset)
@@ -335,7 +338,7 @@ class QmlGeometryTests(unittest.TestCase):
         self.assertEqual(end, {"y": 160, "width": 420, "height": 440, "connectorWidth": 0})
     def test_frame_geometry_never_paints_under_owning_bar_edge(self):
         frame = read("lacuna.bar/LacunaFrameWindow.qml")
-        self.assertIn("readonly property real outerY: topBar ? Math.max(0, barSize) : 0", frame)
+        self.assertIn("readonly property real outerY: topBar || topEdgeOccupied ? Math.max(0, barSize) : 0", frame)
         self.assertIn("readonly property real outerX: leftBar ? Math.max(0, barSize) : 0", frame)
         self.assertIn("id: shadowClip", frame)
 
@@ -353,6 +356,32 @@ class QmlGeometryTests(unittest.TestCase):
             if position == "right":
                 self.assertEqual(g["outerRight"], 1888)
                 self.assertEqual(g["holeRight"], 1888)
+
+    def test_portrait_companion_occupies_both_horizontal_frame_edges(self):
+        top_primary = frame_geometry(
+            active=True, bar_position="top", bar_size=32, thickness=8, radius=14, bottom_occupied=True
+        )
+        bottom_primary = frame_geometry(
+            active=True, bar_position="bottom", bar_size=32, thickness=8, radius=14, top_occupied=True
+        )
+        for geometry in (top_primary, bottom_primary):
+            self.assertEqual(geometry["outerY"], 32)
+            self.assertEqual(geometry["outerBottom"], 1048)
+            self.assertEqual(geometry["holeY"], 32)
+            self.assertEqual(geometry["holeBottom"], 1048)
+
+        rect = content_rect(
+            screen_width=1080,
+            screen_height=1920,
+            frame_enabled=True,
+            position="top",
+            companion_edge="bottom",
+            bar_size=32,
+            thickness=8,
+            radius=14,
+        )
+        self.assertEqual(rect["innerY"], 32)
+        self.assertEqual(rect["innerHeight"], 1856)
 
     def test_frame_shadow_caster_collapses_to_bar_edge_when_frame_off(self):
         for position in ("top", "bottom", "left", "right"):

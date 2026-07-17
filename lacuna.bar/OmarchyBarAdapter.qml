@@ -10,6 +10,7 @@ Item {
   property var manifest: null
   property var pluginRegistry: null
   property var menuToggleHandler: null
+  property bool portraitSplitEnabled: true
   readonly property var barItem: omarchyBar
 
   function debugBarGeometry() {
@@ -41,5 +42,6 @@ Item {
     shell: root.shell
     manifest: root.manifest
     menuToggleHandler: root.menuToggleHandler
+    portraitSplitEnabled: root.portraitSplitEnabled
   }
 }

@@ -40,6 +40,14 @@ def set_frame_mode(mode: str) -> None:
     time.sleep(0.5)
 
 
+def set_portrait_split(enabled: bool) -> None:
+    data = read_settings()
+    data.setdefault("barPresentation", {})["portraitSplit"] = enabled
+    write_settings(data)
+    run(["omarchy", "restart", "shell"], timeout=60)
+    time.sleep(0.5)
+
+
 def set_reduce_motion(enabled: bool) -> None:
     data = read_settings()
     data["reduceMotion"] = enabled
@@ -60,7 +68,7 @@ def lacuna_layers() -> dict[str, list[str]]:
         for level in sorted(payload.get("levels", {}), key=lambda value: int(value)):
             for item in payload["levels"][level]:
                 namespace = item.get("namespace", "")
-                if namespace in {"omarchy-bar", "lacuna-bar-frame", "lacuna-bar-frame-border"}:
+                if namespace in {"omarchy-bar", "lacuna-bar-portrait-companion", "lacuna-bar-frame", "lacuna-bar-frame-border"}:
                     names.append(f"{level}:{namespace}")
         result[screen] = names
     return result
@@ -73,7 +81,9 @@ def wait_for_frame_layers() -> dict[str, list[str]]:
     while time.time() < deadline:
         current = lacuna_layers()
         ready = bool(current) and all(
-            "2:lacuna-bar-frame" in names and "3:lacuna-bar-frame-border" in names
+            "2:lacuna-bar-frame" in names
+            and "2:lacuna-bar-portrait-companion" in names
+            and "3:lacuna-bar-frame-border" in names
             for names in current.values()
         )
         if ready and current == last:
@@ -114,6 +124,15 @@ class LiveVisualTests(unittest.TestCase):
 
         set_frame_mode("off")
         self.assertEqual(wait_for_frame_layers(), off_layers)
+
+    def test_portrait_companion_stays_mapped_across_setting_toggle(self):
+        set_portrait_split(False)
+        disabled_layers = wait_for_frame_layers()
+        self.assertTrue(disabled_layers)
+        self.assertTrue(all("2:lacuna-bar-portrait-companion" in names for names in disabled_layers.values()))
+
+        set_portrait_split(True)
+        self.assertEqual(wait_for_frame_layers(), disabled_layers)
 
     def test_top_bar_rows_are_not_overpainted_by_fullframe_toggle(self):
         with tempfile.TemporaryDirectory() as tmp:

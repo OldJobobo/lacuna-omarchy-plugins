@@ -195,6 +195,8 @@ Item {
   readonly property bool desktopClockUse12Hour: boolSetting(desktopClockSettings.use12Hour, false)
   readonly property var backgroundEffectsSettings: lacunaSettings.data && lacunaSettings.data.backgroundEffects ? lacunaSettings.data.backgroundEffects : ({})
   readonly property var backgroundVignetteSettings: lacunaSettings.data && lacunaSettings.data.backgroundVignette ? lacunaSettings.data.backgroundVignette : ({})
+  readonly property var barPresentationSettings: lacunaSettings.data && lacunaSettings.data.barPresentation ? lacunaSettings.data.barPresentation : ({})
+  readonly property bool portraitSplit: boolSetting(barPresentationSettings.portraitSplit, true)
   readonly property var mediaProvidersSettings: lacunaSettings.data && lacunaSettings.data.mediaProviders ? lacunaSettings.data.mediaProviders : ({})
   readonly property var shellSettingsSettings: lacunaSettings.data && lacunaSettings.data.shellSettings ? lacunaSettings.data.shellSettings : ({})
   readonly property string shellSettingsSurface: validShellSettingsSurface(shellSettingsSettings.surface)
@@ -1404,6 +1406,12 @@ Item {
     setFrameBorder(!lacunaSettings.normalize(lacunaSettings.data).frame.border)
   }
 
+  function setPortraitSplit(enabled) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    next.barPresentation.portraitSplit = enabled === true
+    lacunaSettings.save(next)
+  }
+
   function setSidebarDefaultMode(mode) {
     sidebarState.setDefaultMode(mode)
     applySidebarDefaultState()
@@ -1666,6 +1674,11 @@ Item {
 
     if (entry.action === "toggle-frame-border") {
       setFrameBorder(desiredChecked(entry, !lacunaSettings.normalize(lacunaSettings.data).frame.border))
+      return true
+    }
+
+    if (entry.action === "toggle-portrait-split") {
+      setPortraitSplit(desiredChecked(entry, !root.portraitSplit))
       return true
     }
 
@@ -2113,6 +2126,7 @@ Item {
     frameReserveMode: root.frameReserveMode
     frameShadow: root.frameShadow
     frameBorder: root.frameBorder
+    portraitSplit: root.portraitSplit
     mediaProviders: root.mediaProvidersSettings
     backgroundEffects: root.backgroundEffectsSettings
     backgroundVignette: root.backgroundVignetteSettings

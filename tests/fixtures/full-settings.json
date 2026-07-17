@@ -138,5 +138,11 @@
     "shadowDirection": "bottom_right",
     "shadowOffsetX": 2,
     "shadowOffsetY": 3
+  },
+  "barPresentation": {
+    "portraitSplit": false,
+    "futurePresentationField": {
+      "keep": true
+    }
   }
 }

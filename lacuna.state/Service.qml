@@ -38,6 +38,9 @@ Item {
       compact: false,
       reduceMotion: false,
       barSizeMode: "theme",
+      barPresentation: {
+        portraitSplit: true
+      },
       quickLaunchLayout: "list",
       dailyLaunchLayout: "list",
       shortcutsLayout: "list",
@@ -212,6 +215,7 @@ Item {
         controlLayout: true,
         controlsView: true,
         barSizeMode: true,
+        barPresentation: true,
         compact: true,
         reduceMotion: true,
         barSizeSnapshot: true,
@@ -248,6 +252,14 @@ Item {
       next.shortcutsLayout = normalizeLayoutMode(source.shortcutsLayout || source.shortcutLayout || source.shortcutsView, "list")
       next.controlsLayout = normalizeControlsLayout(source.controlsLayout || source.controlLayout || source.controlsView)
       next.barSizeMode = normalizeBarSizeMode(source.barSizeMode, source.compact === true)
+      if (source.barPresentation && typeof source.barPresentation === "object") {
+        next.barPresentation.portraitSplit = typeof source.barPresentation.portraitSplit === "boolean"
+          ? source.barPresentation.portraitSplit
+          : defaultData().barPresentation.portraitSplit
+        preserveUnknownJson(next.barPresentation, source.barPresentation, {
+          portraitSplit: true
+        })
+      }
       next.compact = next.barSizeMode === "compact"
       next.reduceMotion = value.reduceMotion === true
       next.barSizeSnapshot = normalizeBarSizeSnapshot(source.barSizeSnapshot)
