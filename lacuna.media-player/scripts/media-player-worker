@@ -10,6 +10,7 @@ tokens; those URLs are sent to mpv over IPC and are never placed in argv.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
 import os
 import queue
@@ -42,6 +43,18 @@ VIDEO_CACHE_TTL = 10 * 60
 SEARCH_CACHE_MAX_ENTRIES = 96
 VIDEO_CACHE_MAX_ENTRIES = 48
 MAX_ERROR_LENGTH = 500
+PR_SET_CHILD_SUBREAPER = 36
+
+
+def enable_child_subreaper() -> None:
+    """Reparent provider grandchildren here so container PID 1 cannot retain zombies."""
+    if not sys.platform.startswith("linux"):
+        return
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        libc.prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0)
+    except (AttributeError, OSError):
+        pass
 
 
 def epoch_ms() -> int:
@@ -799,15 +812,50 @@ class MediaWorker:
 
     @staticmethod
     def _terminate_provider_process(process: subprocess.Popen[str], force: bool = False) -> None:
-        if process.poll() is not None:
-            return
         try:
             os.killpg(process.pid, signal.SIGKILL if force else signal.SIGTERM)
+            return
         except (OSError, ProcessLookupError):
+            pass
+        if process.poll() is None:
             try:
                 process.kill() if force else process.terminate()
             except OSError:
                 pass
+
+    @staticmethod
+    def _provider_group_pids(group_id: int) -> set[int]:
+        pids: set[int] = set()
+        proc_root = Path("/proc")
+        if not proc_root.is_dir():
+            return pids
+        for entry in proc_root.iterdir():
+            if not entry.name.isdigit():
+                continue
+            try:
+                stat = (entry / "stat").read_text(encoding="utf-8")
+                fields = stat[stat.rfind(")") + 2:].split()
+                if len(fields) > 2 and int(fields[2]) == group_id:
+                    pids.add(int(entry.name))
+            except (OSError, ValueError):
+                continue
+        return pids
+
+    @staticmethod
+    def _reap_provider_children(pids: set[int]) -> None:
+        pending = set(pids)
+        deadline = time.monotonic() + 0.5
+        while pending and time.monotonic() < deadline:
+            for pid in list(pending):
+                try:
+                    waited, _status = os.waitpid(pid, os.WNOHANG)
+                except ChildProcessError:
+                    pending.remove(pid)
+                    continue
+                if waited == pid:
+                    pending.remove(pid)
+            if pending:
+                time.sleep(0.01)
 
     def _cancel_provider_jobs(self) -> None:
         with self.jobs_lock:
@@ -817,17 +865,24 @@ class MediaWorker:
             event.set()
         with self.provider_processes_lock:
             processes = list(self.provider_processes)
+        group_pids = {
+            process.pid: self._provider_group_pids(process.pid) - {process.pid}
+            for process in processes
+        }
         for process in processes:
             self._terminate_provider_process(process)
         for process in processes:
             try:
                 process.wait(timeout=0.5)
             except subprocess.TimeoutExpired:
-                self._terminate_provider_process(process, force=True)
-                try:
-                    process.wait(timeout=0.5)
-                except subprocess.TimeoutExpired:
-                    pass
+                pass
+            self._terminate_provider_process(process, force=True)
+            try:
+                process.wait(timeout=0.5)
+            except subprocess.TimeoutExpired:
+                pass
+        for process in processes:
+            self._reap_provider_children(group_pids.get(process.pid, set()))
 
     def _run_provider(
         self,
@@ -1203,6 +1258,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    enable_child_subreaper()
     worker = MediaWorker(args)
 
     def stop_signal(_signum: int, _frame: Any) -> None:
