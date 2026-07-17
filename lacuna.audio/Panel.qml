@@ -299,8 +299,8 @@ Item {
             model: activeService.sinks
             DeviceSlat {
               width: column.width
-              label: activeService.nodeLabel(modelData)
-              active: modelData === activeService.sink
+              label: modelData.label
+              active: modelData.selected === true
               onTriggered: activeService.setDefaultSink(modelData)
             }
           }
@@ -319,7 +319,7 @@ Item {
             model: activeService.streams
             StreamSlat {
               width: column.width
-              node: modelData
+              row: modelData
             }
           }
         }
@@ -481,14 +481,14 @@ Item {
   }
 
   component StreamSlat: VolumeSlab {
-    required property var node
+    required property var row
     title: "STREAM"
-    icon: node && node.audio && node.audio.muted ? "" : ""
-    label: activeService.streamLabel(node)
-    percent: node && node.audio ? Math.round(node.audio.volume * 100) : 0
-    muted: node && node.audio ? node.audio.muted : false
-    enabled: !!node && !!node.audio
-    onChanged: function(value) { activeService.setStreamVolume(node, value / 100) }
-    onToggle: activeService.toggleStreamMute(node)
+    icon: row && row.muted ? "" : ""
+    label: row ? row.label : "Stream"
+    percent: row ? Number(row.percent || 0) : 0
+    muted: row ? row.muted === true : false
+    enabled: !!row && row.enabled === true
+    onChanged: function(value) { activeService.setStreamVolume(row, value / 100) }
+    onToggle: activeService.toggleStreamMute(row)
   }
 }

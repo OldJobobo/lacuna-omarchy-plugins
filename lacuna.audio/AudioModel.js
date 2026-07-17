@@ -75,6 +75,28 @@ function streamLabel(node) {
   return friendlyLabel(p["application.name"] || node.description || p["media.name"] || p["node.name"] || node.name || "Stream")
 }
 
+function nodeKey(node) {
+  if (!node) return ""
+  var p = nodeProps(node)
+  var value = node.id
+  if (value === undefined || value === null || value === "") value = p["object.serial"]
+  if (value === undefined || value === null || value === "") value = p["object.id"]
+  if (value === undefined || value === null || value === "") value = node.name || p["node.name"] || node.description
+  return String(value === undefined || value === null ? "" : value)
+}
+
+function snapshotRow(node, kind, selected) {
+  return {
+    key: nodeKey(node),
+    kind: kind,
+    label: kind === "stream" ? streamLabel(node) : nodeLabel(node),
+    selected: selected === true,
+    muted: !!(node && node.audio && node.audio.muted),
+    percent: node && node.audio ? Math.round(node.audio.volume * 100) : 0,
+    enabled: !!(node && node.audio)
+  }
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     clamp: clamp,
@@ -87,6 +109,8 @@ if (typeof module !== "undefined") {
     nodeLabel: nodeLabel,
     isPlaybackStream: isPlaybackStream,
     isAudioSource: isAudioSource,
-    streamLabel: streamLabel
+    streamLabel: streamLabel,
+    nodeKey: nodeKey,
+    snapshotRow: snapshotRow
   }
 }

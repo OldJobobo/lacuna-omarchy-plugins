@@ -275,8 +275,8 @@ PopupWindow {
               DeviceSlat {
                 required property var modelData
                 width: parent ? parent.width : 0
-                label: activeService.nodeLabel(modelData)
-                selected: modelData === activeService.sink
+                label: modelData.label
+                selected: modelData.selected === true
                 onTriggered: activeService.setDefaultSink(modelData)
               }
             }
@@ -286,8 +286,8 @@ PopupWindow {
               DeviceSlat {
                 required property var modelData
                 width: parent ? parent.width : 0
-                label: "MIC / " + activeService.nodeLabel(modelData)
-                selected: modelData === activeService.source
+                label: "MIC / " + modelData.label
+                selected: modelData.selected === true
                 onTriggered: activeService.setDefaultSource(modelData)
               }
             }
@@ -309,7 +309,7 @@ PopupWindow {
               StreamSlat {
                 required property var modelData
                 width: parent ? parent.width : 0
-                node: modelData
+                row: modelData
               }
             }
           }
@@ -395,9 +395,9 @@ PopupWindow {
   component StreamSlat: Rectangle {
     id: streamSlat
 
-    required property var node
-    readonly property bool muted: node && node.audio ? node.audio.muted : true
-    readonly property int percent: node && node.audio ? Math.round(node.audio.volume * 100) : 0
+    required property var row
+    readonly property bool muted: row ? row.muted === true : true
+    readonly property int percent: row ? Number(row.percent || 0) : 0
 
     height: root.space(68)
     radius: 0
@@ -421,7 +421,7 @@ PopupWindow {
       MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onClicked: activeService.toggleStreamMute(streamSlat.node)
+        onClicked: activeService.toggleStreamMute(streamSlat.row)
       }
     }
 
@@ -432,7 +432,7 @@ PopupWindow {
       anchors.leftMargin: root.space(8)
       anchors.rightMargin: root.space(8)
       anchors.topMargin: root.space(10)
-      text: activeService.streamLabel(streamSlat.node)
+      text: streamSlat.row ? streamSlat.row.label : "Stream"
       color: root.foreground
       font.family: root.fontFamily
       font.pixelSize: 13
@@ -465,7 +465,7 @@ PopupWindow {
       to: 150
       value: streamSlat.percent
       live: true
-      onMoved: activeService.setStreamVolume(streamSlat.node, value / 100)
+      onMoved: activeService.setStreamVolume(streamSlat.row, value / 100)
     }
 
     MouseArea {

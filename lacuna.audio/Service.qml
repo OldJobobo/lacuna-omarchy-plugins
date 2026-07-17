@@ -29,41 +29,92 @@ Item {
   readonly property string inputLabel: hasSource ? Model.nodeLabel(source) : "No input"
   readonly property string outputMood: Model.outputMood(outputVolume, outputMuted)
 
-  readonly property var sinks: {
+  // Repeaters must never own transient PwNode QObjects. PipeWire can destroy a
+  // node while Qt is regenerating delegates, which caused the shell crash this
+  // service is designed to survive. Track live nodes privately and expose only
+  // value snapshots with stable keys to UI models.
+  readonly property var liveSinks: collectLiveNodes("sink")
+  readonly property var liveSources: collectLiveNodes("source")
+  readonly property var liveStreams: collectLiveNodes("stream")
+  property var sinks: []
+  property var sources: []
+  property var streams: []
+  property string rowSignature: ""
+
+  PwObjectTracker { objects: root.liveSinks }
+  PwObjectTracker { objects: root.liveSources }
+  PwObjectTracker { objects: root.liveStreams }
+
+  function collectLiveNodes(kind) {
     var list = []
     for (var i = 0; i < nodes.length; i++) {
-      var n = nodes[i]
-      if (n && n.isSink && !n.isStream) list.push(n)
+      var node = nodes[i]
+      if (!node) continue
+      if (kind === "sink" && node.isSink && !node.isStream) list.push(node)
+      else if (kind === "source" && !node.isSink && !node.isStream && Model.isAudioSource(node) && String(node.name || "") !== "quickshell") list.push(node)
+      else if (kind === "stream" && node.audio && Model.isPlaybackStream(node)) list.push(node)
     }
-    if (sink && list.indexOf(sink) < 0) list.unshift(sink)
+    var preferred = kind === "sink" ? sink : kind === "source" ? source : null
+    if (preferred && list.indexOf(preferred) < 0) list.unshift(preferred)
     return list
   }
 
-  readonly property var sources: {
-    var list = []
-    for (var i = 0; i < nodes.length; i++) {
-      var n = nodes[i]
-      if (n && !n.isSink && !n.isStream && Model.isAudioSource(n)) {
-        var name = n.name || ""
-        if (name !== "quickshell") list.push(n)
-      }
+  function snapshotRows(liveNodes, kind, preferred) {
+    var rows = []
+    for (var i = 0; i < liveNodes.length; i++) {
+      var node = liveNodes[i]
+      var row = Model.snapshotRow(node, kind, node === preferred)
+      if (row.key === "") continue
+      rows.push(row)
     }
-    if (source && list.indexOf(source) < 0) list.unshift(source)
-    return list
+    return rows
   }
 
-  readonly property var streams: {
-    var list = []
-    for (var i = 0; i < nodes.length; i++) {
-      var n = nodes[i]
-      if (n && n.audio && Model.isPlaybackStream(n)) list.push(n)
-    }
-    return list
+  function refreshRows() {
+    var nextSinks = snapshotRows(liveSinks, "sink", sink)
+    var nextSources = snapshotRows(liveSources, "source", source)
+    var nextStreams = snapshotRows(liveStreams, "stream", null)
+    var signature = JSON.stringify([nextSinks, nextSources, nextStreams])
+    if (signature === rowSignature) return
+    rowSignature = signature
+    sinks = nextSinks
+    sources = nextSources
+    streams = nextStreams
   }
 
-  PwObjectTracker { objects: root.sinks }
-  PwObjectTracker { objects: root.sources }
-  PwObjectTracker { objects: root.streams }
+  function scheduleRowRefresh() {
+    rowRefresh.restart()
+  }
+
+  function resolveLiveNode(reference) {
+    if (!reference) return null
+    var key = reference.key !== undefined ? String(reference.key) : Model.nodeKey(reference)
+    if (key === "") return null
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i]
+      if (node && Model.nodeKey(node) === key) return node
+    }
+    return null
+  }
+
+  onNodesChanged: scheduleRowRefresh()
+  onSinkChanged: scheduleRowRefresh()
+  onSourceChanged: scheduleRowRefresh()
+  Component.onCompleted: scheduleRowRefresh()
+
+  Timer {
+    id: rowRefresh
+    interval: 0
+    repeat: false
+    onTriggered: root.refreshRows()
+  }
+
+  Timer {
+    interval: 250
+    running: true
+    repeat: true
+    onTriggered: root.refreshRows()
+  }
 
   function setOutputVolume(value) {
     if (hasSink) sink.audio.volume = Model.clamp(value, 0, 1.5)
@@ -85,27 +136,31 @@ Item {
     if (hasSource) source.audio.muted = !source.audio.muted
   }
 
-  function setDefaultSink(node) {
+  function setDefaultSink(reference) {
+    var node = resolveLiveNode(reference)
     if (node) Pipewire.preferredDefaultAudioSink = node
   }
 
-  function setDefaultSource(node) {
+  function setDefaultSource(reference) {
+    var node = resolveLiveNode(reference)
     if (node) Pipewire.preferredDefaultAudioSource = node
   }
 
-  function nodeLabel(node) {
-    return Model.nodeLabel(node)
+  function nodeLabel(reference) {
+    return reference && reference.label !== undefined ? String(reference.label) : Model.nodeLabel(reference)
   }
 
-  function streamLabel(node) {
-    return Model.streamLabel(node)
+  function streamLabel(reference) {
+    return reference && reference.label !== undefined ? String(reference.label) : Model.streamLabel(reference)
   }
 
-  function setStreamVolume(node, value) {
+  function setStreamVolume(reference, value) {
+    var node = resolveLiveNode(reference)
     if (node && node.audio) node.audio.volume = Model.clamp(value, 0, 1.5)
   }
 
-  function toggleStreamMute(node) {
+  function toggleStreamMute(reference) {
+    var node = resolveLiveNode(reference)
     if (node && node.audio) node.audio.muted = !node.audio.muted
   }
 

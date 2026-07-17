@@ -2033,9 +2033,6 @@ Item {
       if (name.indexOf("workspace") >= 0 || name === "focusedmon" || name.indexOf("window") >= 0 || name === "fullscreen") {
         hyprWorkspaceRefreshTimer.restart()
       }
-      if (name === "focusedmon" || name.indexOf("monitor") >= 0) {
-        if (root.shellSettingsService && typeof root.shellSettingsService.refresh === "function") root.shellSettingsService.refresh()
-      }
     }
 
     function onFocusedWorkspaceChanged() {

@@ -70,7 +70,7 @@ class MonitorPolicyTests(unittest.TestCase):
         self.assertTrue(data["isTarget"])
         self.assertEqual("DP-2", data["screenName"])
 
-    def test_menu_uses_policy_and_refreshes_focus_state(self):
+    def test_menu_uses_policy_without_spawning_settings_refreshes_on_focus(self):
         menu = (ROOT / "lacuna.menu/menu/MenuWindow.qml").read_text(encoding="utf-8")
 
         self.assertIn('import "MonitorPolicy.js" as MonitorPolicy', menu)
@@ -94,8 +94,8 @@ class MonitorPolicyTests(unittest.TestCase):
         self.assertIn("model: root.sidebarScreens", menu)
         self.assertIn("function setSidebarMonitorPolicy", menu)
         self.assertIn("function toggleSidebarMonitor", menu)
-        self.assertIn('name === "focusedmon" || name.indexOf("monitor") >= 0', menu)
-        self.assertIn("root.shellSettingsService.refresh()", menu)
+        self.assertNotIn('name === "focusedmon" || name.indexOf("monitor") >= 0', menu)
+        self.assertNotIn("root.shellSettingsService.refresh()", menu)
 
 
 if __name__ == "__main__":

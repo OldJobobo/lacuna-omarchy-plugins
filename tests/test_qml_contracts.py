@@ -1052,11 +1052,15 @@ class QmlContractTests(unittest.TestCase):
             "import Quickshell.Services.Pipewire",
             "readonly property var sink: Pipewire.defaultAudioSink",
             "readonly property var source: Pipewire.defaultAudioSource",
-            "readonly property var streams:",
+            "readonly property var liveStreams:",
+            "property var streams: []",
+            "PwObjectTracker { objects: root.liveStreams }",
+            "function snapshotRows(liveNodes, kind, preferred)",
+            "function resolveLiveNode(reference)",
             "function setOutputVolume(value)",
             "function toggleOutputMute()",
-            "function setDefaultSink(node)",
-            "function setStreamVolume(node, value)",
+            "function setDefaultSink(reference)",
+            "function setStreamVolume(reference, value)",
             'target: "lacuna-audio"',
         ]:
             self.assertIn(snippet, service)
@@ -1084,8 +1088,8 @@ class QmlContractTests(unittest.TestCase):
             "activeService.toggleOutputMute()",
             "activeService.setDefaultSink(modelData)",
             "activeService.setDefaultSource(modelData)",
-            "activeService.setStreamVolume(streamSlat.node, value / 100)",
-            "activeService.toggleStreamMute(streamSlat.node)",
+            "activeService.setStreamVolume(streamSlat.row, value / 100)",
+            "activeService.toggleStreamMute(streamSlat.row)",
             "component ActionChip: Rectangle",
             "component DeviceSlat: Rectangle",
             "component StreamSlat: Rectangle",
@@ -1107,7 +1111,7 @@ class QmlContractTests(unittest.TestCase):
             'text: "PLAYBACK STREAMS"',
             "activeService.setOutputVolume(value / 100)",
             "activeService.setDefaultSink(modelData)",
-            "activeService.setStreamVolume(node, value / 100)",
+            "activeService.setStreamVolume(row, value / 100)",
         ]:
             self.assertIn(snippet, panel)
         self.assertNotIn("FloatingWindow", panel)
@@ -1119,6 +1123,8 @@ class QmlContractTests(unittest.TestCase):
             "function nodeLabel(node)",
             "function isPlaybackStream(node)",
             "function streamLabel(node)",
+            "function nodeKey(node)",
+            "function snapshotRow(node, kind, selected)",
         ]:
             self.assertIn(snippet, model)
 
@@ -2802,9 +2808,17 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("onTriggered: root.handleLoadTimeout()", qml, path)
             self.assertIn("loadWatchdog.restart()", qml, path)
             self.assertIn("if (loadProc.running) loadProc.running = false", qml, path)
+            self.assertIn("property bool refreshPending: false", qml, path)
+            self.assertIn("property bool loadTimedOut: false", qml, path)
+            self.assertIn("id: terminationGrace", qml, path)
+            self.assertIn('var currentDnd = root.toggleValue("notificationSilencing", null)', qml, path)
+            self.assertIn("nextState.toggles.notificationSilencing = currentDnd", qml, path)
             self.assertIn("property bool stale: false", qml, path)
             self.assertIn("loadFailureStreak <= maxAutoRetries", qml, path)
             self.assertIn("id: retryTimer", qml, path)
+
+        menu = read("lacuna.menu/menu/MenuWindow.qml")
+        self.assertNotIn('name === "focusedmon" || name.indexOf("monitor") >= 0', menu)
 
     def test_fake_frame_topbar_reserve_matches_rendered_caster_size(self):
         window = read("lacuna.menu/menu/MenuWindow.qml")

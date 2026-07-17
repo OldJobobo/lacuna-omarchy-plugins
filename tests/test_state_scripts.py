@@ -1,9 +1,11 @@
+import importlib.util
 import json
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -27,6 +29,13 @@ PRESERVED_KEYS = [
 
 def read_json(path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_module(path, name):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def write_json(path, value):
@@ -98,11 +107,48 @@ class StateScriptTests(unittest.TestCase):
 
         self.assertIn("shlex.split(command)", script)
         self.assertIn("stderr=subprocess.DEVNULL", script)
+        self.assertIn("start_new_session=True", script)
+        self.assertIn("os.killpg(proc.pid, signal.SIGTERM)", script)
+        self.assertIn("fcntl.LOCK_EX | fcntl.LOCK_NB", script)
         self.assertNotIn('["bash", "-lc"', script)
         self.assertNotIn("NamedTemporaryFile", script)
+        self.assertNotIn("omarchy-shell notifications isDnd", script)
         self.assertIn("omarchy toggle nightlight --status", script)
         self.assertIn("isinstance(parsed.get(\"enabled\"), bool)", script)
         self.assertIn("int(match.group(0)) < 6000", script)
+
+    def test_shell_settings_state_lock_is_global_single_flight(self):
+        module = load_module(SHELL_SETTINGS_STATE, "shell_settings_state_lock_test")
+        with tempfile.TemporaryDirectory() as tmp:
+            lock_path = Path(tmp) / "state.lock"
+            old = os.environ.get("LACUNA_SHELL_SETTINGS_LOCK")
+            os.environ["LACUNA_SHELL_SETTINGS_LOCK"] = str(lock_path)
+            try:
+                self.assertTrue(module.acquire_single_flight_lock())
+                second = load_module(SHELL_SETTINGS_STATE, "shell_settings_state_second_lock_test")
+                self.assertFalse(second.acquire_single_flight_lock())
+            finally:
+                if old is None:
+                    os.environ.pop("LACUNA_SHELL_SETTINGS_LOCK", None)
+                else:
+                    os.environ["LACUNA_SHELL_SETTINGS_LOCK"] = old
+
+    def test_shell_settings_state_timeout_kills_descendant_process_group(self):
+        module = load_module(SHELL_SETTINGS_STATE, "shell_settings_state_timeout_test")
+        with tempfile.TemporaryDirectory() as tmp:
+            pid_file = Path(tmp) / "child.pid"
+            command = [
+                "bash",
+                "-c",
+                f"sleep 30 & child=$!; printf '%s' \"$child\" > {pid_file}; wait",
+            ]
+            self.assertEqual("", module.run(command, timeout=0.2))
+            for _ in range(20):
+                if pid_file.exists() and not Path("/proc", pid_file.read_text(), "status").exists():
+                    break
+                time.sleep(0.05)
+            self.assertTrue(pid_file.exists())
+            self.assertFalse(Path("/proc", pid_file.read_text(), "status").exists())
 
     def test_bar_size_state_preserves_user_runtime_state_on_toggle(self):
         with tempfile.TemporaryDirectory() as tmp:

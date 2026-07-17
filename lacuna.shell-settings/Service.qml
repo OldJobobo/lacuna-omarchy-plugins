@@ -14,10 +14,13 @@ Item {
   property var pluginRegistry: null
   property var shellConfig: ({})
   property bool loading: false
+  property bool refreshPending: false
+  property bool loadTimedOut: false
   property string errorText: ""
   property bool stale: false
   property int loadFailureStreak: 0
-  readonly property int loadTimeoutMs: 8000
+  readonly property int loadTimeoutMs: 30000
+  readonly property int terminationGraceMs: 1500
   readonly property int maxAutoRetries: 2
   property var state: defaultState()
   readonly property string homeDir: Quickshell.env("HOME") || ""
@@ -207,8 +210,13 @@ Item {
   }
 
   function refresh() {
-    if (loading || lacunaPath === "") return
+    if (lacunaPath === "") return
+    if (loading) {
+      refreshPending = true
+      return
+    }
     loading = true
+    loadTimedOut = false
     errorText = ""
     loadProc.output = ""
     loadProc.command = ["python3", lacunaPath + "/scripts/omarchy-shell-settings-state.py"]
@@ -228,13 +236,20 @@ Item {
   function resolveLoad(success, message) {
     if (!loading) return
     loading = false
+    loadTimedOut = false
     loadWatchdog.stop()
+    terminationGrace.stop()
     if (success) {
       stale = false
       loadFailureStreak = 0
       errorText = ""
+      if (refreshPending) {
+        refreshPending = false
+        refreshTimer.restart()
+      }
       return
     }
+    refreshPending = false
     if (message) errorText = message
     else if (errorText === "") errorText = "Unable to read Omarchy settings state"
     stale = true
@@ -246,9 +261,10 @@ Item {
   }
 
   function handleLoadTimeout() {
-    if (!loading) return
+    if (!loading || loadTimedOut) return
+    loadTimedOut = true
     if (loadProc.running) loadProc.running = false
-    resolveLoad(false, "Timed out reading Omarchy settings state")
+    terminationGrace.restart()
   }
 
   function run(command) {
@@ -467,6 +483,13 @@ Item {
     onTriggered: root.refresh()
   }
 
+  Timer {
+    id: terminationGrace
+    interval: root.terminationGraceMs
+    repeat: false
+    onTriggered: root.resolveLoad(false, "Timed out reading Omarchy settings state")
+  }
+
   Process {
     id: loadProc
     property string output: ""
@@ -484,12 +507,20 @@ Item {
     }
 
     onExited: function(exitCode) {
+      if (root.loadTimedOut) {
+        root.resolveLoad(false, "Timed out reading Omarchy settings state")
+        return
+      }
       if (exitCode !== 0) {
         root.resolveLoad(false, "")
         return
       }
       try {
-        root.state = JSON.parse(loadProc.output || "{}")
+        var nextState = JSON.parse(loadProc.output || "{}")
+        var currentDnd = root.toggleValue("notificationSilencing", null)
+        if (nextState.toggles && (nextState.toggles.notificationSilencing === null || nextState.toggles.notificationSilencing === undefined))
+          nextState.toggles.notificationSilencing = currentDnd
+        root.state = nextState
         root.resolveLoad(true, "")
       } catch (error) {
         root.resolveLoad(false, "Unable to parse Omarchy settings state")
