@@ -41,6 +41,23 @@ This file stores Lacuna app/runtime state such as:
 - `preferredApps`
 - `mediaPlayer` presentation, quality, and provider-filter preferences
 - frame/sidebar preferences
+- portrait bar presentation
+
+Portrait split bars are enabled by default:
+
+```json
+{
+  "barPresentation": {
+    "portraitSplit": true
+  }
+}
+```
+
+When enabled, logical portrait outputs with a top or bottom bar redistribute
+usage, telemetry, theme, and wallpaper widgets to a companion on the opposite
+horizontal edge. Landscape and vertical-edge bars remain single-surface. This
+setting never rewrites `shell.json`; set it to `false` to restore a single bar
+on every output.
 
 Media Player defaults are:
 

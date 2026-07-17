@@ -1,6 +1,6 @@
 # Lacuna Plan Index
 
-Status: current planning ledger (reviewed 2026-07-16)
+Status: current planning ledger (reviewed 2026-07-17)
 
 This is the meta index for every document in `docs/plans/`. It records which
 plans are proposed, complete, implemented, reverted, or superseded. The
@@ -27,6 +27,7 @@ These documents are not part of the beta or RC critical path.
 | Plan | State | Role and boundary |
 | --- | --- | --- |
 | [Surface Transition Pipeline Repair](./lacuna-surface-transition-pipeline-plan.md) | Proposed; ready for implementation | Optional interaction/transition work tracked separately from release readiness. |
+| [Portrait Split Bar](./lacuna-portrait-split-bar-plan.md) | Proposed; ready for implementation | Restores standalone Lacuna's portrait-only opposite-edge companion bar while preserving one canonical Omarchy `shell.json` layout. |
 | [Shell Layout Presets And Agent Orchestration](./lacuna-shell-layout-presets-agent-orchestration-plan.md) | Proposed feature | Built-in per-monitor/workspace layout presets and the first Agent Orchestration shell mode. Not yet represented in runtime settings or QML. |
 | [Issue Creation](./lacuna-issue-creation-plan.md) | Draft operations plan | A prepared GitHub issue-creation batch. It is not an implementation phase and should be revalidated before creating external issues. |
 

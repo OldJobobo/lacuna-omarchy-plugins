@@ -116,6 +116,18 @@ state is cleared and routing falls back to the first currently valid output.
 Bar-originated menu calls carry a screen-local `popupContext`. In `auto` and
 `all` modes the invoking bar output becomes the interactive sidebar/flyout
 output; `pinned` mode still constrains routing to its configured output set.
+The context also reports the invoking surface edge, so a bottom portrait
+companion does not inherit the globally configured top edge (and vice versa).
+
+When `barPresentation.portraitSplit` is enabled, each valid logical portrait
+output with a horizontal bar derives primary and companion bands from the same
+normalized `shell.json` layout. Landscape outputs remain unsplit. Companion
+surfaces stay mapped on every valid output but are transparent, click-through,
+and non-exclusive when inactive. The per-surface proxy preserves Omarchy's
+widget injection, shared popout owner, registry and shell access, while
+overriding edge-sensitive position/orientation. Primary dragging continues to
+mutate the full canonical layout; companion dragging is disabled so filtered
+entries cannot be lost.
 
 `lacuna.menu` resolves the focused monitor name from the Omarchy shell-settings
 state and selects the matching `Quickshell.screens` entry. The persisted
