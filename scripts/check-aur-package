@@ -20,11 +20,19 @@ fi
 
 if command -v makepkg >/dev/null 2>&1; then
   generated="$(mktemp)"
-  trap 'rm -f "$generated"' EXIT
+  builddir=""
+  cleanup() {
+    rm -f "$generated"
+    [[ -z "$builddir" ]] || rm -rf "$builddir"
+  }
+  trap cleanup EXIT
   if [[ "$(id -u)" -eq 0 ]]; then
+    builddir="$(mktemp -d)"
+    cp "$pkgbuild" "$builddir/PKGBUILD"
+    chown -R nobody:nobody "$builddir"
     # The inner shell expands its positional path after dropping privileges.
     # shellcheck disable=SC2016
-    runuser -u nobody -- bash -c 'cd "$1" && makepkg --printsrcinfo' _ "$PWD/packaging/aur" >"$generated"
+    runuser -u nobody -- bash -c 'cd "$1" && makepkg --printsrcinfo' _ "$builddir" >"$generated"
   else
     (cd packaging/aur && makepkg --printsrcinfo) >"$generated"
   fi
