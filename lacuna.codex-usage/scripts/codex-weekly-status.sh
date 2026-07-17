@@ -100,6 +100,7 @@ week_reset_text = clean_reset(data.get("weekly resets") or data.get("resets") or
 plan_text = clean_plan(data.get("plan", "unknown"))
 event_text = clean_event_time(data.get("source event", ""))
 source_file = data.get("source file", "")
+source_text = data.get("source", "") or "local Codex token_count event"
 
 def class_for(left):
     if left <= 10:
@@ -164,7 +165,7 @@ payload = {
     "planText": plan_text,
     "sourceEventText": event_text,
     "sourceFileText": source_file,
-    "source": "local Codex token_count event",
+    "source": source_text,
     "weekActive": week_left is not None,
     "weekLeftPercent": round(week_left) if week_left is not None else 100,
     "weekUsedPercent": round(week_used) if week_used is not None else 0,

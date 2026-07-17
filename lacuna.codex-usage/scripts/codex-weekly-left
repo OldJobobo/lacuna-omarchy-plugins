@@ -1,13 +1,30 @@
 #!/usr/bin/env python3
 
 import json
+import os
+import stat
 import sys
+import tempfile
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
 
 SESSIONS_DIR = Path.home() / ".codex" / "sessions"
 WINDOW_COHERENCE_SECONDS = 15 * 60
+USAGE_ENDPOINT = "https://chatgpt.com/backend-api/wham/usage"
+MAX_RESPONSE_BYTES = 1024 * 1024
+CACHE_MAX_AGE_SECONDS = 12 * 60 * 60
+
+
+def pi_agent_dir():
+    return Path(os.environ.get("PI_CODING_AGENT_DIR") or (Path.home() / ".pi" / "agent"))
+
+
+def cache_path():
+    cache_home = Path(os.environ.get("XDG_CACHE_HOME") or (Path.home() / ".cache"))
+    return cache_home / "lacuna" / "codex-usage.json"
 
 
 def iter_session_files():
@@ -40,50 +57,6 @@ def parse_timestamp(value):
         return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
     except (TypeError, ValueError):
         return None
-
-
-def parse_latest_token_count():
-    best = None
-
-    for path in iter_session_files():
-        try:
-            with path.open("r", encoding="utf-8") as handle:
-                for raw_line in handle:
-                    raw_line = raw_line.strip()
-                    if not raw_line:
-                        continue
-
-                    try:
-                        event = json.loads(raw_line)
-                    except json.JSONDecodeError:
-                        continue
-
-                    if event.get("type") != "event_msg":
-                        continue
-
-                    payload = event.get("payload") or {}
-                    if payload.get("type") != "token_count":
-                        continue
-
-                    timestamp = event.get("timestamp")
-                    if not timestamp:
-                        continue
-                    timestamp_epoch = parse_timestamp(timestamp)
-                    if timestamp_epoch is None:
-                        continue
-
-                    candidate = {
-                        "timestamp": timestamp,
-                        "timestamp_epoch": timestamp_epoch,
-                        "path": path,
-                        "payload": payload,
-                    }
-                    if best is None or candidate_rank(candidate) > candidate_rank(best):
-                        best = candidate
-        except OSError:
-            continue
-
-    return best
 
 
 def parse_latest_windows():
@@ -119,15 +92,14 @@ def parse_latest_windows():
                         resets_at = window.get("resets_at")
                         if resets_at is not None and float(resets_at) < now:
                             continue
-                        candidate = {
+                        candidates.append({
                             "timestamp": timestamp,
                             "timestamp_epoch": timestamp_epoch,
                             "path": path,
                             "payload": payload,
                             "window": window,
                             "minutes": minutes,
-                        }
-                        candidates.append(candidate)
+                        })
         except OSError:
             continue
 
@@ -152,70 +124,244 @@ def parse_latest_windows():
     return best
 
 
+def secure_json_file(path):
+    try:
+        info = path.lstat()
+    except OSError:
+        return None
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid():
+        return None
+    if stat.S_IMODE(info.st_mode) & 0o077:
+        return None
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def read_pi_credential():
+    auth = secure_json_file(pi_agent_dir() / "auth.json")
+    credential = auth.get("openai-codex") if isinstance(auth, dict) else None
+    if not isinstance(credential, dict) or credential.get("type") != "oauth":
+        return None
+    access = credential.get("access")
+    account_id = credential.get("accountId")
+    if not isinstance(access, str) or not access or not isinstance(account_id, str) or not account_id:
+        return None
+    return access, account_id
+
+
+def read_limited_json(response):
+    length = response.headers.get("Content-Length")
+    if length is not None and int(length) > MAX_RESPONSE_BYTES:
+        raise ValueError("usage response is too large")
+    payload = response.read(MAX_RESPONSE_BYTES + 1)
+    if len(payload) > MAX_RESPONSE_BYTES:
+        raise ValueError("usage response is too large")
+    return json.loads(payload.decode("utf-8"))
+
+
+def fetch_usage_payload():
+    # Tests use a fixture and never read or transmit an OAuth credential.
+    fixture = os.environ.get("LACUNA_CODEX_USAGE_API_FIXTURE")
+    if fixture:
+        with Path(fixture).open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+
+    credential = read_pi_credential()
+    if credential is None:
+        return None
+    access, account_id = credential
+    request = urllib.request.Request(
+        USAGE_ENDPOINT,
+        headers={
+            "Authorization": "Bearer " + access,
+            "ChatGPT-Account-Id": account_id,
+            "Accept": "application/json",
+            "User-Agent": "lacuna-codex-usage/1.0",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            if response.status != 200:
+                return None
+            return read_limited_json(response)
+    except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError):
+        return None
+
+
+def bounded_percent(value):
+    try:
+        return max(0.0, min(100.0, float(value)))
+    except (TypeError, ValueError):
+        return None
+
+
+def api_window_minutes(window):
+    try:
+        seconds = int(window.get("limit_window_seconds"))
+    except (AttributeError, TypeError, ValueError):
+        return None
+    minutes = seconds // 60
+    return minutes if minutes in (300, 10080) else None
+
+
+def parse_api_usage(payload):
+    if not isinstance(payload, dict):
+        return None
+    rate_limit = payload.get("rate_limit")
+    if not isinstance(rate_limit, dict):
+        return None
+
+    windows = {}
+    for key in ("primary_window", "secondary_window"):
+        window = rate_limit.get(key)
+        minutes = api_window_minutes(window)
+        used = bounded_percent(window.get("used_percent")) if isinstance(window, dict) else None
+        if minutes is None or used is None:
+            continue
+        try:
+            reset_at = int(window.get("reset_at")) if window.get("reset_at") is not None else None
+        except (TypeError, ValueError):
+            reset_at = None
+        windows[str(minutes)] = {"used_percent": used, "resets_at": reset_at}
+
+    if not windows:
+        return None
+    now = datetime.now(tz=timezone.utc)
+    return {
+        "version": 1,
+        "fetched_at": int(now.timestamp()),
+        "source_event": now.isoformat().replace("+00:00", "Z"),
+        "source": "OpenAI usage API via Pi OAuth",
+        "plan_type": str(payload.get("plan_type") or "unknown"),
+        "windows": windows,
+    }
+
+
+def write_sanitized_cache(data):
+    path = cache_path()
+    try:
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        os.chmod(path.parent, 0o700)
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=path.name + ".",
+            delete=False,
+        ) as handle:
+            os.fchmod(handle.fileno(), 0o600)
+            json.dump(data, handle, separators=(",", ":"))
+            handle.write("\n")
+            temp_path = Path(handle.name)
+        os.replace(temp_path, path)
+        os.chmod(path, 0o600)
+    except OSError:
+        try:
+            temp_path.unlink(missing_ok=True)
+        except (NameError, OSError):
+            pass
+
+
+def read_sanitized_cache():
+    data = secure_json_file(cache_path())
+    if not isinstance(data, dict) or data.get("version") != 1:
+        return None
+    try:
+        age = datetime.now(tz=timezone.utc).timestamp() - float(data.get("fetched_at"))
+    except (TypeError, ValueError):
+        return None
+    if age < 0 or age > CACHE_MAX_AGE_SECONDS or not isinstance(data.get("windows"), dict):
+        return None
+    cached = dict(data)
+    cached["source"] = "OpenAI usage API via Pi OAuth (cached)"
+    return cached
+
+
+def local_usage():
+    windows = parse_latest_windows()
+    selected = [event for event in windows.values() if event is not None]
+    if not selected:
+        return None
+    latest = max(selected, key=lambda event: event["timestamp_epoch"])
+    rate_limits = latest["payload"].get("rate_limits") or {}
+    parsed_windows = {}
+    for minutes, event in windows.items():
+        if event is None:
+            continue
+        window = event["window"]
+        used = bounded_percent(window.get("used_percent"))
+        if used is None:
+            continue
+        parsed_windows[str(minutes)] = {
+            "used_percent": used,
+            "resets_at": window.get("resets_at"),
+        }
+    if not parsed_windows:
+        return None
+    return {
+        "version": 1,
+        "source_event": latest["timestamp"],
+        "source_file": str(latest["path"]),
+        "source": "local Codex token_count event",
+        "plan_type": str(rate_limits.get("plan_type") or "unknown"),
+        "windows": parsed_windows,
+    }
+
+
 def format_reset_time(epoch_seconds):
     if epoch_seconds is None:
         return "unknown"
-    dt = datetime.fromtimestamp(epoch_seconds, tz=timezone.utc).astimezone()
+    dt = datetime.fromtimestamp(float(epoch_seconds), tz=timezone.utc).astimezone()
     return dt.strftime("%Y-%m-%d %I:%M:%S %p %Z")
 
 
-def limit_window(rate_limits, window_minutes, legacy_key):
-    windows = []
-    for key in ("primary", "secondary"):
-        window = rate_limits.get(key) or {}
-        if window:
-            windows.append(window)
-        if window.get("window_minutes") == window_minutes:
-            return window
+def emit_usage(data):
+    windows = data.get("windows") or {}
+    session = windows.get("300") or {}
+    weekly = windows.get("10080") or {}
+    session_used = bounded_percent(session.get("used_percent"))
+    weekly_used = bounded_percent(weekly.get("used_percent"))
+    if session_used is None and weekly_used is None:
+        return 1
 
-    # Older Codex events omitted window_minutes and used fixed positions.
-    if windows and all(window.get("window_minutes") is None for window in windows):
-        return rate_limits.get(legacy_key) or {}
-    return {}
+    if session_used is not None:
+        print(f"5h limit left: {max(0.0, 100.0 - session_used):.1f}%")
+        print(f"5h used: {session_used:.1f}%")
+        print(f"5h resets: {format_reset_time(session.get('resets_at'))}")
+    if weekly_used is not None:
+        print(f"Weekly limit left: {max(0.0, 100.0 - weekly_used):.1f}%")
+        print(f"Weekly used: {weekly_used:.1f}%")
+        print(f"Weekly resets: {format_reset_time(weekly.get('resets_at'))}")
+
+    print(f"Plan: {data.get('plan_type') or 'unknown'}")
+    print(f"Source: {data.get('source') or 'unknown'}")
+    if data.get("source_event"):
+        print(f"Source event: {data['source_event']}")
+    if data.get("source_file"):
+        print(f"Source file: {data['source_file']}")
+    return 0
 
 
 def main():
-    windows = parse_latest_windows()
-    session_event = windows[300]
-    weekly_event = windows[10080]
-    selected = [event for event in (session_event, weekly_event) if event is not None]
-    if not selected:
-        print("No Codex token_count events found in ~/.codex/sessions", file=sys.stderr)
-        return 1
+    payload = fetch_usage_payload()
+    api_usage = parse_api_usage(payload)
+    if api_usage is not None:
+        write_sanitized_cache(api_usage)
+        return emit_usage(api_usage)
 
-    latest = max(selected, key=lambda event: event["timestamp"])
-    session = session_event["window"] if session_event else {}
-    weekly = weekly_event["window"] if weekly_event else {}
-    session_used_percent = session.get("used_percent")
-    session_reset_at = session.get("resets_at")
-    weekly_used_percent = weekly.get("used_percent")
-    weekly_reset_at = weekly.get("resets_at")
-    rate_limits = latest["payload"].get("rate_limits") or {}
-    plan_type = rate_limits.get("plan_type") or "unknown"
+    cached = read_sanitized_cache()
+    if cached is not None:
+        return emit_usage(cached)
 
-    if weekly_used_percent is None and session_used_percent is None:
-        print("Latest token_count event does not include primary or secondary used_percent", file=sys.stderr)
-        return 1
+    local = local_usage()
+    if local is not None:
+        return emit_usage(local)
 
-    source = latest["path"]
-    timestamp = latest["timestamp"]
-
-    if session_used_percent is not None:
-        session_left_percent = max(0.0, 100.0 - float(session_used_percent))
-        print(f"5h limit left: {session_left_percent:.1f}%")
-        print(f"5h used: {float(session_used_percent):.1f}%")
-        print(f"5h resets: {format_reset_time(session_reset_at)}")
-
-    if weekly_used_percent is not None:
-        weekly_left_percent = max(0.0, 100.0 - float(weekly_used_percent))
-        print(f"Weekly limit left: {weekly_left_percent:.1f}%")
-        print(f"Weekly used: {float(weekly_used_percent):.1f}%")
-        print(f"Weekly resets: {format_reset_time(weekly_reset_at)}")
-
-    print(f"Plan: {plan_type}")
-    print(f"Source event: {timestamp}")
-    print(f"Source file: {source}")
-    return 0
+    print("No current OpenAI or local Codex usage windows found", file=sys.stderr)
+    return 1
 
 
 if __name__ == "__main__":

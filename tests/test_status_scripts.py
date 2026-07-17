@@ -201,6 +201,7 @@ class CodexWeeklyStatusTests(unittest.TestCase):
             "Weekly used: 63%\n"
             "Weekly resets: 2026-06-20 09:00 AM\n"
             "Plan: pro\n"
+            "Source: OpenAI usage API via Pi OAuth\n"
             "Source event: 2026-06-18T12:34:56Z\n"
             "Source file: /tmp/codex-session.jsonl\n"
             "OUT\n"
@@ -225,7 +226,7 @@ class CodexWeeklyStatusTests(unittest.TestCase):
         self.assertEqual(payload["weekResetText"], "2026-06-20 09:00 AM")
         self.assertEqual(payload["planText"], "Pro")
         self.assertEqual(payload["sourceFileText"], "/tmp/codex-session.jsonl")
-        self.assertEqual(payload["source"], "local Codex token_count event")
+        self.assertEqual(payload["source"], "OpenAI usage API via Pi OAuth")
         self.assertIn("Codex Usage", payload["tooltip"])
 
     def test_low_balance_is_flagged_alert(self):
@@ -245,6 +246,107 @@ class CodexWeeklyStatusTests(unittest.TestCase):
             result = run([str(staged)], {})
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stdout.strip(), HIDDEN)
+
+    def test_weekly_left_reads_pi_oauth_usage_without_caching_auth_data(self):
+        future = int(datetime.now().timestamp()) + 604800
+        payload = {
+            "user_id": "must-not-be-cached",
+            "account_id": "must-not-be-cached",
+            "email": "must-not-be-cached@example.com",
+            "plan_type": "prolite",
+            "rate_limit": {
+                "primary_window": {
+                    "used_percent": 30,
+                    "limit_window_seconds": 604800,
+                    "reset_at": future,
+                },
+                "secondary_window": None,
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fixture = root / "usage.json"
+            fixture.write_text(json.dumps(payload), encoding="utf-8")
+            cache_home = root / "cache"
+            result = run(
+                [str(self.LEFT_SCRIPT)],
+                {
+                    "HOME": str(root),
+                    "XDG_CACHE_HOME": str(cache_home),
+                    "PI_CODING_AGENT_DIR": str(root / "pi-agent"),
+                    "LACUNA_CODEX_USAGE_API_FIXTURE": str(fixture),
+                },
+            )
+            cache = cache_home / "lacuna" / "codex-usage.json"
+            cached_text = cache.read_text(encoding="utf-8")
+            cache_mode = stat.S_IMODE(cache.stat().st_mode)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("5h used", result.stdout)
+        self.assertIn("Weekly used: 30.0%", result.stdout)
+        self.assertIn("Source: OpenAI usage API via Pi OAuth", result.stdout)
+        self.assertEqual(cache_mode, 0o600)
+        for secret in ("user_id", "account_id", "email", "access", "refresh", "must-not-be-cached"):
+            self.assertNotIn(secret, cached_text)
+
+    def test_weekly_left_uses_sanitized_cache_when_api_is_unavailable(self):
+        future = int(datetime.now().timestamp()) + 604800
+        payload = {
+            "plan_type": "pro",
+            "rate_limit": {
+                "primary_window": {
+                    "used_percent": 44,
+                    "limit_window_seconds": 604800,
+                    "reset_at": future,
+                },
+                "secondary_window": None,
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fixture = root / "usage.json"
+            fixture.write_text(json.dumps(payload), encoding="utf-8")
+            env = {
+                "HOME": str(root),
+                "XDG_CACHE_HOME": str(root / "cache"),
+                "PI_CODING_AGENT_DIR": str(root / "pi-agent"),
+                "LACUNA_CODEX_USAGE_API_FIXTURE": str(fixture),
+            }
+            first = run([str(self.LEFT_SCRIPT)], env)
+            fixture.unlink()
+            env.pop("LACUNA_CODEX_USAGE_API_FIXTURE")
+            second = run([str(self.LEFT_SCRIPT)], env)
+
+        self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertIn("Weekly used: 44.0%", second.stdout)
+        self.assertIn("Source: OpenAI usage API via Pi OAuth (cached)", second.stdout)
+
+    def test_weekly_left_rejects_permissive_pi_auth_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            agent_dir = root / "pi-agent"
+            agent_dir.mkdir()
+            auth = agent_dir / "auth.json"
+            auth.write_text(json.dumps({
+                "openai-codex": {
+                    "type": "oauth",
+                    "access": "must-not-be-used",
+                    "accountId": "must-not-be-used",
+                }
+            }), encoding="utf-8")
+            auth.chmod(0o644)
+            result = run(
+                [str(self.LEFT_SCRIPT)],
+                {
+                    "HOME": str(root),
+                    "XDG_CACHE_HOME": str(root / "cache"),
+                    "PI_CODING_AGENT_DIR": str(agent_dir),
+                },
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn("must-not-be-used", result.stdout + result.stderr)
 
     def test_weekly_left_prefers_canonical_codex_limit_over_newer_variant(self):
         def token_event(timestamp, limit_id, weekly_used, weekly_reset):
@@ -283,7 +385,11 @@ class CodexWeeklyStatusTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            result = run([str(self.LEFT_SCRIPT)], {"HOME": str(home)})
+            result = run([str(self.LEFT_SCRIPT)], {
+                "HOME": str(home),
+                "XDG_CACHE_HOME": str(home / "cache"),
+                "PI_CODING_AGENT_DIR": str(home / "pi-agent"),
+            })
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Weekly limit left: 38.0%", result.stdout)
@@ -313,7 +419,11 @@ class CodexWeeklyStatusTests(unittest.TestCase):
             sessions = home / ".codex" / "sessions" / "2026" / "07" / "12"
             sessions.mkdir(parents=True)
             (sessions / "session.jsonl").write_text(json.dumps(event) + "\n", encoding="utf-8")
-            result = run([str(self.LEFT_SCRIPT)], {"HOME": str(home)})
+            result = run([str(self.LEFT_SCRIPT)], {
+                "HOME": str(home),
+                "XDG_CACHE_HOME": str(home / "cache"),
+                "PI_CODING_AGENT_DIR": str(home / "pi-agent"),
+            })
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotIn("5h used", result.stdout)
@@ -355,7 +465,11 @@ class CodexWeeklyStatusTests(unittest.TestCase):
                 + "\n",
                 encoding="utf-8",
             )
-            result = run([str(self.LEFT_SCRIPT)], {"HOME": str(home)})
+            result = run([str(self.LEFT_SCRIPT)], {
+                "HOME": str(home),
+                "XDG_CACHE_HOME": str(home / "cache"),
+                "PI_CODING_AGENT_DIR": str(home / "pi-agent"),
+            })
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("5h used: 12.0%", result.stdout)
@@ -396,7 +510,11 @@ class CodexWeeklyStatusTests(unittest.TestCase):
                 + "\n",
                 encoding="utf-8",
             )
-            result = run([str(self.LEFT_SCRIPT)], {"HOME": str(home)})
+            result = run([str(self.LEFT_SCRIPT)], {
+                "HOME": str(home),
+                "XDG_CACHE_HOME": str(home / "cache"),
+                "PI_CODING_AGENT_DIR": str(home / "pi-agent"),
+            })
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotIn("5h used", result.stdout)
