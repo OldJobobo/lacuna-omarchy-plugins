@@ -143,12 +143,23 @@ class StateScriptTests(unittest.TestCase):
                 f"sleep 30 & child=$!; printf '%s' \"$child\" > {pid_file}; wait",
             ]
             self.assertEqual("", module.run(command, timeout=0.2))
+            self.assertTrue(pid_file.exists())
+            status_path = Path("/proc", pid_file.read_text(), "status")
+            state = None
             for _ in range(20):
-                if pid_file.exists() and not Path("/proc", pid_file.read_text(), "status").exists():
+                if not status_path.exists():
+                    state = None
+                    break
+                status = status_path.read_text(encoding="utf-8")
+                state_line = next((line for line in status.splitlines() if line.startswith("State:")), "")
+                state = state_line.split()[1] if len(state_line.split()) > 1 else ""
+                if state == "Z":
                     break
                 time.sleep(0.05)
-            self.assertTrue(pid_file.exists())
-            self.assertFalse(Path("/proc", pid_file.read_text(), "status").exists())
+            # A zombie has terminated and cannot consume CPU or spawn work. It
+            # may remain visible under container PID 1 because GitHub's runner
+            # does not guarantee prompt orphan reaping.
+            self.assertIn(state, (None, "Z"))
 
     def test_bar_size_state_preserves_user_runtime_state_on_toggle(self):
         with tempfile.TemporaryDirectory() as tmp:
