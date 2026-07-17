@@ -819,10 +819,15 @@ class MediaWorker:
             processes = list(self.provider_processes)
         for process in processes:
             self._terminate_provider_process(process)
-        if processes:
-            time.sleep(0.1)
         for process in processes:
-            self._terminate_provider_process(process, force=True)
+            try:
+                process.wait(timeout=0.5)
+            except subprocess.TimeoutExpired:
+                self._terminate_provider_process(process, force=True)
+                try:
+                    process.wait(timeout=0.5)
+                except subprocess.TimeoutExpired:
+                    pass
 
     def _run_provider(
         self,
