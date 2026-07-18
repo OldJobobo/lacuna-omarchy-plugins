@@ -10,7 +10,8 @@ PREVIEW_DIR="$CACHE_PATH/previews"
 SIGNATURE_FILE="$CACHE_PATH/signature"
 FAST_SIGNATURE_FILE="$CACHE_PATH/fast-signature"
 STATUS_FILE="$CACHE_PATH/preloader-status.json"
-LOCK_DIR="$CACHE_PATH/preloader.lock"
+LOCK_FILE="$CACHE_PATH/preloader.lockfile"
+LEGACY_LOCK_DIR="$CACHE_PATH/preloader.lock"
 REASON="manual"
 
 while [[ $# -gt 0 ]]; do
@@ -31,11 +32,14 @@ done
 
 mkdir -p "$CACHE_PATH" "$PREVIEW_DIR"
 
-if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+# Older versions used a persistent mkdir lock. A crash could leave it behind
+# forever, so remove that obsolete lock and use a kernel-owned flock instead.
+rmdir "$LEGACY_LOCK_DIR" 2>/dev/null || true
+
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
   exit 0
 fi
-
-trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT
 
 json_escape() {
   local value="$1"

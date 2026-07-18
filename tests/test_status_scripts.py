@@ -8,6 +8,7 @@ stubbed helpers, without depending on the real external tools.
 
 import json
 import contextlib
+import fcntl
 import importlib.machinery
 import importlib.util
 import io
@@ -576,6 +577,41 @@ class PreloadThemeSwitcherTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(status["status"], "ok")
             self.assertEqual(status["changed"], False)
+
+    def test_recovers_from_stale_legacy_lock_directory(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            theme = tmp / "themes" / "mytheme"
+            theme.mkdir(parents=True)
+            (theme / "preview.png").write_bytes(b"img")
+            cache_path = tmp / "cache" / "omarchy" / "theme-selector"
+            (cache_path / "preloader.lock").mkdir(parents=True)
+            env = self._env(tmp)
+
+            result = run([str(self.SCRIPT), "--reason", "stale-lock-test"], env)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse((cache_path / "preloader.lock").exists())
+            status = json.loads((cache_path / "preloader-status.json").read_text())
+            self.assertEqual(status["status"], "ok")
+            self.assertEqual(status["reason"], "stale-lock-test")
+
+    def test_live_lock_contention_skips_without_disturbing_status(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            cache_path = tmp / "cache" / "omarchy" / "theme-selector"
+            cache_path.mkdir(parents=True)
+            status_path = cache_path / "preloader-status.json"
+            status_path.write_text('{"status":"running-owner"}\n', encoding="utf-8")
+            lock_path = cache_path / "preloader.lockfile"
+            env = self._env(tmp)
+
+            with lock_path.open("w") as lock_file:
+                fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                result = run([str(self.SCRIPT), "--reason", "contender"], env)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(status_path.read_text())["status"], "running-owner")
 
 
 class MediaPlayerScriptTests(unittest.TestCase):
