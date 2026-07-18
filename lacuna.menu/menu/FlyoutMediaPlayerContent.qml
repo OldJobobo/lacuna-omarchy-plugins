@@ -27,6 +27,7 @@ Column {
   property string favoritesSort: "recent"
   property string pendingClearKind: ""
   property string feedbackText: ""
+  property bool searchPasteMenuOpen: false
   readonly property int resultRowHeight: compact ? 46 : 54
   readonly property int resultPageSize: Math.max(8, Math.ceil(resultScroll.height / (resultRowHeight + resultScroll.spacing)))
   readonly property int initialResultWindow: resultPageSize * 2
@@ -301,7 +302,10 @@ Column {
   opacity: open ? 1 : 0
   anchors.margins: compact ? 10 : 12
   spacing: compact ? 8 : 10
-  onOpenChanged: ensureDefaultSuggestions()
+  onOpenChanged: {
+    if (!open) searchPasteMenuOpen = false
+    ensureDefaultSuggestions()
+  }
   onActiveTabChanged: ensureDefaultSuggestions()
   onServiceChanged: ensureDefaultSuggestions()
 
@@ -547,7 +551,10 @@ Column {
         spacing: root.spacing
 
         LacunaRect {
+          id: searchFieldShell
+
           visible: root.activeTab === "search"
+          z: root.searchPasteMenuOpen ? 100 : 0
           height: visible ? (root.compact ? 28 : 32) : 0
           width: parent.width
           radius: root.designTokens.material ? height / 2 : root.designTokens.controlRadius
@@ -599,6 +606,7 @@ Column {
             Accessible.name: "Search media"
             Accessible.description: "Search configured providers or paste a YouTube URL"
             onTextChanged: {
+              root.searchPasteMenuOpen = false
               root.query = text
               root.scheduleSearch()
             }
@@ -621,6 +629,60 @@ Column {
             Keys.onEnterPressed: function(event) {
               root.activateSelectedResult((event.modifiers & Qt.ShiftModifier) !== 0)
               event.accepted = true
+            }
+            Keys.onPressed: function(event) {
+              if (event.key === Qt.Key_V && (event.modifiers & Qt.MetaModifier) !== 0) {
+                paste()
+                event.accepted = true
+              }
+            }
+
+            MouseArea {
+              anchors.fill: parent
+              acceptedButtons: Qt.RightButton
+              preventStealing: true
+              onClicked: function(mouse) {
+                searchInput.forceActiveFocus()
+                root.searchPasteMenuOpen = searchInput.canPaste
+                mouse.accepted = true
+              }
+            }
+          }
+
+          LacunaRect {
+            id: searchPasteMenu
+
+            visible: root.searchPasteMenuOpen && searchInput.canPaste
+            z: 100
+            width: root.compact ? 76 : 84
+            height: root.compact ? 26 : 30
+            x: Math.max(0, searchInput.x + searchInput.width - width)
+            y: parent.height + 4
+            radius: root.designTokens.material ? height / 2 : root.designTokens.controlRadius
+            color: root.background
+            border.width: 1
+            border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.35)
+
+            LacunaText {
+              anchors.centerIn: parent
+              text: "Paste"
+              color: root.foreground
+              fontFamily: root.bodyFontFamily
+              font.pixelSize: root.compact ? 9 : 10
+              font.weight: Font.DemiBold
+            }
+
+            LacunaStateLayer {
+              anchors.fill: parent
+              stateColor: root.accent
+              hoverOpacity: root.designTokens.hoverOpacity
+              pressOpacity: root.designTokens.activeOpacity
+              onTriggered: {
+                root.searchPasteMenuOpen = false
+                searchInput.forceActiveFocus()
+                searchInput.paste()
+                Qt.callLater(function() { root.searchPasteMenuOpen = false })
+              }
             }
           }
 

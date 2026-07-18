@@ -2894,6 +2894,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("property bool keyboardInputActive: false", panel_window)
         self.assertIn("? WlrKeyboardFocus.Exclusive", panel_window)
         self.assertIn("root.dismissActive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None", panel_window)
+        self.assertIn("ShortcutInhibitor {", panel_window)
+        self.assertIn("enabled: root.keyboardInputActive", panel_window)
         self.assertIn("keyboardInputActive: root.lacunaEnabled && root.activeFlyoutMediaPlayer && root.flyoutInteractiveOnScreen(modelData)", window)
         self.assertIn("HyprlandFocusGrab {", panel_window)
         self.assertIn("active: root.focusGrabActive", panel_window)
@@ -3228,9 +3230,18 @@ class QmlContractTests(unittest.TestCase):
             "function ensureDefaultSuggestions()",
             "id: defaultSuggestionsTimer",
             "defaultSuggestionsTimer.restart()",
-            "onOpenChanged: ensureDefaultSuggestions()",
+            "if (!open) searchPasteMenuOpen = false",
+            "onOpenChanged: {",
             "onActiveTabChanged: ensureDefaultSuggestions()",
             'text: "Search media or paste YouTube URL"',
+            'event.key === Qt.Key_V && (event.modifiers & Qt.MetaModifier) !== 0',
+            'acceptedButtons: Qt.RightButton',
+            'root.searchPasteMenuOpen = searchInput.canPaste',
+            'id: searchFieldShell',
+            'z: root.searchPasteMenuOpen ? 100 : 0',
+            'visible: root.searchPasteMenuOpen && searchInput.canPaste',
+            'text: "Paste"',
+            'searchInput.paste()',
             'id: searchActionButton',
             'accessibleName: searchInput.text !== "" && !root.inputIsYoutubeUrl ? "Clear search"',
             "id: searchFilterRow",

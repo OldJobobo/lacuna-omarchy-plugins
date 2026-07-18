@@ -86,6 +86,14 @@ PanelWindow {
     ? WlrKeyboardFocus.Exclusive
     : root.dismissActive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
+  // The system's Super+V binding normally consumes the key before it reaches
+  // layer-shell surfaces. Inhibit compositor shortcuts while explicit keyboard
+  // input is active so the focused search field can handle it directly.
+  ShortcutInhibitor {
+    window: root
+    enabled: root.keyboardInputActive
+  }
+
   margins {
     top: root.visualTopInset
     bottom: root.visualBottomInset
