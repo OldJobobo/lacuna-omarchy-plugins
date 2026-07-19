@@ -12,7 +12,9 @@ Bar-widget options belong in Omarchy's shell config:
 ~/.config/omarchy/shell.json
 ```
 
-Omarchy Settings writes plugin bar-widget schema values inline to this file.
+This host-owned path follows Omarchy's shell contract and remains under
+`~/.config` even when `XDG_CONFIG_HOME` points elsewhere. Omarchy Settings
+writes plugin bar-widget schema values inline to this file.
 Each Lacuna bar widget exposes its user-facing options through its
 `manifest.json` schema.
 
@@ -28,10 +30,10 @@ stock bar's transparency toggle.
 
 ## Lacuna Runtime State
 
-Lacuna runtime state lives here:
+Lacuna-owned runtime state honors `XDG_CONFIG_HOME` and lives here:
 
 ```text
-~/.config/omarchy/lacuna/settings.json
+${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/lacuna/settings.json
 ```
 
 This file stores Lacuna app/runtime state such as:

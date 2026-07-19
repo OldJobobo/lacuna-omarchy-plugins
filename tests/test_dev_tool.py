@@ -21,6 +21,7 @@ def run_dev(args, config_home=None):
 
     env = os.environ.copy()
     env["XDG_CONFIG_HOME"] = str(config_home)
+    env["LACUNA_OMARCHY_CONFIG_HOME"] = str(config_home)
     return subprocess.run(
         [str(DEV), *args],
         check=True,
@@ -41,6 +42,21 @@ def load_dev_module():
 
 
 class DevToolTests(unittest.TestCase):
+    def test_omarchy_host_paths_ignore_custom_xdg_config_home(self):
+        module = load_dev_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            xdg_config = Path(tmp) / "xdg-config"
+            with mock.patch.dict(
+                module.os.environ,
+                {"HOME": str(home), "XDG_CONFIG_HOME": str(xdg_config)},
+                clear=True,
+            ):
+                self.assertEqual(module.config_home(), xdg_config)
+                self.assertEqual(module.omarchy_config_home(), home / ".config")
+                self.assertEqual(module.plugins_dir(), home / ".config/omarchy/plugins")
+
     def test_deploy_dry_run_restarts_and_verifies_plugin(self):
         with tempfile.TemporaryDirectory() as tmp:
             config_home = Path(tmp) / "config"
@@ -71,7 +87,7 @@ class DevToolTests(unittest.TestCase):
                 restart_shell=True,
             )
 
-            with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+            with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}), \
                 mock.patch.object(module, "validate_plugin", return_value=0), \
                 mock.patch.object(module, "run_command", return_value=0) as run_command:
                 result = module.deploy(args)
@@ -100,7 +116,7 @@ class DevToolTests(unittest.TestCase):
                 restart_shell=True,
             )
 
-            with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+            with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}), \
                 mock.patch.object(module, "validate_plugin", return_value=0), \
                 mock.patch.object(module, "run_command", side_effect=[7, 0]) as run_command:
                 result = module.deploy(args)

@@ -19,6 +19,7 @@ def run_lacuna(args, config_home=None):
 
     env = os.environ.copy()
     env["XDG_CONFIG_HOME"] = str(config_home)
+    env["LACUNA_OMARCHY_CONFIG_HOME"] = str(config_home)
     return subprocess.run(
         [str(INSTALLER), *args],
         check=True,
@@ -36,6 +37,7 @@ def run_lacuna_unchecked(args, config_home=None):
 
     env = os.environ.copy()
     env["XDG_CONFIG_HOME"] = str(config_home)
+    env["LACUNA_OMARCHY_CONFIG_HOME"] = str(config_home)
     return subprocess.run(
         [str(INSTALLER), *args],
         check=False,
@@ -59,6 +61,23 @@ def load_installer_module():
 
 
 class LacunaInstallerTests(unittest.TestCase):
+    def test_omarchy_host_paths_ignore_custom_xdg_config_home(self):
+        module = load_installer_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            xdg_config = Path(tmp) / "xdg-config"
+            with mock.patch.dict(
+                module.os.environ,
+                {"HOME": str(home), "XDG_CONFIG_HOME": str(xdg_config)},
+                clear=True,
+            ):
+                self.assertEqual(module.config_home(), xdg_config)
+                self.assertEqual(module.omarchy_config_home(), home / ".config")
+                self.assertEqual(module.plugins_dir(), home / ".config/omarchy/plugins")
+                self.assertEqual(module.shell_config_path(), home / ".config/omarchy/shell.json")
+                self.assertEqual(module.lacuna_state_dir(), xdg_config / "omarchy/lacuna")
+
     def test_core_profile_dry_run_uses_current_omarchy_plugin_routes(self):
         result = run_lacuna(["install", "--profile", "core", "--dry-run", "--yes"])
 
@@ -179,7 +198,7 @@ class LacunaInstallerTests(unittest.TestCase):
                 backup.mkdir()
                 os.utime(backup, (index, index))
 
-            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}):
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}):
                 module.prune_backups("lacuna.clock", keep=2)
 
             remaining = sorted(path.name for path in backup_dir.glob(".lacuna.clock.bak.*"))
@@ -198,7 +217,7 @@ class LacunaInstallerTests(unittest.TestCase):
             (source / "manifest.json").write_text('{"id":"lacuna.fake"}\n', encoding="utf-8")
 
             with mock.patch.object(module, "ROOT", tmp_path / "repo"), \
-                mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+                mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}), \
                 mock.patch.object(module, "validate_plugin", return_value=0):
                 result = module.stage_plugin("lacuna.fake", dry_run=False, reinstall=True)
 
@@ -227,7 +246,7 @@ class LacunaInstallerTests(unittest.TestCase):
 
             changes = []
             with mock.patch.object(module, "ROOT", repo), \
-                mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+                mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}), \
                 mock.patch.object(module, "validate_plugin", return_value=0), \
                 mock.patch.object(module, "run_command", side_effect=[7, 0]) as run_command:
                 result = module.stage_plugins(
@@ -261,7 +280,7 @@ class LacunaInstallerTests(unittest.TestCase):
             shell_json.write_text(original, encoding="utf-8")
             plugins = module.load_plugins()
 
-            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}), \
                 mock.patch.object(module, "run_command", return_value=9):
                 result = module.activate_plugins(
                     ["lacuna.state"],
@@ -288,7 +307,7 @@ class LacunaInstallerTests(unittest.TestCase):
             shell_json.write_text("shell-state\n", encoding="utf-8")
             settings_json.write_text("settings-state\n", encoding="utf-8")
 
-            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}):
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}):
                 backups = module.preserve_runtime_state()
 
             contents = sorted(path.read_text(encoding="utf-8") for path in backups)
@@ -369,7 +388,7 @@ class LacunaInstallerTests(unittest.TestCase):
             )
             plugins = module.load_plugins()
 
-            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}), \
                 mock.patch.object(module, "run_command", return_value=0) as run_command:
                 result = module.activate_plugins(
                     ["lacuna.state", "lacuna.menu-button"],
@@ -417,7 +436,7 @@ class LacunaInstallerTests(unittest.TestCase):
             )
             plugins = module.load_plugins()
 
-            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}), \
                 mock.patch.object(module, "run_command", return_value=0) as run_command:
                 result = module.activate_plugins(
                     ["lacuna.bar", "lacuna.state"],
@@ -480,7 +499,7 @@ class LacunaInstallerTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}), \
                 mock.patch.object(module, "OMARCHY_STOCK_SHELL_CONFIG_PATHS", [stock]):
                 result = module.deactivate_plugins(["lacuna.bar", "lacuna.state"], dry_run=False)
 
@@ -542,7 +561,7 @@ class LacunaInstallerTests(unittest.TestCase):
             plugins = module.load_plugins()
             selected = {"lacuna.bar"} | module.LACUNA_BAR_LAYOUT_PLUGIN_IDS
 
-            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home)}), \
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}), \
                 mock.patch.object(module, "installed_lacuna_plugins", return_value=[]), \
                 mock.patch.object(module, "run_command", return_value=0):
                 result = module.activate_plugins(

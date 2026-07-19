@@ -19,15 +19,21 @@ RUNTIME_BACKUPS_TO_KEEP = 8
 
 
 def config_home() -> Path:
+    """XDG root for Lacuna-owned runtime state."""
     return Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
 
 
+def omarchy_config_home() -> Path:
+    """Config root used by Omarchy's shell and plugin host."""
+    return Path(os.environ.get("LACUNA_OMARCHY_CONFIG_HOME", Path.home() / ".config"))
+
+
 def plugins_dir() -> Path:
-    return config_home() / "omarchy" / "plugins"
+    return omarchy_config_home() / "omarchy" / "plugins"
 
 
 def preserve_runtime_state() -> list[Path]:
-    paths = [config_home() / "omarchy" / "shell.json", config_home() / "omarchy" / "lacuna" / "settings.json"]
+    paths = [omarchy_config_home() / "omarchy" / "shell.json", config_home() / "omarchy" / "lacuna" / "settings.json"]
     existing = [path for path in paths if path.exists() or path.is_symlink()]
     if not existing:
         return []
