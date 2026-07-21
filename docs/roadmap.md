@@ -231,10 +231,12 @@ true:
 - Validation on 2026-07-16 reports 305 passing tests and 3 environment skips.
   Treat this as a dated observation, not a pinned expected count.
 - `scripts/quattro-compatibility --check` reports compatibility with Omarchy
-  `4.0.0.r1054.g2f7a07e-1` and Quickshell `0.3.0-2` on the current machine.
-- The r1054 review is accepted: its only reviewed bar-host delta is the stock
-  transparent-surface declaration, which does not change Lacuna's deliberately
-  opaque custom bar contract.
+  `4.0.0.r1193.g0526ebe-1` and Quickshell `0.3.0-2` on the current machine.
+- The r1193 review is accepted. The r1180 portion exposed one breaking host change: upstream
+  removed `omarchy-hyprland-launch` and `Util.hyprExecCommand()`. Lacuna's bar
+  command runner now uses the replacement `Util.execDetached()` API. The other
+  reviewed bar deltas are stock icon geometry, bar-edge dragging/configuration,
+  and removal of an IPC route that Lacuna does not consume.
 - Codex currently reports a weekly-only quota window, so its 5-hour readout is
   suppressed in the bar and dimmed in the flyout. Claude currently reports both
   session and weekly windows through its authenticated usage endpoint. Both

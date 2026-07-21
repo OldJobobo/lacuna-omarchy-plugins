@@ -1,6 +1,6 @@
 # Quattro Compatibility Ledger
 
-Status: reference (updated 2026-07-15)
+Status: reference (updated 2026-07-21)
 
 This is the compatibility record for the Lacuna core bundle on Omarchy
 Quattro. It is intentionally a ledger, not a promise that every future
@@ -10,12 +10,12 @@ Omarchy development build is supported.
 
 | Component | Observed value |
 | --- | --- |
-| Omarchy package | `omarchy-dev 4.0.0.r1054.g2f7a07e-1` |
+| Omarchy package | `omarchy-dev 4.0.0.r1193.g0526ebe-1` |
 | Quickshell package | `quickshell 0.3.0-2` |
 | Omarchy path | `/usr/share/omarchy` |
 | Upstream bar source | `/usr/share/omarchy/shell/plugins/bar/` |
-| Bar source revision | package revision `2f7a07e` (encoded in the Omarchy package version) |
-| Target date | 2026-07-15 |
+| Bar source revision | package revision `0526ebe` (encoded in the Omarchy package version) |
+| Target date | 2026-07-21 |
 
 The current upstream bar source is package-managed rather than a Git checkout,
 so the package version and source hashes are the authoritative revision record
@@ -23,9 +23,9 @@ on this machine:
 
 | File | SHA-256 |
 | --- | --- |
-| `shell/plugins/bar/Bar.qml` | `d566f03cc57c38f552eed05748250027d6b9daee6b8cdb695eadc60fd684eb93` |
+| `shell/plugins/bar/Bar.qml` | `bb0150acd5caf88c7f72c1db83cb2cd5676260fa246e9b11b8db5b23e047e860` |
 | `shell/plugins/bar/BarModel.js` | `729f86bc475ad3b6383bfff4b44a64132da2a5cd36e5470ca4d6bec9ee3712c0` |
-| `shell/shell.qml` | `1aa87fad78f7edaa5e40f4603a1e115f5036235ae26b631ade4d8fecf016690c` |
+| `shell/shell.qml` | `ada999ec2a0f0e6f5548da1e962ff9bbb312da32def818187c3c799568758888` |
 
 `lacuna.bar/BarModel.js` matches the upstream `BarModel.js`. The copied
 `lacuna.bar/OmarchyBar.qml` is intentionally Lacuna-owned and diverges from
@@ -42,6 +42,42 @@ does not change Lacuna's host, injection, layout, slot-measurement, registry,
 geometry, or layer contracts. No source port is required because `lacuna.bar`
 deliberately renders an opaque unified bar/frame/sidebar surface and activation
 normalizes `bar.transparent` to `false`.
+
+### r1054 to r1180 review
+
+The r1180 update includes substantial stock bar and shell work. The reviewed
+compatibility-sensitive changes are:
+
+- Upstream commit `d4d1b518` removes `omarchy-hyprland-launch`, removes
+  `Util.hyprExecCommand()`, and replaces the bar's detached `Process` launcher
+  with `Util.execDetached()`. This was a breaking change for Lacuna: every
+  action routed through `lacuna.bar`'s copied `run()` method failed at the
+  removed API. Lacuna now uses `Util.execDetached()` too.
+- Upstream commits `6e3b69b8` and `52ecb4ea` add `BarIconButton`, optical glyph
+  alignment, and shared status-slot sizing. These are optional visual APIs;
+  Lacuna's self-contained widget geometry does not depend on them.
+- Upstream commits `18233046` and `9aa1dcd6` split bar CLI responsibilities,
+  add whole-bar edge dragging, remove the stock `BarConfigPanel.qml`, and
+  remove the shell `openBarConfig` IPC method. Lacuna retains its own config
+  panel and does not invoke that removed IPC route or the removed CLI helpers.
+- `BarModel.js` is byte-identical to the previous reviewed baseline. The
+  shell entry-point delta is limited to removing `openBarConfig`; plugin
+  discovery, custom bar selection, injection, and summon routing remain
+  compatible.
+
+The copied `OmarchyBar.qml` remains intentionally divergent, but its command
+execution boundary is now synchronized with r1180 and later. Core plugin
+validation, vendored parity, and the live P0 smoke all pass against this
+baseline.
+
+### r1180 to r1193 review
+
+The three tracked compatibility files (`Bar.qml`, `BarModel.js`, and
+`shell.qml`) are byte-identical across r1180 and r1193. The intervening shell
+changes affect OSD feedback, service startup polling, display text sizing, and
+theme layering; none changes Lacuna's bar host, plugin discovery, injection,
+or summon contracts. The r1193 package is therefore accepted with the same
+reviewed hashes.
 
 ## Compatibility check
 

@@ -13,7 +13,7 @@ an entry here does not make a historical plan active again.
 | --- | --- | --- |
 | [Sidebar And Settings Flyout Stability](./sidebar-settings-flyout-stability-plan.md) | Completed and user-verified | Keeps the shared layer-shell surface at a fixed width so settings flyouts cannot squeeze or redraw the persistent sidebar. |
 | [Quattro P1 — Product Integration](./quattro-p1-product-integration-plan.md) | In progress; beta product readiness | Capability-aware Codex/Claude usage states are implemented and live-verified. Remaining work closes the full native ownership matrix, settings, sidebar focus safety, media recovery, and canonical omakase setup. General keyboard navigation is excluded; interactive flyouts may take bounded focus for click-away, Escape, unconsumed Backspace, explicit-close dismissal, and intentional text entry. |
-| [Quattro P2 — Release And Evolution](./quattro-p2-release-and-evolution-plan.md) | In progress alongside P1 | The r1054 compatibility baseline is accepted. Remaining work closes the multi-target support declaration, diagnostics, packaging, migration, documentation, beta, and RC gates. |
+| [Quattro P2 — Release And Evolution](./quattro-p2-release-and-evolution-plan.md) | In progress alongside P1 | The r1193 compatibility baseline is accepted. Remaining work closes the multi-target support declaration, diagnostics, packaging, migration, documentation, beta, and RC gates. |
 
 P1 execution is sequenced in the
 [Quattro P1 Closeout Execution Plan](./quattro-p1-closeout-execution-plan.md),

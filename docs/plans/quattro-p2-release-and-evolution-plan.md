@@ -25,10 +25,10 @@ release rehearsal should not wait for all product work to finish.
 
 | Workstream | Status | Current evidence | Remaining release boundary |
 | --- | --- | --- | --- |
-| Compatibility | Current development target accepted | The r1054 delta was reviewed; executable ledger, hashes, vendored parity, plugin checks, and live compatibility pass. | Declare minimum and release-tested targets, then record beta/RC results. |
+| Compatibility | Current development target accepted | The r1193 delta was reviewed; the r1180 command-launch removal was ported, and r1193 leaves the tracked contracts unchanged. The executable ledger, hashes, vendored parity, plugin checks, and live compatibility pass. | Declare minimum and release-tested targets, then record beta/RC results. |
 | Diagnostics | In progress | `scripts/lacuna status` distinguishes staged/enabled versions. | Add core health, active host, migration, monitor policy, failures, and recovery actions. |
 | Release and migration | In progress | Version parity tests, changelog, rollback-capable installer, and tag workflow exist. | Add one bump/rehearsal procedure, inventory, migration notes, and committed-tree archive verification. |
-| Documentation consistency | In progress | Canonical roadmap/index, phase status, current r1054 baseline, and docs contracts agree. | Continue removing drift and validate release claims, links, and commands. |
+| Documentation consistency | In progress | Canonical roadmap/index, phase status, current r1193 baseline, and docs contracts agree. | Continue removing drift and validate release claims, links, and commands. |
 | Structural evolution | Deferred | Existing behavior tests permit later bounded cleanup. | Not a beta/RC gate unless required to fix a blocker. |
 | P2 validation | Pending | Local checks and compatibility pass. | Run beta and RC artifact rehearsals. |
 
@@ -183,6 +183,17 @@ back, and understood without relying on private project knowledge.
 - This advances Workstream 1 for the current target only. Minimum-supported and
   release-tested target declarations plus beta/RC artifact rehearsals remain
   open.
+
+## Delivered Checkpoint — 2026-07-21
+
+- Accepted Omarchy `4.0.0.r1193.g0526ebe-1` with Quickshell `0.3.0-2` as the
+  current development target after reviewing the r1054-to-r1193 source delta.
+- Ported `lacuna.bar` from the removed `Util.hyprExecCommand()` and
+  `omarchy-hyprland-launch` path to upstream's `Util.execDetached()` API.
+- Reviewed the stock icon-geometry, bar-drag/configuration, CLI split, and
+  `openBarConfig` IPC removal changes; Lacuna does not consume those removed
+  stock-only routes.
+- Re-ran the executable compatibility and live smoke checks successfully.
 
 ## Promotion Gates
 
