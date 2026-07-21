@@ -1,4 +1,6 @@
+import json
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -18,28 +20,50 @@ class AurPackagingTests(unittest.TestCase):
         arch_version = version.replace("-", "")
         self.assertIn(f"\tpkgver = {arch_version}", SRCINFO.read_text(encoding="utf-8"))
 
-    def test_package_uses_matching_immutable_tag(self):
+    def test_package_uses_release_archive_and_publish_checksum_gate(self):
         pkgbuild = PKGBUILD.read_text(encoding="utf-8")
+        self.assertIn("_source_sha256=SKIP", pkgbuild)
         self.assertIn('pkgver=${_upstream_version//-/}', pkgbuild)
-        self.assertIn('source=("git+${url}.git#tag=v${_upstream_version}")', pkgbuild)
-        self.assertIn("makedepends=('git')", pkgbuild)
+        self.assertIn('/releases/download/v${_upstream_version}/', pkgbuild)
+        self.assertIn('sha256sums=("${_source_sha256}")', pkgbuild)
+        checker = (ROOT / "scripts" / "check-aur-package").read_text(encoding="utf-8")
+        self.assertIn("--publish-check", checker)
+        self.assertIn("release archive SHA-256 is still SKIP", checker)
 
-    def test_package_installs_system_payload_without_touching_user_state(self):
+    def test_arch_versions_sort_beta_rc_stable(self):
+        if not (Path("/usr/bin/vercmp").exists() or subprocess.run(["sh", "-c", "command -v vercmp"], stdout=subprocess.DEVNULL).returncode == 0):
+            self.skipTest("vercmp is unavailable")
+        versions = ["0.1.0beta.1", "0.1.0beta.2", "0.1.0rc.1", "0.1.0"]
+        for older, newer in zip(versions, versions[1:]):
+            result = subprocess.run(["vercmp", older, newer], text=True, stdout=subprocess.PIPE, check=True)
+            self.assertLess(int(result.stdout.strip()), 0, f"{older} must sort before {newer}")
+
+    def test_package_requires_host_and_installs_only_system_payload(self):
         pkgbuild = PKGBUILD.read_text(encoding="utf-8")
+        srcinfo = SRCINFO.read_text(encoding="utf-8")
+        self.assertIn("depends=('omarchy' 'python' 'qt6-multimedia')", pkgbuild)
+        self.assertIn("\tdepends = omarchy", srcinfo)
+        self.assertIn("\tdepends = python", srcinfo)
+        self.assertIn("\tdepends = qt6-multimedia", srcinfo)
         self.assertIn('/usr/share/$pkgname', pkgbuild)
         self.assertIn('cp -a lacuna.* shared config "$appdir/"', pkgbuild)
         self.assertIn('/usr/bin/lacuna-omarchy', pkgbuild)
         self.assertNotIn("$HOME", pkgbuild)
         self.assertNotIn(".config/omarchy", pkgbuild)
 
-    def test_ci_and_release_validate_aur_metadata(self):
+    def test_ci_and_release_rehearse_packaging(self):
         check_script = (ROOT / "scripts" / "check.sh").read_text(encoding="utf-8")
         check_workflow = (ROOT / ".github" / "workflows" / "check.yml").read_text(encoding="utf-8")
         release_workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
         self.assertIn("scripts/check-aur-package", check_script)
-        self.assertIn("base-devel", check_workflow)
-        self.assertIn("Run release checks", release_workflow)
-        self.assertIn("packaging", release_workflow)
+        self.assertIn("scripts/rehearse-aur-package", check_workflow)
+        self.assertIn("namcap", check_workflow)
+        self.assertIn("scripts/build-release-archive", release_workflow)
+        self.assertIn("prerelease:", release_workflow)
+        compatibility = json.loads((ROOT / "config/quattro-compatibility.json").read_text(encoding="utf-8"))
+        revision = compatibility["reviewedOmarchyVersion"].rsplit(".g", 1)[-1].split("-", 1)[0]
+        self.assertIn(f"ref: {revision}", check_workflow)
+        self.assertIn(f"ref: {revision}", release_workflow)
 
 
 if __name__ == "__main__":

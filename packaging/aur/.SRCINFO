@@ -5,13 +5,13 @@ pkgbase = lacuna-omarchy-plugins
 	url = https://github.com/OldJobobo/lacuna-omarchy-plugins
 	arch = any
 	license = MIT
-	makedepends = git
+	depends = omarchy
 	depends = python
-	optdepends = omarchy: install, activate, and manage Lacuna plugins
+	depends = qt6-multimedia
 	optdepends = mpv: media-player playback
 	optdepends = yt-dlp: YouTube media search and playback
 	optdepends = imagemagick: adaptive desktop-clock contrast sampling
-	source = git+https://github.com/OldJobobo/lacuna-omarchy-plugins.git#tag=v0.1.0
+	source = lacuna-omarchy-plugins-0.1.0.tar.gz::https://github.com/OldJobobo/lacuna-omarchy-plugins/releases/download/v0.1.0/lacuna-omarchy-plugins-0.1.0.tar.gz
 	sha256sums = SKIP
 
 pkgname = lacuna-omarchy-plugins

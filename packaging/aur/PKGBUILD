@@ -1,25 +1,24 @@
 # Maintainer: OldJobobo <oldjobobo@users.noreply.github.com>
 pkgname=lacuna-omarchy-plugins
 _upstream_version=0.1.0
+_source_sha256=SKIP
 pkgver=${_upstream_version//-/}
 pkgrel=1
 pkgdesc="Cohesive Lacuna desktop plugins for the Omarchy shell"
 arch=('any')
 url="https://github.com/OldJobobo/lacuna-omarchy-plugins"
 license=('MIT')
-depends=('python')
-makedepends=('git')
+depends=('omarchy' 'python' 'qt6-multimedia')
 optdepends=(
-  'omarchy: install, activate, and manage Lacuna plugins'
   'mpv: media-player playback'
   'yt-dlp: YouTube media search and playback'
   'imagemagick: adaptive desktop-clock contrast sampling'
 )
-source=("git+${url}.git#tag=v${_upstream_version}")
-sha256sums=('SKIP')
+source=("${pkgname}-${_upstream_version}.tar.gz::${url}/releases/download/v${_upstream_version}/${pkgname}-${_upstream_version}.tar.gz")
+sha256sums=("${_source_sha256}")
 
 package() {
-  cd "$srcdir/$pkgname"
+  cd "$srcdir/$pkgname-${_upstream_version}"
 
   local appdir="$pkgdir/usr/share/$pkgname"
   install -dm755 "$appdir" "$appdir/scripts"

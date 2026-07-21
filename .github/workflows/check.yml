@@ -24,16 +24,18 @@ jobs:
           pacman -Syu --noconfirm --needed \
             base-devel \
             git \
+            namcap \
             nodejs \
             python \
             python-pytest \
             qt6-declarative \
+            qt6-multimedia \
             shellcheck
       - uses: actions/checkout@v7
       - uses: actions/checkout@v7
         with:
           repository: basecamp/omarchy
-          ref: 3d4bb9ab813d9dc469dd6311216425c7aff18199
+          ref: 0526ebefccf6e58fb2cc9419070f1b5aff4b2df2
           path: .ci/omarchy
       - name: Configure Qt tools
         run: echo "/usr/lib/qt6/bin" >> "$GITHUB_PATH"
@@ -43,3 +45,5 @@ jobs:
           node --version
       - name: Run checks
         run: ./scripts/check.sh
+      - name: Rehearse AUR package
+        run: scripts/rehearse-aur-package

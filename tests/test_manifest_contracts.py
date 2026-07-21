@@ -58,7 +58,7 @@ class ManifestContractTests(unittest.TestCase):
                     self.assertIn(plugin_id, plugin_ids, f"{path}: unknown lacuna.{key} {plugin_id}")
 
     def test_manifest_versions_match_suite_version(self):
-        self.assertRegex(SUITE_VERSION, r"^\d+\.\d+\.\d+$")
+        self.assertRegex(SUITE_VERSION, r"^\d+\.\d+\.\d+(?:-(?:beta|rc)\.\d+)?$")
         for path in manifest_paths():
             manifest = read_json(path)
             self.assertEqual(SUITE_VERSION, manifest.get("version"), str(path))

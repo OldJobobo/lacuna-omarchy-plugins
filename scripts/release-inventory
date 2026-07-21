@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+"""Generate or verify the deterministic Lacuna release inventory."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+OUTPUT = ROOT / "config/release-inventory.json"
+
+
+def payload_files(path: Path) -> list[str]:
+    result = subprocess.run(
+        ["git", "ls-files", "--", str(path.relative_to(ROOT))],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+    )
+    files = [str((ROOT / item).relative_to(path)) for item in result.stdout.splitlines() if item]
+    if path == ROOT / "config" and "release-inventory.json" not in files:
+        files.append("release-inventory.json")
+    return sorted(files)
+
+
+def generate() -> dict:
+    plugins = []
+    for manifest_path in sorted(ROOT.glob("lacuna.*/manifest.json")):
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        meta = data.get("lacuna", {})
+        plugin_dir = manifest_path.parent
+        plugins.append(
+            {
+                "id": data["id"],
+                "kinds": data.get("kinds", []),
+                "stability": meta.get("stability", "stable"),
+                "bundle": meta.get("bundle", "standalone"),
+                "standalone": bool(meta.get("standalone", False)),
+                "requires": meta.get("requires", []),
+                "recommends": meta.get("recommends", []),
+                "entryPoints": data.get("entryPoints", {}),
+                "files": payload_files(plugin_dir),
+            }
+        )
+    return {
+        "schemaVersion": 1,
+        "package": {
+            "name": "lacuna-omarchy-plugins",
+            "requiredPackages": ["omarchy", "python", "qt6-multimedia"],
+            "optionalPackages": ["imagemagick", "mpv", "yt-dlp"],
+            "payloadRoot": "/usr/share/lacuna-omarchy-plugins",
+            "command": "/usr/bin/lacuna-omarchy",
+            "sharedFiles": payload_files(ROOT / "shared"),
+            "configFiles": payload_files(ROOT / "config"),
+        },
+        "plugins": plugins,
+    }
+
+
+def rendered() -> str:
+    return json.dumps(generate(), indent=2, ensure_ascii=False) + "\n"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check", action="store_true", help="Fail if the checked inventory is stale.")
+    args = parser.parse_args()
+    expected = rendered()
+    if args.check:
+        actual = OUTPUT.read_text(encoding="utf-8") if OUTPUT.exists() else ""
+        if actual != expected:
+            print("config/release-inventory.json is stale; run scripts/release-inventory", file=sys.stderr)
+            return 1
+        print(f"Release inventory: {len(generate()['plugins'])} plugins")
+        return 0
+    OUTPUT.write_text(expected, encoding="utf-8")
+    print(f"Wrote {OUTPUT.relative_to(ROOT)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

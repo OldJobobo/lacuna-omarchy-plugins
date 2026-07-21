@@ -1,0 +1,1211 @@
+{
+  "schemaVersion": 1,
+  "package": {
+    "name": "lacuna-omarchy-plugins",
+    "requiredPackages": [
+      "omarchy",
+      "python",
+      "qt6-multimedia"
+    ],
+    "optionalPackages": [
+      "imagemagick",
+      "mpv",
+      "yt-dlp"
+    ],
+    "payloadRoot": "/usr/share/lacuna-omarchy-plugins",
+    "command": "/usr/bin/lacuna-omarchy",
+    "sharedFiles": [
+      "qml/simple-bar/BarHoverSeam.qml",
+      "qml/simple-bar/ColorProfile.qml",
+      "qml/simple-bar/MotionTokens.qml"
+    ],
+    "configFiles": [
+      "quattro-compatibility.json",
+      "release-inventory.json",
+      "settings.example.json",
+      "shell.lacuna-native-replacements.example.json",
+      "shell.phase1.example.json",
+      "shell.phase2-menu.example.json"
+    ]
+  },
+  "plugins": [
+    {
+      "id": "lacuna.audio",
+      "kinds": [
+        "service",
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "service": "Service.qml",
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "AudioFlyout.qml",
+        "AudioModel.js",
+        "BarFlyoutSurface.qml",
+        "ColorProfile.qml",
+        "LacunaGeometry.qml",
+        "MotionTokens.qml",
+        "Panel.qml",
+        "Service.qml",
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.aurora-drift",
+      "kinds": [
+        "overlay"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "overlay": "Overlay.qml"
+      },
+      "files": [
+        "Overlay.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.background-vignette",
+      "kinds": [
+        "overlay"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "overlay": "Overlay.qml"
+      },
+      "files": [
+        "Overlay.qml",
+        "assets/vignette.svg",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.bar",
+      "kinds": [
+        "bar"
+      ],
+      "stability": "stable",
+      "bundle": "core",
+      "standalone": false,
+      "requires": [
+        "lacuna.state",
+        "lacuna.shell-settings",
+        "lacuna.menu"
+      ],
+      "recommends": [
+        "lacuna.menu-button",
+        "lacuna.background-vignette",
+        "lacuna.cinematic-light-overlay",
+        "lacuna.crt-overlay",
+        "lacuna.desktop-clock",
+        "lacuna.theme-preloader",
+        "lacuna.tray",
+        "lacuna.vhs-overlay"
+      ],
+      "entryPoints": {
+        "bar": "Bar.qml"
+      },
+      "files": [
+        "Bar.qml",
+        "BarConfigPanel.qml",
+        "BarModel.js",
+        "LacunaFrameBorderWindow.qml",
+        "LacunaFrameWindow.qml",
+        "LacunaGeometry.qml",
+        "OmarchyBar.qml",
+        "OmarchyBarAdapter.qml",
+        "PortraitBarModel.js",
+        "ScreenModel.js",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.bar-seam",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "ColorProfile.qml",
+        "MotionTokens.qml",
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.bar-size-pill",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarHoverSeam.qml",
+        "ColorProfile.qml",
+        "MotionTokens.qml",
+        "Widget.qml",
+        "assets/tabler/arrows-maximize.svg",
+        "assets/tabler/arrows-minimize.svg",
+        "manifest.json",
+        "scripts/bar-size-state"
+      ]
+    },
+    {
+      "id": "lacuna.bluetooth",
+      "kinds": [
+        "service",
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "service": "Service.qml",
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarFlyoutSurface.qml",
+        "BluetoothFlyout.qml",
+        "BluetoothModel.js",
+        "ColorProfile.qml",
+        "LacunaGeometry.qml",
+        "MotionTokens.qml",
+        "Panel.qml",
+        "Service.qml",
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.cinematic-light-overlay",
+      "kinds": [
+        "overlay"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "overlay": "Overlay.qml"
+      },
+      "files": [
+        "Overlay.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.claude-usage",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarCycleText.qml",
+        "BarFlyoutSurface.qml",
+        "ClaudeUsageFlyout.qml",
+        "ColorProfile.qml",
+        "LacunaDropShadow.qml",
+        "LacunaGeometry.qml",
+        "MotionTokens.qml",
+        "Widget.qml",
+        "assets/claude-ai.svg",
+        "manifest.json",
+        "scripts/claude-code-status.sh"
+      ]
+    },
+    {
+      "id": "lacuna.clock",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarFlyoutSurface.qml",
+        "CalendarFlyout.qml",
+        "CalendarModel.js",
+        "CalendarState.qml",
+        "ColorProfile.qml",
+        "LacunaDropShadow.qml",
+        "LacunaGeometry.qml",
+        "LacunaTokens.qml",
+        "MotionTokens.qml",
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.codex-usage",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarCycleText.qml",
+        "BarFlyoutSurface.qml",
+        "CodexUsageFlyout.qml",
+        "ColorProfile.qml",
+        "LacunaDropShadow.qml",
+        "LacunaGeometry.qml",
+        "MotionTokens.qml",
+        "Widget.qml",
+        "assets/openai-light.svg",
+        "assets/tabler/brand-openai.svg",
+        "manifest.json",
+        "scripts/codex-weekly-left",
+        "scripts/codex-weekly-status.sh"
+      ]
+    },
+    {
+      "id": "lacuna.compact-pill",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "deprecated",
+      "bundle": "legacy",
+      "standalone": false,
+      "requires": [
+        "lacuna.bar-size-pill"
+      ],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "ColorProfile.qml",
+        "MotionTokens.qml",
+        "Widget.qml",
+        "assets/tabler/arrows-maximize.svg",
+        "assets/tabler/arrows-minimize.svg",
+        "manifest.json",
+        "scripts/compact-state"
+      ]
+    },
+    {
+      "id": "lacuna.crt-overlay",
+      "kinds": [
+        "overlay"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "overlay": "Overlay.qml"
+      },
+      "files": [
+        "Overlay.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.desktop-clock",
+      "kinds": [
+        "overlay"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "overlay": "Clock.qml"
+      },
+      "files": [
+        "Clock.qml",
+        "assets/fonts/Tektur-SemiBold.ttf",
+        "manifest.json",
+        "scripts/wallpaper-contrast-sample"
+      ]
+    },
+    {
+      "id": "lacuna.dust-motes-overlay",
+      "kinds": [
+        "overlay"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "overlay": "Overlay.qml"
+      },
+      "files": [
+        "Overlay.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.film-grain-overlay",
+      "kinds": [
+        "overlay"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "overlay": "Overlay.qml"
+      },
+      "files": [
+        "Overlay.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.god-rays-overlay",
+      "kinds": [
+        "overlay"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "overlay": "Overlay.qml"
+      },
+      "files": [
+        "Overlay.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.idle-inhibitor",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarHoverSeam.qml",
+        "ColorProfile.qml",
+        "MotionTokens.qml",
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.indicators",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "ColorProfile.qml",
+        "MotionTokens.qml",
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.media-player",
+      "kinds": [
+        "service"
+      ],
+      "stability": "beta",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [
+        "lacuna.menu",
+        "lacuna.audio",
+        "lacuna.media-player-video"
+      ],
+      "entryPoints": {
+        "service": "Service.qml"
+      },
+      "files": [
+        "Service.qml",
+        "manifest.json",
+        "scripts/jellyfin-search",
+        "scripts/jellyfin-stream",
+        "scripts/media-player-background",
+        "scripts/media-player-check",
+        "scripts/media-player-control",
+        "scripts/media-player-info",
+        "scripts/media-player-preview",
+        "scripts/media-player-refresh-favorites",
+        "scripts/media-player-search",
+        "scripts/media-player-worker",
+        "scripts/youtube-auth"
+      ]
+    },
+    {
+      "id": "lacuna.media-player-video",
+      "kinds": [
+        "overlay"
+      ],
+      "stability": "beta",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [
+        "lacuna.media-player"
+      ],
+      "entryPoints": {
+        "overlay": "Overlay.qml"
+      },
+      "files": [
+        "Overlay.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.menu",
+      "kinds": [
+        "menu"
+      ],
+      "stability": "stable",
+      "bundle": "core",
+      "standalone": false,
+      "requires": [
+        "lacuna.state",
+        "lacuna.shell-settings"
+      ],
+      "recommends": [
+        "lacuna.menu-button",
+        "lacuna.background-vignette",
+        "lacuna.cinematic-light-overlay",
+        "lacuna.crt-overlay",
+        "lacuna.desktop-clock",
+        "lacuna.media-player",
+        "lacuna.theme-preloader",
+        "lacuna.tray",
+        "lacuna.vhs-overlay"
+      ],
+      "entryPoints": {
+        "menu": "Menu.qml"
+      },
+      "files": [
+        "Menu.qml",
+        "VERSION",
+        "assets/fonts/Tektur-SemiBold.ttf",
+        "assets/tabler/circle-dotted-letter-l.svg",
+        "components/LacunaAnim.qml",
+        "components/LacunaColorAnim.qml",
+        "components/LacunaDropShadow.qml",
+        "components/LacunaGeometry.qml",
+        "components/LacunaIconButton.qml",
+        "components/LacunaLog.qml",
+        "components/LacunaRect.qml",
+        "components/LacunaScrollView.qml",
+        "components/LacunaSlider.qml",
+        "components/LacunaStateLayer.qml",
+        "components/LacunaTablerIcon.qml",
+        "components/LacunaText.qml",
+        "components/LacunaTokens.qml",
+        "components/README.md",
+        "manifest.json",
+        "menu/FlyoutAppPickerContent.qml",
+        "menu/FlyoutMediaPlayerContent.qml",
+        "menu/LacunaAttachedFlyout.qml",
+        "menu/LacunaCornerHelper.qml",
+        "menu/LacunaFrameOverlay.qml",
+        "menu/LacunaFrameReserveWindow.qml",
+        "menu/LacunaPanelBorder.qml",
+        "menu/LacunaPanelConnector.qml",
+        "menu/LacunaPanelHost.qml",
+        "menu/LacunaPanelUnifiedSurface.qml",
+        "menu/LacunaPanelWindow.qml",
+        "menu/LacunaShapeSurface.qml",
+        "menu/MediaPlayerTile.qml",
+        "menu/MenuAppModel.qml",
+        "menu/MenuCommandCatalog.qml",
+        "menu/MenuContent.qml",
+        "menu/MenuEntryFactory.qml",
+        "menu/MenuHeader.qml",
+        "menu/MenuRail.qml",
+        "menu/MenuRailButton.qml",
+        "menu/MenuRegistry.qml",
+        "menu/MenuSection.qml",
+        "menu/MenuSurface.qml",
+        "menu/MenuValueHelpers.qml",
+        "menu/MenuWindow.qml",
+        "menu/MonitorPolicy.js",
+        "modules/LacunaMenuItem.qml",
+        "scripts/desktop-app-catalog.py",
+        "scripts/omarchy-shell-settings-state.py",
+        "services/AppCatalog.qml",
+        "services/BarSizeMode.qml",
+        "services/CommandRunner.qml",
+        "services/CompactState.qml",
+        "services/DesignTokens.qml",
+        "services/LacunaMenuState.qml",
+        "services/LacunaSettings.qml",
+        "services/MotionTokens.qml",
+        "services/OmarchyShellSettingsService.qml",
+        "services/PanelController.qml",
+        "services/SidebarState.qml",
+        "services/Theme.qml",
+        "settings/OmarchyShellSettingsWindow.qml",
+        "settings/SettingsHeader.qml",
+        "settings/SettingsRail.qml",
+        "settings/SettingsRow.qml",
+        "settings/SettingsSearchableSelectRow.qml",
+        "settings/SettingsSection.qml",
+        "settings/SettingsSelectRow.qml",
+        "settings/SettingsStackRow.qml",
+        "settings/SettingsTextRow.qml",
+        "settings/SettingsWindow.qml"
+      ]
+    },
+    {
+      "id": "lacuna.menu-button",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "core",
+      "standalone": false,
+      "requires": [
+        "lacuna.menu"
+      ],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarHoverSeam.qml",
+        "ColorProfile.qml",
+        "MotionTokens.qml",
+        "Widget.qml",
+        "assets/tabler/circle-dotted-letter-l.svg",
+        "assets/tabler/layout-sidebar-left-expand-filled.svg",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.mpris",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "ColorProfile.qml",
+        "Widget.qml",
+        "components/LacunaAnim.qml",
+        "components/LacunaMprisButton.qml",
+        "components/LacunaStateLayer.qml",
+        "components/MotionTokens.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.network",
+      "kinds": [
+        "service",
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "service": "Service.qml",
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarFlyoutSurface.qml",
+        "ColorProfile.qml",
+        "LacunaGeometry.qml",
+        "MotionTokens.qml",
+        "NetworkFlyout.qml",
+        "NetworkModel.js",
+        "Panel.qml",
+        "Service.qml",
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.nightlight",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarHoverSeam.qml",
+        "ColorProfile.qml",
+        "MotionTokens.qml",
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.notifications",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarFlyoutSurface.qml",
+        "BarHoverSeam.qml",
+        "ColorProfile.qml",
+        "LacunaGeometry.qml",
+        "MotionTokens.qml",
+        "NotificationsFlyout.qml",
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.power",
+      "kinds": [
+        "service",
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "service": "Service.qml",
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarFlyoutSurface.qml",
+        "ColorProfile.qml",
+        "LacunaGeometry.qml",
+        "MotionTokens.qml",
+        "Panel.qml",
+        "PowerFlyout.qml",
+        "PowerModel.js",
+        "Service.qml",
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.rainfall-overlay",
+      "kinds": [
+        "overlay"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "overlay": "Overlay.qml"
+      },
+      "files": [
+        "Overlay.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.reminders",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.screen-recording",
+      "kinds": [
+        "service",
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "service": "Service.qml",
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarHoverSeam.qml",
+        "ColorProfile.qml",
+        "MotionTokens.qml",
+        "Service.qml",
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.script-pill",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "experimental",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "ColorProfile.qml",
+        "MotionTokens.qml",
+        "Widget.qml",
+        "manifest.json",
+        "scripts/example-status"
+      ]
+    },
+    {
+      "id": "lacuna.settings-persistence",
+      "kinds": [
+        "service",
+        "panel"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "service": "Service.qml",
+        "panel": "Panel.qml"
+      },
+      "files": [
+        "Panel.qml",
+        "Service.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.shell-settings",
+      "kinds": [
+        "service",
+        "panel"
+      ],
+      "stability": "stable",
+      "bundle": "core",
+      "standalone": false,
+      "requires": [
+        "lacuna.state"
+      ],
+      "recommends": [
+        "lacuna.menu",
+        "lacuna.theme-preloader"
+      ],
+      "entryPoints": {
+        "service": "Service.qml",
+        "panel": "Panel.qml"
+      },
+      "files": [
+        "CommandRunner.qml",
+        "Panel.qml",
+        "Service.qml",
+        "assets/fonts/Tektur-SemiBold.ttf",
+        "components/LacunaAnim.qml",
+        "components/LacunaColorAnim.qml",
+        "components/LacunaDropShadow.qml",
+        "components/LacunaGeometry.qml",
+        "components/LacunaIconButton.qml",
+        "components/LacunaLog.qml",
+        "components/LacunaRect.qml",
+        "components/LacunaScrollView.qml",
+        "components/LacunaSlider.qml",
+        "components/LacunaStateLayer.qml",
+        "components/LacunaTablerIcon.qml",
+        "components/LacunaText.qml",
+        "components/LacunaTokens.qml",
+        "manifest.json",
+        "scripts/omarchy-shell-settings-state.py",
+        "services/DesignTokens.qml",
+        "services/MotionTokens.qml",
+        "settings/OmarchyShellSettingsWindow.qml",
+        "settings/SettingsHeader.qml",
+        "settings/SettingsRail.qml",
+        "settings/SettingsRow.qml",
+        "settings/SettingsSearchableSelectRow.qml",
+        "settings/SettingsSection.qml",
+        "settings/SettingsSelectRow.qml",
+        "settings/SettingsStackRow.qml"
+      ]
+    },
+    {
+      "id": "lacuna.state",
+      "kinds": [
+        "service"
+      ],
+      "stability": "stable",
+      "bundle": "core",
+      "standalone": false,
+      "requires": [],
+      "recommends": [
+        "lacuna.menu",
+        "lacuna.shell-settings"
+      ],
+      "entryPoints": {
+        "service": "Service.qml"
+      },
+      "files": [
+        "Service.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.system-stats",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarFlyoutSurface.qml",
+        "BarHoverSeam.qml",
+        "ColorProfile.qml",
+        "LacunaDropShadow.qml",
+        "LacunaGeometry.qml",
+        "LacunaTokens.qml",
+        "MotionTokens.qml",
+        "TelemetryFlyout.qml",
+        "Widget.qml",
+        "assets/tabler/assembly-filled.svg",
+        "assets/tabler/cpu.svg",
+        "assets/tabler/database-filled.svg",
+        "assets/tabler/stack-3-filled.svg",
+        "manifest.json",
+        "scripts/system-stats-snapshot.py"
+      ]
+    },
+    {
+      "id": "lacuna.system-update",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarHoverSeam.qml",
+        "ColorProfile.qml",
+        "MotionTokens.qml",
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.temperature",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarFlyoutSurface.qml",
+        "BarHoverSeam.qml",
+        "ColorProfile.qml",
+        "LacunaDropShadow.qml",
+        "LacunaGeometry.qml",
+        "LacunaTokens.qml",
+        "MotionTokens.qml",
+        "ThermalFlyout.qml",
+        "Widget.qml",
+        "assets/tabler/temperature-plus-filled.svg",
+        "manifest.json",
+        "scripts/thermal-snapshot.py"
+      ]
+    },
+    {
+      "id": "lacuna.theme",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [
+        "lacuna.theme-preloader"
+      ],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarFlyoutSurface.qml",
+        "ColorProfile.qml",
+        "LacunaDropShadow.qml",
+        "LacunaGeometry.qml",
+        "LacunaTokens.qml",
+        "MotionTokens.qml",
+        "ThemeFlyout.qml",
+        "Widget.qml",
+        "assets/tabler/palette.svg",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.theme-preloader",
+      "kinds": [
+        "service"
+      ],
+      "stability": "stable",
+      "bundle": "theme",
+      "standalone": false,
+      "requires": [],
+      "recommends": [
+        "lacuna.theme",
+        "lacuna.wallpaper"
+      ],
+      "entryPoints": {
+        "service": "Service.qml"
+      },
+      "files": [
+        "Service.qml",
+        "manifest.json",
+        "scripts/preload-theme-switcher.sh",
+        "scripts/refresh-theme-background.sh"
+      ]
+    },
+    {
+      "id": "lacuna.tray",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.vhs-overlay",
+      "kinds": [
+        "overlay"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "overlay": "Overlay.qml"
+      },
+      "files": [
+        "Overlay.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.voxtype",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarHoverSeam.qml",
+        "ColorProfile.qml",
+        "MotionTokens.qml",
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.wallpaper",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [
+        "lacuna.theme-preloader"
+      ],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarFlyoutSurface.qml",
+        "ColorProfile.qml",
+        "LacunaDropShadow.qml",
+        "LacunaGeometry.qml",
+        "LacunaTokens.qml",
+        "MotionTokens.qml",
+        "WallpaperFlyout.qml",
+        "Widget.qml",
+        "assets/tabler/photo.svg",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.weather",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "BarFlyoutSurface.qml",
+        "ColorProfile.qml",
+        "LacunaDropShadow.qml",
+        "LacunaGeometry.qml",
+        "LacunaTokens.qml",
+        "MotionTokens.qml",
+        "WeatherFlyout.qml",
+        "WeatherModel.js",
+        "WeatherState.qml",
+        "Widget.qml",
+        "manifest.json"
+      ]
+    },
+    {
+      "id": "lacuna.workspaces",
+      "kinds": [
+        "bar-widget"
+      ],
+      "stability": "stable",
+      "bundle": "standalone",
+      "standalone": true,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "barWidget": "Widget.qml"
+      },
+      "files": [
+        "ColorProfile.qml",
+        "Widget.qml",
+        "components/LacunaAnim.qml",
+        "components/LacunaStateLayer.qml",
+        "components/LacunaWorkspaceButton.qml",
+        "components/MotionTokens.qml",
+        "manifest.json"
+      ]
+    }
+  ]
+}

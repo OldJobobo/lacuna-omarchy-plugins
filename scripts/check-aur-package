@@ -3,34 +3,58 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+publish_check=false
+if [[ ${1:-} == --publish-check ]]; then
+  publish_check=true
+elif [[ $# -gt 0 ]]; then
+  printf 'usage: %s [--publish-check]\n' "$0" >&2
+  exit 2
+fi
+
 pkgbuild="packaging/aur/PKGBUILD"
 srcinfo="packaging/aur/.SRCINFO"
 version="$(<VERSION)"
 
 bash -n "$pkgbuild"
+scripts/release-version check
+scripts/release-inventory --check
 
-readarray -t package_versions < <(bash -c 'source "$1"; printf "%s\n%s\n" "$_upstream_version" "$pkgver"' _ "$pkgbuild")
-upstream_version="${package_versions[0]}"
-pkgver="${package_versions[1]}"
+readarray -t package_values < <(bash -c 'source "$1"; printf "%s\n%s\n%s\n%s\n" "$_upstream_version" "$pkgver" "$_source_sha256" "${source[0]}"' _ "$pkgbuild")
+upstream_version="${package_values[0]}"
+pkgver="${package_values[1]}"
+source_sha256="${package_values[2]}"
+source_spec="${package_values[3]}"
 expected_pkgver="${version//-/}"
-if [[ "$upstream_version" != "$version" || "$pkgver" != "$expected_pkgver" ]]; then
+if [[ $upstream_version != "$version" || $pkgver != "$expected_pkgver" ]]; then
   printf 'AUR versions (%s -> %s) do not match VERSION %s\n' "$upstream_version" "$pkgver" "$version" >&2
   exit 1
 fi
 
+if ! grep -Fq "depends = omarchy" "$srcinfo" || ! grep -Fq "depends = python" "$srcinfo" || ! grep -Fq "depends = qt6-multimedia" "$srcinfo"; then
+  printf 'AUR metadata must require omarchy, python, and qt6-multimedia\n' >&2
+  exit 1
+fi
+if [[ $source_spec != *"/releases/download/v${version}/lacuna-omarchy-plugins-${version}.tar.gz" ]]; then
+  printf 'AUR source is not the versioned GitHub release archive\n' >&2
+  exit 1
+fi
+
+generated=""
+builddir=""
+archive=""
+cleanup() {
+  [[ -z $generated ]] || rm -f "$generated"
+  [[ -z $archive ]] || rm -f "$archive"
+  [[ -z $builddir ]] || rm -rf "$builddir"
+}
+trap cleanup EXIT
+
 if command -v makepkg >/dev/null 2>&1; then
   generated="$(mktemp)"
-  builddir=""
-  cleanup() {
-    rm -f "$generated"
-    [[ -z "$builddir" ]] || rm -rf "$builddir"
-  }
-  trap cleanup EXIT
-  if [[ "$(id -u)" -eq 0 ]]; then
+  if [[ $(id -u) -eq 0 ]]; then
     builddir="$(mktemp -d)"
     cp "$pkgbuild" "$builddir/PKGBUILD"
     chown -R nobody:nobody "$builddir"
-    # The inner shell expands its positional path after dropping privileges.
     # shellcheck disable=SC2016
     runuser -u nobody -- bash -c 'cd "$1" && makepkg --printsrcinfo' _ "$builddir" >"$generated"
   else
@@ -39,6 +63,43 @@ if command -v makepkg >/dev/null 2>&1; then
   diff -u "$srcinfo" "$generated"
 else
   grep -Fq "pkgver = $expected_pkgver" "$srcinfo"
-  grep -Fq "#tag=v$version" "$srcinfo"
   printf 'warning: makepkg not found; performed static AUR metadata checks only\n' >&2
+fi
+
+if command -v namcap >/dev/null 2>&1; then
+  namcap_output="$(namcap "$pkgbuild" || true)"
+  [[ -z $namcap_output ]] || printf '%s\n' "$namcap_output"
+  if grep -Eq '(^|[[:space:]])E:' <<<"$namcap_output"; then
+    printf 'namcap reported PKGBUILD errors\n' >&2
+    exit 1
+  fi
+fi
+
+if $publish_check; then
+  if [[ $source_sha256 == SKIP ]]; then
+    printf 'publish blocked: release archive SHA-256 is still SKIP\n' >&2
+    exit 1
+  fi
+  if [[ -n $(git status --porcelain) ]]; then
+    printf 'publish blocked: worktree is not clean\n' >&2
+    exit 1
+  fi
+  if ! git ls-remote --exit-code --tags origin "refs/tags/v${version}" >/dev/null 2>&1; then
+    printf 'publish blocked: tag v%s is not available on origin\n' "$version" >&2
+    exit 1
+  fi
+  source_url="${source_spec#*::}"
+  archive="$(mktemp)"
+  if ! curl -fsSL "$source_url" -o "$archive"; then
+    printf 'publish blocked: release archive is unavailable: %s\n' "$source_url" >&2
+    exit 1
+  fi
+  actual="$(sha256sum "$archive" | awk '{print $1}')"
+  if [[ $actual != "$source_sha256" ]]; then
+    printf 'publish blocked: release archive checksum mismatch (%s != %s)\n' "$actual" "$source_sha256" >&2
+    exit 1
+  fi
+  printf 'AUR publish prerequisites: PASS\n'
+else
+  printf 'AUR scaffold checks: PASS (publication remains blocked until checksum/tag/release gates pass)\n'
 fi

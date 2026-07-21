@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+"""Check or update Lacuna's release version metadata."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+VERSION_FILE = ROOT / "VERSION"
+PKGBUILD = ROOT / "packaging/aur/PKGBUILD"
+SRCINFO = ROOT / "packaging/aur/.SRCINFO"
+VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:-(?:beta|rc)\.\d+)?$")
+
+
+def arch_version(version: str) -> str:
+    if not VERSION_RE.fullmatch(version):
+        raise ValueError(f"unsupported release version: {version}")
+    return version.replace("-", "")
+
+
+def manifest_paths() -> list[Path]:
+    return sorted(ROOT.glob("lacuna.*/manifest.json"))
+
+
+def updated_pkgbuild(content: str, version: str) -> str:
+    replacements = [
+        (r"^_upstream_version=.+$", f"_upstream_version={version}"),
+        (r"^_source_sha256=.+$", "_source_sha256=SKIP"),
+        (r"^pkgrel=.+$", "pkgrel=1"),
+    ]
+    for pattern, replacement in replacements:
+        content, count = re.subn(pattern, replacement, content, count=1, flags=re.MULTILINE)
+        if count != 1:
+            raise RuntimeError(f"PKGBUILD is missing {pattern[1:].split('=')[0]}")
+    return content
+
+
+def atomic_write(path: Path, content: bytes) -> None:
+    temporary = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    temporary.write_bytes(content)
+    os.replace(temporary, path)
+
+
+def pkgbuild_version() -> str:
+    match = re.search(r"^_upstream_version=(.+)$", PKGBUILD.read_text(encoding="utf-8"), re.MULTILINE)
+    return match.group(1).strip() if match else ""
+
+
+def check() -> int:
+    version = VERSION_FILE.read_text(encoding="utf-8").strip()
+    try:
+        expected_arch = arch_version(version)
+    except ValueError as error:
+        print(error, file=sys.stderr)
+        return 1
+
+    errors: list[str] = []
+    for path in manifest_paths():
+        actual = str(json.loads(path.read_text(encoding="utf-8")).get("version", ""))
+        if actual != version:
+            errors.append(f"{path.relative_to(ROOT)}: {actual or '<missing>'} != {version}")
+    if pkgbuild_version() != version:
+        errors.append(f"packaging/aur/PKGBUILD: {pkgbuild_version() or '<missing>'} != {version}")
+    srcinfo = SRCINFO.read_text(encoding="utf-8")
+    if f"\tpkgver = {expected_arch}\n" not in srcinfo:
+        errors.append(f"packaging/aur/.SRCINFO: pkgver != {expected_arch}")
+
+    if errors:
+        print("Release version drift:", file=sys.stderr)
+        for error in errors:
+            print(f"  - {error}", file=sys.stderr)
+        return 1
+    print(f"Release version: {version} (Arch: {expected_arch})")
+    return 0
+
+
+def set_version(version: str, dry_run: bool) -> int:
+    try:
+        arch_version(version)
+    except ValueError as error:
+        print(error, file=sys.stderr)
+        return 2
+
+    targets = [VERSION_FILE, *manifest_paths(), PKGBUILD, SRCINFO]
+    print(f"Release version plan: {version}")
+    for path in targets:
+        print(f"  update {path.relative_to(ROOT)}")
+    if dry_run:
+        return 0
+
+    originals = {path: path.read_bytes() for path in targets}
+    try:
+        atomic_write(VERSION_FILE, (version + "\n").encode())
+        for path in manifest_paths():
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["version"] = version
+            atomic_write(path, (json.dumps(data, indent=2, ensure_ascii=False) + "\n").encode())
+
+        pkgbuild = updated_pkgbuild(PKGBUILD.read_text(encoding="utf-8"), version)
+        atomic_write(PKGBUILD, pkgbuild.encode())
+
+        result = subprocess.run(
+            ["makepkg", "--printsrcinfo"],
+            cwd=PKGBUILD.parent,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+        )
+        if result.returncode != 0:
+            raise RuntimeError("makepkg --printsrcinfo failed")
+        atomic_write(SRCINFO, result.stdout.encode())
+        if check() != 0:
+            raise RuntimeError("updated release metadata did not validate")
+    except BaseException as error:
+        for path, content in originals.items():
+            atomic_write(path, content)
+        print(f"release version update rolled back: {error}", file=sys.stderr)
+        return 130 if isinstance(error, KeyboardInterrupt) else 1
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("check")
+    set_parser = subparsers.add_parser("set")
+    set_parser.add_argument("version")
+    set_parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args()
+    if args.command == "check":
+        return check()
+    return set_version(args.version, args.dry_run)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

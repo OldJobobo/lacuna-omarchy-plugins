@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+"""Build and inspect the AUR package locally without a published release tag."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+PKGBUILD = ROOT / "packaging/aur/PKGBUILD"
+
+
+def run(command: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(command, cwd=cwd, env=env, check=False, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--keep", action="store_true", help="Keep the temporary rehearsal directory.")
+    args = parser.parse_args()
+    required = ["makepkg", "bsdtar"]
+    missing = [name for name in required if shutil.which(name) is None]
+    if missing:
+        print(f"missing package rehearsal tools: {', '.join(missing)}", file=sys.stderr)
+        return 2
+
+    temp = Path(tempfile.mkdtemp(prefix="lacuna-aur-rehearsal-"))
+    try:
+        result = run(
+            [str(ROOT / "scripts/build-release-archive"), "--allow-dirty", "--check-reproducible", "--output-dir", str(temp / "dist")],
+            cwd=ROOT,
+        )
+        print(result.stdout, end="")
+        if result.returncode != 0:
+            return result.returncode
+        archive = next((temp / "dist").glob("*.tar.gz"))
+        checksum = hashlib.sha256(archive.read_bytes()).hexdigest()
+        build = temp / "build"
+        build.mkdir()
+        local_archive = build / archive.name
+        shutil.copy2(archive, local_archive)
+
+        pkgbuild = PKGBUILD.read_text(encoding="utf-8")
+        pkgbuild = re.sub(r"^_source_sha256=.+$", f"_source_sha256={checksum}", pkgbuild, count=1, flags=re.MULTILINE)
+        pkgbuild = re.sub(
+            r'^source=\(.+\)$',
+            f'source=("file://{local_archive}")',
+            pkgbuild,
+            count=1,
+            flags=re.MULTILINE,
+        )
+        (build / "PKGBUILD").write_text(pkgbuild, encoding="utf-8")
+
+        command = ["makepkg", "--nodeps", "--cleanbuild", "--force", "--noconfirm"]
+        if os.geteuid() == 0:
+            shutil.chown(temp, user="nobody", group="nobody")
+            for path in temp.rglob("*"):
+                shutil.chown(path, user="nobody", group="nobody")
+            command = ["runuser", "-u", "nobody", "--", *command]
+        result = run(command, cwd=build)
+        print(result.stdout, end="")
+        if result.returncode != 0:
+            return result.returncode
+
+        packages = [path for path in build.glob("*.pkg.tar.*") if not path.name.endswith(".sig")]
+        if len(packages) != 1:
+            print(f"expected one built package, found {len(packages)}", file=sys.stderr)
+            return 1
+        package = packages[0]
+
+        if shutil.which("namcap"):
+            allowed_warnings = (
+                "Referenced QML module 'qs.Commons'",
+                "Referenced QML module 'qs.Ui'",
+                "Referenced library 'python3'",
+                "Dependency bash detected and implicitly satisfied",
+                "Dependency qt6-declarative detected and implicitly satisfied",
+                "Dependency quickshell detected and implicitly satisfied",
+                "Dependency included, but may not be needed ('omarchy')",
+            )
+            for target in [build / "PKGBUILD", package]:
+                result = run(["namcap", str(target)], cwd=build)
+                if result.stdout:
+                    print(result.stdout, end="")
+                lines = result.stdout.splitlines()
+                errors = [line for line in lines if re.search(r"(^|\s)E:", line)]
+                unknown_warnings = [
+                    line
+                    for line in lines
+                    if re.search(r"(^|\s)W:", line) and not any(allowed in line for allowed in allowed_warnings)
+                ]
+                if result.returncode != 0 or errors or unknown_warnings:
+                    if unknown_warnings:
+                        print("unreviewed namcap warnings:", *unknown_warnings, sep="\n  ", file=sys.stderr)
+                    print(f"namcap rejected {target.name}", file=sys.stderr)
+                    return 1
+
+        names = subprocess.run(["bsdtar", "-tf", str(package)], check=True, text=True, stdout=subprocess.PIPE).stdout.splitlines()
+        package_metadata = {".BUILDINFO", ".MTREE", ".PKGINFO"}
+        outside_usr = [name for name in names if name and not name.startswith("usr/") and name not in package_metadata]
+        forbidden = [name for name in names if "__pycache__" in name or name.endswith(".pyc")]
+        if outside_usr or forbidden:
+            print(f"forbidden package paths: {(outside_usr + forbidden)[:5]}", file=sys.stderr)
+            return 1
+        required_paths = {
+            "usr/bin/lacuna-omarchy",
+            "usr/share/lacuna-omarchy-plugins/VERSION",
+            "usr/share/lacuna-omarchy-plugins/scripts/lacuna",
+            "usr/share/licenses/lacuna-omarchy-plugins/LICENSE",
+        }
+        missing_paths = sorted(required_paths - set(names))
+        if missing_paths:
+            print(f"missing package paths: {', '.join(missing_paths)}", file=sys.stderr)
+            return 1
+
+        extract = temp / "root"
+        extract.mkdir()
+        subprocess.run(["bsdtar", "-xf", str(package), "-C", str(extract)], check=True)
+        payload_root = extract / "usr/share/lacuna-omarchy-plugins"
+        command_link = extract / "usr/bin/lacuna-omarchy"
+        if not command_link.is_symlink() or os.readlink(command_link) != "/usr/share/lacuna-omarchy-plugins/scripts/lacuna":
+            print("packaged command symlink is incorrect", file=sys.stderr)
+            return 1
+        command_path = payload_root / "scripts/lacuna"
+        if command_path.stat().st_mode & 0o777 != 0o755:
+            print("packaged installer mode is not 0755", file=sys.stderr)
+            return 1
+        inventory = json.loads((ROOT / "config/release-inventory.json").read_text(encoding="utf-8"))
+        expected_plugins = {plugin["id"] for plugin in inventory["plugins"]}
+        packaged_plugins = {path.parent.name for path in payload_root.glob("lacuna.*/manifest.json")}
+        if packaged_plugins != expected_plugins:
+            print("packaged plugin inventory does not match config/release-inventory.json", file=sys.stderr)
+            return 1
+        expected_payload = {"VERSION", "scripts/lacuna"}
+        for plugin in inventory["plugins"]:
+            expected_payload.update(f"{plugin['id']}/{relative}" for relative in plugin["files"])
+        expected_payload.update(f"shared/{relative}" for relative in inventory["package"]["sharedFiles"])
+        expected_payload.update(f"config/{relative}" for relative in inventory["package"]["configFiles"])
+        actual_payload = {
+            str(path.relative_to(payload_root))
+            for path in payload_root.rglob("*")
+            if path.is_file() or path.is_symlink()
+        }
+        if actual_payload != expected_payload:
+            missing = sorted(expected_payload - actual_payload)
+            unexpected = sorted(actual_payload - expected_payload)
+            print(f"packaged payload drift: missing={missing[:5]} unexpected={unexpected[:5]}", file=sys.stderr)
+            return 1
+        env = os.environ.copy()
+        env.update({"HOME": str(temp / "home"), "XDG_CONFIG_HOME": str(temp / "config")})
+        result = run([sys.executable, str(command_path), "--help"], cwd=extract, env=env)
+        if result.returncode != 0 or "Install, uninstall, and inspect" not in result.stdout:
+            print(result.stdout, file=sys.stderr)
+            print("packaged installer help smoke failed", file=sys.stderr)
+            return 1
+
+        digest = hashlib.sha256(package.read_bytes()).hexdigest()
+        print(f"AUR rehearsal PASS: {package.name} ({len(names)} entries, {digest})")
+        return 0
+    finally:
+        if args.keep:
+            print(f"Kept rehearsal directory: {temp}")
+        else:
+            shutil.rmtree(temp, ignore_errors=True)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
