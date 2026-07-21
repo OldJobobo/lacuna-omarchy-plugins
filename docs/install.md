@@ -61,8 +61,10 @@ Stage a full install without enabling it:
 ## Arch Linux And AUR Packages
 
 The repository maintains an AUR publication scaffold in `packaging/aur/`.
-Once a matching tagged package has been published, install it with an AUR
-helper or build its `PKGBUILD` in a clean Arch environment. The package places
+Beta and RC builds remain GitHub prereleases; the stable AUR package will be
+submitted after the verified `0.1.0` release. Once published, install it with an
+AUR helper or build its `PKGBUILD` in a clean Arch environment. The package
+requires an `omarchy` provider, Python, and Qt Multimedia, places
 the versioned payload under `/usr/share/lacuna-omarchy-plugins` and provides
 the `lacuna-omarchy` command; package installation itself never edits a user's
 Omarchy configuration.
@@ -105,6 +107,10 @@ for manual recovery.
 ./scripts/lacuna uninstall --plugin lacuna.clock,lacuna.weather
 ./scripts/lacuna uninstall --all --purge-state
 ```
+
+Selective uninstall refuses to remove a plugin while another installed Lacuna
+plugin requires it. Review the printed reverse dependency closure and pass
+`--cascade` only when those dependent plugins should be removed too.
 
 ## Manual Omarchy Source Install
 

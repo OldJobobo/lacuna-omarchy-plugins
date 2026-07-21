@@ -27,7 +27,7 @@ release rehearsal should not wait for all product work to finish.
 | --- | --- | --- | --- |
 | Compatibility | Current development target accepted | The r1193 delta was reviewed; the r1180 command-launch removal was ported, and r1193 leaves the tracked contracts unchanged. The executable ledger, hashes, vendored parity, plugin checks, and live compatibility pass. | Declare minimum and release-tested targets, then record beta/RC results. |
 | Diagnostics | In progress | `scripts/lacuna status` distinguishes staged/enabled versions. | Add core health, active host, migration, monitor policy, failures, and recovery actions. |
-| Release and migration | In progress | Version parity tests, changelog, rollback-capable installer, and tag workflow exist. | Add one bump/rehearsal procedure, inventory, migration notes, and committed-tree archive verification. |
+| Release and migration | In progress | Version tooling, generated inventory, deterministic archives, local AUR rehearsal, dependency-safe uninstall, changelog, rollback-capable installer, and tag workflow exist. | Complete the packaged beta/RC live matrix, migration notes, and release evidence record. |
 | Documentation consistency | In progress | Canonical roadmap/index, phase status, current r1193 baseline, and docs contracts agree. | Continue removing drift and validate release claims, links, and commands. |
 | Structural evolution | Deferred | Existing behavior tests permit later bounded cleanup. | Not a beta/RC gate unless required to fix a blocker. |
 | P2 validation | Pending | Local checks and compatibility pass. | Run beta and RC artifact rehearsals. |

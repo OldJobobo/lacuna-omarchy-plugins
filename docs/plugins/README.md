@@ -5,7 +5,9 @@ Status: reference
 Omarchy installs plugins from trusted sources one plugin at a time. It does not
 currently enforce dependency metadata, so Lacuna records install intent in each
 manifest under the ignored `lacuna` metadata block and mirrors it here for
-users.
+users. The machine-readable release/package inventory is generated from these
+manifests at `config/release-inventory.json`; maintainers verify it with
+`scripts/release-inventory --check` before building an artifact.
 
 ## Plugin Areas
 

@@ -1,6 +1,6 @@
 # Release Workflow
 
-Status: active release runbook (updated 2026-07-11)
+Status: active release runbook (updated 2026-07-21)
 
 `VERSION` is the machine-readable source of truth. `README.md`, every plugin
 manifest, the changelog section, Git tag, archive name, and release notes must
@@ -29,17 +29,23 @@ from the repository's existing `0.1.0` version.
    stable version.
 3. Move relevant changelog entries from `Unreleased` into the target version;
    record migrations, known limitations, and supported environment.
-4. Update `packaging/aur/PKGBUILD` and regenerate `packaging/aur/.SRCINFO`;
-   `_upstream_version` must match `VERSION` exactly (`pkgver` removes SemVer's
-   prerelease hyphen to satisfy Arch version syntax).
-5. Confirm installer profiles match `docs/plugins/README.md` and generate or
-   review the release plugin inventory.
+4. Preview the synchronized bump with `scripts/release-version set <version>
+   --dry-run`, then use the same command without `--dry-run` to update
+   `VERSION`, manifests, `PKGBUILD`, and `.SRCINFO` together. Arch `pkgver`
+   removes the supported beta/RC prerelease hyphen.
+5. Regenerate `config/release-inventory.json` with `scripts/release-inventory`
+   and confirm installer profiles match `docs/plugins/README.md`.
 6. Confirm user-visible changes have current screenshots when useful.
 
 ## Validate The Tree
 
 ```bash
 ./scripts/check.sh
+scripts/release-version check
+scripts/release-inventory --check
+scripts/build-release-archive --allow-dirty --check-reproducible
+scripts/check-aur-package
+scripts/rehearse-aur-package
 scripts/quattro-compatibility --check
 scripts/quattro-p0-smoke
 ./scripts/lacuna install --dry-run
@@ -54,9 +60,11 @@ the current command result.
 
 ## Rehearse The Artifact
 
-Build from committed source, not an arbitrary dirty working tree. Verify the
-archive inventory against the committed file list, then test the artifact in a
-clean install path:
+Build from committed source, not an arbitrary dirty working tree. Run
+`scripts/build-release-archive --check-reproducible` to create a deterministic,
+single-root archive, checksum, and machine-readable file inventory. Then run
+`scripts/rehearse-aur-package` and test the extracted artifact in a clean install
+path:
 
 1. Install and activate the core profile.
 2. Rescan/restart the shell and smoke the bar, menu, state, and settings.
@@ -74,11 +82,16 @@ private project knowledge.
 2. Tag the exact commit as `v$(cat VERSION)`.
 3. Push the commit and tag.
 4. Verify the release workflow runs the full project gate, checks tag/version
-   and manifest/version parity, builds the archive and checksum, and creates the
-   GitHub release.
-5. Copy the validated AUR recipe into its dedicated AUR repository and build it
-   in a clean Arch chroot before publishing.
-6. Install the published artifact once; do not treat workflow success alone as
+   and manifest/version parity, rehearses the Arch package, builds the archive,
+   checksum, and inventory, and creates the GitHub release. Beta and RC tags
+   must be marked as prereleases.
+5. Do not submit beta or RC builds to the stable AUR package name. After the
+   verified stable release exists, replace the scaffold's `SKIP` with the real
+   release-archive checksum, regenerate `.SRCINFO`, and run
+   `scripts/check-aur-package --publish-check`.
+6. Follow `packaging/aur/SUBMISSION.md`, including the clean-chroot build, exact
+   package inspection, dedicated AUR repository, and post-publication smoke.
+7. Install the published artifact once; do not treat workflow success alone as
    runtime validation.
 
 ## Promotion Discipline

@@ -23,6 +23,8 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
 - Media-player worker shutdown now reaps provider subprocesses, preventing the
   process-group lifecycle check from failing under container PID 1.
 - GitHub release jobs now run the complete project gate before publishing.
+- Selective uninstall now refuses to break installed plugin dependencies unless
+  `--cascade` explicitly includes their reverse dependency closure.
 
 ### Changed
 - The Bézier corner constant `curveKappa` is defined once in a shared
@@ -50,5 +52,8 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
   installs pytest and reports coverage.
 - AUR packaging scaffold for `lacuna-omarchy-plugins`, including synchronized
   `.SRCINFO`, package validation, system payload layout, and maintainer docs.
+- Prerelease-aware version tooling, a generated plugin inventory, deterministic
+  single-root release archives, local `makepkg`/`namcap` rehearsal, strict AUR
+  publication gates, and a clean-chroot submission runbook.
 
-[Unreleased]: https://github.com/jsbrown7/lacuna-omarchy-plugins/compare/HEAD
+[Unreleased]: https://github.com/OldJobobo/lacuna-omarchy-plugins/compare/HEAD
