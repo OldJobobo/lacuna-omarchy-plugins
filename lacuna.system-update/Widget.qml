@@ -30,6 +30,12 @@ Item {
     if (!updateProc.running) updateProc.running = true
   }
 
+  function triggerPress(button) {
+    if (!bar) return
+    if (button === Qt.MiddleButton) refresh()
+    else if (button === Qt.LeftButton) bar.run("omarchy-launch-floating-terminal-with-presentation omarchy-update")
+  }
+
   ColorProfile {
     id: colorProfile
     bar: root.bar
@@ -103,9 +109,7 @@ Item {
       onEntered: if (root.bar) root.bar.showTooltip(root, "Omarchy update available")
       onExited: if (root.bar) root.bar.hideTooltip(root)
       onClicked: function(mouse) {
-        if (!root.bar) return
-        if (mouse.button === Qt.MiddleButton) root.refresh()
-        else root.bar.run("omarchy launch floating terminal with presentation omarchy update")
+        root.triggerPress(mouse.button)
       }
     }
   }

@@ -5,6 +5,61 @@ from qml_harness import HAVE_SESSION, parse_behave, qml_url, require_no_qml_erro
 
 @unittest.skipUnless(HAVE_SESSION, "needs a quickshell binary and a Wayland session")
 class QmlBarIconSizeBehaviorTests(unittest.TestCase):
+    def test_system_update_exposes_bar_routed_click_action(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property string launchedCommand: ""
+  property var updateWidget: null
+
+  QtObject {{
+    id: mockBar
+    property bool vertical: false
+    property int barSize: 30
+    property color foreground: "#eeeeee"
+    property color background: "#101010"
+    property color accent: "#2979ff"
+    property color urgent: "#ef1234"
+    property string fontFamily: "Hack Nerd Font Propo"
+    property string position: "top"
+    property var shell: null
+    function showTooltip(owner, text) {{}}
+    function hideTooltip(owner) {{}}
+    function run(command) {{ root.launchedCommand = command }}
+  }}
+
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.system-update/Widget.qml')}", Component.PreferSynchronous)
+    updateWidget = component.createObject(root, {{
+      bar: mockBar,
+      settings: {{ interval: 999999 }}
+    }})
+    finish.restart()
+  }}
+
+  Timer {{
+    id: finish
+    interval: 40
+    onTriggered: {{
+      updateWidget.triggerPress(Qt.LeftButton)
+      console.log("BEHAVE " + JSON.stringify({{ command: launchedCommand }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        result = parse_behave(output)[-1]
+
+        self.assertEqual(
+            result["command"],
+            "omarchy-launch-floating-terminal-with-presentation omarchy-update",
+        )
+
     def test_first_party_icon_widgets_resolve_to_shared_large_bar_size(self):
         component_urls = [
             qml_url("lacuna.audio/Widget.qml"),

@@ -2275,6 +2275,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("root.popupContextFor(position, anchorItem, moduleId, owningScreen)", omarchy_bar)
         self.assertIn("function registerClickTarget(target) { root.registerClickTarget(target) }", omarchy_bar)
         self.assertIn("function unregisterClickTarget(target) { root.unregisterClickTarget(target) }", omarchy_bar)
+        self.assertIn("Util.execDetached(command)", omarchy_bar)
+        self.assertNotIn("Util.hyprExecCommand", omarchy_bar)
 
     def test_media_player_video_waits_for_high_res_background_stream(self):
         overlay = read("lacuna.media-player-video/Overlay.qml")
