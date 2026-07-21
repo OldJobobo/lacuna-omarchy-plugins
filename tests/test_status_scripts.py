@@ -397,6 +397,7 @@ class CodexWeeklyStatusTests(unittest.TestCase):
         self.assertIn("Weekly used: 62.0%", result.stdout)
 
     def test_weekly_left_recognizes_weekly_window_in_primary(self):
+        future = int(datetime.now(timezone.utc).timestamp()) + 604800
         event = {
             "timestamp": "2026-07-12T22:45:31.079Z",
             "type": "event_msg",
@@ -407,7 +408,7 @@ class CodexWeeklyStatusTests(unittest.TestCase):
                     "plan_type": "prolite",
                     "primary": {
                         "used_percent": 7.0,
-                        "resets_at": 1784487505,
+                        "resets_at": future,
                         "window_minutes": 10080,
                     },
                     "secondary": None,
