@@ -252,6 +252,19 @@ def dependency_closure(ids: set[str], plugins: dict[str, Plugin]) -> set[str]:
     return resolved
 
 
+def reverse_dependency_closure(ids: set[str], installed: set[str], plugins: dict[str, Plugin]) -> set[str]:
+    resolved = set(ids)
+    changed = True
+    while changed:
+        changed = False
+        for plugin_id in installed - resolved:
+            plugin = plugins.get(plugin_id)
+            if plugin and any(required in resolved for required in plugin.requires):
+                resolved.add(plugin_id)
+                changed = True
+    return resolved
+
+
 def full_profile(plugins: dict[str, Plugin], include_legacy: bool, include_replacements: bool) -> set[str]:
     ids = {
         plugin_id
@@ -1323,6 +1336,17 @@ def uninstall(args: argparse.Namespace) -> int:
     if unknown:
         raise SystemExit(f"Unknown Lacuna plugin id: {', '.join(unknown)}")
 
+    installed = set(installed_lacuna_plugins(plugins))
+    cascade = reverse_dependency_closure(selected, installed, plugins)
+    dependents = cascade - selected
+    if dependents and not args.cascade:
+        print("Refusing to break installed plugin dependencies.", file=sys.stderr)
+        print(f"Also remove: {', '.join(ordered(dependents, plugins))}", file=sys.stderr)
+        print("Re-run with --cascade to remove the dependent plugins too.", file=sys.stderr)
+        return 2
+    if dependents:
+        selected = cascade
+
     ids = ordered(selected, plugins)
     print_plan("Uninstall plan", ids, plugins)
     commands = uninstall_stage_commands(ids)
@@ -1562,6 +1586,7 @@ def parser() -> argparse.ArgumentParser:
     uninstall_parser = subparsers.add_parser("uninstall", parents=[common], help="Uninstall Lacuna plugins.")
     uninstall_parser.add_argument("--all", action="store_true", help="Remove all installed Lacuna plugins.")
     uninstall_parser.add_argument("--plugin", dest="plugins", action="append", default=[], help="Plugin id or comma list.")
+    uninstall_parser.add_argument("--cascade", action="store_true", help="Also remove installed plugins that require the selection.")
     uninstall_parser.add_argument("--purge-state", action="store_true", help="Also remove ~/.config/omarchy/lacuna after confirmation.")
 
     update_parser = subparsers.add_parser("update", parents=[common], help="Restage installed Lacuna plugins that changed in this checkout.")
@@ -1598,6 +1623,8 @@ def normalize_args(args: argparse.Namespace) -> argparse.Namespace:
         args.apply_layout = None
     if not hasattr(args, "all"):
         args.all = False
+    if not hasattr(args, "cascade"):
+        args.cascade = False
     if not hasattr(args, "purge_state"):
         args.purge_state = False
     return args

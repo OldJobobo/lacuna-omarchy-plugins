@@ -174,6 +174,40 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertIn("omarchy restart shell", result.stdout)
         self.assertNotIn("omarchy plugin rescan", result.stdout)
 
+    def test_selective_uninstall_refuses_to_break_installed_dependencies(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            for plugin_id in ["lacuna.menu", "lacuna.menu-button"]:
+                installed = config_home / "omarchy" / "plugins" / plugin_id
+                installed.mkdir(parents=True)
+                shutil.copy2(ROOT / plugin_id / "manifest.json", installed / "manifest.json")
+
+            result = run_lacuna_unchecked(
+                ["uninstall", "--plugin", "lacuna.menu", "--dry-run", "--yes"],
+                config_home=config_home,
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("Refusing to break installed plugin dependencies", result.stderr)
+        self.assertIn("lacuna.menu-button", result.stderr)
+        self.assertIn("--cascade", result.stderr)
+
+    def test_selective_uninstall_cascade_includes_installed_dependents(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            for plugin_id in ["lacuna.menu", "lacuna.menu-button"]:
+                installed = config_home / "omarchy" / "plugins" / plugin_id
+                installed.mkdir(parents=True)
+                shutil.copy2(ROOT / plugin_id / "manifest.json", installed / "manifest.json")
+
+            result = run_lacuna(
+                ["uninstall", "--plugin", "lacuna.menu", "--cascade", "--dry-run", "--yes"],
+                config_home=config_home,
+            )
+
+        self.assertIn("lacuna.menu", result.stdout)
+        self.assertIn("lacuna.menu-button", result.stdout)
+
     def test_uninstall_requires_all_or_plugin_selection(self):
         with tempfile.TemporaryDirectory() as tmp:
             config_home = Path(tmp) / "config"
