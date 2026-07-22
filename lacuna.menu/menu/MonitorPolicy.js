@@ -90,6 +90,16 @@ function isSidebarScreen(targets, screen) {
   return false
 }
 
+function workspaceHasFullscreen(workspace) {
+  if (!workspace) return false
+  if (workspace.hasFullscreen === true) return true
+
+  var ipc = workspace.lastIpcObject || {}
+  return ipc.hasfullscreen === true
+    || ipc.hasFullscreen === true
+    || Number(ipc.fullscreen || 0) > 0
+}
+
 function monitorOptions(screens, pinnedNames) {
   var wanted = normalizeMonitorNames(pinnedNames)
   var values = screens || []
@@ -117,6 +127,7 @@ if (typeof module !== "undefined") {
     chooseFlyoutScreen: chooseFlyoutScreen,
     chooseSidebarScreen: chooseSidebarScreen,
     isSidebarScreen: isSidebarScreen,
+    workspaceHasFullscreen: workspaceHasFullscreen,
     monitorOptions: monitorOptions
   }
 }

@@ -47,7 +47,12 @@ class MonitorPolicyTests(unittest.TestCase):
               noScreens: policy.chooseSidebarScreens([], "auto", "DP-3", []),
               normalizedNames: policy.normalizeMonitorNames([" DP-1 ", "DP-1", "", "DP-2"]),
               isTarget: policy.isSidebarScreen([{ name: "DP-2" }], { name: "DP-2" }),
-              screenName: policy.screenName({ name: "DP-2" })
+              screenName: policy.screenName({ name: "DP-2" }),
+              fullscreenDirect: policy.workspaceHasFullscreen({ hasFullscreen: true }),
+              fullscreenIpcLower: policy.workspaceHasFullscreen({ lastIpcObject: { hasfullscreen: true } }),
+              fullscreenIpcMode: policy.workspaceHasFullscreen({ lastIpcObject: { fullscreen: 1 } }),
+              fullscreenFalse: policy.workspaceHasFullscreen({ hasFullscreen: false, lastIpcObject: { fullscreen: 0 } }),
+              fullscreenMissing: policy.workspaceHasFullscreen(null)
             };
             console.log(JSON.stringify(cases));
             """
@@ -69,6 +74,11 @@ class MonitorPolicyTests(unittest.TestCase):
         self.assertEqual(["DP-1", "DP-2"], data["normalizedNames"])
         self.assertTrue(data["isTarget"])
         self.assertEqual("DP-2", data["screenName"])
+        self.assertTrue(data["fullscreenDirect"])
+        self.assertTrue(data["fullscreenIpcLower"])
+        self.assertTrue(data["fullscreenIpcMode"])
+        self.assertFalse(data["fullscreenFalse"])
+        self.assertFalse(data["fullscreenMissing"])
 
     def test_menu_uses_policy_without_spawning_settings_refreshes_on_focus(self):
         menu = (ROOT / "lacuna.menu/menu/MenuWindow.qml").read_text(encoding="utf-8")
@@ -79,6 +89,10 @@ class MonitorPolicyTests(unittest.TestCase):
         self.assertIn("readonly property var sidebarScreens", menu)
         self.assertIn("readonly property var flyoutScreen", menu)
         self.assertIn("function flyoutVisibleOnScreen(screen)", menu)
+        self.assertIn("function fullscreenWorkspaceOnScreen(screen)", menu)
+        self.assertIn("&& !fullscreenWorkspaceOnScreen(screen)", menu)
+        self.assertIn("fullscreenWorkspaceOnScreen(screen)) return false", menu)
+        self.assertIn("readonly property bool sidebarRenderable: root.sidebarVisibleOnScreen(modelData)", menu)
         self.assertIn("function flyoutOpenOnScreen(screen)", menu)
         self.assertIn("function flyoutInteractiveOnScreen(screen)", menu)
         self.assertIn('property string requestedInteractionMonitorName: ""', menu)

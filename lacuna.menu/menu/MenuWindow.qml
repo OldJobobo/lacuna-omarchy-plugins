@@ -248,11 +248,13 @@ Item {
   }
 
   function sidebarVisibleOnScreen(screen) {
-    return sidebarSurfaceVisible && MonitorPolicy.isSidebarScreen(sidebarScreens, screen)
+    return sidebarSurfaceVisible
+      && MonitorPolicy.isSidebarScreen(sidebarScreens, screen)
+      && !fullscreenWorkspaceOnScreen(screen)
   }
 
   function flyoutVisibleOnScreen(screen) {
-    if (!flyoutRenderable || !screen || !flyoutScreen) return false
+    if (!flyoutRenderable || !screen || !flyoutScreen || fullscreenWorkspaceOnScreen(screen)) return false
     if (flyoutScreen === screen) return true
     var targetName = MonitorPolicy.screenName(flyoutScreen)
     var screenName = MonitorPolicy.screenName(screen)
@@ -1081,11 +1083,22 @@ Item {
     return valueHelpers.validFrameReserveMode(value)
   }
 
-  function activeHyprWorkspace() {
+  function activeHyprWorkspaceForScreen(screen) {
     hyprWorkspaceRevision
-    var monitor = root.sidebarScreen && Hyprland.monitorFor ? Hyprland.monitorFor(root.sidebarScreen) : null
+    var monitor = screen && Hyprland.monitorFor ? Hyprland.monitorFor(screen) : null
     if (monitor && monitor.activeWorkspace) return monitor.activeWorkspace
-    return Hyprland.focusedWorkspace || null
+
+    var focused = Hyprland.focusedWorkspace || null
+    var focusedScreenName = focused && focused.monitor ? String(focused.monitor.name || "") : ""
+    return focusedScreenName !== "" && focusedScreenName === MonitorPolicy.screenName(screen) ? focused : null
+  }
+
+  function activeHyprWorkspace() {
+    return activeHyprWorkspaceForScreen(root.sidebarScreen) || Hyprland.focusedWorkspace || null
+  }
+
+  function fullscreenWorkspaceOnScreen(screen) {
+    return MonitorPolicy.workspaceHasFullscreen(activeHyprWorkspaceForScreen(screen))
   }
 
   function activeWorkspaceWindowCount() {
@@ -2198,11 +2211,13 @@ Item {
     LacunaPanelWindow {
       id: menuWindow
       required property var modelData
+      readonly property bool sidebarRenderable: root.sidebarVisibleOnScreen(modelData)
 
     targetScreen: modelData
     layerNamespace: root.pluginId + "-menu-" + root.screenNamespace(modelData)
     menuOpen: root.menuState.open
     panelVisible: root.lacunaEnabled && root.panelVisible
+      && (menuWindow.sidebarRenderable || root.flyoutVisibleOnScreen(modelData))
     keepMapped: root.lacunaEnabled && (root.frameMode !== "off" || root.topBarPanelShadowVisible)
     flyoutOpen: root.lacunaEnabled && root.flyoutOpenOnScreen(modelData)
     flyoutInteractive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)
@@ -2242,7 +2257,7 @@ Item {
       sidebarHeight: menuWindow.height
       anchorRight: root.panelOnRight
       connectorWidth: root.settingsConnectorWidth
-      connectorRenderable: root.lacunaEnabled && root.sidebarSurfaceVisible && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      connectorRenderable: root.lacunaEnabled && menuWindow.sidebarRenderable && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
       flyoutY: root.activeFlyoutYFor(modelData)
       flyoutWidth: Math.max(0, root.activeFlyoutWidth)
       flyoutHeight: Math.max(0, root.activeFlyoutHeightFor(modelData))
@@ -2282,17 +2297,17 @@ Item {
       shadowOffsetY: root.frameShadowOffsetY
       sidebarX: panelHost.sidebarMaskX
       sidebarY: panelHost.sidebarMaskY
-      sidebarWidth: root.sidebarSurfaceVisible ? root.panelWidth : 0
+      sidebarWidth: menuWindow.sidebarRenderable ? root.panelWidth : 0
       sidebarHeight: panelHost.sidebarMaskHeight
       sidebarCornerWidth: root.surfaceRightInset
-      sidebarCornerVisible: root.sidebarSurfaceVisible && root.effectiveCornerPieces && root.surfaceRightInset > 0
-      leftEdgeOccupied: root.sidebarSurfaceVisible && !root.panelOnRight
-      rightEdgeOccupied: root.sidebarSurfaceVisible && root.panelOnRight
+      sidebarCornerVisible: menuWindow.sidebarRenderable && root.effectiveCornerPieces && root.surfaceRightInset > 0
+      leftEdgeOccupied: menuWindow.sidebarRenderable && !root.panelOnRight
+      rightEdgeOccupied: menuWindow.sidebarRenderable && root.panelOnRight
       connectorX: panelHost.connectorX
       connectorY: panelHost.connectorY
       connectorWidth: panelHost.effectiveConnectorWidth
       connectorHeight: panelHost.effectiveFlyoutHeight + panelHost.effectiveConnectorWidth * 2
-      connectorVisible: root.sidebarSurfaceVisible && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      connectorVisible: menuWindow.sidebarRenderable && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
       flyoutX: panelHost.flyoutMaskX
       flyoutY: panelHost.flyoutMaskY
       flyoutWidth: panelHost.flyoutMaskWidth
@@ -2312,7 +2327,7 @@ Item {
       sidebarVisible: false
       flyoutOpen: root.flyoutOpenOnScreen(modelData)
       flyoutRenderable: root.flyoutVisibleOnScreen(modelData)
-      connectorRenderable: root.sidebarSurfaceVisible && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      connectorRenderable: menuWindow.sidebarRenderable && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
       shadowEnabled: root.lacunaEnabled && root.frameShadow && root.menuPanelControllerRef.flyoutRenderable
       menuProgress: root.menuPanelControllerRef.menuProgress
       flyoutProgress: root.menuPanelControllerRef.flyoutProgress
@@ -2358,7 +2373,7 @@ Item {
       // ordinary declaration order for a frame; without this pin, that opaque
       // source covers the sidebar content during flyout geometry changes.
       z: 10
-      visible: root.sidebarSurfaceVisible
+      visible: menuWindow.sidebarRenderable
       anchors.top: parent.top
       anchors.bottom: parent.bottom
       x: panelHost.sidebarX
@@ -2386,7 +2401,7 @@ Item {
       backgroundVisible: true
 
       MenuContent {
-        visible: root.sidebarSurfaceVisible && !sidebarState.collapsed
+        visible: menuWindow.sidebarRenderable && !sidebarState.collapsed
         motionTokens: root.menuMotionTokensRef
         anchors.fill: parent
         anchors.leftMargin: root.menuDesignTokensRef.contentInset
@@ -2430,7 +2445,7 @@ Item {
       }
 
       MenuRail {
-        visible: root.sidebarSurfaceVisible && sidebarState.collapsed
+        visible: menuWindow.sidebarRenderable && sidebarState.collapsed
         anchors.top: parent.top
         anchors.topMargin: root.barBottomY + root.railTopGap
         anchors.bottom: parent.bottom
@@ -2468,7 +2483,7 @@ Item {
 
       z: 20
       open: root.flyoutOpenOnScreen(modelData)
-      renderable: root.sidebarSurfaceVisible && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      renderable: menuWindow.sidebarRenderable && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
       progress: root.menuPanelControllerRef.flyoutProgress
       x: panelHost.connectorX
       y: panelHost.connectorY
@@ -2640,7 +2655,7 @@ Item {
 
       anchors.fill: parent
       active: root.lacunaEnabled && root.frameBorder
-      connectorVisible: root.sidebarSurfaceVisible && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      connectorVisible: menuWindow.sidebarRenderable && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
       flyoutVisible: root.flyoutVisibleOnScreen(modelData) && root.menuPanelControllerRef.flyoutProgress > 0.001
       openToLeft: root.panelOnRight
       connectorX: panelHost.connectorX
