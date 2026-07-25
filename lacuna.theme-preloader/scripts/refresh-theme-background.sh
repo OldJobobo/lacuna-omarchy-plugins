@@ -3,7 +3,8 @@ set -u
 
 OMARCHY_PATH=${OMARCHY_PATH:-"$HOME/.local/share/omarchy"}
 CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
-CURRENT_DIR="$CONFIG_HOME/omarchy/current"
+STATE_HOME=${XDG_STATE_HOME:-"$HOME/.local/state"}
+CURRENT_DIR="$STATE_HOME/omarchy/current"
 CURRENT_THEME_PATH="$CURRENT_DIR/theme"
 CURRENT_BACKGROUND_LINK="$CURRENT_DIR/background"
 THEME_NAME="${1:-}"

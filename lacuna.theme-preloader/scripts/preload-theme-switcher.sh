@@ -101,46 +101,36 @@ add_theme_preview() {
   ln -s "$preview" "$PREVIEW_DIR/$theme_name.$extension"
 }
 
-fast_signature="v1"$'\n'
+theme_signature="v2"$'\n'
 theme_count=0
 
+# Include the selected preview's identity and metadata on every pass. Directory
+# mtimes do not change when an existing preview is replaced in place, so the
+# former fast directory-only signature could leave stale links/thumbnails.
 for theme_dir in "$USER_THEMES_PATH" "$OMARCHY_THEMES_PATH"; do
   if [[ -d $theme_dir ]]; then
-    fast_signature+="$theme_dir:$(stat -Lc '%Y' "$theme_dir")"$'\n'
+    theme_signature+="$theme_dir:$(stat -Lc '%Y' "$theme_dir")"$'\n'
 
     while IFS= read -r -d '' theme_path; do
-      fast_signature+="$theme_path:$(stat -Lc '%Y' "$theme_path")"$'\n'
+      preview=$(find_preview "$theme_path")
+      theme_signature+="$theme_path:$(stat -Lc '%Y' "$theme_path")"$'\n'
       theme_count=$((theme_count + 1))
+
+      if [[ -n $preview && -e $preview ]]; then
+        theme_signature+="$preview:$(stat -Lc '%s:%y' "$preview")"$'\n'
+      fi
     done < <(find -L "$theme_dir" -mindepth 1 -maxdepth 1 \( -type d -o -type l \) -print0 2>/dev/null | sort -z)
   fi
 done
 
 cache_stale=false
-if [[ ! -f $FAST_SIGNATURE_FILE ]]; then
+if [[ ! -f $SIGNATURE_FILE ]]; then
   cache_stale=true
 else
-  previous_fast_signature=$(<"$FAST_SIGNATURE_FILE")
-  if [[ ${previous_fast_signature}$'\n' != "$fast_signature" ]]; then
+  previous_theme_signature=$(<"$SIGNATURE_FILE")
+  if [[ ${previous_theme_signature}$'\n' != "$theme_signature" ]]; then
     cache_stale=true
   fi
-fi
-
-theme_signature=""
-if [[ $cache_stale == true ]]; then
-  for theme_dir in "$USER_THEMES_PATH" "$OMARCHY_THEMES_PATH"; do
-    if [[ -d $theme_dir ]]; then
-      theme_signature+="$theme_dir:$(stat -Lc '%Y' "$theme_dir")"$'\n'
-
-      while IFS= read -r -d '' theme_path; do
-        preview=$(find_preview "$theme_path")
-        theme_signature+="$theme_path:$(stat -Lc '%Y' "$theme_path")"$'\n'
-
-        if [[ -n $preview && -e $preview ]]; then
-          theme_signature+="$preview:$(stat -Lc '%s:%Y' "$preview")"$'\n'
-        fi
-      done < <(find -L "$theme_dir" -mindepth 1 -maxdepth 1 \( -type d -o -type l \) -print0 2>/dev/null | sort -z)
-    fi
-  done
 fi
 
 changed=false
@@ -171,7 +161,9 @@ if [[ $cache_stale == true ]]; then
   fi
 
   printf '%s' "$theme_signature" >"$SIGNATURE_FILE"
-  printf '%s' "$fast_signature" >"$FAST_SIGNATURE_FILE"
+  # Keep writing the legacy marker so upgrades do not leave confusing stale
+  # state, but correctness is based on the content-aware signature above.
+  printf '%s' "$theme_signature" >"$FAST_SIGNATURE_FILE"
 fi
 
 menu_images=(omarchy menu images)

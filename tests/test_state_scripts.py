@@ -262,13 +262,14 @@ class StateScriptTests(unittest.TestCase):
             tmp_path = Path(tmp)
             config_home, omarchy_path, _settings_path, _before = seed_config(tmp_path)
             theme_name = "fixture-theme"
-            current_background = config_home / "omarchy" / "current" / "theme" / "backgrounds" / "same-name.jpg"
+            state_home = tmp_path / "state"
+            current_background = state_home / "omarchy" / "current" / "theme" / "backgrounds" / "same-name.jpg"
             source_background = config_home / "omarchy" / "themes" / theme_name / "backgrounds" / "same-name.jpg"
             current_background.parent.mkdir(parents=True, exist_ok=True)
             source_background.parent.mkdir(parents=True, exist_ok=True)
             current_background.write_bytes(b"old-current-copy")
             source_background.write_bytes(b"new-source-image")
-            background_link = config_home / "omarchy" / "current" / "background"
+            background_link = state_home / "omarchy" / "current" / "background"
             background_link.symlink_to(current_background)
 
             fake_bin = tmp_path / "bin"
@@ -290,6 +291,7 @@ class StateScriptTests(unittest.TestCase):
                 {
                     "PATH": str(fake_bin) + os.pathsep + os.environ.get("PATH", ""),
                     "OMARCHY_SHELL_LOG": str(shell_log),
+                    "XDG_STATE_HOME": str(state_home),
                 },
             )
 

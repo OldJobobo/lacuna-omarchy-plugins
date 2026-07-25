@@ -579,6 +579,26 @@ class PreloadThemeSwitcherTests(unittest.TestCase):
             self.assertEqual(status["status"], "ok")
             self.assertEqual(status["changed"], False)
 
+    def test_in_place_preview_change_invalidates_cache(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            theme = tmp / "themes" / "mytheme"
+            theme.mkdir(parents=True)
+            preview = theme / "preview.png"
+            preview.write_bytes(b"old")
+            env = self._env(tmp)
+
+            run([str(self.SCRIPT)], env)
+            preview.write_bytes(b"new")
+            result = run([str(self.SCRIPT)], env)
+
+            status = json.loads(
+                (tmp / "cache" / "omarchy" / "theme-selector" / "preloader-status.json").read_text()
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(status["status"], "ok")
+            self.assertEqual(status["changed"], True)
+
     def test_recovers_from_stale_legacy_lock_directory(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
