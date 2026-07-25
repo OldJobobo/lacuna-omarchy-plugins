@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.Commons
 
 Item {
   id: root
@@ -80,7 +81,13 @@ Item {
     if (!next.foreground && next.fg) next.foreground = next.fg
     if (!next.red && next.color9) next.red = next.color9
     if (!next.green && next.color10) next.green = next.color10
+    if (Object.keys(next).length === 0) return false
     palette = next
+    return true
+  }
+
+  function scheduleThemeReload() {
+    themeReloadTimer.restart()
   }
 
   function loadSettings(raw) {
@@ -94,22 +101,36 @@ Item {
     }
   }
 
-  FileView {
-    id: colorsFile
-    path: root.colorsPath
-    watchChanges: true
-    printErrors: false
-    onLoaded: root.loadTheme(text())
-    onFileChanged: reload()
-    onLoadFailed: root.loadTheme("")
+  Connections {
+    target: Color
+    function onBackgroundChanged() { root.scheduleThemeReload() }
+    function onForegroundChanged() { root.scheduleThemeReload() }
+    function onAccentChanged() { root.scheduleThemeReload() }
+    function onUrgentChanged() { root.scheduleThemeReload() }
+    function onShellValuesChanged() { root.scheduleThemeReload() }
+  }
+
+  Timer {
+    id: themeReloadTimer
+    interval: 40
+    repeat: false
+    onTriggered: colorsFile.reload()
+  }
+
+  Timer {
+    id: themeRetryTimer
+    interval: 120
+    repeat: false
+    onTriggered: colorsFile.reload()
   }
 
   FileView {
-    id: themeNameFile
-    path: root.themeNamePath
-    watchChanges: true
+    id: colorsFile
+    path: root.colorsPath
+    watchChanges: false
     printErrors: false
-    onFileChanged: colorsFile.reload()
+    onLoaded: root.loadTheme(text())
+    onLoadFailed: themeRetryTimer.restart()
   }
 
   FileView {

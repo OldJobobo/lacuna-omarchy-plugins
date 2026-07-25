@@ -74,6 +74,54 @@ ShellRoot {{
         self.assertTrue(result["youtube"].startswith("#"))
         self.assertTrue(result["jellyfin"].startswith("#"))
 
+    def test_menu_theme_tracks_native_color_and_retains_extended_palette(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+import qs.Commons
+
+ShellRoot {{
+  id: root
+  property var theme: null
+  Component.onCompleted: {{
+    var c = Qt.createComponent("{qml_url('lacuna.menu/services/Theme.qml')}", Component.PreferSynchronous)
+    theme = c.createObject(root)
+    applyTheme.restart()
+  }}
+  Timer {{
+    id: applyTheme
+    interval: 20
+    onTriggered: {{
+      Color.loadColors('background = "#232227"\nforeground = "#eeeeee"\naccent = "#ffaa00"')
+      Color.loadShell('[bar]\nbackground = "#232227"\n[menu]\nbackground = "#050505"\ntext = "#eeeeee"')
+      theme.load('red = "#ef3344"\nmagenta = "#b142d4"')
+      theme.load("")
+      finish.restart()
+    }}
+  }}
+  Timer {{
+    id: finish
+    interval: 20
+    onTriggered: {{
+      console.log("BEHAVE " + JSON.stringify({{
+        panel: theme.panelBackground.toString(),
+        nativeBar: Color.bar.background.toString(),
+        menu: Color.menu.background.toString(),
+        retainedRed: theme.palette.red
+      }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        result = parse_behave(output)[-1]
+        self.assertEqual(result["panel"], "#232227")
+        self.assertEqual(result["panel"], result["nativeBar"])
+        self.assertNotEqual(result["panel"], result["menu"])
+        self.assertEqual(result["retainedRed"], "#ef3344")
+
     def test_theme_and_wallpaper_widgets_share_equal_bar_seam_spacing(self):
         qml = f"""
 import Quickshell

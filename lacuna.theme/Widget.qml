@@ -9,8 +9,8 @@ Item {
   property var bar: null
   property string moduleName: "lacuna.theme"
   property var settings: ({})
-  property var palette: ({})
-  property string themeName: ""
+  readonly property var palette: colorProfile.palette
+  readonly property string themeName: colorProfile.themeName
   property bool flyoutOpen: false
 
   readonly property bool opened: flyoutOpen
@@ -26,9 +26,6 @@ Item {
   readonly property int contentSpacing: 5
   readonly property int horizontalPadding: vertical ? 0 : 5
   readonly property url iconSource: Qt.resolvedUrl("assets/tabler/palette.svg")
-  readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")
-  readonly property string colorsPath: stateHome + "/omarchy/current/theme/colors.toml"
-  readonly property string themeNamePath: stateHome + "/omarchy/current/theme.name"
   readonly property string themeTitle: formatTitle(themeName)
   readonly property string displayText: clipped(themeTitle || "Theme")
   readonly property string tooltipText: themeTitle.length > 0 ? themeTitle + " / theme details" : "Theme details"
@@ -69,16 +66,6 @@ Item {
     return palette[name] || (name === "bg" || name === "dark_bg" ? "#101315" : foreground)
   }
 
-  function loadTheme(raw) {
-    var next = {}
-    var lines = String(raw || "").split(/\n/)
-    for (var i = 0; i < lines.length; i++) {
-      var match = lines[i].match(/^\s*([A-Za-z0-9_-]+)\s*=\s*["']?([^"'\s]+)["']?/)
-      if (match) next[match[1]] = match[2].trim()
-    }
-    palette = next
-  }
-
   function open() {
     flyoutOpen = true
   }
@@ -101,24 +88,6 @@ Item {
   MotionTokens {
     id: motionTokens
     animationDisabled: colorProfile.reduceMotion
-  }
-
-  FileView {
-    path: root.colorsPath
-    watchChanges: true
-    printErrors: false
-    onLoaded: root.loadTheme(text())
-    onFileChanged: reload()
-    onLoadFailed: root.loadTheme("")
-  }
-
-  FileView {
-    path: root.themeNamePath
-    watchChanges: true
-    printErrors: false
-    onLoaded: root.themeName = text().trim()
-    onFileChanged: reload()
-    onLoadFailed: root.themeName = ""
   }
 
   Item {

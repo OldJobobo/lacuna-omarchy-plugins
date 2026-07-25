@@ -2,6 +2,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
+import qs.Commons
 
 Item {
   id: root
@@ -11,15 +12,13 @@ Item {
   property var manifest: null
 
   property date now: new Date()
-  readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
-  readonly property string colorsPath: configHome + "/omarchy/current/theme/colors.toml"
-  readonly property string backgroundPath: configHome + "/omarchy/current/background"
+  readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")
+  readonly property string backgroundPath: stateHome + "/omarchy/current/background"
   readonly property string pluginDir: manifest && manifest.__sourceDir ? manifest.__sourceDir : localPath(Qt.resolvedUrl("."))
   readonly property string contrastScript: pluginDir + "/scripts/wallpaper-contrast-sample"
-  property var palette: ({})
-  readonly property color clockColor: themeColor("foreground", "#d8dee9")
+  readonly property color clockColor: Color.foreground
   readonly property color softColor: withAlpha(clockColor, 0.68)
-  readonly property color accentColor: themeColor("accent", themeColor("color14", clockColor))
+  readonly property color accentColor: Color.accent
   readonly property color shadowColor: Qt.rgba(0, 0, 0, 0.52)
   readonly property var clockSettings: pluginSettings()
   readonly property string clockAnchor: validAnchor(settingValue("anchor", "bottom-right"))
@@ -85,22 +84,6 @@ Item {
     return contrastRatio(light, backgroundColor) >= contrastRatio(dark, backgroundColor) ? light : dark
   }
 
-  function themeColor(name, fallbackColor) {
-    return palette[name] || fallbackColor
-  }
-
-  function loadTheme(raw) {
-    var next = {}
-    var lines = String(raw || "").split(/\n/)
-
-    for (var i = 0; i < lines.length; i++) {
-      var match = lines[i].match(/^\s*([A-Za-z0-9_-]+)\s*=\s*["']?([^"'\s]+)["']?/)
-      if (match) next[match[1]] = match[2].trim()
-    }
-
-    palette = next
-  }
-
   function pluginSettings() {
     var merged = {}
     var defaults = manifest && manifest.defaults ? manifest.defaults : {}
@@ -161,25 +144,6 @@ Item {
     id: tekturFont
 
     source: "assets/fonts/Tektur-SemiBold.ttf"
-  }
-
-  FileView {
-    id: themeFile
-
-    path: root.colorsPath
-    watchChanges: true
-    printErrors: false
-    onLoaded: root.loadTheme(text())
-    onFileChanged: reload()
-    onLoadFailed: themeRetry.restart()
-  }
-
-  Timer {
-    id: themeRetry
-
-    interval: 500
-    repeat: false
-    onTriggered: themeFile.reload()
   }
 
   Timer {

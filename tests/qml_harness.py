@@ -36,6 +36,13 @@ def run_quickshell(qml: str, *, timeout: int = 60, config_home: Path | None = No
         tmp_path = Path(tmp)
         shell = tmp_path / "shell.qml"
         shell.write_text(qml, encoding="utf-8")
+        # Repository components run inside Omarchy's config root and may import
+        # qs.Commons. Mirror that root-module layout for direct component probes.
+        omarchy_shell = Path(os.environ.get("OMARCHY_PATH", "/usr/share/omarchy")) / "shell"
+        for module in ("Commons", "Ui"):
+            source = omarchy_shell / module
+            if source.is_dir():
+                (tmp_path / module).symlink_to(source, target_is_directory=True)
         env = dict(os.environ)
         env["QT_QPA_PLATFORM"] = "wayland"
         if config_home is not None:

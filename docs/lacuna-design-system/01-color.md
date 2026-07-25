@@ -3,21 +3,23 @@
 > Principle 4: **Theme owns hue, Lacuna owns form.**
 
 Lacuna does not have a palette. It has a set of **roles** and the **relationships** between them.
-Every role resolves from the active Omarchy theme at runtime through `lacuna.menu/services/Theme.qml`
-(and, for vendored bar widgets, `shared/qml/simple-bar/ColorProfile.qml`). The fallback values
+Every role resolves from Omarchy's live `qs.Commons.Color` singleton through
+`lacuna.menu/services/Theme.qml` (and, for vendored bar widgets, through the injected bar plus
+`shared/qml/simple-bar/ColorProfile.qml`). The fallback values
 below exist only so the shell degrades gracefully when no theme is loaded — they are *not* the
 Lacuna palette, because there is no Lacuna palette.
 
 ## Source of truth
 
-Color enters from two theme files Omarchy maintains:
+Omarchy pushes foundational and shell-role colors into `qs.Commons.Color` transactionally during a
+theme change. Lacuna consumes that singleton for structural surfaces and foundational roles, so it
+updates on the same clock as the native bar instead of watching files below the atomically replaced
+runtime theme directory.
 
-- `~/.local/state/omarchy/current/theme/colors.toml` — the Quattro palette (`fg`, `bg`,
-  `accent`, and named hues such as `red`, `green`, `cyan`, and `magenta`).
-- `~/.local/state/omarchy/current/theme/shell.toml` — shell-layer overrides (`menu.text`,
-  `menu.selected`, `bar.background`, …), read via `shellColor()` / `shellSurfaceColor()`.
-
-Shell overrides win where present; palette is the base; the fallback constants are the floor.
+`~/.local/state/omarchy/current/theme/colors.toml` is still read after that native update for the
+extended Quattro hues (`red`, `green`, `cyan`, `magenta`, and related aliases) that `Color` does not
+expose. These reads retain the last valid palette on transient failure and retry after the runtime
+path settles. Fallback constants remain only the startup floor.
 
 ## The role tokens
 
@@ -25,14 +27,14 @@ Each role is named from the gap metaphor and defined as a **derivation**, never 
 
 | Role | Derivation | Fallback | Used for |
 |---|---|---|---|
-| `field` | `color("background")` | `#101315` | the page, deepest present background |
+| `field` | `Color.background` | `#101315` | the page, deepest present background |
 | `void` | `withAlpha(field, 0.18)` | — | intentional absence: insets, wells, scrim behind reveals |
-| `plate` | `shellSurfaceColor("bar.background", field)` | `#101315` | a present, raised surface (bar, sidebar, flyout) |
-| `ink` | `shellColor("menu.text", color("foreground"))` | `#d8dee9` | primary foreground / text |
+| `plate` | opaque `Color.bar.background` | `#101315` | a present, raised surface (bar, sidebar, flyout, frame) |
+| `ink` | `Color.menu.text` | `#d8dee9` | primary foreground / text |
 | `whisper` | contrast-aware mix of `ink` over `plate` (minimum 4.5:1 for menu text) | — | muted foreground: hints and secondary labels |
 | `soft` | `withAlpha(ink, 0.78)` | — | de-emphasized but legible foreground |
 | `seam` | `withAlpha(ink, 0.18)` | — | expressed edges, dividers, connector strokes, linework |
-| `accent` | `shellColor("menu.selected", color("accent"))` | `#88c0d0` | the single theme accent (see unified model) |
+| `accent` | `Color.menu.selectedText` | `#88c0d0` | the single theme accent (see unified model) |
 | `danger` | `color("color9")` | `#bf616a` | destructive/high-impact actions only |
 | `warning` | `color("color11")` | `#ebcb8b` | warm/low/warning status |
 | `urgent` | `bar.urgent` → named `red` → `color9` | `#d42b5b` | critical/over-threshold status |

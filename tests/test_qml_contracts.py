@@ -45,7 +45,7 @@ class QmlContractTests(unittest.TestCase):
             for shader in pattern.findall(qml):
                 self.assertTrue((qml_path.parent / shader).exists(), f"{qml_path.relative_to(ROOT)} references missing {shader}")
 
-    def test_ambience_overlays_use_frame_animation_not_wall_clock_timers(self):
+    def test_ambience_overlays_use_frame_animation_for_continuous_motion(self):
         overlay_paths = [
             "lacuna.film-grain-overlay/Overlay.qml",
             "lacuna.rainfall-overlay/Overlay.qml",
@@ -60,7 +60,9 @@ class QmlContractTests(unittest.TestCase):
 
         for path in overlay_paths:
             qml = read(path)
-            self.assertNotIn("Timer {", qml, path)
+            # Short one-shot theme reload/retry timers are allowed; continuous
+            # visual motion must remain frame-driven rather than wall-clock-driven.
+            self.assertNotIn("repeat: true\n    running: root.effectVisible", qml, path)
             if path in frame_driven_paths:
                 self.assertIn("FrameAnimation {", qml, path)
 
@@ -193,24 +195,26 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("shadowEnabled: root.shadowEnabled && root.width > 0 && root.height > 0", frame)
         self.assertNotIn("id: frameBorderSource", frame)
 
-    def test_lacuna_menu_surface_ignores_shell_surface_alpha(self):
+    def test_lacuna_menu_surface_tracks_transactional_native_bar_color(self):
         qml = read("lacuna.menu/services/Theme.qml")
 
-        self.assertIn('property color panelBackground: shellSurfaceColor("menu.background", shellSurfaceColor("popups.background", color("background")))', qml)
-        self.assertIn("function shellSurfaceColor", qml)
+        self.assertIn("import qs.Commons", qml)
+        self.assertIn("property color panelBackground: opaqueColor(Color.bar.background)", qml)
+        self.assertIn("property color foreground: Color.menu.text", qml)
+        self.assertIn("property color background: Color.background", qml)
+        self.assertIn("property color accent: Color.menu.selectedText", qml)
         self.assertIn("function opaqueColor", qml)
-        self.assertIn("return opaqueColor(shellColor(name, fallbackColor))", qml)
-        self.assertNotIn('shellValues[name + "-alpha"]', qml)
-        self.assertNotIn("function alphaFor", qml)
+        self.assertNotIn("property var shellValues", qml)
+        self.assertNotIn("shellSurfaceColor", qml)
+        self.assertNotIn("id: shellFile", qml)
+        self.assertIn("function onShellValuesChanged()", qml)
+        self.assertIn("watchChanges: false", qml)
+        self.assertIn("onLoadFailed: retryTimer.restart()", qml)
+        self.assertNotIn('onLoadFailed: root.load("")', qml)
         self.assertIn("function parseColor", qml)
         self.assertIn("rgba?", qml)
         self.assertIn("rgbHexAlpha", qml)
         self.assertIn("hyprHex", qml)
-        self.assertIn("function stripInlineComment", qml)
-        self.assertIn("function unquoteValue", qml)
-        self.assertIn('var match = line.match(/^([A-Za-z0-9_-]+)\\s*=\\s*(.+)$/)', qml)
-        self.assertNotIn("property color panelBackground: color(\"background\")", qml)
-        self.assertNotIn('property color panelBackground: shellSurfaceColor("bar.background"', qml)
 
     def test_theme_reads_omarchy4_current_theme_state(self):
         theme = read("lacuna.menu/services/Theme.qml")
@@ -219,9 +223,10 @@ class QmlContractTests(unittest.TestCase):
         for qml in [theme, bar_size]:
             self.assertIn('Quickshell.env("XDG_STATE_HOME")', qml)
             self.assertIn('"/omarchy/current/theme/colors.toml"', qml)
-            self.assertIn('"/omarchy/current/theme/shell.toml"', qml)
             self.assertNotIn('XDG_CONFIG_HOME") ? Quickshell.env("XDG_CONFIG_HOME") + "/omarchy/current/theme', qml)
 
+        self.assertNotIn('"/omarchy/current/theme/shell.toml"', theme)
+        self.assertIn('"/omarchy/current/theme/shell.toml"', bar_size)
         self.assertIn('"/omarchy/current/theme.name"', theme)
         self.assertIn('"OMARCHY_PATH=" + quote(omarchyPath) + " omarchy-shell"', bar_size)
         self.assertNotIn('"OMARCHY_PATH=" + quote(omarchyPath) + " omarchy shell"', bar_size)
@@ -233,7 +238,8 @@ class QmlContractTests(unittest.TestCase):
         # instead of silently snapping to the built-in fallback palette.
         self.assertIn("could not parse color value", qml)
         self.assertIn("colors.toml has content but produced no parseable entries", qml)
-        self.assertIn("shell.toml has content but produced no parseable entries", qml)
+        self.assertIn("retaining last palette", qml)
+        self.assertNotIn("shell.toml has content but produced no parseable entries", qml)
         # Only the genuine-mistake paths warn; routine per-key misses do not.
         self.assertIn("if (raw.length > 0)", qml)
         self.assertNotIn("function rawColor(name) {\n    console.warn", qml)
@@ -2578,6 +2584,12 @@ class QmlContractTests(unittest.TestCase):
             self.assertNotIn('configHome + "/omarchy/current/theme', qml)
             self.assertIn("if (!next.background && next.bg)", qml)
             self.assertIn("if (!next.foreground && next.fg)", qml)
+            self.assertIn("import qs.Commons", qml)
+            self.assertIn("target: Color", qml)
+            self.assertIn("function onShellValuesChanged()", qml)
+            self.assertIn("watchChanges: false", qml)
+            self.assertIn("onLoadFailed: themeRetryTimer.restart()", qml)
+            self.assertNotIn('onLoadFailed: root.loadTheme("")', qml)
 
         for role, hue in {
             "codex": "cyan",
@@ -2607,6 +2619,12 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("color: root.textColor", widget)
             self.assertIn('stateHome + "/omarchy/current/theme/colors.toml"', profile)
             self.assertIn(f'{role}: "{hue}"', profile)
+
+        theme_widget = read("lacuna.theme/Widget.qml")
+        self.assertIn("readonly property var palette: colorProfile.palette", theme_widget)
+        self.assertIn("readonly property string themeName: colorProfile.themeName", theme_widget)
+        self.assertNotIn("function loadTheme(raw)", theme_widget)
+        self.assertNotIn("FileView {", theme_widget)
 
     def test_motion_uses_one_named_reveal_scale(self):
         # Phase D: a single named "reveal" scale (03-motion.md) replaces the

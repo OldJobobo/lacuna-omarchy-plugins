@@ -272,14 +272,13 @@ Item {
     id: colorsFile
 
     path: root.colorsPath
-    watchChanges: true
+    watchChanges: false
     printErrors: false
     onLoaded: {
       root.colorsRaw = text()
       root.colorsLoaded = true
       applyTimer.restart()
     }
-    onFileChanged: reload()
     onLoadFailed: {
       root.colorsLoaded = false
       retryTimer.restart()
@@ -290,7 +289,7 @@ Item {
     id: shellFile
 
     path: root.shellPath
-    watchChanges: true
+    watchChanges: false
     atomicWrites: true
     printErrors: false
     onLoaded: {
@@ -298,7 +297,6 @@ Item {
       root.shellLoaded = true
       applyTimer.restart()
     }
-    onFileChanged: reload()
     onLoadFailed: {
       root.shellLoaded = false
       retryTimer.restart()

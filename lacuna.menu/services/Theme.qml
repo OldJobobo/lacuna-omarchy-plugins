@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.Commons
 import "../components"
 
 Item {
@@ -13,16 +14,16 @@ Item {
 
   readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state"
   readonly property string colorsPath: stateHome + "/omarchy/current/theme/colors.toml"
-  readonly property string shellPath: stateHome + "/omarchy/current/theme/shell.toml"
   readonly property string themeNamePath: stateHome + "/omarchy/current/theme.name"
   property var palette: ({})
-  property var shellValues: ({})
   property string themeName: ""
   property string themeTitle: formatTitle(themeName)
-  property color foreground: shellColor("menu.text", color("foreground"))
-  property color background: color("background")
-  property color panelBackground: shellSurfaceColor("menu.background", shellSurfaceColor("popups.background", color("background")))
-  property color accent: shellColor("menu.selected", color("accent"))
+  property color foreground: Color.menu.text
+  property color background: Color.background
+  // Structural Lacuna surfaces attach to the Omarchy bar. Consume the same
+  // IPC-updated singleton instead of independently watching shell.toml.
+  property color panelBackground: opaqueColor(Color.bar.background)
+  property color accent: Color.menu.selectedText
   property color voidColor: withAlpha(background, 0.18)
   property color border: withAlpha(foreground, 0.18)
   property color muted: contrastAwareText(foreground, panelBackground, 4.5)
@@ -126,18 +127,12 @@ Item {
   }
 
   function rawColor(name) {
+    // Omarchy's Color singleton is updated transactionally by shell.applyTheme.
+    // Keep colors.toml parsing only for extended Quattro hues Color does not expose.
+    if (name === "background" || name === "bg") return Color.background
+    if (name === "foreground" || name === "fg") return Color.foreground
+    if (name === "accent") return Color.accent
     return palette[name] || fallback(name)
-  }
-
-  function shellColor(name, fallbackColor) {
-    var value = shellValues[name]
-    if (typeof value !== "string" || value.length === 0) return fallbackColor
-
-    return parseColor(resolveColor(value, fallbackColor), fallbackColor)
-  }
-
-  function shellSurfaceColor(name, fallbackColor) {
-    return opaqueColor(shellColor(name, fallbackColor))
   }
 
   function stripInlineComment(value) {
@@ -277,37 +272,24 @@ Item {
       if (match) next[match[1]] = match[2].trim()
     }
 
-    if (String(raw || "").trim().length > 0 && Object.keys(next).length === 0)
-      log.warn("colors.toml has content but produced no parseable entries; check its syntax")
-    palette = next
-  }
-
-  function loadShell(raw) {
-    var next = {}
-    var section = ""
-    var lines = String(raw || "").split(/\n/)
-
-    for (var i = 0; i < lines.length; i++) {
-      var line = lines[i].replace(/^\s+|\s+$/g, "")
-      if (line === "" || line.charAt(0) === "#") continue
-
-      var sectionMatch = line.match(/^\[([A-Za-z0-9_-]+)\]\s*(#.*)?$/)
-      if (sectionMatch) {
-        section = sectionMatch[1]
-        continue
-      }
-
-      var match = line.match(/^([A-Za-z0-9_-]+)\s*=\s*(.+)$/)
-      if (match && section) next[section + "." + match[1]] = unquoteValue(match[2])
+    if (Object.keys(next).length === 0) {
+      if (String(raw || "").trim().length > 0)
+        log.warn("colors.toml has content but produced no parseable entries; retaining last palette")
+      return false
     }
-
-    if (String(raw || "").trim().length > 0 && Object.keys(next).length === 0)
-      log.warn("shell.toml has content but produced no parseable entries; check its syntax")
-    shellValues = next
+    palette = next
+    return true
   }
 
   function loadThemeName(raw) {
-    themeName = String(raw || "").trim()
+    var next = String(raw || "").trim()
+    if (next.length === 0) return false
+    themeName = next
+    return true
+  }
+
+  function scheduleThemeReload() {
+    themeReloadTimer.restart()
   }
 
   function formatTitle(value) {
@@ -317,38 +299,53 @@ Item {
       .replace(/\b\w/g, function(letter) { return letter.toUpperCase() })
   }
 
-  FileView {
-    id: themeFile
+  // Color changes only after Omarchy has atomically installed the new theme
+  // and applied its payload over IPC. Debounce the related property signals,
+  // then reload the extended palette/name from their settled paths.
+  Connections {
+    target: Color
+    function onBackgroundChanged() { root.scheduleThemeReload() }
+    function onForegroundChanged() { root.scheduleThemeReload() }
+    function onAccentChanged() { root.scheduleThemeReload() }
+    function onUrgentChanged() { root.scheduleThemeReload() }
+    function onShellValuesChanged() { root.scheduleThemeReload() }
+  }
 
-    path: root.colorsPath
-    watchChanges: true
-    printErrors: false
-    onLoaded: root.load(text())
-    onFileChanged: {
-      reload()
+  Timer {
+    id: themeReloadTimer
+    interval: 40
+    repeat: false
+    onTriggered: {
+      themeFile.reload()
+      themeNameFile.reload()
     }
-    onLoadFailed: root.load("")
+  }
+
+  Timer {
+    id: retryTimer
+    interval: 120
+    repeat: false
+    onTriggered: {
+      themeFile.reload()
+      themeNameFile.reload()
+    }
   }
 
   FileView {
-    id: shellFile
-
-    path: root.shellPath
-    watchChanges: true
+    id: themeFile
+    path: root.colorsPath
+    watchChanges: false
     printErrors: false
-    onLoaded: root.loadShell(text())
-    onFileChanged: reload()
-    onLoadFailed: root.loadShell("")
+    onLoaded: root.load(text())
+    onLoadFailed: retryTimer.restart()
   }
 
   FileView {
     id: themeNameFile
-
     path: root.themeNamePath
-    watchChanges: true
+    watchChanges: false
     printErrors: false
     onLoaded: root.loadThemeName(text())
-    onFileChanged: reload()
-    onLoadFailed: root.loadThemeName("")
+    onLoadFailed: retryTimer.restart()
   }
 }

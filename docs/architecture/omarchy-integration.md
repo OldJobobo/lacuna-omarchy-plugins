@@ -59,7 +59,7 @@ actions back to `omarchy-reminder`.
 | CONTROLS actions | `omarchy <subcommand>` CLI | menu shells `omarchy network status` / `omarchy audio output switch` / `omarchy toggle idle` / bluetoothctl | **Aligned** (command launchers, not reinvented state). |
 | Audio / Bluetooth / Temperature / Network | (none) | `lacuna.*` read Pipewire / Bluetooth / hwmon / `omarchy` CLI | Lacuna fills a real gap. |
 | System stats | `omarchy.system-stats` widget | `lacuna.system-stats` reads `/proc` | Parallel widget; kept for the Lacuna look. |
-| Theme palette | `Color` / `Style` singletons (base semantic colors only) | base from injected `bar`; `colors.toml` parsed for Quattro's named hues | **Kept** — `Color` lacks the role hues Lacuna needs (see policy #5). |
+| Theme palette | `Color` / `Style` singletons + IPC updates | structural/base roles from `Color` or injected `bar`; settled `colors.toml` reload for extended Quattro hues | **Aligned** — native theme timing with a retained extended-palette supplement (see policy #5). |
 
 ## Policy (for new work)
 
@@ -72,11 +72,10 @@ actions back to `omarchy-reminder`.
    Wi-Fi / audio / idle / Bluetooth — keep that pattern.
 4. **Prefer native widgets** for rich surfaces where a distinct Lacuna visual isn't needed
    (`script-pill` is the experiment path; promote only durable non-native workflows).
-5. **Theme-source consolidation** (`ColorProfile`/`Theme` → Omarchy `Color`) was investigated and
-   **declined**. `Color` exposes only `foreground`/`background`/`accent`/`urgent`/`muted` + the
-   shell.toml surface roles — **not** Quattro's named role hues. Lacuna's per-widget `colors.toml`
-   parse exists for that extended palette (the `colorful` profile maps roles to `red`, `green`,
-   `cyan`, `magenta`, and related keys), which `Color` cannot supply. So consuming
-   `Color` would not remove the parse — it would create a split source (base from `Color`, palette
-   still parsed) and host-couple every widget for marginal gain. Widgets already consume Omarchy's
-   resolved base colors via the injected `bar`; the palette parse is necessary and stays.
+5. **Theme-source consolidation:** use Omarchy `Color` (or the injected bar derived from it) for
+   foundational colors, shell roles, and every structural surface. Omarchy updates `Color` from the
+   theme IPC payload after atomically replacing the runtime directory; do not independently watch
+   `current/theme/colors.toml` or `shell.toml` for those roles. `Color` does not expose Quattro's
+   named role hues, so `ColorProfile` still parses `colors.toml` as a supplement for the `colorful`
+   profile. Trigger that read from native `Color` changes, retain the last valid palette on failure,
+   and retry after the path settles.

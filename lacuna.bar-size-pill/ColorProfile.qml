@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.Commons
 
 Item {
   id: root
@@ -11,6 +12,7 @@ Item {
   property string settingsProfile: "semantic"
   property bool reduceMotion: false
   property var palette: ({})
+  property string themeName: ""
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
   readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")
@@ -110,7 +112,22 @@ Item {
     if (!next.color13 && next.magenta) next.color13 = next.magenta
     if (!next.color14 && next.cyan) next.color14 = next.cyan
     if (!next.color15 && next.bright_fg) next.color15 = next.bright_fg
+    // Atomic theme replacement can briefly make colors.toml unavailable.
+    // Never discard a valid palette because of that transient window.
+    if (Object.keys(next).length === 0) return false
     palette = next
+    return true
+  }
+
+  function loadThemeName(raw) {
+    var next = String(raw || "").trim()
+    if (next.length === 0) return false
+    themeName = next
+    return true
+  }
+
+  function scheduleThemeReload() {
+    themeReloadTimer.restart()
   }
 
   function loadSettings(raw) {
@@ -124,22 +141,54 @@ Item {
     }
   }
 
+  // Omarchy applies theme payloads to Color after replacing the runtime
+  // directory. Use that transactional update as the reload signal instead of
+  // watching files below the replaced directory.
+  Connections {
+    target: Color
+    function onBackgroundChanged() { root.scheduleThemeReload() }
+    function onForegroundChanged() { root.scheduleThemeReload() }
+    function onAccentChanged() { root.scheduleThemeReload() }
+    function onUrgentChanged() { root.scheduleThemeReload() }
+    function onShellValuesChanged() { root.scheduleThemeReload() }
+  }
+
+  Timer {
+    id: themeReloadTimer
+    interval: 40
+    repeat: false
+    onTriggered: {
+      colorsFile.reload()
+      themeNameFile.reload()
+    }
+  }
+
+  Timer {
+    id: themeRetryTimer
+    interval: 120
+    repeat: false
+    onTriggered: {
+      colorsFile.reload()
+      themeNameFile.reload()
+    }
+  }
+
   FileView {
     id: colorsFile
     path: root.colorsPath
-    watchChanges: true
+    watchChanges: false
     printErrors: false
     onLoaded: root.loadTheme(text())
-    onFileChanged: reload()
-    onLoadFailed: root.loadTheme("")
+    onLoadFailed: themeRetryTimer.restart()
   }
 
   FileView {
     id: themeNameFile
     path: root.themeNamePath
-    watchChanges: true
+    watchChanges: false
     printErrors: false
-    onFileChanged: colorsFile.reload()
+    onLoaded: root.loadThemeName(text())
+    onLoadFailed: themeRetryTimer.restart()
   }
 
   FileView {

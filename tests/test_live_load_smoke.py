@@ -6,10 +6,9 @@ Unlike the static load-smoke, this resolves the full QML type/import tree
 It uses Qt.createComponent (compile only, never createObject), so no windows or
 layer-shell surfaces are mapped onto the live desktop.
 
-Skips when there is no Quickshell binary or Wayland session (e.g. CI). Entry
-points that import Omarchy host modules (``qs.*``) are host-dependent: they only
-resolve with the Omarchy shell as the config root, so they are exercised
-separately by the running shell rather than here.
+Skips when there is no Quickshell binary or Wayland session (e.g. CI). The
+throwaway config root mirrors installed Omarchy `qs.*` modules because an entry
+point may acquire that dependency transitively through a shared component.
 """
 
 import json
@@ -33,6 +32,13 @@ def omarchy_shell_dir() -> Path | None:
 
 
 def run_harness(config_root: Path, entries: list[Path]) -> str:
+    shell_dir = omarchy_shell_dir()
+    if shell_dir is not None:
+        for sub in shell_dir.iterdir():
+            if sub.is_dir() and (sub / "qmldir").exists():
+                target = config_root / sub.name
+                if not target.exists():
+                    target.symlink_to(sub)
     shell = config_root / "shell.qml"
     shell.write_text(build_harness(entries), encoding="utf-8")
     env = dict(os.environ)

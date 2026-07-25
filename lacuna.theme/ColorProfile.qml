@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.Commons
 
 Item {
   id: root
@@ -10,6 +11,7 @@ Item {
   property string role: "foreground"
   property string settingsProfile: "semantic"
   property var palette: ({})
+  property string themeName: ""
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
   readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")
@@ -73,7 +75,20 @@ Item {
     if (!next.foreground && next.fg) next.foreground = next.fg
     if (!next.magenta && next.color5) next.magenta = next.color5
     if (!next.blue && next.color4) next.blue = next.color4
+    if (Object.keys(next).length === 0) return false
     palette = next
+    return true
+  }
+
+  function loadThemeName(raw) {
+    var next = String(raw || "").trim()
+    if (next.length === 0) return false
+    themeName = next
+    return true
+  }
+
+  function scheduleThemeReload() {
+    themeReloadTimer.restart()
   }
 
   function loadSettings(raw) {
@@ -85,22 +100,51 @@ Item {
     }
   }
 
+  Connections {
+    target: Color
+    function onBackgroundChanged() { root.scheduleThemeReload() }
+    function onForegroundChanged() { root.scheduleThemeReload() }
+    function onAccentChanged() { root.scheduleThemeReload() }
+    function onUrgentChanged() { root.scheduleThemeReload() }
+    function onShellValuesChanged() { root.scheduleThemeReload() }
+  }
+
+  Timer {
+    id: themeReloadTimer
+    interval: 40
+    repeat: false
+    onTriggered: {
+      colorsFile.reload()
+      themeNameFile.reload()
+    }
+  }
+
+  Timer {
+    id: themeRetryTimer
+    interval: 120
+    repeat: false
+    onTriggered: {
+      colorsFile.reload()
+      themeNameFile.reload()
+    }
+  }
+
   FileView {
     id: colorsFile
     path: root.colorsPath
-    watchChanges: true
+    watchChanges: false
     printErrors: false
     onLoaded: root.loadTheme(text())
-    onFileChanged: reload()
-    onLoadFailed: root.loadTheme("")
+    onLoadFailed: themeRetryTimer.restart()
   }
 
   FileView {
     id: themeNameFile
     path: root.themeNamePath
-    watchChanges: true
+    watchChanges: false
     printErrors: false
-    onFileChanged: colorsFile.reload()
+    onLoaded: root.loadThemeName(text())
+    onLoadFailed: themeRetryTimer.restart()
   }
 
   FileView {

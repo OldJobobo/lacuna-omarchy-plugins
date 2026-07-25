@@ -2,6 +2,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
+import qs.Commons
 
 Item {
   id: root
@@ -18,10 +19,10 @@ Item {
   property var palette: ({})
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
+  readonly property string stateHome: Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")
   readonly property string configDir: configHome + "/omarchy/lacuna"
   readonly property string settingsFile: configDir + "/settings.json"
-  readonly property string colorsPath: configHome + "/omarchy/current/theme/colors.toml"
-  readonly property string themeNamePath: configHome + "/omarchy/current/theme.name"
+  readonly property string colorsPath: stateHome + "/omarchy/current/theme/colors.toml"
   readonly property var overlaySettings: pluginSettings()
   readonly property var filmGrainSettings: backgroundEffectSettings("filmGrain")
   readonly property bool configuredEnabled: boolSetting("effectEnabled", true)
@@ -149,10 +150,19 @@ Item {
       var match = lines[i].match(/^\s*([A-Za-z0-9_-]+)\s*=\s*["']?([^"'\s]+)["']?/)
       if (match) next[match[1]] = match[2].trim()
     }
+    if (Object.keys(next).length === 0) return false
     palette = next
+    return true
+  }
+
+  function scheduleThemeReload() {
+    themeReloadTimer.restart()
   }
 
   function themeColor(name, fallbackColor) {
+    if (name === "background" || name === "bg") return Color.background
+    if (name === "foreground" || name === "fg") return Color.foreground
+    if (name === "accent") return Color.accent
     return palette[name] || fallbackColor
   }
 
@@ -205,22 +215,36 @@ Item {
     onLoadFailed: root.lacunaSettings = {}
   }
 
-  FileView {
-    id: colorsFile
-    path: root.colorsPath
-    watchChanges: true
-    printErrors: false
-    onLoaded: root.loadTheme(text())
-    onFileChanged: reload()
-    onLoadFailed: root.palette = ({})
+  Connections {
+    target: Color
+    function onBackgroundChanged() { root.scheduleThemeReload() }
+    function onForegroundChanged() { root.scheduleThemeReload() }
+    function onAccentChanged() { root.scheduleThemeReload() }
+    function onUrgentChanged() { root.scheduleThemeReload() }
+    function onShellValuesChanged() { root.scheduleThemeReload() }
+  }
+
+  Timer {
+    id: themeReloadTimer
+    interval: 40
+    repeat: false
+    onTriggered: colorsFile.reload()
+  }
+
+  Timer {
+    id: themeRetryTimer
+    interval: 120
+    repeat: false
+    onTriggered: colorsFile.reload()
   }
 
   FileView {
-    id: themeNameFile
-    path: root.themeNamePath
-    watchChanges: true
+    id: colorsFile
+    path: root.colorsPath
+    watchChanges: false
     printErrors: false
-    onFileChanged: colorsFile.reload()
+    onLoaded: root.loadTheme(text())
+    onLoadFailed: themeRetryTimer.restart()
   }
 
   FrameAnimation {
