@@ -11,6 +11,7 @@ PopupWindow {
   property var owner: null
   property var weatherState: null
   property bool open: false
+  property bool reduceMotion: false
   property int panelWidth: 430
   property int panelHeight: 380
   property int joinRadius: 13
@@ -112,7 +113,10 @@ PopupWindow {
   }
 
   LacunaTokens { id: tokens }
-  MotionTokens { id: motionTokens }
+  MotionTokens {
+    id: motionTokens
+    animationDisabled: root.reduceMotion
+  }
 
   FileView {
     path: root.configHome + "/omarchy/lacuna/settings.json"

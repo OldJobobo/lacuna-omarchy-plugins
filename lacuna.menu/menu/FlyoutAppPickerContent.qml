@@ -83,8 +83,8 @@ Column {
       anchors.verticalCenter: parent.verticalCenter
       text: root.mode === "preferredApp" ? "Set " + root.registry.roleMeta(root.preferredRole).label + " App" : "Add Quick Launch App"
       color: root.foreground
-      fontFamily: "Tektur"
-      font.pixelSize: root.compact ? 13 : 15
+      fontFamily: typeTokens.displayFont
+      font.pixelSize: root.compact ? typeTokens.textPrimary : typeTokens.textTitle
       font.weight: Font.DemiBold
     }
 
@@ -120,8 +120,8 @@ Column {
       anchors.verticalCenter: parent.verticalCenter
       text: "Search apps"
       color: root.muted
-      fontFamily: "Hack Nerd Font Propo"
-      font.pixelSize: root.compact ? 10 : 11
+      fontFamily: typeTokens.monoFont
+      font.pixelSize: root.compact ? typeTokens.textSmall : typeTokens.textNormal
     }
 
     TextInput {
@@ -135,8 +135,8 @@ Column {
       color: root.foreground
       selectedTextColor: root.background
       selectionColor: root.accent
-      font.family: "Hack Nerd Font Propo"
-      font.pixelSize: root.compact ? 10 : 11
+      font.family: typeTokens.monoFont
+      font.pixelSize: root.compact ? typeTokens.textSmall : typeTokens.textNormal
       verticalAlignment: TextInput.AlignVCenter
       clip: true
       onTextChanged: root.query = text
@@ -181,8 +181,8 @@ Column {
         anchors.verticalCenter: parent.verticalCenter
         text: root.registry.roleMeta(root.preferredRole).systemHint
         color: root.foreground
-        fontFamily: "Hack Nerd Font Propo"
-        font.pixelSize: root.compact ? 10 : 11
+        fontFamily: typeTokens.monoFont
+        font.pixelSize: root.compact ? typeTokens.textSmall : typeTokens.textNormal
         font.weight: systemPickerMouse.containsMouse ? Font.DemiBold : Font.Normal
         elide: Text.ElideRight
         maximumLineCount: 1
@@ -266,8 +266,8 @@ Column {
           anchors.verticalCenter: parent.verticalCenter
           text: modelData.Name || modelData.id
           color: alreadyAdded ? root.muted : root.foreground
-          fontFamily: "Hack Nerd Font Propo"
-          font.pixelSize: root.compact ? 10 : 11
+          fontFamily: typeTokens.monoFont
+          font.pixelSize: root.compact ? typeTokens.textSmall : typeTokens.textNormal
           font.weight: pickerMouse.containsMouse ? Font.DemiBold : Font.Normal
           elide: Text.ElideRight
           maximumLineCount: 1
@@ -316,4 +316,7 @@ Column {
     background: root.background
     accent: root.accent
   }
+
+  LacunaTokens { id: typeTokens }
+
 }

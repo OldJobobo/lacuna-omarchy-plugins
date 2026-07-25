@@ -13,6 +13,7 @@ Item {
   property real runtimeIntensity: -1
   property int noiseTick: 0
   property var lacunaSettings: ({})
+  readonly property bool reducedMotion: lacunaSettings && lacunaSettings.reduceMotion === true
 
   readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy/lacuna"
   readonly property string settingsFile: configDir + "/settings.json"
@@ -154,7 +155,7 @@ Item {
   Timer {
     interval: Math.max(45, 120 / root.speed)
     repeat: true
-    running: root.effectVisible && root.noiseAmount > 0
+    running: root.effectVisible && !root.reducedMotion && root.noiseAmount > 0
     onTriggered: root.noiseTick += 1
   }
 
@@ -213,7 +214,7 @@ Item {
             to: 0
             duration: Math.max(180, 950 / root.speed)
             loops: Animation.Infinite
-            running: root.effectVisible
+            running: root.effectVisible && !root.reducedMotion
           }
 
           Repeater {
@@ -263,7 +264,7 @@ Item {
 
             SequentialAnimation on y {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
 
               PauseAnimation {
                 duration: 7200 + index * 5200
@@ -434,7 +435,7 @@ Item {
 
           SequentialAnimation on y {
             loops: Animation.Infinite
-            running: root.effectVisible
+            running: root.effectVisible && !root.reducedMotion
 
             PauseAnimation {
               duration: Math.max(400, 2800 / root.speed)

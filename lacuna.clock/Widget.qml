@@ -103,6 +103,7 @@ Item {
 
   MotionTokens {
     id: motionTokens
+    animationDisabled: colorProfile.reduceMotion
   }
 
   SystemClock {
@@ -112,6 +113,7 @@ Item {
   }
 
   CalendarFlyout {
+    reduceMotion: colorProfile.reduceMotion
     anchorItem: button
     bar: root.bar
     owner: root

@@ -32,7 +32,7 @@ Item {
         text: root.title
         color: root.foreground
         fontFamily: root.titleFontFamily
-        font.pixelSize: root.compact ? 16 : 18
+        font.pixelSize: root.compact ? typeTokens.textTitle : typeTokens.textFeature
         font.weight: Font.DemiBold
       }
 
@@ -41,7 +41,7 @@ Item {
         text: root.subtitle
         color: root.muted
         fontFamily: root.bodyFontFamily
-        font.pixelSize: root.compact ? 9 : 10
+        font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
       }
     }
 
@@ -62,4 +62,7 @@ Item {
       onTriggered: root.closeRequested()
     }
   }
+
+  LacunaTokens { id: typeTokens }
+
 }

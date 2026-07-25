@@ -29,13 +29,15 @@ Each role is named from the gap metaphor and defined as a **derivation**, never 
 | `void` | `withAlpha(field, 0.18)` | — | intentional absence: insets, wells, scrim behind reveals |
 | `plate` | `shellSurfaceColor("bar.background", field)` | `#101315` | a present, raised surface (bar, sidebar, flyout) |
 | `ink` | `shellColor("menu.text", color("foreground"))` | `#d8dee9` | primary foreground / text |
-| `whisper` | `withAlpha(ink, 0.48)` | — | muted foreground: hints, secondary labels, idle icons |
+| `whisper` | contrast-aware mix of `ink` over `plate` (minimum 4.5:1 for menu text) | — | muted foreground: hints and secondary labels |
 | `soft` | `withAlpha(ink, 0.78)` | — | de-emphasized but legible foreground |
 | `seam` | `withAlpha(ink, 0.18)` | — | expressed edges, dividers, connector strokes, linework |
 | `accent` | `shellColor("menu.selected", color("accent"))` | `#88c0d0` | the single theme accent (see unified model) |
 | `danger` | `color("color9")` | `#bf616a` | destructive/high-impact actions only |
 | `warning` | `color("color11")` | `#ebcb8b` | warm/low/warning status |
-| `urgent` | `bar.urgent` → `color("color9")` | `#d42b5b` | critical/over-threshold status |
+| `urgent` | `bar.urgent` → named `red` → `color9` | `#d42b5b` | critical/over-threshold status |
+| `providerYoutube` | named `red` → `color9` | `#e05252` | YouTube provider identity |
+| `providerJellyfin` | named `magenta` → `color13` | `#9b7bd7` | Jellyfin provider identity |
 
 `withAlpha(c, a)` and the color-format parsing (hex `#RRGGBB[AA]`, `rgba()`, hyprland
 `0xAARRGGBB`) already live in `Theme.qml`; reuse them rather than re-deriving.
@@ -116,4 +118,5 @@ Status colors are also theme-derived and carry fixed meaning across the shell:
 2. **`danger` is for destructive actions only.** A red system *state* is `urgent`/`warning`.
 3. **One accent for non-destructive chrome.** Do not reintroduce per-category tones into the menu.
 4. **Reach for `void`/`seam`/`recess` before reaching for new color.** Depth and edge first.
-5. **Fallbacks are a floor, not a palette.** Never design *to* the fallback hexes.
+5. **Muted text remains legible.** Resolve menu metadata against the actual plate at a 4.5:1 target; decorative seams keep their independent alpha.
+6. **Fallbacks are a floor, not a palette.** Never design *to* the fallback hexes.

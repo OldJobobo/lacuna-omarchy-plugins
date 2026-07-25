@@ -40,11 +40,12 @@ LacunaRect {
   property color toneAccent: accent
   property color seam: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.2)
   property color background: "#101315"
-  property string fontFamily: "Hack Nerd Font Propo"
+  property string fontFamily: tokens.monoFont
   property string labelFontFamily: fontFamily
   property int iconRailWidth: 32
   property bool compact: false
   property var designTokens: fallbackDesignTokens
+  property MotionTokens motionTokens: defaultMotionTokens
   readonly property bool hovered: stateLayer.containsMouse
   readonly property bool pressed: stateLayer.pressed
   readonly property real reveal: stateLayer.reveal
@@ -95,19 +96,19 @@ LacunaRect {
   opacity: reorderActive ? 0.76 : 1
 
   Behavior on contentLeftMargin {
-    LacunaAnim { motion: "fast" }
+    LacunaAnim { motion: "fast"; motionTokens: root.motionTokens }
   }
 
   Behavior on opacity {
-    LacunaAnim { motion: "fast" }
+    LacunaAnim { motion: "fast"; motionTokens: root.motionTokens }
   }
 
   Behavior on focusReveal {
-    LacunaAnim { motion: "fast" }
+    LacunaAnim { motion: "fast"; motionTokens: root.motionTokens }
   }
 
   Behavior on labelMix {
-    NumberAnimation { duration: 300; easing.type: Easing.InOutCubic }
+    NumberAnimation { duration: motionTokens.reveal; easing.type: Easing.InOutCubic }
   }
 
   // Bottom hover treatment — mirrors the grid tile: a seam line broken by a
@@ -168,8 +169,10 @@ LacunaRect {
     }
   }
 
+  onHighlightedChanged: if (highlighted && motionTokens.animationDisabled) gapBreath = 0.5
+
   Timer {
-    running: root.designTokens.lacuna && root.highlighted && !root.header
+    running: root.designTokens.lacuna && root.highlighted && !root.header && !motionTokens.animationDisabled
     interval: 50
     repeat: true
     onTriggered: root.gapBreath = 0.5 + 0.5 * Math.sin(Date.now() / 620)
@@ -198,7 +201,7 @@ LacunaRect {
       text: root.label.toUpperCase()
       color: root.muted
       fontFamily: root.fontFamily
-      font.pixelSize: 9
+      font.pixelSize: tokens.textHint
       font.weight: Font.DemiBold
     }
   }
@@ -247,7 +250,9 @@ LacunaRect {
         text: root.icon
         color: root.tone === "nav" && !root.highlighted ? root.muted : root.toneAccent
         fontFamily: root.fontFamily
-        font.pixelSize: root.compact ? (root.featured ? 15 : root.primary ? 13 : 12) : (root.featured ? 17 : root.primary ? 15 : 13)
+        font.pixelSize: root.compact
+          ? (root.featured ? tokens.textTitle : root.primary ? tokens.textPrimary : tokens.textNormal)
+          : (root.featured ? tokens.textFeature : root.primary ? tokens.textTitle : tokens.textPrimary)
         horizontalAlignment: Text.AlignHCenter
       }
     }
@@ -262,7 +267,9 @@ LacunaRect {
         text: root.label
         color: root.labelColor
         fontFamily: root.labelFontFamily
-        font.pixelSize: root.compact ? (root.featured ? 13 : root.primary ? 12 : 11) : (root.featured ? 15 : root.primary ? 14 : 13)
+        font.pixelSize: root.compact
+          ? (root.featured ? tokens.textPrimary : root.primary ? tokens.textNormal : tokens.textSmall)
+          : (root.featured ? tokens.textTitle : root.primary ? tokens.textPrimary : tokens.textPrimary)
         font.weight: root.highlighted || root.primary || root.featured ? Font.DemiBold : Font.Normal
         font.letterSpacing: root.compact ? tokens.trackingMenuItemCompact : tokens.trackingMenuItem
       }
@@ -398,7 +405,7 @@ LacunaRect {
         text: root.trailingTooltip
         color: root.foreground
         fontFamily: root.fontFamily
-        font.pixelSize: root.compact ? 8 : 9
+        font.pixelSize: tokens.textHint
         font.weight: Font.DemiBold
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
@@ -424,7 +431,7 @@ LacunaRect {
         text: root.badgeText
         color: root.hovered ? root.foreground : root.muted
         fontFamily: root.fontFamily
-        font.pixelSize: root.compact ? 8 : 9
+        font.pixelSize: tokens.textHint
         font.weight: Font.DemiBold
         horizontalAlignment: Text.AlignHCenter
       }
@@ -451,7 +458,7 @@ LacunaRect {
         color: root.switchChecked ? root.toneAccent : root.muted
 
         Behavior on x {
-          LacunaAnim { motion: "fast" }
+          LacunaAnim { motion: "fast"; motionTokens: root.motionTokens }
         }
       }
     }
@@ -485,7 +492,7 @@ LacunaRect {
             text: modelData.label
             color: parent.selected ? root.foreground : root.muted
             fontFamily: root.fontFamily
-            font.pixelSize: root.compact ? 8 : 9
+            font.pixelSize: tokens.textHint
             font.weight: parent.selected ? Font.DemiBold : Font.Normal
           }
 
@@ -515,6 +522,7 @@ LacunaRect {
     }
   }
 
+  MotionTokens { id: defaultMotionTokens }
   LacunaTokens { id: tokens }
 
   DesignTokens {

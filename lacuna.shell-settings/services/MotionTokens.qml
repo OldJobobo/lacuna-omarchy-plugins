@@ -7,9 +7,9 @@ import QtQuick
 QtObject {
   id: root
 
-  // Central reduced-motion / speed switch. Bind animationDisabled to a
-  // reduced-motion preference to collapse every duration to 0; animationSpeed
-  // scales the whole scale at once.
+  // The owning surface binds animationDisabled from the one settings service.
+  // Token instances remain pure value objects so delegates do not create file
+  // watchers of their own.
   property bool animationDisabled: false
   property real animationSpeed: 1.0
 

@@ -98,7 +98,10 @@ Item {
     role: "theme"
   }
 
-  MotionTokens { id: motionTokens }
+  MotionTokens {
+    id: motionTokens
+    animationDisabled: colorProfile.reduceMotion
+  }
 
   FileView {
     path: root.colorsPath
@@ -188,6 +191,7 @@ Item {
   }
 
   ThemeFlyout {
+    reduceMotion: colorProfile.reduceMotion
     anchorItem: root
     owner: root
     bar: root.bar

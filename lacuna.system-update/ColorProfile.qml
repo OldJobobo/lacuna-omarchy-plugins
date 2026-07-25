@@ -9,6 +9,7 @@ Item {
   property var widgetSettings: ({})
   property string role: "foreground"
   property string settingsProfile: "semantic"
+  property bool reduceMotion: false
   property var palette: ({})
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
@@ -116,8 +117,10 @@ Item {
     try {
       var data = JSON.parse(String(raw || "{}"))
       settingsProfile = normalizeProfile(data.colorProfile || "semantic")
+      reduceMotion = data.reduceMotion === true
     } catch (e) {
       settingsProfile = "semantic"
+      reduceMotion = false
     }
   }
 

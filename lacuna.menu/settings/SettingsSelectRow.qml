@@ -90,7 +90,7 @@ Item {
           text: root.label
           color: root.foreground
           fontFamily: root.titleFontFamily
-          font.pixelSize: root.compact ? 12 : 13
+          font.pixelSize: root.compact ? typeTokens.textNormal : typeTokens.textPrimary
           font.weight: Font.DemiBold
         }
 
@@ -100,7 +100,7 @@ Item {
           text: root.hint
           color: root.muted
           fontFamily: root.bodyFontFamily
-          font.pixelSize: root.compact ? 9 : 10
+          font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
         }
       }
 
@@ -123,7 +123,7 @@ Item {
           text: root.optionLabel(root.currentValue)
           color: root.currentValue === "" ? root.muted : root.foreground
           fontFamily: root.bodyFontFamily
-          font.pixelSize: root.compact ? 9 : 10
+          font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
         }
 
         LacunaTablerIcon {
@@ -186,7 +186,7 @@ Item {
               text: modelData.label || modelData.value
               color: root.foreground
               fontFamily: root.bodyFontFamily
-              font.pixelSize: root.compact ? 9 : 10
+              font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
             }
 
             LacunaText {
@@ -195,7 +195,7 @@ Item {
               text: modelData.description || ""
               color: root.muted
               fontFamily: root.bodyFontFamily
-              font.pixelSize: root.compact ? 8 : 9
+              font.pixelSize: typeTokens.textHint
             }
           }
 
@@ -222,4 +222,7 @@ Item {
       }
     }
   }
+
+  LacunaTokens { id: typeTokens }
+
 }

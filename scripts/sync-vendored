@@ -52,6 +52,14 @@ def vendored_pairs() -> list[tuple[Path, Path]]:
         if rel(target) not in excluded:
             pairs.append((source, target))
 
+    geometry_source = ROOT / "shared/qml/LacunaGeometry.qml"
+    for target in sorted(ROOT.glob("lacuna.*/**/LacunaGeometry.qml")):
+        append_pair(geometry_source, target)
+
+    tokens_source = ROOT / "shared/qml/LacunaTokens.qml"
+    append_pair(tokens_source, ROOT / "lacuna.menu/components/LacunaTokens.qml")
+    append_pair(tokens_source, ROOT / "lacuna.shell-settings/components/LacunaTokens.qml")
+
     color_source = ROOT / "shared/qml/simple-bar/ColorProfile.qml"
     for target in sorted(ROOT.glob("lacuna.*/ColorProfile.qml")):
         if rel(target) not in excluded:
@@ -77,6 +85,8 @@ def vendored_pairs() -> list[tuple[Path, Path]]:
     components_source = ROOT / "lacuna.shell-settings/components"
     components_target = ROOT / "lacuna.menu/components"
     for source in sorted(components_source.glob("*.qml")):
+        if source.name in {"LacunaGeometry.qml", "LacunaTokens.qml"}:
+            continue
         target = components_target / source.name
         if target.exists():
             pairs.append((source, target))
@@ -89,14 +99,6 @@ def vendored_pairs() -> list[tuple[Path, Path]]:
         (
             ROOT / "lacuna.clock/LacunaDropShadow.qml",
             ROOT / "lacuna.weather/LacunaDropShadow.qml",
-        ),
-        (
-            ROOT / "lacuna.clock/LacunaGeometry.qml",
-            ROOT / "lacuna.weather/LacunaGeometry.qml",
-        ),
-        (
-            ROOT / "lacuna.shell-settings/components/LacunaGeometry.qml",
-            ROOT / "lacuna.bar/LacunaGeometry.qml",
         ),
         (
             OMARCHY_ROOT / "shell/plugins/bar/Bar.qml",

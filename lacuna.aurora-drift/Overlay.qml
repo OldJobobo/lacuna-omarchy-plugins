@@ -13,6 +13,7 @@ Item {
   property bool runtimeEnabled: true
   property real runtimeIntensity: -1
   property var lacunaSettings: ({})
+  readonly property bool reducedMotion: lacunaSettings && lacunaSettings.reduceMotion === true
   property var palette: ({})
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
@@ -312,7 +313,7 @@ Item {
 
             SequentialAnimation on x {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
 
               PauseAnimation {
                 duration: ribbon.initialDelay
@@ -335,7 +336,7 @@ Item {
 
             SequentialAnimation on y {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
 
               PauseAnimation {
                 duration: Math.round(ribbon.initialDelay * 0.47)
@@ -459,7 +460,7 @@ Item {
 
             SequentialAnimation on x {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
 
               PauseAnimation {
                 duration: glow.initialDelay
@@ -482,7 +483,7 @@ Item {
 
             SequentialAnimation on y {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
 
               PauseAnimation {
                 duration: Math.round(glow.initialDelay * 0.56)
@@ -505,7 +506,7 @@ Item {
 
             SequentialAnimation on opacity {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
 
               PauseAnimation {
                 duration: Math.round(glow.initialDelay * 0.32)

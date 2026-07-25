@@ -43,6 +43,7 @@ Item {
 
   MotionTokens {
     id: motionTokens
+    animationDisabled: colorProfile.reduceMotion
   }
 
   // The breathing glow — a layered vertical streak that

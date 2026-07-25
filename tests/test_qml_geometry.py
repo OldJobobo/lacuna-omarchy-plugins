@@ -508,7 +508,8 @@ class QmlGeometryTests(unittest.TestCase):
         claude = read("lacuna.claude-usage/ClaudeUsageFlyout.qml")
         codex = read("lacuna.codex-usage/CodexUsageFlyout.qml")
         for text in (notifications, claude, codex):
-            self.assertIn("point.x = Math.max(root.margin, Math.min(point.x, window.width - root.implicitWidth - root.margin))", text)
+            self.assertIn("point.x = Math.max(root.margin, Math.min(point.x, root.anchorWindow.width - root.implicitWidth - root.margin))", text)
+            self.assertIn("point.y = Math.max(root.margin, Math.min(point.y, root.anchorWindow.height - root.implicitHeight - root.margin))", text)
             self.assertIn("popupAnchor.rect.x = Math.round(point.x)", text)
 
         self.assertEqual(
@@ -548,6 +549,44 @@ class QmlGeometryTests(unittest.TestCase):
             ),
             321,
         )
+
+    def test_all_rich_bar_flyouts_support_four_attachment_edges(self):
+        inventory = {
+            "audio": "AudioFlyout.qml",
+            "bluetooth": "BluetoothFlyout.qml",
+            "network": "NetworkFlyout.qml",
+            "power": "PowerFlyout.qml",
+            "notifications": "NotificationsFlyout.qml",
+            "claude-usage": "ClaudeUsageFlyout.qml",
+            "codex-usage": "CodexUsageFlyout.qml",
+            "system-stats": "TelemetryFlyout.qml",
+            "temperature": "ThermalFlyout.qml",
+            "theme": "ThemeFlyout.qml",
+            "wallpaper": "WallpaperFlyout.qml",
+        }
+        canonical_surface = read("lacuna.clock/BarFlyoutSurface.qml")
+        for plugin, flyout_name in inventory.items():
+            with self.subTest(plugin=plugin):
+                surface = read(f"lacuna.{plugin}/BarFlyoutSurface.qml")
+                flyout = read(f"lacuna.{plugin}/{flyout_name}")
+                self.assertEqual(canonical_surface, surface)
+                self.assertIn('property string attachmentEdge: "top"', surface)
+                for edge in ("top", "bottom", "left", "right"):
+                    self.assertIn(f'visible: root.attachmentEdge === "{edge}"', surface)
+                self.assertGreaterEqual(surface.count("strokeWidth: 0"), 4)
+                self.assertIn("readonly property string attachmentEdge: bar && /^(top|bottom|left|right)$/.test(bar.position)", flyout)
+                self.assertIn('root.attachmentEdge === "left"', flyout)
+                self.assertIn('root.attachmentEdge === "right"', flyout)
+                self.assertIn("readonly property bool horizontalReveal", flyout)
+                self.assertIn("attachmentEdge: root.attachmentEdge", flyout)
+                self.assertIn("point.y = Math.max(root.margin", flyout)
+                if plugin in {"claude-usage", "codex-usage", "system-stats", "temperature", "theme", "wallpaper"}:
+                    self.assertIn("readonly property int shadowLeftMargin", flyout)
+                    self.assertIn("readonly property int shadowRightMargin", flyout)
+                    self.assertIn("readonly property int shadowTopMargin", flyout)
+                    self.assertIn("readonly property int shadowBottomMargin", flyout)
+                    self.assertIn("implicitWidth: surface.fullWidth + shadowLeftMargin + shadowRightMargin", flyout)
+                    self.assertIn("implicitHeight: surface.fullHeight + shadowTopMargin + shadowBottomMargin", flyout)
 
 
 if __name__ == "__main__":

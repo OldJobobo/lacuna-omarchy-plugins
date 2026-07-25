@@ -46,10 +46,19 @@ under any theme the user installs. There is no Lacuna brand color.
 | [05-components.md](05-components.md) | Primitives and controls re-expressed in the token families |
 | [06-roadmap.md](06-roadmap.md) | The phased migration from today's QML onto this language |
 
+## Interaction scope
+
+Lacuna is intentionally pointer-first. Broad keyboard navigation, complete
+focus traversal, and screen-reader coverage are deferred because they require a
+design-wide interaction model rather than piecemeal shortcuts. Existing bounded
+focus behavior remains supported: intentional text entry, Escape and click-away
+dismissal, and already-shipped semantic metadata must not regress. This matches
+the beta boundary in [`../roadmap.md`](../roadmap.md).
+
 ## How this lives in the code
 
-Plugins are self-contained, and simple bar widgets **vendor** their own copies of token files
-(`shared/qml/simple-bar/`), reconciled by `scripts/sync-vendored`. So the design *system* is
-centralized here as documentation; the design *tokens in code* are duplicated per plugin and kept
-in sync by that script. This spec is the single source of truth for intent; the canonical
-templates in `shared/qml/simple-bar/` are the single source of truth for code.
+Plugins are self-contained and **vendor** shared build-time sources, reconciled
+by `scripts/sync-vendored`. `shared/qml/LacunaGeometry.qml` owns curve geometry;
+`shared/qml/simple-bar/` owns simple-widget color and motion templates. Runtime
+imports remain plugin-local. This spec is the source of truth for intent, while
+those shared templates are the source of truth for duplicated code.

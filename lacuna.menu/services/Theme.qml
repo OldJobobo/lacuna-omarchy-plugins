@@ -25,7 +25,7 @@ Item {
   property color accent: shellColor("menu.selected", color("accent"))
   property color voidColor: withAlpha(background, 0.18)
   property color border: withAlpha(foreground, 0.18)
-  property color muted: withAlpha(foreground, 0.48)
+  property color muted: contrastAwareText(foreground, panelBackground, 4.5)
   property color soft: withAlpha(foreground, 0.78)
 
   // Design-language color roles (docs/lacuna-design-system/01-color.md).
@@ -41,6 +41,77 @@ Item {
   readonly property color seam: border
   readonly property color danger: color("color9")
   readonly property color warning: color("color11")
+  readonly property color urgent: contrastAwareRole(palette.red || palette.color9 || fallback("providerYoutube"), panelBackground, 3.0)
+  readonly property color providerYoutube: contrastAwareRole(palette.red || palette.color9 || fallback("providerYoutube"), panelBackground, 3.0)
+  readonly property color providerJellyfin: contrastAwareRole(palette.magenta || palette.color13 || fallback("providerJellyfin"), panelBackground, 3.0)
+
+  function linearChannel(value) {
+    return value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4)
+  }
+
+  function relativeLuminance(value) {
+    return 0.2126 * linearChannel(value.r) + 0.7152 * linearChannel(value.g) + 0.0722 * linearChannel(value.b)
+  }
+
+  function contrastRatio(first, second) {
+    var firstLuminance = relativeLuminance(first)
+    var secondLuminance = relativeLuminance(second)
+    return (Math.max(firstLuminance, secondLuminance) + 0.05) / (Math.min(firstLuminance, secondLuminance) + 0.05)
+  }
+
+  function mixOpaque(backgroundColor, foregroundColor, amount) {
+    var ratio = Math.max(0, Math.min(1, Number(amount)))
+    return Qt.rgba(
+      backgroundColor.r + (foregroundColor.r - backgroundColor.r) * ratio,
+      backgroundColor.g + (foregroundColor.g - backgroundColor.g) * ratio,
+      backgroundColor.b + (foregroundColor.b - backgroundColor.b) * ratio,
+      1
+    )
+  }
+
+  function contrastEndpoint(surfaceColor) {
+    var black = Qt.rgba(0, 0, 0, 1)
+    var white = Qt.rgba(1, 1, 1, 1)
+    return contrastRatio(white, surfaceColor) >= contrastRatio(black, surfaceColor) ? white : black
+  }
+
+  function contrastAwareRole(roleColor, surfaceColor, targetRatio) {
+    var target = Math.max(1, Number(targetRatio) || 3.0)
+    var role = opaqueColor(roleColor)
+    if (contrastRatio(role, surfaceColor) >= target) return role
+
+    var endpoint = contrastEndpoint(surfaceColor)
+    var low = 0
+    var high = 1
+    for (var i = 0; i < 12; i++) {
+      var middle = (low + high) / 2
+      var candidate = mixOpaque(role, endpoint, middle)
+      if (contrastRatio(candidate, surfaceColor) >= target) high = middle
+      else low = middle
+    }
+    return mixOpaque(role, endpoint, high)
+  }
+
+  function contrastAwareText(foregroundColor, surfaceColor, targetRatio) {
+    var target = Math.max(1, Number(targetRatio) || 4.5)
+    var minimumMix = 0.48
+    var candidate = mixOpaque(surfaceColor, foregroundColor, minimumMix)
+    if (contrastRatio(candidate, surfaceColor) >= target) return candidate
+
+    var foreground = opaqueColor(foregroundColor)
+    if (contrastRatio(foreground, surfaceColor) < target)
+      return contrastAwareRole(foreground, surfaceColor, target)
+
+    var low = minimumMix
+    var high = 1
+    for (var i = 0; i < 12; i++) {
+      var middle = (low + high) / 2
+      candidate = mixOpaque(surfaceColor, foreground, middle)
+      if (contrastRatio(candidate, surfaceColor) >= target) high = middle
+      else low = middle
+    }
+    return mixOpaque(surfaceColor, foreground, high)
+  }
 
   function withAlpha(value, alpha) {
     return Qt.rgba(value.r, value.g, value.b, alpha)
@@ -189,7 +260,9 @@ Item {
       color12: "#81a1c1",
       color13: "#b48ead",
       color14: "#8fbcbb",
-      color15: "#eceff4"
+      color15: "#eceff4",
+      providerYoutube: "#e05252",
+      providerJellyfin: "#9b7bd7"
     }
 
     return fallbacks[name] || "#d8dee9"

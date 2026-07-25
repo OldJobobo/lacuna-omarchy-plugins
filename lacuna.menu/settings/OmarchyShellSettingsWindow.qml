@@ -631,4 +631,7 @@ Item {
     background: root.background
     accent: root.shellAccent
   }
+
+  LacunaTokens { id: typeTokens }
+
 }

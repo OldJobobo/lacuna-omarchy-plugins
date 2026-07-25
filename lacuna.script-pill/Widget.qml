@@ -81,6 +81,7 @@ Item {
 
   MotionTokens {
     id: motionTokens
+    animationDisabled: colorProfile.reduceMotion
   }
 
   Timer {

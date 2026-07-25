@@ -10,6 +10,7 @@ PopupWindow {
   required property QtObject bar
   property var owner: null
   property bool open: false
+  property bool reduceMotion: false
   property date liveDate: new Date()
   property int panelWidth: 350
   property int panelHeight: 440
@@ -113,7 +114,10 @@ PopupWindow {
   }
 
   LacunaTokens { id: tokens }
-  MotionTokens { id: motionTokens }
+  MotionTokens {
+    id: motionTokens
+    animationDisabled: root.reduceMotion
+  }
 
   FileView {
     path: root.lacunaSettingsPath

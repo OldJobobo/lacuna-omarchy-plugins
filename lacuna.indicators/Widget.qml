@@ -188,6 +188,7 @@ Item {
 
   MotionTokens {
     id: motionTokens
+    animationDisabled: colorProfile.reduceMotion
   }
 
   Component.onCompleted: refresh()

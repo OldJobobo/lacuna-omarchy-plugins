@@ -1,5 +1,6 @@
 import QtQuick
 import "../components"
+import "../services"
 
 Item {
   id: root
@@ -20,9 +21,10 @@ Item {
   property string optionValue: ""
   property string actionIcon: ""
   property string actionTooltip: ""
-  property string fontFamily: "Hack Nerd Font Propo"
+  property string fontFamily: typeTokens.monoFont
   property bool compact: false
   property var designTokens: null
+  property MotionTokens motionTokens: defaultMotionTokens
   property real hoverOpacity: 0.06
   property real pressOpacity: 0.11
 
@@ -96,7 +98,7 @@ Item {
     text: root.title.toUpperCase()
     color: stateLayer.containsMouse || root.band ? root.foreground : root.muted
     fontFamily: root.fontFamily
-    font.pixelSize: root.compact ? 8 : 9
+    font.pixelSize: typeTokens.textHint
     font.weight: Font.DemiBold
     font.letterSpacing: tokens.trackingSection
   }
@@ -191,8 +193,12 @@ Item {
       rotation: root.collapsed ? 0 : 90
 
       Behavior on rotation {
-        LacunaAnim { motion: "fast" }
+        LacunaAnim { motion: "fast"; motionTokens: root.motionTokens }
       }
     }
   }
+
+  MotionTokens { id: defaultMotionTokens }
+  LacunaTokens { id: typeTokens }
+
 }

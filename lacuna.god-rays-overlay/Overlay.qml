@@ -13,6 +13,7 @@ Item {
   property bool runtimeEnabled: true
   property real runtimeIntensity: -1
   property var lacunaSettings: ({})
+  readonly property bool reducedMotion: lacunaSettings && lacunaSettings.reduceMotion === true
   property var palette: ({})
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
@@ -278,7 +279,7 @@ Item {
 
         SequentialAnimation on ambientPulse {
           loops: Animation.Infinite
-          running: root.effectVisible && root.shimmer
+          running: root.effectVisible && !root.reducedMotion && root.shimmer
           NumberAnimation {
             from: 0.58
             to: 1
@@ -393,7 +394,7 @@ Item {
 
             SequentialAnimation on x {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
               PauseAnimation { duration: ray.initialDelay }
               NumberAnimation {
                 from: ray.xA
@@ -411,7 +412,7 @@ Item {
 
             SequentialAnimation on y {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
               PauseAnimation { duration: Math.round(ray.initialDelay * 0.41) }
               NumberAnimation {
                 from: ray.yA
@@ -429,7 +430,7 @@ Item {
 
             SequentialAnimation on opacity {
               loops: Animation.Infinite
-              running: root.effectVisible && root.shimmer
+              running: root.effectVisible && !root.reducedMotion && root.shimmer
               PauseAnimation { duration: Math.round(ray.initialDelay * 0.62) }
               NumberAnimation {
                 from: ray.baseOpacity * 0.7
@@ -512,7 +513,7 @@ Item {
 
             ParallelAnimation {
               loops: Animation.Infinite
-              running: root.effectVisible && root.shimmer
+              running: root.effectVisible && !root.reducedMotion && root.shimmer
               NumberAnimation {
                 target: mote
                 property: "x"

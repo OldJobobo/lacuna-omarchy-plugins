@@ -139,6 +139,14 @@ Acceptance:
 
 ## Workstream 5 — Bounded structural evolution
 
+The UI review records large-file decomposition as tracked structural work, not
+part of the current visual-correctness fixes. `MenuFlyoutGeometry.js` is the
+first safe pure extraction. Follow-ups must land independently after focused
+behavior tests: restart confirmation/action routing from `MenuWindow.qml`,
+media tabs from `FlyoutMediaPlayerContent.qml`, and declarative catalog data
+from `MenuRegistry.qml`. Do not refactor upstream-derived `OmarchyBar.qml`.
+
+
 Tasks:
 
 - Decompose `MenuWindow.qml` only where behavior tests already describe the

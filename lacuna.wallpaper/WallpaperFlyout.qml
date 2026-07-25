@@ -10,6 +10,7 @@ PopupWindow {
   required property QtObject bar
   property var owner: null
   property bool open: false
+  property bool reduceMotion: false
   property string backgroundPath: ""
   property string wallpaperTitle: ""
   property color accentColor: "#89b4fa"
@@ -19,6 +20,7 @@ PopupWindow {
   property int margin: 8
 
   readonly property var anchorWindow: anchorItem ? anchorItem.QsWindow.window : null
+  readonly property string attachmentEdge: bar && /^(top|bottom|left|right)$/.test(bar.position) ? bar.position : "top"
   readonly property string fontFamily: tokens.monoFont
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color background: opaque(bar ? bar.background : "#101315")
@@ -30,14 +32,30 @@ PopupWindow {
   property int shadowOffsetX: 2
   property int shadowOffsetY: 3
   readonly property int shadowBlurMax: 28
-  readonly property int shadowMargin: shadowEnabled ? Math.ceil(shadowBlurMax + Math.max(Math.abs(shadowOffsetX), Math.abs(shadowOffsetY))) : 0
-  readonly property int shadowBottomMargin: shadowEnabled ? Math.ceil(shadowMargin + shadowBlurMax * 0.6 + Math.max(0, shadowOffsetY)) : 0
+  readonly property int shadowMargin: shadowEnabled
+    ? Math.ceil(shadowBlurMax + Math.max(Math.abs(shadowOffsetX), Math.abs(shadowOffsetY)))
+    : 0
+  readonly property int shadowFarLeftMargin: shadowEnabled
+    ? Math.ceil(shadowMargin + shadowBlurMax * 0.6 + Math.max(0, -shadowOffsetX)) : 0
+  readonly property int shadowFarRightMargin: shadowEnabled
+    ? Math.ceil(shadowMargin + shadowBlurMax * 0.6 + Math.max(0, shadowOffsetX)) : 0
+  readonly property int shadowFarTopMargin: shadowEnabled
+    ? Math.ceil(shadowMargin + shadowBlurMax * 0.6 + Math.max(0, -shadowOffsetY)) : 0
+  readonly property int shadowFarBottomMargin: shadowEnabled
+    ? Math.ceil(shadowMargin + shadowBlurMax * 0.6 + Math.max(0, shadowOffsetY)) : 0
+  readonly property int shadowLeftMargin: attachmentEdge === "left" ? 0 : (attachmentEdge === "right" ? shadowFarLeftMargin : shadowMargin)
+  readonly property int shadowRightMargin: attachmentEdge === "right" ? 0 : (attachmentEdge === "left" ? shadowFarRightMargin : shadowMargin)
+  readonly property int shadowTopMargin: attachmentEdge === "top" ? 0 : (attachmentEdge === "bottom" ? shadowFarTopMargin : shadowMargin)
+  readonly property int shadowBottomMargin: attachmentEdge === "bottom" ? 0 : (attachmentEdge === "top" ? shadowFarBottomMargin : shadowMargin)
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
   readonly property string lacunaSettingsPath: configHome + "/omarchy/lacuna/settings.json"
   property real reveal: open ? 1 : 0
 
   LacunaTokens { id: tokens }
-  MotionTokens { id: motionTokens }
+  MotionTokens {
+    id: motionTokens
+    animationDisabled: root.reduceMotion
+  }
 
   function opaque(value) {
     var c = typeof value === "string" ? Qt.color(value) : value
@@ -80,8 +98,8 @@ PopupWindow {
   Behavior on reveal { NumberAnimation { duration: motionTokens.reveal; easing.type: Easing.OutCubic } }
   visible: open || reveal > 0.001
   color: "transparent"
-  implicitWidth: surface.fullWidth + shadowMargin * 2
-  implicitHeight: surface.implicitHeight + shadowBottomMargin
+  implicitWidth: surface.fullWidth + shadowLeftMargin + shadowRightMargin
+  implicitHeight: surface.fullHeight + shadowTopMargin + shadowBottomMargin
 
   onOpenChanged: {
     if (!bar) return
@@ -100,29 +118,47 @@ PopupWindow {
     window: root.anchorWindow
     adjustment: PopupAdjustment.Slide
     edges: Edges.Top | Edges.Left
-    gravity: root.bar && root.bar.position === "bottom" ? Edges.Top | Edges.Right : Edges.Bottom | Edges.Right
+    gravity: root.attachmentEdge === "bottom"
+      ? Edges.Top | Edges.Right
+      : (root.attachmentEdge === "right" ? Edges.Bottom | Edges.Left : Edges.Bottom | Edges.Right)
     rect.width: 1
     rect.height: 1
     onAnchoring: {
       if (!root.anchorWindow || !root.bar) return
-      var below = root.bar.position !== "bottom"
-      var localX = root.anchorItem.width / 2 - (root.shadowMargin + root.joinRadius + root.panelWidth / 2)
-      var localY = below ? root.anchorItem.height : -root.implicitHeight
-      var point = root.anchorWindow.contentItem.mapFromItem(root.anchorItem, localX, localY)
-      point.x = Math.max(root.margin, Math.min(point.x, root.anchorWindow.width - root.implicitWidth - root.margin))
+      var target = root.anchorItem
+      var localX = target.width / 2 - (root.shadowLeftMargin + surface.fullWidth / 2)
+      var localY = target.height - root.shadowTopMargin
+      if (root.attachmentEdge === "bottom") {
+        localY = -(root.shadowTopMargin + surface.fullHeight)
+      } else if (root.attachmentEdge === "left") {
+        localX = target.width - root.shadowLeftMargin
+        localY = target.height / 2 - (root.shadowTopMargin + surface.fullHeight / 2)
+      } else if (root.attachmentEdge === "right") {
+        localX = -(root.shadowLeftMargin + surface.fullWidth)
+        localY = target.height / 2 - (root.shadowTopMargin + surface.fullHeight / 2)
+      }
+      var point = root.anchorWindow.contentItem.mapFromItem(target, localX, localY)
+      if (root.attachmentEdge === "top" || root.attachmentEdge === "bottom")
+        point.x = Math.max(root.margin, Math.min(point.x, root.anchorWindow.width - root.implicitWidth - root.margin))
+      else
+        point.y = Math.max(root.margin, Math.min(point.y, root.anchorWindow.height - root.implicitHeight - root.margin))
       popupAnchor.rect.x = Math.round(point.x)
       popupAnchor.rect.y = Math.round(point.y)
     }
   }
-
   Item {
-    anchors.top: parent.top
-    width: parent.width
-    height: Math.round(root.implicitHeight * root.reveal)
+    id: clipper
+    readonly property bool horizontalReveal: root.attachmentEdge === "top" || root.attachmentEdge === "bottom"
+    x: root.attachmentEdge === "right" ? root.implicitWidth - width : 0
+    y: root.attachmentEdge === "bottom" ? root.implicitHeight - height : 0
+    width: horizontalReveal ? root.implicitWidth : Math.round(root.implicitWidth * root.reveal)
+    height: horizontalReveal ? Math.round(root.implicitHeight * root.reveal) : root.implicitHeight
     clip: true
 
     Item {
       id: stage
+      x: -clipper.x
+      y: -clipper.y
       width: root.implicitWidth
       height: root.implicitHeight
 
@@ -132,11 +168,13 @@ PopupWindow {
         visible: root.shadowEnabled
         z: -2
         BarFlyoutSurface {
-          x: root.shadowMargin
+          x: root.shadowLeftMargin
+          y: root.shadowTopMargin
           panelWidth: root.panelWidth
           panelHeight: root.panelHeight
           joinRadius: root.joinRadius
           panelColor: root.background
+          attachmentEdge: root.attachmentEdge
         }
       }
 
@@ -154,16 +192,18 @@ PopupWindow {
 
       BarFlyoutSurface {
         id: surface
-        x: root.shadowMargin
+        x: root.shadowLeftMargin
+        y: root.shadowTopMargin
         panelWidth: root.panelWidth
         panelHeight: root.panelHeight
         joinRadius: root.joinRadius
         panelColor: root.background
+        attachmentEdge: root.attachmentEdge
       }
 
       Column {
         x: surface.x + surface.panelLeft + tokens.spaceXLarge
-        y: surface.panelTop + tokens.spaceXLarge
+        y: surface.y + surface.panelTop + tokens.spaceXLarge
         width: root.panelWidth - tokens.spaceXLarge * 2
         spacing: tokens.spaceLarge
         opacity: Math.max(0, Math.min(1, (root.reveal - 0.55) / 0.45))

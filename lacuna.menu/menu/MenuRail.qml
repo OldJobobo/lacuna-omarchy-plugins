@@ -29,6 +29,7 @@ Column {
   property int railWidth: 32
   property var panelWindow: null
   property var mediaPlayerService: null
+  property MotionTokens motionTokens: defaultMotionTokens
   property var tooltipTarget: null
   property string tooltipText: ""
   property color tooltipAccent: accent
@@ -98,7 +99,7 @@ Column {
   opacity: open ? 1 : 0
 
   Behavior on opacity {
-    LacunaAnim { motion: "normal" }
+    LacunaAnim { motion: "normal"; motionTokens: root.motionTokens }
   }
 
   Repeater {
@@ -243,7 +244,7 @@ Column {
         text: root.tooltipText
         color: root.foreground
         fontFamily: root.bodyFontFamily
-        font.pixelSize: 11
+        font.pixelSize: typeTokens.textNormal
         font.weight: Font.DemiBold
       }
     }
@@ -257,4 +258,8 @@ Column {
     background: root.panelColor
     accent: root.accent
   }
+
+  MotionTokens { id: defaultMotionTokens }
+  LacunaTokens { id: typeTokens }
+
 }

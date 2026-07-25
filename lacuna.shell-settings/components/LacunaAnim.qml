@@ -3,13 +3,12 @@ import "../services"
 
 NumberAnimation {
   property string motion: "normal"
+  property MotionTokens motionTokens: MotionTokens {}
 
-  // Durations mirror the named reveal scale (03-motion.md):
-  // fast = quick, normal = reveal, slow = settle.
   function durationFor(value) {
-    if (value === "fast") return 150
-    if (value === "slow") return 450
-    return 300
+    if (value === "fast") return motionTokens.quick
+    if (value === "slow") return motionTokens.settle
+    return motionTokens.reveal
   }
 
   duration: durationFor(motion)

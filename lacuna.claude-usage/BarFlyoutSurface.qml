@@ -1,99 +1,157 @@
 import QtQuick
 import QtQuick.Shapes
 
-// Self-contained Lacuna molded flyout surface for a top-bar attachment.
-//
-// The top edge is square and flush with the bar; two Omarchy-style molding
-// coves flare the panel outward at the top corners so it reads as growing out
-// of the bar rather than floating. Only the exposed (bottom) corners are
-// rounded. Fill-only (strokeWidth: 0) per the Flyout Surface Geometry rules in
-// AGENTS.md. curveKappa is vendored here because self-contained plugins cannot
-// import lacuna.menu/components/LacunaGeometry.qml.
 Item {
   id: root
 
-  property int panelWidth: 320
-  property int panelHeight: 240
-  property int joinRadius: 13      // molding cove reach / top-corner flare
-  property int cornerRadius: 14    // exposed bottom corners
-  property color panelColor: "#0e1113"
+  property int panelWidth: 344
+  property int panelHeight: 420
+  property int joinRadius: 13
+  property int cornerRadius: 14
+  property color panelColor: "#101315"
+  property string attachmentEdge: "top"
 
   LacunaGeometry { id: lacunaGeometry }
   readonly property real curveKappa: lacunaGeometry.curveKappa
-  readonly property color solidColor: Qt.rgba(panelColor.r, panelColor.g, panelColor.b, 1)
-  readonly property int fullWidth: panelWidth + joinRadius * 2
-  readonly property int panelLeft: joinRadius
-  readonly property int panelRight: joinRadius + panelWidth
-  readonly property int panelTop: joinRadius
-  readonly property int panelBottom: joinRadius + panelHeight
+  readonly property bool horizontalAttachment: attachmentEdge === "top" || attachmentEdge === "bottom"
+  readonly property int fullWidth: panelWidth + (horizontalAttachment ? joinRadius * 2 : joinRadius)
+  readonly property int fullHeight: panelHeight + (horizontalAttachment ? joinRadius : joinRadius * 2)
+  readonly property int panelLeft: attachmentEdge === "left" ? joinRadius : (horizontalAttachment ? joinRadius : 0)
+  readonly property int panelTop: attachmentEdge === "top" ? joinRadius : (horizontalAttachment ? 0 : joinRadius)
+  readonly property int panelRight: panelLeft + panelWidth
+  readonly property int panelBottom: panelTop + panelHeight
 
   implicitWidth: fullWidth
-  implicitHeight: joinRadius + panelHeight
+  implicitHeight: fullHeight
 
   Shape {
     anchors.fill: parent
-    asynchronous: false
-    antialiasing: true
+    visible: root.attachmentEdge === "top"
     preferredRendererType: Shape.CurveRenderer
-
     ShapePath {
-      fillColor: root.solidColor
-      strokeWidth: 0
-
-      // Top-left outer point, on the bar line.
-      startX: 0
-      startY: 0
-
-      // Flat top edge, flush under the bar.
+      fillColor: root.panelColor; strokeWidth: 0; startX: 0; startY: 0
       PathLine { x: root.fullWidth; y: 0 }
-
-      // Right molding cove: bar-wide edge down into the panel's right edge.
       PathCubic {
-        x: root.panelRight
-        y: root.panelTop
-        control1X: root.fullWidth - root.joinRadius * root.curveKappa
-        control1Y: 0
-        control2X: root.panelRight
-        control2Y: root.joinRadius * (1 - root.curveKappa)
+        x: root.panelRight; y: root.panelTop
+        control1X: root.fullWidth - root.joinRadius * root.curveKappa; control1Y: 0
+        control2X: root.panelRight; control2Y: root.joinRadius * (1 - root.curveKappa)
       }
-
-      // Right edge down to the bottom corner.
       PathLine { x: root.panelRight; y: root.panelBottom - root.cornerRadius }
-
-      // Bottom-right rounded corner.
       PathCubic {
-        x: root.panelRight - root.cornerRadius
-        y: root.panelBottom
-        control1X: root.panelRight
-        control1Y: root.panelBottom - root.cornerRadius * (1 - root.curveKappa)
-        control2X: root.panelRight - root.cornerRadius * (1 - root.curveKappa)
-        control2Y: root.panelBottom
+        x: root.panelRight - root.cornerRadius; y: root.panelBottom
+        control1X: root.panelRight; control1Y: root.panelBottom - root.cornerRadius * (1 - root.curveKappa)
+        control2X: root.panelRight - root.cornerRadius * (1 - root.curveKappa); control2Y: root.panelBottom
       }
-
-      // Bottom edge.
       PathLine { x: root.panelLeft + root.cornerRadius; y: root.panelBottom }
-
-      // Bottom-left rounded corner.
       PathCubic {
-        x: root.panelLeft
-        y: root.panelBottom - root.cornerRadius
-        control1X: root.panelLeft + root.cornerRadius * (1 - root.curveKappa)
-        control1Y: root.panelBottom
-        control2X: root.panelLeft
-        control2Y: root.panelBottom - root.cornerRadius * (1 - root.curveKappa)
+        x: root.panelLeft; y: root.panelBottom - root.cornerRadius
+        control1X: root.panelLeft + root.cornerRadius * (1 - root.curveKappa); control1Y: root.panelBottom
+        control2X: root.panelLeft; control2Y: root.panelBottom - root.cornerRadius * (1 - root.curveKappa)
       }
-
-      // Left edge up to the molding cove.
       PathLine { x: root.panelLeft; y: root.panelTop }
-
-      // Left molding cove: panel's left edge out to the bar-wide edge.
       PathCubic {
-        x: 0
-        y: 0
-        control1X: root.panelLeft
-        control1Y: root.joinRadius * (1 - root.curveKappa)
-        control2X: root.joinRadius * root.curveKappa
-        control2Y: 0
+        x: 0; y: 0
+        control1X: root.panelLeft; control1Y: root.joinRadius * (1 - root.curveKappa)
+        control2X: root.joinRadius * root.curveKappa; control2Y: 0
+      }
+    }
+  }
+
+  Shape {
+    anchors.fill: parent
+    visible: root.attachmentEdge === "bottom"
+    preferredRendererType: Shape.CurveRenderer
+    ShapePath {
+      fillColor: root.panelColor; strokeWidth: 0; startX: 0; startY: root.fullHeight
+      PathLine { x: root.fullWidth; y: root.fullHeight }
+      PathCubic {
+        x: root.panelRight; y: root.panelBottom
+        control1X: root.fullWidth - root.joinRadius * root.curveKappa; control1Y: root.fullHeight
+        control2X: root.panelRight; control2Y: root.fullHeight - root.joinRadius * (1 - root.curveKappa)
+      }
+      PathLine { x: root.panelRight; y: root.panelTop + root.cornerRadius }
+      PathCubic {
+        x: root.panelRight - root.cornerRadius; y: root.panelTop
+        control1X: root.panelRight; control1Y: root.panelTop + root.cornerRadius * (1 - root.curveKappa)
+        control2X: root.panelRight - root.cornerRadius * (1 - root.curveKappa); control2Y: root.panelTop
+      }
+      PathLine { x: root.panelLeft + root.cornerRadius; y: root.panelTop }
+      PathCubic {
+        x: root.panelLeft; y: root.panelTop + root.cornerRadius
+        control1X: root.panelLeft + root.cornerRadius * (1 - root.curveKappa); control1Y: root.panelTop
+        control2X: root.panelLeft; control2Y: root.panelTop + root.cornerRadius * (1 - root.curveKappa)
+      }
+      PathLine { x: root.panelLeft; y: root.panelBottom }
+      PathCubic {
+        x: 0; y: root.fullHeight
+        control1X: root.panelLeft; control1Y: root.fullHeight - root.joinRadius * (1 - root.curveKappa)
+        control2X: root.joinRadius * root.curveKappa; control2Y: root.fullHeight
+      }
+    }
+  }
+
+  Shape {
+    anchors.fill: parent
+    visible: root.attachmentEdge === "left"
+    preferredRendererType: Shape.CurveRenderer
+    ShapePath {
+      fillColor: root.panelColor; strokeWidth: 0; startX: 0; startY: 0
+      PathLine { x: 0; y: root.fullHeight }
+      PathCubic {
+        x: root.panelLeft; y: root.panelBottom
+        control1X: 0; control1Y: root.fullHeight - root.joinRadius * root.curveKappa
+        control2X: root.joinRadius * (1 - root.curveKappa); control2Y: root.panelBottom
+      }
+      PathLine { x: root.panelRight - root.cornerRadius; y: root.panelBottom }
+      PathCubic {
+        x: root.panelRight; y: root.panelBottom - root.cornerRadius
+        control1X: root.panelRight - root.cornerRadius * (1 - root.curveKappa); control1Y: root.panelBottom
+        control2X: root.panelRight; control2Y: root.panelBottom - root.cornerRadius * (1 - root.curveKappa)
+      }
+      PathLine { x: root.panelRight; y: root.panelTop + root.cornerRadius }
+      PathCubic {
+        x: root.panelRight - root.cornerRadius; y: root.panelTop
+        control1X: root.panelRight; control1Y: root.panelTop + root.cornerRadius * (1 - root.curveKappa)
+        control2X: root.panelRight - root.cornerRadius * (1 - root.curveKappa); control2Y: root.panelTop
+      }
+      PathLine { x: root.panelLeft; y: root.panelTop }
+      PathCubic {
+        x: 0; y: 0
+        control1X: root.joinRadius * (1 - root.curveKappa); control1Y: root.panelTop
+        control2X: 0; control2Y: root.joinRadius * root.curveKappa
+      }
+    }
+  }
+
+  Shape {
+    anchors.fill: parent
+    visible: root.attachmentEdge === "right"
+    preferredRendererType: Shape.CurveRenderer
+    ShapePath {
+      fillColor: root.panelColor; strokeWidth: 0; startX: root.fullWidth; startY: 0
+      PathLine { x: root.fullWidth; y: root.fullHeight }
+      PathCubic {
+        x: root.panelRight; y: root.panelBottom
+        control1X: root.fullWidth; control1Y: root.fullHeight - root.joinRadius * root.curveKappa
+        control2X: root.panelRight + root.joinRadius * root.curveKappa; control2Y: root.panelBottom
+      }
+      PathLine { x: root.panelLeft + root.cornerRadius; y: root.panelBottom }
+      PathCubic {
+        x: root.panelLeft; y: root.panelBottom - root.cornerRadius
+        control1X: root.panelLeft + root.cornerRadius * (1 - root.curveKappa); control1Y: root.panelBottom
+        control2X: root.panelLeft; control2Y: root.panelBottom - root.cornerRadius * (1 - root.curveKappa)
+      }
+      PathLine { x: root.panelLeft; y: root.panelTop + root.cornerRadius }
+      PathCubic {
+        x: root.panelLeft + root.cornerRadius; y: root.panelTop
+        control1X: root.panelLeft; control1Y: root.panelTop + root.cornerRadius * (1 - root.curveKappa)
+        control2X: root.panelLeft + root.cornerRadius * (1 - root.curveKappa); control2Y: root.panelTop
+      }
+      PathLine { x: root.panelRight; y: root.panelTop }
+      PathCubic {
+        x: root.fullWidth; y: 0
+        control1X: root.panelRight + root.joinRadius * root.curveKappa; control1Y: root.panelTop
+        control2X: root.fullWidth; control2Y: root.joinRadius * root.curveKappa
       }
     }
   }

@@ -81,6 +81,7 @@ Item {
 
   MotionTokens {
     id: motionTokens
+    animationDisabled: colorProfile.reduceMotion
   }
 
   Component.onCompleted: {
@@ -155,12 +156,14 @@ Item {
   }
 
   NetworkFlyout {
+    reduceMotion: colorProfile.reduceMotion
     id: flyout
     anchorItem: root
     owner: root
     bar: root.bar
     service: root.networkService
     accentColor: root.moduleColor
+    urgentColor: colorProfile.urgent
     open: root.flyoutOpen
   }
 }

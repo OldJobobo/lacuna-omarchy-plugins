@@ -5,6 +5,75 @@ from qml_harness import HAVE_SESSION, parse_behave, qml_url, require_no_qml_erro
 
 @unittest.skipUnless(HAVE_SESSION, "needs a quickshell binary and a Wayland session")
 class QmlColorProfileBehaviorTests(unittest.TestCase):
+    def test_menu_theme_derives_legible_muted_text_and_provider_roles(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var theme: null
+  property string youtube: ""
+  property string jellyfin: ""
+  property real darkContrast: 0
+  property real lightContrast: 0
+  property real lowContrast: 0
+  property real youtubeContrast: 0
+  property real jellyfinContrast: 0
+  Component.onCompleted: {{
+    var c = Qt.createComponent("{qml_url('lacuna.menu/services/Theme.qml')}", Component.PreferSynchronous)
+    theme = c.createObject(root)
+    theme.load('background = "#101315"\\nforeground = "#d8dee9"\\nred = "#ef3344"\\nmagenta = "#b142d4"')
+    youtube = theme.providerYoutube.toString()
+    jellyfin = theme.providerJellyfin.toString()
+    var darkBg = theme.parseColor("#101315", theme.background)
+    var darkFg = theme.parseColor("#d8dee9", theme.foreground)
+    var lightBg = theme.parseColor("#f5f2ed", theme.background)
+    var lightFg = theme.parseColor("#292724", theme.foreground)
+    var lowFg = theme.parseColor("#181818", theme.foreground)
+    darkContrast = theme.contrastRatio(theme.contrastAwareText(darkFg, darkBg, 4.5), darkBg)
+    lightContrast = theme.contrastRatio(theme.contrastAwareText(lightFg, lightBg, 4.5), lightBg)
+    lowContrast = theme.contrastRatio(theme.contrastAwareText(lowFg, darkBg, 4.5), darkBg)
+    theme.load('background = "#101315"\nforeground = "#d8dee9"\nred = "#101315"\nmagenta = "#101315"')
+    youtubeContrast = theme.contrastRatio(theme.providerYoutube, theme.panelBackground)
+    jellyfinContrast = theme.contrastRatio(theme.providerJellyfin, theme.panelBackground)
+    finish.restart()
+  }}
+  Timer {{
+    id: finish
+    interval: 20
+    onTriggered: {{
+      console.log("BEHAVE " + JSON.stringify({{
+        contrast: theme.contrastRatio(theme.muted, theme.panelBackground),
+        darkContrast: root.darkContrast,
+        lightContrast: root.lightContrast,
+        lowContrast: root.lowContrast,
+        youtubeContrast: root.youtubeContrast,
+        jellyfinContrast: root.jellyfinContrast,
+        mutedAlpha: theme.muted.a,
+        seamAlpha: theme.seam.a,
+        youtube: root.youtube,
+        jellyfin: root.jellyfin
+      }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        result = parse_behave(output)[-1]
+        self.assertGreaterEqual(result["contrast"], 4.49)
+        self.assertGreaterEqual(result["darkContrast"], 4.49)
+        self.assertGreaterEqual(result["lightContrast"], 4.49)
+        self.assertGreaterEqual(result["lowContrast"], 4.49)
+        self.assertGreaterEqual(result["youtubeContrast"], 2.99)
+        self.assertGreaterEqual(result["jellyfinContrast"], 2.99)
+        self.assertEqual(result["mutedAlpha"], 1)
+        self.assertAlmostEqual(result["seamAlpha"], 0.18, places=2)
+        self.assertTrue(result["youtube"].startswith("#"))
+        self.assertTrue(result["jellyfin"].startswith("#"))
+
     def test_theme_and_wallpaper_widgets_share_equal_bar_seam_spacing(self):
         qml = f"""
 import Quickshell

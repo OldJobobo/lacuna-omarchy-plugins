@@ -1,29 +1,11 @@
 import QtQuick
 
-// Lacuna design-language token registry (see docs/lacuna-design-system).
-//
-// This is the component-level vocabulary. Each token family resolves either
-// here or in the module noted, per the design language:
-//   recess*            interaction depth (alpha of the state color over a
-//                      surface, never a new hue) — defined below
-//   space* / text*     spacing and type scale (02-geometry / 04-typography)
-//   curveKappa         seam / molding-connector geometry — LacunaGeometry.qml
-//   field/void/plate/ink/whisper/soft/seam/accent/danger
-//                      theme-derived color roles — Theme.qml / DesignTokens.qml
-//   reveal / threshold disclosure motion and its content-fade gate
-//                      — MotionTokens.qml (the named reveal scale)
+// Canonical build-time source for Lacuna menu/settings type, spacing, and
+// control roles. Runtime copies remain plugin-local.
 QtObject {
-  id: root
-
   readonly property string monoFont: "Hack Nerd Font Propo"
   readonly property string displayFont: "Tektur"
 
-  // Motion durations live in MotionTokens (the named reveal scale,
-  // 03-motion.md), not here.
-
-  // Interaction depth — the "recess" family (05-components.md). Pressing into
-  // a surface is rendered as a sinking-in: an alpha of the state color, not a
-  // tint or glow. These are the canonical lacuna-style values.
   readonly property real recessRest: 0.0
   readonly property real recessHover: 0.06
   readonly property real recessPress: 0.11
@@ -39,8 +21,12 @@ QtObject {
   readonly property int textNormal: 12
   readonly property int textPrimary: 13
   readonly property int textTitle: 16
+  readonly property int textFeature: 18
+  readonly property int textTelemetry: 58
   readonly property int textIcon: 15
   readonly property int textGlyph: 20
+  readonly property int iconFeature: 28
+  readonly property int iconHero: 46
 
   readonly property real trackingTitle: 2.0
   readonly property real trackingTitleCompact: 1.4

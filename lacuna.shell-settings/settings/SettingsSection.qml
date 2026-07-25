@@ -10,7 +10,7 @@ Item {
   property color foreground: "#d8dee9"
   property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
   property color accent: "#88c0d0"
-  property string fontFamily: "Hack Nerd Font Propo"
+  property string fontFamily: typeTokens.monoFont
 
   height: note === "" ? (compact ? 24 : 28) : (compact ? 38 : 44)
 
@@ -37,7 +37,7 @@ Item {
         text: root.title.toUpperCase()
         color: root.muted
         fontFamily: root.fontFamily
-        font.pixelSize: root.compact ? 9 : 10
+        font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
         font.weight: Font.DemiBold
       }
     }
@@ -48,7 +48,7 @@ Item {
       text: root.note
       color: root.muted
       fontFamily: root.fontFamily
-      font.pixelSize: root.compact ? 9 : 10
+      font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
     }
   }
 
@@ -75,4 +75,7 @@ Item {
       color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.14)
     }
   }
+
+  LacunaTokens { id: typeTokens }
+
 }

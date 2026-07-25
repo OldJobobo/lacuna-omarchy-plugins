@@ -74,6 +74,7 @@ Item {
 
   MotionTokens {
     id: motionTokens
+    animationDisabled: colorProfile.reduceMotion
   }
 
   Component.onCompleted: resolveService()
@@ -137,6 +138,7 @@ Item {
   }
 
   BluetoothFlyout {
+    reduceMotion: colorProfile.reduceMotion
     anchorItem: root
     owner: root
     bar: root.bar

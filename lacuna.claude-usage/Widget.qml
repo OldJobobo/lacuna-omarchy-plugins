@@ -187,6 +187,7 @@ Item {
 
   MotionTokens {
     id: motionTokens
+    animationDisabled: colorProfile.reduceMotion
   }
 
   Timer {
@@ -351,6 +352,7 @@ Item {
   }
 
   ClaudeUsageFlyout {
+    reduceMotion: colorProfile.reduceMotion
     id: flyout
     anchorItem: root
     owner: root

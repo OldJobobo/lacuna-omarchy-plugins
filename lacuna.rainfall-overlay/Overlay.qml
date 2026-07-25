@@ -12,6 +12,7 @@ Item {
   property bool runtimeEnabled: true
   property real runtimeIntensity: -1
   property var lacunaSettings: ({})
+  readonly property bool reducedMotion: lacunaSettings && lacunaSettings.reduceMotion === true
   property var palette: ({})
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
@@ -287,7 +288,7 @@ Item {
 
             SequentialAnimation on x {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
 
               NumberAnimation {
                 from: -Math.round(rainWindow.width * 0.04)
@@ -330,7 +331,7 @@ Item {
 
             SequentialAnimation on y {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
 
               PauseAnimation {
                 duration: Math.round(root.seededNoise(drop.seed + 19) * 900)
@@ -410,7 +411,7 @@ Item {
               to: rainWindow.height + rainSheet.sheetLength
               duration: Math.max(1900, (3600 + root.seededNoise(rainSheet.seed + 17) * 1500) / (root.speed * rainSheet.sheetSpeed))
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
               easing.type: Easing.Linear
             }
 
@@ -444,7 +445,7 @@ Item {
 
             SequentialAnimation on y {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
 
               PauseAnimation {
                 duration: Math.round(root.seededNoise(foregroundDrop.seed + 19) * 650)
@@ -519,7 +520,7 @@ Item {
 
             SequentialAnimation on opacity {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
 
               PauseAnimation {
                 duration: Math.round(450 + root.seededNoise(splash.seed + 11) * 1900)
@@ -542,7 +543,7 @@ Item {
 
             SequentialAnimation on scale {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
 
               PauseAnimation {
                 duration: Math.round(450 + root.seededNoise(splash.seed + 11) * 1900)

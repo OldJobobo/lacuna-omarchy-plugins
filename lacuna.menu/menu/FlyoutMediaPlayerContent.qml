@@ -15,7 +15,9 @@ Column {
   property color foreground: "#d8dee9"
   property color background: "#101315"
   property color accent: "#88c0d0"
-  property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
+  property color muted: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.72)
+  property color providerYoutube: accent
+  property color providerJellyfin: accent
   property var designTokens: fallbackDesignTokens
   property string bodyFontFamily: "Hack Nerd Font Propo"
   property string query: ""
@@ -224,8 +226,8 @@ Column {
   }
 
   function providerAccent(provider) {
-    if (provider === "youtube") return "#e05252"
-    if (provider === "jellyfin") return "#9b7bd7"
+    if (provider === "youtube") return providerYoutube
+    if (provider === "jellyfin") return providerJellyfin
     return accent
   }
 
@@ -368,8 +370,8 @@ Column {
       anchors.verticalCenter: parent.verticalCenter
       text: "Media"
       color: root.foreground
-      fontFamily: "Tektur"
-      font.pixelSize: root.compact ? 13 : 15
+      fontFamily: typeTokens.displayFont
+      font.pixelSize: root.compact ? typeTokens.textPrimary : typeTokens.textTitle
       font.weight: Font.DemiBold
       maximumLineCount: 1
       elide: Text.ElideRight
@@ -585,7 +587,7 @@ Column {
             text: "Search media or paste YouTube URL"
             color: root.muted
             fontFamily: root.bodyFontFamily
-            font.pixelSize: root.compact ? 10 : 11
+            font.pixelSize: root.compact ? typeTokens.textSmall : typeTokens.textNormal
           }
 
           TextInput {
@@ -598,7 +600,7 @@ Column {
             selectedTextColor: root.background
             selectionColor: root.accent
             font.family: root.bodyFontFamily
-            font.pixelSize: root.compact ? 10 : 11
+            font.pixelSize: root.compact ? typeTokens.textSmall : typeTokens.textNormal
             verticalAlignment: TextInput.AlignVCenter
             clip: true
             activeFocusOnTab: true
@@ -668,7 +670,7 @@ Column {
               text: "Paste"
               color: root.foreground
               fontFamily: root.bodyFontFamily
-              font.pixelSize: root.compact ? 9 : 10
+              font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
               font.weight: Font.DemiBold
             }
 
@@ -754,7 +756,7 @@ Column {
                   text: "All"
                   color: root.currentProviderFilter === "all" ? root.foreground : root.muted
                   fontFamily: root.bodyFontFamily
-                  font.pixelSize: root.compact ? 8 : 9
+                  font.pixelSize: typeTokens.textHint
                   font.weight: root.currentProviderFilter === "all" ? Font.DemiBold : Font.Normal
                 }
 
@@ -790,7 +792,7 @@ Column {
                   color: !root.youtubeAvailable ? Qt.rgba(root.muted.r, root.muted.g, root.muted.b, 0.55)
                     : root.currentProviderFilter === "youtube" ? root.foreground : root.muted
                   fontFamily: root.bodyFontFamily
-                  font.pixelSize: root.compact ? 8 : 9
+                  font.pixelSize: typeTokens.textHint
                   font.weight: root.currentProviderFilter === "youtube" ? Font.DemiBold : Font.Normal
                 }
 
@@ -827,7 +829,7 @@ Column {
                   color: !root.jellyfinAvailable ? Qt.rgba(root.muted.r, root.muted.g, root.muted.b, 0.55)
                     : root.currentProviderFilter === "jellyfin" ? root.foreground : root.muted
                   fontFamily: root.bodyFontFamily
-                  font.pixelSize: root.compact ? 8 : 9
+                  font.pixelSize: typeTokens.textHint
                   font.weight: root.currentProviderFilter === "jellyfin" ? Font.DemiBold : Font.Normal
                 }
 
@@ -981,7 +983,7 @@ Column {
             text: root.service && root.service.displayTitle ? root.service.displayTitle : (root.service ? root.service.statusText() : "Service disabled")
             color: root.foreground
             fontFamily: root.bodyFontFamily
-            font.pixelSize: root.compact ? 10 : 11
+            font.pixelSize: root.compact ? typeTokens.textSmall : typeTokens.textNormal
             maximumLineCount: 1
             elide: Text.ElideRight
           }
@@ -1003,7 +1005,7 @@ Column {
               : root.queueLength + " queued"
             color: root.muted
             fontFamily: root.bodyFontFamily
-            font.pixelSize: root.compact ? 9 : 10
+            font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
             maximumLineCount: 1
             elide: Text.ElideRight
           }
@@ -1029,7 +1031,7 @@ Column {
               text: root.pendingClearKind === root.activeTab ? "Confirm" : "Clear"
               color: root.pendingClearKind === root.activeTab ? root.accent : root.muted
               fontFamily: root.bodyFontFamily
-              font.pixelSize: root.compact ? 9 : 10
+              font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
             }
 
             LacunaStateLayer {
@@ -1066,7 +1068,7 @@ Column {
               text: "Filter favorites"
               color: root.muted
               fontFamily: root.bodyFontFamily
-              font.pixelSize: root.compact ? 9 : 10
+              font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
             }
 
             TextInput {
@@ -1078,7 +1080,7 @@ Column {
               selectedTextColor: root.background
               selectionColor: root.accent
               font.family: root.bodyFontFamily
-              font.pixelSize: root.compact ? 9 : 10
+              font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
               verticalAlignment: TextInput.AlignVCenter
               activeFocusOnTab: true
               Accessible.role: Accessible.EditableText
@@ -1108,7 +1110,7 @@ Column {
               text: root.favoritesSortLabel()
               color: root.muted
               fontFamily: root.bodyFontFamily
-              font.pixelSize: root.compact ? 9 : 10
+              font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
             }
 
             LacunaStateLayer {
@@ -1127,7 +1129,7 @@ Column {
           text: root.service ? root.service.errorText : ""
           color: root.muted
           fontFamily: root.bodyFontFamily
-          font.pixelSize: root.compact ? 9 : 10
+          font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
           maximumLineCount: 2
           wrapMode: Text.WordWrap
         }
@@ -1138,7 +1140,7 @@ Column {
           text: root.feedbackText
           color: root.accent
           fontFamily: root.bodyFontFamily
-          font.pixelSize: root.compact ? 9 : 10
+          font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
           horizontalAlignment: Text.AlignHCenter
         }
 
@@ -1148,7 +1150,7 @@ Column {
           text: "Searching…"
           color: root.muted
           fontFamily: root.bodyFontFamily
-          font.pixelSize: root.compact ? 9 : 10
+          font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
           horizontalAlignment: Text.AlignHCenter
         }
 
@@ -1160,7 +1162,7 @@ Column {
           text: "No results for “" + String(searchInput.text || "").trim() + "”"
           color: root.muted
           fontFamily: root.bodyFontFamily
-          font.pixelSize: root.compact ? 9 : 10
+          font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
           horizontalAlignment: Text.AlignHCenter
         }
 
@@ -1170,7 +1172,7 @@ Column {
           text: root.resultCount + (root.resultCount === 1 ? " result" : " results")
           color: root.muted
           fontFamily: root.bodyFontFamily
-          font.pixelSize: root.compact ? 8 : 9
+          font.pixelSize: typeTokens.textHint
           horizontalAlignment: Text.AlignRight
         }
 
@@ -1224,7 +1226,7 @@ Column {
                 text: "YouTube  /  " + root.providerStatusText("youtube")
                 color: parent.providerState.loading === true ? root.foreground : root.muted
                 fontFamily: root.bodyFontFamily
-                font.pixelSize: root.compact ? 8 : 9
+                font.pixelSize: typeTokens.textHint
                 maximumLineCount: 1
                 elide: Text.ElideRight
               }
@@ -1255,7 +1257,7 @@ Column {
                 text: "Jellyfin  /  " + root.providerStatusText("jellyfin")
                 color: parent.providerState.loading === true ? root.foreground : root.muted
                 fontFamily: root.bodyFontFamily
-                font.pixelSize: root.compact ? 8 : 9
+                font.pixelSize: typeTokens.textHint
                 maximumLineCount: 1
                 elide: Text.ElideRight
               }
@@ -1333,7 +1335,7 @@ Column {
                   : "No results for \"" + String(root.query).trim() + "\""
                 color: root.muted
                 fontFamily: root.bodyFontFamily
-                font.pixelSize: root.compact ? 9 : 10
+                font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
                 horizontalAlignment: Text.AlignHCenter
                 maximumLineCount: 2
                 wrapMode: Text.Wrap
@@ -1419,7 +1421,7 @@ Column {
                   text: modelData.duration || ""
                   color: root.foreground
                   fontFamily: root.bodyFontFamily
-                  font.pixelSize: root.compact ? 7 : 8
+                  font.pixelSize: typeTokens.textHint
                   maximumLineCount: 1
                 }
               }
@@ -1445,7 +1447,7 @@ Column {
                   text: modelData.title || "Untitled video"
                   color: root.foreground
                   fontFamily: root.bodyFontFamily
-                  font.pixelSize: root.compact ? 9 : 10
+                  font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
                   font.weight: Font.DemiBold
                   maximumLineCount: 1
                   elide: Text.ElideRight
@@ -1471,7 +1473,7 @@ Column {
                       text: resultRow.providerName
                       color: root.foreground
                       fontFamily: root.bodyFontFamily
-                      font.pixelSize: root.compact ? 7 : 8
+                      font.pixelSize: typeTokens.textHint
                       font.weight: Font.DemiBold
                       maximumLineCount: 1
                     }
@@ -1483,7 +1485,7 @@ Column {
                     text: modelData.uploader || modelData.artist || modelData.album || ""
                     color: root.muted
                     fontFamily: root.bodyFontFamily
-                    font.pixelSize: root.compact ? 8 : 9
+                    font.pixelSize: typeTokens.textHint
                     maximumLineCount: 1
                     elide: Text.ElideRight
                   }
@@ -1595,7 +1597,7 @@ Column {
             text: "More results below"
             color: root.muted
             fontFamily: root.bodyFontFamily
-            font.pixelSize: root.compact ? 8 : 9
+            font.pixelSize: typeTokens.textHint
             horizontalAlignment: Text.AlignHCenter
           }
 
@@ -1700,7 +1702,7 @@ Column {
                   text: (index + 1) + ". " + (modelData.title || "Untitled video")
                   color: root.foreground
                   fontFamily: root.bodyFontFamily
-                  font.pixelSize: root.compact ? 9 : 10
+                  font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
                   font.weight: Font.DemiBold
                   maximumLineCount: 1
                   elide: Text.ElideRight
@@ -1713,7 +1715,7 @@ Column {
                   }).join(" / ")
                   color: root.muted
                   fontFamily: root.bodyFontFamily
-                  font.pixelSize: root.compact ? 8 : 9
+                  font.pixelSize: typeTokens.textHint
                   maximumLineCount: 1
                   elide: Text.ElideRight
                 }
@@ -1880,7 +1882,7 @@ Column {
                 text: "Queue is empty"
                 color: root.foreground
                 fontFamily: root.bodyFontFamily
-                font.pixelSize: root.compact ? 10 : 11
+                font.pixelSize: root.compact ? typeTokens.textSmall : typeTokens.textNormal
               }
 
               LacunaRect {
@@ -1906,7 +1908,7 @@ Column {
                   text: "Add media from Search"
                   color: root.accent
                   fontFamily: root.bodyFontFamily
-                  font.pixelSize: root.compact ? 9 : 10
+                  font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
                 }
 
                 LacunaStateLayer {
@@ -2012,7 +2014,7 @@ Column {
                   text: modelData.title || "Untitled video"
                   color: root.foreground
                   fontFamily: root.bodyFontFamily
-                  font.pixelSize: root.compact ? 9 : 10
+                  font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
                   font.weight: Font.DemiBold
                   maximumLineCount: 1
                   elide: Text.ElideRight
@@ -2025,7 +2027,7 @@ Column {
                   }).join(" / ")
                   color: root.muted
                   fontFamily: root.bodyFontFamily
-                  font.pixelSize: root.compact ? 8 : 9
+                  font.pixelSize: typeTokens.textHint
                   maximumLineCount: 1
                   elide: Text.ElideRight
                 }
@@ -2149,7 +2151,7 @@ Column {
                 text: "No favorites yet"
                 color: root.foreground
                 fontFamily: root.bodyFontFamily
-                font.pixelSize: root.compact ? 10 : 11
+                font.pixelSize: root.compact ? typeTokens.textSmall : typeTokens.textNormal
               }
 
               LacunaText {
@@ -2157,7 +2159,7 @@ Column {
                 text: "Favorite media from Search or Queue"
                 color: root.muted
                 fontFamily: root.bodyFontFamily
-                font.pixelSize: root.compact ? 9 : 10
+                font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
               }
             }
           }
@@ -2168,7 +2170,7 @@ Column {
             text: "No favorites match “" + root.favoritesFilter.trim() + "”"
             color: root.muted
             fontFamily: root.bodyFontFamily
-            font.pixelSize: root.compact ? 9 : 10
+            font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
             horizontalAlignment: Text.AlignHCenter
           }
 
@@ -2195,5 +2197,8 @@ Column {
     }
 
   }
+
+
+  LacunaTokens { id: typeTokens }
 
 }

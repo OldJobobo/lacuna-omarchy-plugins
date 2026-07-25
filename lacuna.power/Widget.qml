@@ -69,6 +69,7 @@ Item {
 
   MotionTokens {
     id: motionTokens
+    animationDisabled: colorProfile.reduceMotion
   }
 
   Component.onCompleted: resolveService()
@@ -132,11 +133,13 @@ Item {
   }
 
   PowerFlyout {
+    reduceMotion: colorProfile.reduceMotion
     anchorItem: root
     owner: root
     bar: root.bar
     service: root.powerService
     accentColor: root.moduleColor
+    urgentColor: colorProfile.urgent
     open: root.flyoutOpen
   }
 }

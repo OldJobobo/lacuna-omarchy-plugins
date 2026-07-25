@@ -16,6 +16,7 @@ Item {
 
   // Hover progress, 0..1. Bind to the widget's hoverReveal.
   property real reveal: 0
+  property bool reduceMotion: false
   // Seam hairline color (ink-derived) and the accent used for the glow.
   property color seam: "#888888"
   property color accent: "#88c0d0"
@@ -86,8 +87,10 @@ Item {
 
   // Breathe only while hovered (declarative SequentialAnimation does not run in
   // this context; a Timer does). breath oscillates 0..1 on a ~3.9s sine.
+  onReduceMotionChanged: if (reduceMotion) breath = 0.5
+
   Timer {
-    running: root.reveal > 0.01
+    running: root.reveal > 0.01 && !root.reduceMotion
     interval: 50
     repeat: true
     onTriggered: root.breath = 0.5 + 0.5 * Math.sin(Date.now() / 620)

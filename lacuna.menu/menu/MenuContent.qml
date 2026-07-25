@@ -323,7 +323,7 @@ Column {
   x: open ? -6 * (1 - viewProgress) : -6
 
   Behavior on opacity {
-    LacunaAnim { motion: "normal" }
+    LacunaAnim { motion: "normal"; motionTokens: root.motionTokens }
   }
 
   // The item model (visibleItems) is rebuilt from the registry, but only
@@ -366,6 +366,7 @@ Column {
     canCollapse: false
     designTokens: root.designTokens
     bodyFontFamily: root.bodyFontFamily
+    motionTokens: root.motionTokens
     onBackRequested: root.menuState.back()
     onCollapseRequested: root.collapseRequested()
     onCloseRequested: root.menuState.close()
@@ -442,7 +443,7 @@ Column {
       height: 8
 
       Behavior on y {
-        LacunaAnim { motion: "fast" }
+        LacunaAnim { motion: "fast"; motionTokens: root.motionTokens }
       }
 
       LacunaRect {
@@ -504,7 +505,7 @@ Column {
             text: root.quickLaunchOrderingUnlocked ? "Lock order" : "Unlock order"
             color: root.foreground
             fontFamily: root.bodyFontFamily
-            font.pixelSize: root.compact ? 9 : 10
+            font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
             font.weight: Font.DemiBold
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
@@ -541,7 +542,7 @@ Column {
             text: "Rename"
             color: root.foreground
             fontFamily: root.bodyFontFamily
-            font.pixelSize: root.compact ? 9 : 10
+            font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
             font.weight: Font.DemiBold
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
@@ -575,7 +576,7 @@ Column {
             text: "Delete"
             color: root.dangerAccent
             fontFamily: root.bodyFontFamily
-            font.pixelSize: root.compact ? 9 : 10
+            font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
             font.weight: Font.DemiBold
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
@@ -621,7 +622,7 @@ Column {
         selectionColor: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.36)
         selectedTextColor: root.foreground
         font.family: root.bodyFontFamily
-        font.pixelSize: root.compact ? 10 : 11
+        font.pixelSize: root.compact ? typeTokens.textSmall : typeTokens.textNormal
         verticalAlignment: TextInput.AlignVCenter
         selectByMouse: true
         clip: true
@@ -692,6 +693,7 @@ Column {
         fontFamily: root.bodyFontFamily
         hoverOpacity: root.designTokens.hoverOpacity
         pressOpacity: root.designTokens.activeOpacity
+        motionTokens: root.motionTokens
         onToggled: root.toggleSection(parent.entry.sectionKey)
         onOptionSelected: function(value) {
           root.activated({
@@ -749,6 +751,7 @@ Column {
         iconRailWidth: root.iconRailWidth
         compact: root.compact
         designTokens: root.designTokens
+        motionTokens: root.motionTokens
         onTriggered: root.activated(parent.entry)
         onContextRequested: function(x, y) {
           if (parent.entry.reorderable !== true) return
@@ -998,7 +1001,7 @@ Column {
                   text: tile.modelData.icon || ""
                   color: tile.hovered ? root.foreground : tile.itemAccent
                   fontFamily: root.bodyFontFamily
-                  font.pixelSize: root.compact ? 15 : 17
+                  font.pixelSize: root.compact ? typeTokens.textTitle : typeTokens.textFeature
                   horizontalAlignment: Text.AlignHCenter
                   scale: 1 + tile.reveal * 0.12
                   transformOrigin: Item.Center
@@ -1018,7 +1021,7 @@ Column {
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
                 fontFamily: root.bodyFontFamily
-                font.pixelSize: root.compact ? 8 : 9
+                font.pixelSize: typeTokens.textHint
                 font.weight: Font.DemiBold
 
                 // Name eases in after a slight delay and slowly; fades out
@@ -1198,7 +1201,7 @@ Column {
         text: "Lacuna Settings"
         color: root.foreground
         fontFamily: root.bodyFontFamily
-        font.pixelSize: 11
+        font.pixelSize: typeTokens.textNormal
         font.weight: Font.DemiBold
         elide: Text.ElideRight
       }
@@ -1234,7 +1237,7 @@ Column {
         text: "Omarchy Shell Settings"
         color: root.foreground
         fontFamily: root.bodyFontFamily
-        font.pixelSize: 11
+        font.pixelSize: typeTokens.textNormal
         font.weight: Font.DemiBold
         elide: Text.ElideRight
       }
@@ -1249,4 +1252,7 @@ Column {
     background: root.background
     accent: root.accent
   }
+
+  LacunaTokens { id: typeTokens }
+
 }

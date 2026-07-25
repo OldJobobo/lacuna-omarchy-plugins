@@ -14,6 +14,7 @@ Item {
   property int grainTick: 0
   property real grainAccumulator: 0
   property var lacunaSettings: ({})
+  readonly property bool reducedMotion: lacunaSettings && lacunaSettings.reduceMotion === true
   property var palette: ({})
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
@@ -225,7 +226,7 @@ Item {
   FrameAnimation {
     id: grainFrameClock
 
-    running: root.effectVisible
+    running: root.effectVisible && !root.reducedMotion
     onTriggered: {
       root.grainAccumulator += frameTime * 1000
       var interval = Math.max(28, Math.round(88 / root.speed))

@@ -19,6 +19,7 @@ Item {
   property real cursorVelocityY: 0
   property real cursorKick: 0
   property var lacunaSettings: ({})
+  readonly property bool reducedMotion: lacunaSettings && lacunaSettings.reduceMotion === true
   property var palette: ({})
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
@@ -291,7 +292,7 @@ Item {
 
     interval: 120
     repeat: true
-    running: root.effectVisible && root.mouseReactive
+    running: root.effectVisible && !root.reducedMotion && root.mouseReactive
     triggeredOnStart: true
     onTriggered: root.pollCursor()
   }
@@ -440,14 +441,14 @@ Item {
         Timer {
           interval: 58
           repeat: true
-          running: root.effectVisible && root.mouseReactive
+          running: root.effectVisible && !root.reducedMotion && root.mouseReactive
           onTriggered: dustLayer.spawnTransientMote()
         }
 
         Timer {
           interval: 33
           repeat: true
-          running: root.effectVisible
+          running: root.effectVisible && !root.reducedMotion
           triggeredOnStart: true
           onTriggered: dustLayer.updatePersistentMotes()
         }
@@ -455,7 +456,7 @@ Item {
         Timer {
           interval: 33
           repeat: true
-          running: root.effectVisible && transientMotes.count > 0
+          running: root.effectVisible && !root.reducedMotion && transientMotes.count > 0
           onTriggered: dustLayer.updateTransientMotes()
         }
 
@@ -541,7 +542,7 @@ Item {
             ]
 
             SequentialAnimation on x {
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
               loops: Animation.Infinite
               NumberAnimation {
                 to: Math.round(root.seededNoise(seed + 23) * Math.max(1, dustWindow.width))
@@ -556,7 +557,7 @@ Item {
             }
 
             SequentialAnimation on y {
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
               loops: Animation.Infinite
               NumberAnimation {
                 to: Math.round(root.seededNoise(seed + 41) * Math.max(1, dustWindow.height))
@@ -571,7 +572,7 @@ Item {
             }
 
             SequentialAnimation on opacity {
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
               loops: Animation.Infinite
               NumberAnimation {
                 to: 0.12 + root.seededNoise(seed + 59) * 0.42

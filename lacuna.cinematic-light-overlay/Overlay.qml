@@ -13,6 +13,7 @@ Item {
   property bool runtimeEnabled: true
   property real runtimeIntensity: -1
   property var lacunaSettings: ({})
+  readonly property bool reducedMotion: lacunaSettings && lacunaSettings.reduceMotion === true
   property var palette: ({})
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
@@ -315,7 +316,7 @@ Item {
 
         SequentialAnimation on ambientPulse {
           loops: Animation.Infinite
-          running: root.effectVisible && root.slowDriftEnabled
+          running: root.effectVisible && !root.reducedMotion && root.slowDriftEnabled
           NumberAnimation {
             from: 0.55
             to: 1
@@ -423,7 +424,7 @@ Item {
 
             SequentialAnimation on opacity {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
               PauseAnimation {
                 duration: leak.initialDelay
               }
@@ -512,7 +513,7 @@ Item {
 
             SequentialAnimation {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
               PauseAnimation {
                 duration: flare.fadeDelay
               }
@@ -682,7 +683,7 @@ Item {
 
             SequentialAnimation on x {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
               PauseAnimation { duration: sweep.initialDelay }
               NumberAnimation {
                 from: -sweep.sweepWidth
@@ -695,7 +696,7 @@ Item {
 
             SequentialAnimation on opacity {
               loops: Animation.Infinite
-              running: root.effectVisible
+              running: root.effectVisible && !root.reducedMotion
               PauseAnimation { duration: sweep.initialDelay }
               NumberAnimation {
                 from: sweep.sweepFloor

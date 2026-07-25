@@ -88,7 +88,10 @@ Item {
     role: "wallpaper"
   }
 
-  MotionTokens { id: motionTokens }
+  MotionTokens {
+    id: motionTokens
+    animationDisabled: colorProfile.reduceMotion
+  }
 
   FileView {
     path: root.backgroundLink
@@ -188,6 +191,7 @@ Item {
   }
 
   WallpaperFlyout {
+    reduceMotion: colorProfile.reduceMotion
     anchorItem: root
     owner: root
     bar: root.bar

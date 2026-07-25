@@ -108,7 +108,7 @@ Item {
           text: root.label
           color: root.foreground
           fontFamily: root.titleFontFamily
-          font.pixelSize: root.compact ? 12 : 13
+          font.pixelSize: root.compact ? typeTokens.textNormal : typeTokens.textPrimary
           font.weight: Font.DemiBold
         }
 
@@ -118,7 +118,7 @@ Item {
           text: root.hint
           color: root.muted
           fontFamily: root.bodyFontFamily
-          font.pixelSize: root.compact ? 9 : 10
+          font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
         }
       }
 
@@ -141,7 +141,7 @@ Item {
           text: root.optionLabel(root.currentValue)
           color: root.currentValue === "" ? root.muted : root.foreground
           fontFamily: root.bodyFontFamily
-          font.pixelSize: root.compact ? 9 : 10
+          font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
         }
 
         LacunaTablerIcon {
@@ -203,7 +203,7 @@ Item {
         selectionColor: Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.35)
         selectedTextColor: root.foreground
         font.family: root.bodyFontFamily
-        font.pixelSize: root.compact ? 10 : 11
+        font.pixelSize: root.compact ? typeTokens.textSmall : typeTokens.textNormal
         clip: true
         onTextChanged: root.searchText = text
         Keys.onEscapePressed: {
@@ -242,7 +242,7 @@ Item {
           text: modelData.label || modelData.value
           color: root.foreground
           fontFamily: root.bodyFontFamily
-          font.pixelSize: root.compact ? 9 : 10
+          font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
         }
 
         LacunaTablerIcon {
@@ -269,4 +269,7 @@ Item {
       }
     }
   }
+
+  LacunaTokens { id: typeTokens }
+
 }

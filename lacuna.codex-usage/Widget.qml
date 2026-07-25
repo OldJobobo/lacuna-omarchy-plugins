@@ -171,6 +171,7 @@ Item {
 
   MotionTokens {
     id: motionTokens
+    animationDisabled: colorProfile.reduceMotion
   }
 
   Timer {
@@ -334,6 +335,7 @@ Item {
   }
 
   CodexUsageFlyout {
+    reduceMotion: colorProfile.reduceMotion
     id: flyout
     anchorItem: root
     owner: root

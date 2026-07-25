@@ -107,7 +107,7 @@ LacunaRect {
         text: root.label
         color: root.foreground
         fontFamily: root.titleFontFamily
-        font.pixelSize: root.compact ? 12 : 13
+        font.pixelSize: root.compact ? typeTokens.textNormal : typeTokens.textPrimary
         font.weight: Font.DemiBold
       }
 
@@ -117,7 +117,7 @@ LacunaRect {
         text: root.hint
         color: root.muted
         fontFamily: root.bodyFontFamily
-        font.pixelSize: root.compact ? 9 : 10
+        font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
       }
     }
 
@@ -134,7 +134,7 @@ LacunaRect {
         text: root.value
         color: stateLayer.containsMouse ? root.toneAccent : root.muted
         fontFamily: root.bodyFontFamily
-        font.pixelSize: root.compact ? 9 : 10
+        font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
         horizontalAlignment: Text.AlignRight
       }
 
@@ -189,7 +189,7 @@ LacunaRect {
           text: root.value === "" ? "Open" : root.value
           color: root.toneAccent
           fontFamily: root.bodyFontFamily
-          font.pixelSize: root.compact ? 9 : 10
+          font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
           horizontalAlignment: Text.AlignHCenter
         }
       }
@@ -223,7 +223,7 @@ LacunaRect {
               text: modelData.label
               color: selected ? root.foreground : root.muted
               fontFamily: root.bodyFontFamily
-              font.pixelSize: root.compact ? 8 : 9
+              font.pixelSize: typeTokens.textHint
               horizontalAlignment: Text.AlignHCenter
             }
 
@@ -264,5 +264,8 @@ LacunaRect {
       }
     }
   }
+
+
+  LacunaTokens { id: typeTokens }
 
 }

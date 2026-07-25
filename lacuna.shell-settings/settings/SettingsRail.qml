@@ -72,8 +72,8 @@ Column {
         anchors.verticalCenter: parent.verticalCenter
         text: modelData.label || ""
         color: itemColor
-        fontFamily: "Hack Nerd Font Propo"
-        font.pixelSize: root.compact ? 10 : 11
+        fontFamily: typeTokens.monoFont
+        font.pixelSize: root.compact ? typeTokens.textSmall : typeTokens.textNormal
         font.weight: active ? Font.DemiBold : Font.Medium
         elide: Text.ElideRight
       }
@@ -88,4 +88,7 @@ Column {
       }
     }
   }
+
+  LacunaTokens { id: typeTokens }
+
 }

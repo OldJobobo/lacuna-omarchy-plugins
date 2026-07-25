@@ -22,6 +22,7 @@ Item {
   property string bodyFontFamily: "Hack Nerd Font Propo"
   property bool compact: false
   property var designTokens: fallbackDesignTokens
+  property MotionTokens motionTokens: defaultMotionTokens
   readonly property bool hasSubtitle: subtitle !== ""
   readonly property bool hasVersion: version !== ""
   readonly property int controlSize: compact ? 24 : tokens.controlSmall
@@ -188,12 +189,16 @@ Item {
   // Drive the breathing glow from a Timer. The declarative SequentialAnimation
   // would not run in this context; a Timer reliably does. gapBreath oscillates
   // 0..1 on a ~3.9s sine.
+  onVisibleChanged: if (visible && motionTokens.animationDisabled) gapBreath = 0.5
+
   Timer {
-    running: root.designTokens.decorativeLinework && root.visible
+    running: root.designTokens.decorativeLinework && root.visible && !motionTokens.animationDisabled
     interval: 50
     repeat: true
     onTriggered: root.gapBreath = 0.5 + 0.5 * Math.sin(Date.now() / 620)
   }
+
+  MotionTokens { id: defaultMotionTokens }
 
   LacunaTokens {
     id: tokens

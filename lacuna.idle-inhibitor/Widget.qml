@@ -84,6 +84,7 @@ Item {
 
   MotionTokens {
     id: motionTokens
+    animationDisabled: colorProfile.reduceMotion
   }
 
   Component.onCompleted: {
@@ -139,6 +140,7 @@ Item {
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
 
     BarHoverSeam {
+      reduceMotion: colorProfile.reduceMotion
       anchors.fill: parent
       reveal: parent.hoverReveal
       seam: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.35)

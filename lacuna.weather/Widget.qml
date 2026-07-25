@@ -81,7 +81,10 @@ Item {
     role: "weather"
   }
 
-  MotionTokens { id: motionTokens }
+  MotionTokens {
+    id: motionTokens
+    animationDisabled: colorProfile.reduceMotion
+  }
 
   WeatherState {
     id: weatherState
@@ -174,6 +177,7 @@ Item {
   }
 
   WeatherFlyout {
+    reduceMotion: colorProfile.reduceMotion
     anchorItem: root
     owner: root
     bar: root.bar

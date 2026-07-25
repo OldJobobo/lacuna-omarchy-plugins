@@ -333,7 +333,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("geometrySwitchActive ? interpolate(fromFlyoutWidth, flyoutWidth)", host)
         self.assertIn("readonly property real flyoutCurrentWidth: Math.max(0, effectiveFlyoutWidth * clampedFlyoutProgress)", host)
         self.assertIn("readonly property real flyoutX: effectiveAnchorRight ? 0 : panelWidth + effectiveConnectorWidth", host)
-        self.assertIn("property int flyoutLaneWidth: lacunaEnabled && panelController.menuRenderable ? maxFlyoutLaneWidth + panelShadowOutset : 0", window)
+        self.assertIn("property int flyoutLaneWidth: lacunaEnabled && panelController.menuRenderable ? maxFlyoutWidthFor(sidebarScreen) + panelShadowOutset : 0", window)
         self.assertIn("readonly property int panelShadowBlurMax: 28", window)
         self.assertIn("readonly property int panelShadowOutset: frameShadow ? Math.ceil(panelShadowBlurMax + Math.abs(frameShadowOffsetX)) : 0", window)
         self.assertIn("connectorWidth: root.settingsConnectorWidth", window)
@@ -586,9 +586,10 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("Selected widgets are redistributed automatically", settings_window)
 
     def test_curve_kappa_constant_has_single_definition(self):
-        # The Bezier circular-arc kappa is defined once in LacunaGeometry and
-        # referenced everywhere else, so the molding geometry can never drift.
+        # Plugins require local runtime copies, but every copy is vendored from
+        # one build-time source so the molding geometry cannot drift.
         literal = "0.5522847498"
+        canonical_geometry = "shared/qml/LacunaGeometry.qml"
         geometry_files = {
             "lacuna.shell-settings/components/LacunaGeometry.qml",
             "lacuna.menu/components/LacunaGeometry.qml",
@@ -607,8 +608,10 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.clock/LacunaGeometry.qml",
             "lacuna.weather/LacunaGeometry.qml",
         }
+        canonical = read(canonical_geometry)
+        self.assertIn("readonly property real curveKappa: " + literal, canonical)
         for path in sorted(geometry_files):
-            self.assertIn("readonly property real curveKappa: " + literal, read(path), path)
+            self.assertEqual(canonical, read(path), path)
 
         consumers = [
             "lacuna.menu/menu/MenuSurface.qml",
@@ -638,10 +641,11 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("readonly property real curveKappa: lacunaGeometry.curveKappa", qml, path)
             self.assertIn("LacunaGeometry { id: lacunaGeometry }", qml, path)
 
-        # The literal must not leak into any other QML file in the suite.
-        for qml_path in ROOT.glob("lacuna.*/**/*.qml"):
+        # Only the canonical build-time source and its verified runtime copies
+        # may contain the literal.
+        for qml_path in ROOT.glob("**/*.qml"):
             rel = qml_path.relative_to(ROOT).as_posix()
-            if rel in geometry_files:
+            if rel == canonical_geometry or rel in geometry_files:
                 continue
             self.assertNotIn(literal, qml_path.read_text(encoding="utf-8"), rel)
 
@@ -1674,7 +1678,8 @@ class QmlContractTests(unittest.TestCase):
 
         for flyout in [theme_flyout, wallpaper_flyout]:
             self.assertIn("LacunaTokens { id: tokens }", flyout)
-            self.assertIn("MotionTokens { id: motionTokens }", flyout)
+            self.assertIn("MotionTokens {", flyout)
+            self.assertIn("animationDisabled: root.reduceMotion", flyout)
             self.assertIn("duration: motionTokens.reveal", flyout)
             self.assertIn("(root.reveal - 0.55) / 0.45", flyout)
             self.assertIn("font.family: tokens.displayFont", flyout)
@@ -1931,7 +1936,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property real ambientWashOpacity", cinematic)
         self.assertIn("readonly property real ambientBandOpacity", cinematic)
         self.assertIn("property real ambientPulse", cinematic)
-        self.assertIn("running: root.effectVisible && root.slowDriftEnabled", cinematic)
+        self.assertIn("running: root.effectVisible && !root.reducedMotion && root.slowDriftEnabled", cinematic)
         self.assertIn("readonly property int hiddenPause: root.slowDriftEnabled", cinematic)
         self.assertIn("readonly property int darkPause: root.slowDriftEnabled", cinematic)
         self.assertIn('if (preset === "cinematicFlare" || preset === "anamorphicGlow") return preset', cinematic)
@@ -2624,11 +2629,12 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("panelBezierCurve", qml, path)
 
         anim = read("lacuna.shell-settings/components/LacunaAnim.qml")
-        self.assertIn('if (value === "fast") return 150', anim)
-        self.assertIn('if (value === "slow") return 450', anim)
+        self.assertIn('if (value === "fast") return motionTokens.quick', anim)
+        self.assertIn('if (value === "slow") return motionTokens.settle', anim)
 
         widget = read("shared/qml/simple-bar/MotionTokens.qml")
-        self.assertIn("readonly property int quick: 150", widget)
+        self.assertIn("readonly property int quick: duration(150)", widget)
+        self.assertIn("property bool animationDisabled: false", widget)
         self.assertIn("readonly property int hoverDuration: quick", widget)
 
     def test_typography_adopts_hack_nerd_font_propo(self):
@@ -2884,7 +2890,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("function flyoutOpenOnScreen(screen)", window)
         self.assertIn("function flyoutInteractiveOnScreen(screen)", window)
         self.assertIn("function flyoutLaneWidthFor(screen)", window)
-        self.assertIn("return sidebarVisibleOnScreen(screen) ? flyoutLaneWidth : 0", window)
+        self.assertIn("return sidebarVisibleOnScreen(screen) ? maxFlyoutWidthFor(screen) + panelShadowOutset : 0", window)
         self.assertNotIn("return flyoutVisibleOnScreen(screen) ? flyoutLaneWidth : 0", window)
         self.assertIn("flyoutOpen: root.lacunaEnabled && root.flyoutOpenOnScreen(modelData)", window)
         self.assertIn("flyoutInteractive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)", window)
@@ -3757,7 +3763,7 @@ class QmlContractTests(unittest.TestCase):
         ]:
             qml = read(path)
             self.assertIn("readonly property int shadowBottomMargin", qml)
-            self.assertIn("implicitHeight: surface.implicitHeight + shadowBottomMargin", qml)
+            self.assertIn("implicitHeight: surface.fullHeight + shadowTopMargin + shadowBottomMargin", qml)
             self.assertIn("id: shadowSource", qml)
             self.assertIn("height: root.implicitHeight", qml)
             self.assertIn("source: shadowSource", qml)
@@ -3795,10 +3801,10 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("OmarchyShellSettingsWindow", menu)
         self.assertIn("shellSettingsSurface", menu)
         self.assertIn("property int settingsPanelWidth: Math.round(sizeMix(560, 500))", menu)
-        self.assertIn("return Math.max(360, Math.min(availableHeight, compact ? 560 : 660))", menu)
+        self.assertIn("return MenuFlyoutGeometry.boundedGeometry({", menu)
         shell_section = menu.split("function openShellSettingsSection", 1)[1].split("function requestFlyoutFocus", 1)[0]
         self.assertNotIn("sidebarState.expand()", shell_section)
-        self.assertIn("return settingsFlyoutYFor(sidebarScreen, panelHeight)", menu)
+        self.assertIn("function flyoutGeometryFor(screen, kind)", menu)
         self.assertIn('surface: "flyout"', settings)
         self.assertIn('"Omarchy Settings Link"', settings_window)
         self.assertIn('"set-shell-settings-surface-"', settings_window)

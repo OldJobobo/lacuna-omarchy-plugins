@@ -85,7 +85,10 @@ Item {
     role: "recording"
   }
 
-  MotionTokens { id: motionTokens }
+  MotionTokens {
+    id: motionTokens
+    animationDisabled: colorProfile.reduceMotion
+  }
 
   Component.onCompleted: {
     resolveService()
@@ -131,6 +134,7 @@ Item {
     property real hoverReveal: mouseArea.containsMouse || mouseArea.pressed ? 1 : 0
 
     BarHoverSeam {
+      reduceMotion: colorProfile.reduceMotion
       anchors.fill: parent
       reveal: parent.hoverReveal
       seam: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.35)
@@ -163,16 +167,16 @@ Item {
       border.color: root.moduleColor
 
       SequentialAnimation on scale {
-        running: root.recording
+        running: root.recording && !motionTokens.animationDisabled
         loops: Animation.Infinite
-        NumberAnimation { from: 0.72; to: 1.35; duration: 760; easing.type: Easing.OutCubic }
-        PauseAnimation { duration: 140 }
+        NumberAnimation { from: 0.72; to: 1.35; duration: motionTokens.ambient; easing.type: Easing.OutCubic }
+        PauseAnimation { duration: motionTokens.quick }
       }
       SequentialAnimation on opacity {
-        running: root.recording
+        running: root.recording && !motionTokens.animationDisabled
         loops: Animation.Infinite
-        NumberAnimation { from: 0.78; to: 0.08; duration: 760; easing.type: Easing.OutCubic }
-        PauseAnimation { duration: 140 }
+        NumberAnimation { from: 0.78; to: 0.08; duration: motionTokens.ambient; easing.type: Easing.OutCubic }
+        PauseAnimation { duration: motionTokens.quick }
       }
     }
 

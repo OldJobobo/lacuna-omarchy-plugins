@@ -6,6 +6,7 @@ import "../services"
 import "../components"
 import "../settings"
 import "MonitorPolicy.js" as MonitorPolicy
+import "MenuFlyoutGeometry.js" as MenuFlyoutGeometry
 
 Item {
   id: root
@@ -51,6 +52,8 @@ Item {
   property color dangerAccent: menuTheme.color("color9")
   property color navAccent: menuTheme.soft
   property color muted: menuTheme.muted
+  property color providerYoutube: menuTheme.providerYoutube
+  property color providerJellyfin: menuTheme.providerJellyfin
   property string version: ""
   property string bodyFontFamily: "Hack Nerd Font Propo"
   property bool compact: compactState.compact
@@ -91,7 +94,7 @@ Item {
   property int barEdgeCasterSize: frameThickness
   property int frameReservePadding: 4
   property int sidebarReserveExtra: 0
-  property int flyoutLaneWidth: lacunaEnabled && panelController.menuRenderable ? maxFlyoutLaneWidth + panelShadowOutset : 0
+  property int flyoutLaneWidth: lacunaEnabled && panelController.menuRenderable ? maxFlyoutWidthFor(sidebarScreen) + panelShadowOutset : 0
   // In exclusive mode the compositor already places this window below the top
   // bar, so the bar edge is local y=0. In overlay mode the window starts at
   // screen top and the bar edge is the live bar height.
@@ -131,7 +134,7 @@ Item {
   readonly property bool renderShellSettingsContent: shellSettingsPanelVisible || outgoingFlyout === "shellSettings" || retainedFlyout === "shellSettings" || closingFlyout === "shellSettings"
   readonly property bool renderAppPickerContent: appPickerVisible || outgoingFlyout === "appPicker" || retainedFlyout === "appPicker" || closingFlyout === "appPicker"
   readonly property bool renderMediaPlayerContent: mediaPlayerVisible || outgoingFlyout === "mediaPlayer" || retainedFlyout === "mediaPlayer" || closingFlyout === "mediaPlayer"
-  readonly property int activeFlyoutWidth: activeFlyoutSettings ? settingsPanelWidth : activeFlyoutShellSettings ? shellSettingsPanelWidth : activeFlyoutAppPicker ? appPickerWidth : activeFlyoutMediaPlayer ? mediaPlayerWidth : 0
+  readonly property int activeFlyoutWidth: activeFlyoutWidthFor(sidebarScreen)
   readonly property int activeFlyoutHeight: activeFlyoutHeightFor(sidebarScreen)
   readonly property int activeFlyoutY: activeFlyoutYFor(sidebarScreen)
   readonly property bool frameBorderAttachedFlyoutVisible: lacunaEnabled && panelController.flyoutRenderable && panelController.flyoutProgress > 0.001
@@ -270,11 +273,10 @@ Item {
   }
 
   function flyoutLaneWidthFor(screen) {
-    // Keep every mapped sidebar window at its maximum flyout width. Changing
-    // the layer-shell buffer width when a flyout opens makes the compositor
-    // briefly scale the existing sidebar buffer, visibly squeezing every
-    // child before the new buffer arrives.
-    return sidebarVisibleOnScreen(screen) ? flyoutLaneWidth : 0
+    // Keep every mapped sidebar window at its maximum bounded flyout width.
+    // Changing the layer-shell buffer width while opening still squeezes the
+    // existing sidebar buffer, so only monitor geometry may change this lane.
+    return sidebarVisibleOnScreen(screen) ? maxFlyoutWidthFor(screen) + panelShadowOutset : 0
   }
 
   function frameBorderAttachedFlyoutVisibleOnScreen(screen) {
@@ -283,14 +285,14 @@ Item {
 
   Behavior on compactProgress {
     NumberAnimation {
-      duration: 180
+      duration: root.menuMotionTokensRef.quick
       easing.type: Easing.OutCubic
     }
   }
 
   Behavior on barControlSize {
     NumberAnimation {
-      duration: 180
+      duration: root.menuMotionTokensRef.quick
       easing.type: Easing.OutCubic
     }
   }
@@ -487,93 +489,70 @@ Item {
     return Math.max(1, Math.round(screenHeight) - visualTopInset - visualBottomInset)
   }
 
-  function settingsFlyoutHeightFor(screen) {
-    var availableHeight = sidebarWindowHeightFor(screen) - barBottomY - designTokens.topInset - designTokens.bottomInset
-    return Math.max(360, Math.min(availableHeight, compact ? 560 : 660))
+  function preferredFlyoutWidth(kind) {
+    if (kind === "settings") return settingsPanelWidth
+    if (kind === "shellSettings") return shellSettingsPanelWidth
+    if (kind === "appPicker") return appPickerWidth
+    if (kind === "mediaPlayer") return mediaPlayerWidth
+    return 0
   }
 
-  function settingsFlyoutHeight() {
-    return settingsFlyoutHeightFor(sidebarScreen)
+  function preferredFlyoutHeight(kind) {
+    if (kind === "appPicker") return compact ? 430 : 520
+    if (kind === "mediaPlayer") return compact ? 520 : 600
+    return compact ? 560 : 660
   }
 
-  function settingsFlyoutYFor(screen, panelHeight) {
+  function flyoutGeometryFor(screen, kind) {
+    var windowHeight = sidebarWindowHeightFor(screen)
+    var screenWidth = screen && screen.width !== undefined ? Number(screen.width) : 1920
+    if (!isFinite(screenWidth) || screenWidth <= 0) screenWidth = 1920
     var topLimit = barBottomY + designTokens.topInset
-    var lift = compact ? 72 : 112
-    return Math.max(topLimit, sidebarWindowHeightFor(screen) - panelHeight - designTokens.bottomInset - lift)
+    var preferredHeight = preferredFlyoutHeight(kind)
+    var preferredY = kind === "appPicker"
+      ? topLimit + (compact ? 38 : 52)
+      : windowHeight - preferredHeight - designTokens.bottomInset - (compact ? 72 : 112)
+    return MenuFlyoutGeometry.boundedGeometry({
+      screenWidth: screenWidth,
+      screenHeight: windowHeight,
+      leftInset: panelWidth + settingsConnectorWidth,
+      rightInset: panelShadowOutset + designTokens.contentInset,
+      topInset: topLimit,
+      bottomInset: designTokens.bottomInset,
+      preferredWidth: preferredFlyoutWidth(kind),
+      preferredHeight: preferredHeight,
+      preferredY: preferredY
+    })
   }
 
-  function settingsFlyoutY(panelHeight) {
-    return settingsFlyoutYFor(sidebarScreen, panelHeight)
+  function maxFlyoutWidthFor(screen) {
+    var kinds = ["settings", "shellSettings", "appPicker", "mediaPlayer"]
+    var width = 0
+    for (var i = 0; i < kinds.length; i++) width = Math.max(width, flyoutGeometryFor(screen, kinds[i]).width)
+    return width
   }
 
-  function appPickerFlyoutYFor(screen) {
-    var topLimit = barBottomY + designTokens.topInset
-    var panelHeight = root.compact ? 430 : 520
-    var preferredY = topLimit + (compact ? 38 : 52)
-    var maxY = Math.max(topLimit, sidebarWindowHeightFor(screen) - panelHeight - designTokens.bottomInset)
-    return Math.min(preferredY, maxY)
+  function activeFlyoutKind() {
+    if (activeFlyoutSettings) return "settings"
+    if (activeFlyoutShellSettings) return "shellSettings"
+    if (activeFlyoutAppPicker) return "appPicker"
+    if (activeFlyoutMediaPlayer) return "mediaPlayer"
+    return ""
   }
 
-  function appPickerFlyoutY() {
-    return appPickerFlyoutYFor(sidebarScreen)
-  }
-
-  function appPickerHeightForScreen(screen, y) {
-    return Math.min(sidebarWindowHeightFor(screen) - y - designTokens.bottomInset, root.compact ? 430 : 520)
-  }
-
-  function appPickerHeightFor(y) {
-    return appPickerHeightForScreen(sidebarScreen, y)
-  }
-
-  function mediaPlayerFlyoutHeightFor(screen) {
-    var availableHeight = sidebarWindowHeightFor(screen) - barBottomY - designTokens.topInset - designTokens.bottomInset
-    return Math.max(360, Math.min(availableHeight, compact ? 520 : 600))
-  }
-
-  function mediaPlayerFlyoutHeight() {
-    return mediaPlayerFlyoutHeightFor(sidebarScreen)
-  }
-
-  function mediaPlayerFlyoutYFor(screen, panelHeight) {
-    return settingsFlyoutYFor(screen, panelHeight)
-  }
-
-  function mediaPlayerFlyoutY(panelHeight) {
-    return mediaPlayerFlyoutYFor(sidebarScreen, panelHeight)
-  }
-
-  function shellSettingsFlyoutHeightFor(screen) {
-    var availableHeight = sidebarWindowHeightFor(screen) - barBottomY - designTokens.topInset - designTokens.bottomInset
-    return Math.max(360, Math.min(availableHeight, compact ? 560 : 660))
-  }
-
-  function shellSettingsFlyoutHeight() {
-    return shellSettingsFlyoutHeightFor(sidebarScreen)
-  }
-
-  function shellSettingsFlyoutYFor(screen, panelHeight) {
-    return settingsFlyoutYFor(screen, panelHeight)
-  }
-
-  function shellSettingsFlyoutY(panelHeight) {
-    return shellSettingsFlyoutYFor(sidebarScreen, panelHeight)
+  function activeFlyoutWidthFor(screen) {
+    var kind = activeFlyoutKind()
+    return kind === "" ? 0 : flyoutGeometryFor(screen, kind).width
   }
 
   function activeFlyoutHeightFor(screen) {
-    if (activeFlyoutSettings) return settingsFlyoutHeightFor(screen)
-    if (activeFlyoutShellSettings) return shellSettingsFlyoutHeightFor(screen)
-    if (activeFlyoutAppPicker) return appPickerHeightForScreen(screen, appPickerFlyoutYFor(screen))
-    if (activeFlyoutMediaPlayer) return mediaPlayerFlyoutHeightFor(screen)
-    return 0
+    var kind = activeFlyoutKind()
+    return kind === "" ? 0 : flyoutGeometryFor(screen, kind).height
   }
 
   function activeFlyoutYFor(screen) {
-    if (activeFlyoutSettings) return settingsFlyoutYFor(screen, settingsFlyoutHeightFor(screen))
-    if (activeFlyoutShellSettings) return shellSettingsFlyoutYFor(screen, shellSettingsFlyoutHeightFor(screen))
-    if (activeFlyoutAppPicker) return appPickerFlyoutYFor(screen)
-    if (activeFlyoutMediaPlayer) return mediaPlayerFlyoutYFor(screen, mediaPlayerFlyoutHeightFor(screen))
-    return 0
+    var kind = activeFlyoutKind()
+    return kind === "" ? 0 : flyoutGeometryFor(screen, kind).y
   }
 
   function frameBorderAttachedFlyoutYFor(screen) {
@@ -2259,7 +2238,7 @@ Item {
       connectorWidth: root.settingsConnectorWidth
       connectorRenderable: root.lacunaEnabled && menuWindow.sidebarRenderable && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
       flyoutY: root.activeFlyoutYFor(modelData)
-      flyoutWidth: Math.max(0, root.activeFlyoutWidth)
+      flyoutWidth: Math.max(0, root.activeFlyoutWidthFor(modelData))
       flyoutHeight: Math.max(0, root.activeFlyoutHeightFor(modelData))
       flyoutProgress: root.menuPanelControllerRef.flyoutProgress
       flyoutRenderable: root.lacunaEnabled && root.flyoutVisibleOnScreen(modelData)
@@ -2468,6 +2447,7 @@ Item {
         muted: root.muted
         railWidth: root.railButtonWidth
         mediaPlayerService: root.mediaPlayerService
+        motionTokens: root.menuMotionTokensRef
         onExpandRequested: sidebarState.toggleCollapsed()
         onActivated: function(entry) {
           root.activate(entry)
@@ -2642,6 +2622,8 @@ Item {
         background: root.background
         accent: root.accent
         muted: root.muted
+        providerYoutube: root.providerYoutube
+        providerJellyfin: root.providerJellyfin
         bodyFontFamily: root.bodyFontFamily
         onCloseRequested: root.menuPanelControllerRef.closeFlyout("mediaPlayer")
 
@@ -2687,7 +2669,7 @@ Item {
       Keys.onEnterPressed: root.confirmSystemRestart()
 
       Behavior on opacity {
-        LacunaAnim { motion: "fast" }
+        LacunaAnim { motion: "fast"; motionTokens: root.menuMotionTokensRef }
       }
 
       MouseArea {

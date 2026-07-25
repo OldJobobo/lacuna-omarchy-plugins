@@ -18,6 +18,7 @@ Item {
   property int bloomPulseCycle: 0
   property int bloomPulseDelay: 14000
   property var lacunaSettings: ({})
+  readonly property bool reducedMotion: lacunaSettings && lacunaSettings.reduceMotion === true
 
   readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy/lacuna"
   readonly property string settingsFile: configDir + "/settings.json"
@@ -173,7 +174,7 @@ Item {
   Timer {
     interval: Math.max(70, 180 / root.speed)
     repeat: true
-    running: root.effectVisible && root.staticAmount > 0
+    running: root.effectVisible && !root.reducedMotion && root.staticAmount > 0
     onTriggered: root.noiseTick += 1
   }
 
@@ -181,7 +182,7 @@ Item {
     id: bloomPulseAnimation
 
     loops: Animation.Infinite
-    running: root.effectVisible && root.bloomPulseEnabled && root.bloomPulseAmount > 0.001
+    running: root.effectVisible && !root.reducedMotion && root.bloomPulseEnabled && root.bloomPulseAmount > 0.001
     onRunningChanged: if (!running) root.bloomPulse = 0
 
     PauseAnimation {
@@ -351,7 +352,7 @@ Item {
             to: 0
             duration: Math.max(420, 1500 / root.speed)
             loops: Animation.Infinite
-            running: root.effectVisible
+            running: root.effectVisible && !root.reducedMotion
           }
 
           Repeater {
@@ -379,7 +380,7 @@ Item {
 
           SequentialAnimation on y {
             loops: Animation.Infinite
-            running: root.effectVisible
+            running: root.effectVisible && !root.reducedMotion
 
             PauseAnimation {
               duration: Math.max(1000, 5200 / root.speed)
@@ -552,7 +553,7 @@ Item {
                 duration: Math.max(2600, (6200 + index * 900) / root.speed)
                 loops: Animation.Infinite
                 easing.type: Easing.InOutSine
-                running: root.effectVisible && curvedGlassDistortion.visible
+                running: root.effectVisible && !root.reducedMotion && curvedGlassDistortion.visible
               }
 
               Shape {

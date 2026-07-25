@@ -15,12 +15,15 @@ Every curve in Lacuna — every molding connector and every rounded corner — i
 approximated by one cubic Bézier, controlled by a single number:
 
 ```qml
-// lacuna.menu/components/LacunaGeometry.qml
+// shared/qml/LacunaGeometry.qml — canonical build-time source
 readonly property real curveKappa: 0.5522847498   // = 4/3 * (sqrt(2) - 1)
 ```
 
-`curveKappa` is the cubic-Bézier control-point multiplier that makes a quarter turn approximate a
-circular arc. **It must stay defined in exactly one place** and be referenced everywhere. A second copy is a bug: it is how two surfaces drift out of optical agreement.
+`curveKappa` is the cubic-Bézier control-point multiplier that makes a quarter
+turn approximate a circular arc. Plugins cannot import across runtime
+boundaries, so `scripts/sync-vendored` copies this canonical file into each
+plugin and equality tests prevent drift. A second independently maintained
+source is a bug; verified vendored runtime copies are required packaging.
 
 Control points for a quarter arc of radius `r` are placed at `r * (1 - curveKappa)` from the
 corner. This is the canonical pattern used by `MenuSurface.qml`'s join shapes; reuse it.
@@ -160,7 +163,7 @@ The Carbon alias that previously made `lacuna === carbon` is **removed** (see
 
 ## Rules
 
-1. **One `curveKappa`, referenced everywhere.** Never copy the constant.
+1. **One canonical `curveKappa`, vendored and verified everywhere.** Never maintain a plugin copy independently.
 2. **Square interior, curves only at joins and exposed corners.**
 3. **Molding connectors over rounded join corners.** Show the seam.
 4. **No `Rectangle.radius` on attached surfaces** — use per-corner `Shape` states.

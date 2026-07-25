@@ -10,6 +10,7 @@ PopupWindow {
   required property QtObject bar
   property var owner: null
   property bool open: false
+  property bool reduceMotion: false
   property string mode: "cpu"
   property int cpuPercent: 0
   property int memoryPercent: 0
@@ -32,6 +33,7 @@ PopupWindow {
   property real reveal: open ? 1 : 0
 
   readonly property var anchorWindow: anchorItem ? anchorItem.QsWindow.window : null
+  readonly property string attachmentEdge: bar && /^(top|bottom|left|right)$/.test(bar.position) ? bar.position : "top"
   readonly property color background: opaque(bar ? bar.background : "#101315")
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color whisper: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.48)
@@ -43,16 +45,21 @@ PopupWindow {
   readonly property string title: mode === "memory" ? "SYSTEM / MEMORY" : mode === "disk" ? "SYSTEM / STORAGE" : "SYSTEM / PROCESSOR"
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
   readonly property int shadowBlurMax: 28
-  readonly property int shadowMargin: shadowEnabled ? Math.ceil(shadowBlurMax + Math.max(Math.abs(shadowOffsetX), Math.abs(shadowOffsetY))) : 0
-  readonly property int shadowBottomMargin: shadowEnabled ? Math.ceil(shadowMargin + shadowBlurMax * 0.6 + Math.max(0, shadowOffsetY)) : 0
-
-  LacunaTokens { id: tokens }
-  MotionTokens { id: motionTokens }
-
-  Behavior on cpuPercent { NumberAnimation { duration: motionTokens.quick; easing.type: Easing.OutCubic } }
-  Behavior on memoryPercent { NumberAnimation { duration: motionTokens.quick; easing.type: Easing.OutCubic } }
-  Behavior on diskPercent { NumberAnimation { duration: motionTokens.quick; easing.type: Easing.OutCubic } }
-
+  readonly property int shadowMargin: shadowEnabled
+    ? Math.ceil(shadowBlurMax + Math.max(Math.abs(shadowOffsetX), Math.abs(shadowOffsetY)))
+    : 0
+  readonly property int shadowFarLeftMargin: shadowEnabled
+    ? Math.ceil(shadowMargin + shadowBlurMax * 0.6 + Math.max(0, -shadowOffsetX)) : 0
+  readonly property int shadowFarRightMargin: shadowEnabled
+    ? Math.ceil(shadowMargin + shadowBlurMax * 0.6 + Math.max(0, shadowOffsetX)) : 0
+  readonly property int shadowFarTopMargin: shadowEnabled
+    ? Math.ceil(shadowMargin + shadowBlurMax * 0.6 + Math.max(0, -shadowOffsetY)) : 0
+  readonly property int shadowFarBottomMargin: shadowEnabled
+    ? Math.ceil(shadowMargin + shadowBlurMax * 0.6 + Math.max(0, shadowOffsetY)) : 0
+  readonly property int shadowLeftMargin: attachmentEdge === "left" ? 0 : (attachmentEdge === "right" ? shadowFarLeftMargin : shadowMargin)
+  readonly property int shadowRightMargin: attachmentEdge === "right" ? 0 : (attachmentEdge === "left" ? shadowFarRightMargin : shadowMargin)
+  readonly property int shadowTopMargin: attachmentEdge === "top" ? 0 : (attachmentEdge === "bottom" ? shadowFarTopMargin : shadowMargin)
+  readonly property int shadowBottomMargin: attachmentEdge === "bottom" ? 0 : (attachmentEdge === "top" ? shadowFarBottomMargin : shadowMargin)
   function opaque(value) {
     var c = typeof value === "string" ? Qt.color(value) : value
     return Qt.rgba(c.r, c.g, c.b, 1)
@@ -112,6 +119,12 @@ PopupWindow {
     } catch (error) { shadowEnabled = false }
   }
 
+  LacunaTokens { id: tokens }
+  MotionTokens {
+    id: motionTokens
+    animationDisabled: root.reduceMotion
+  }
+
   FileView {
     path: root.configHome + "/omarchy/lacuna/settings.json"
     watchChanges: true
@@ -124,8 +137,8 @@ PopupWindow {
   Behavior on reveal { NumberAnimation { duration: motionTokens.reveal; easing.type: Easing.OutCubic } }
   visible: open || reveal > 0.001
   color: "transparent"
-  implicitWidth: surface.fullWidth + shadowMargin * 2
-  implicitHeight: surface.implicitHeight + shadowBottomMargin
+  implicitWidth: surface.fullWidth + shadowLeftMargin + shadowRightMargin
+  implicitHeight: surface.fullHeight + shadowTopMargin + shadowBottomMargin
 
   onOpenChanged: {
     if (!bar) return
@@ -144,29 +157,53 @@ PopupWindow {
     window: root.anchorWindow
     adjustment: PopupAdjustment.Slide
     edges: Edges.Top | Edges.Left
-    gravity: root.bar && root.bar.position === "bottom" ? Edges.Top | Edges.Right : Edges.Bottom | Edges.Right
-    rect.width: 1; rect.height: 1
+    gravity: root.attachmentEdge === "bottom"
+      ? Edges.Top | Edges.Right
+      : (root.attachmentEdge === "right" ? Edges.Bottom | Edges.Left : Edges.Bottom | Edges.Right)
+    rect.width: 1
+    rect.height: 1
     onAnchoring: {
       if (!root.anchorWindow || !root.bar) return
-      var below = root.bar.position !== "bottom"
-      var point = root.anchorWindow.contentItem.mapFromItem(root.anchorItem, root.anchorItem.width / 2 - (root.shadowMargin + root.joinRadius + root.panelWidth / 2), below ? root.anchorItem.height : -root.implicitHeight)
-      point.x = Math.max(root.margin, Math.min(point.x, root.anchorWindow.width - root.implicitWidth - root.margin))
-      popupAnchor.rect.x = Math.round(point.x); popupAnchor.rect.y = Math.round(point.y)
+      var target = root.anchorItem
+      var localX = target.width / 2 - (root.shadowLeftMargin + surface.fullWidth / 2)
+      var localY = target.height - root.shadowTopMargin
+      if (root.attachmentEdge === "bottom") {
+        localY = -(root.shadowTopMargin + surface.fullHeight)
+      } else if (root.attachmentEdge === "left") {
+        localX = target.width - root.shadowLeftMargin
+        localY = target.height / 2 - (root.shadowTopMargin + surface.fullHeight / 2)
+      } else if (root.attachmentEdge === "right") {
+        localX = -(root.shadowLeftMargin + surface.fullWidth)
+        localY = target.height / 2 - (root.shadowTopMargin + surface.fullHeight / 2)
+      }
+      var point = root.anchorWindow.contentItem.mapFromItem(target, localX, localY)
+      if (root.attachmentEdge === "top" || root.attachmentEdge === "bottom")
+        point.x = Math.max(root.margin, Math.min(point.x, root.anchorWindow.width - root.implicitWidth - root.margin))
+      else
+        point.y = Math.max(root.margin, Math.min(point.y, root.anchorWindow.height - root.implicitHeight - root.margin))
+      popupAnchor.rect.x = Math.round(point.x)
+      popupAnchor.rect.y = Math.round(point.y)
     }
   }
-
   Item {
-    anchors.top: parent.top
-    width: parent.width
-    height: Math.round(root.implicitHeight * root.reveal)
+    id: clipper
+    readonly property bool horizontalReveal: root.attachmentEdge === "top" || root.attachmentEdge === "bottom"
+    x: root.attachmentEdge === "right" ? root.implicitWidth - width : 0
+    y: root.attachmentEdge === "bottom" ? root.implicitHeight - height : 0
+    width: horizontalReveal ? root.implicitWidth : Math.round(root.implicitWidth * root.reveal)
+    height: horizontalReveal ? Math.round(root.implicitHeight * root.reveal) : root.implicitHeight
     clip: true
     Item {
+      id: stage
+      x: -clipper.x
+      y: -clipper.y
       width: root.implicitWidth; height: root.implicitHeight
       Item {
         id: shadowSource
         anchors.fill: parent
         visible: root.shadowEnabled
-        BarFlyoutSurface { x: root.shadowMargin; panelWidth: root.panelWidth; panelHeight: root.panelHeight; joinRadius: root.joinRadius; panelColor: root.background }
+        BarFlyoutSurface { x: root.shadowLeftMargin
+          y: root.shadowTopMargin; panelWidth: root.panelWidth; panelHeight: root.panelHeight; joinRadius: root.joinRadius; panelColor: root.background; attachmentEdge: root.attachmentEdge }
       }
       LacunaDropShadow {
         source: shadowSource; shadowEnabled: root.shadowEnabled; shadowColor: "black"; shadowOpacity: 0.62
@@ -174,13 +211,15 @@ PopupWindow {
       }
       BarFlyoutSurface {
         id: surface
-        x: root.shadowMargin
+        x: root.shadowLeftMargin
+        y: root.shadowTopMargin
         panelWidth: root.panelWidth; panelHeight: root.panelHeight; joinRadius: root.joinRadius; panelColor: root.background
+        attachmentEdge: root.attachmentEdge
       }
 
       Column {
         x: surface.x + surface.panelLeft + tokens.spaceXLarge
-        y: surface.panelTop + tokens.spaceXLarge
+        y: surface.y + surface.panelTop + tokens.spaceXLarge
         width: root.panelWidth - tokens.spaceXLarge * 2
         spacing: tokens.spaceNormal
         opacity: Math.max(0, Math.min(1, (root.reveal - 0.55) / 0.45))

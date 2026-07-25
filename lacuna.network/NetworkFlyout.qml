@@ -13,6 +13,7 @@ PopupWindow {
   property var service: null
 
   property bool open: false
+  property bool reduceMotion: false
   property int panelWidth: 392
   property int panelHeight: 520
   property int joinRadius: 13
@@ -27,6 +28,7 @@ PopupWindow {
   readonly property var activeService: service || fallbackService
   readonly property var wifiNetworks: activeService && activeService.wifiNetworks ? activeService.wifiNetworks : []
   readonly property var anchorWindow: anchorItem ? anchorItem.QsWindow.window : null
+  readonly property string attachmentEdge: bar && /^(top|bottom|left|right)$/.test(bar.position) ? bar.position : "top"
   readonly property int contentPadding: 14
   readonly property int innerWidth: panelWidth - contentPadding * 2
   readonly property color surfaceBackground: opaqueColor(bar ? bar.background : "#101315")
@@ -78,9 +80,14 @@ PopupWindow {
     }
   }
 
+  MotionTokens {
+    id: motionTokens
+    animationDisabled: root.reduceMotion
+  }
+
   property real reveal: open ? 1 : 0
   Behavior on reveal {
-    NumberAnimation { duration: 190; easing.type: Easing.OutCubic }
+    NumberAnimation { duration: motionTokens.reveal; easing.type: Easing.OutCubic }
   }
 
   readonly property real contentOpacity: Math.max(0, Math.min(1, (reveal - 0.3) / 0.7))
@@ -88,7 +95,7 @@ PopupWindow {
   visible: open || reveal > 0.001
   color: "transparent"
   implicitWidth: surface.fullWidth
-  implicitHeight: surface.implicitHeight
+  implicitHeight: surface.fullHeight
 
   onOpenChanged: {
     if (!bar) return
@@ -129,39 +136,51 @@ PopupWindow {
 
   anchor {
     id: popupAnchor
-    window: root.anchorItem ? root.anchorItem.QsWindow.window : null
+    window: root.anchorWindow
     adjustment: PopupAdjustment.Slide
     edges: Edges.Top | Edges.Left
-    gravity: root.bar && root.bar.position === "bottom" ? Edges.Top | Edges.Right : Edges.Bottom | Edges.Right
+    gravity: root.attachmentEdge === "bottom"
+      ? Edges.Top | Edges.Right
+      : (root.attachmentEdge === "right" ? Edges.Bottom | Edges.Left : Edges.Bottom | Edges.Right)
     rect.width: 1
     rect.height: 1
 
     onAnchoring: {
-      if (!root.anchorItem || !root.bar) return
+      if (!root.anchorWindow || !root.bar) return
       var target = root.anchorItem
-      var window = target.QsWindow.window
-      if (!window) return
-
-      var below = root.bar.position !== "bottom"
-      var localX = target.width / 2 - (root.joinRadius + root.panelWidth / 2)
-      var localY = below ? target.height : -root.implicitHeight
-
-      var point = window.contentItem.mapFromItem(target, localX, localY)
-      point.x = Math.max(root.margin, Math.min(point.x, window.width - root.implicitWidth - root.margin))
+      var localX = target.width / 2 - surface.fullWidth / 2
+      var localY = target.height
+      if (root.attachmentEdge === "bottom") {
+        localY = -surface.fullHeight
+      } else if (root.attachmentEdge === "left") {
+        localX = target.width
+        localY = target.height / 2 - surface.fullHeight / 2
+      } else if (root.attachmentEdge === "right") {
+        localX = -surface.fullWidth
+        localY = target.height / 2 - surface.fullHeight / 2
+      }
+      var point = root.anchorWindow.contentItem.mapFromItem(target, localX, localY)
+      if (root.attachmentEdge === "top" || root.attachmentEdge === "bottom")
+        point.x = Math.max(root.margin, Math.min(point.x, root.anchorWindow.width - root.implicitWidth - root.margin))
+      else
+        point.y = Math.max(root.margin, Math.min(point.y, root.anchorWindow.height - root.implicitHeight - root.margin))
       popupAnchor.rect.x = Math.round(point.x)
       popupAnchor.rect.y = Math.round(point.y)
     }
   }
-
   Item {
     id: clipper
-    anchors.top: parent.top
-    width: parent.width
-    height: Math.round(root.implicitHeight * root.reveal)
+    readonly property bool horizontalReveal: root.attachmentEdge === "top" || root.attachmentEdge === "bottom"
+    x: root.attachmentEdge === "right" ? root.implicitWidth - width : 0
+    y: root.attachmentEdge === "bottom" ? root.implicitHeight - height : 0
+    width: horizontalReveal ? root.implicitWidth : Math.round(root.implicitWidth * root.reveal)
+    height: horizontalReveal ? Math.round(root.implicitHeight * root.reveal) : root.implicitHeight
     clip: true
 
     Item {
       id: stage
+      x: -clipper.x
+      y: -clipper.y
       width: root.implicitWidth
       height: root.implicitHeight
 
@@ -172,6 +191,7 @@ PopupWindow {
         joinRadius: root.joinRadius
         cornerRadius: root.cornerRadius
         panelColor: root.panelColor
+        attachmentEdge: root.attachmentEdge
       }
 
       Item {
