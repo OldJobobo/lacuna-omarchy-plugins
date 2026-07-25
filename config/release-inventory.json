@@ -15,6 +15,8 @@
     "payloadRoot": "/usr/share/lacuna-omarchy-plugins",
     "command": "/usr/bin/lacuna-omarchy",
     "sharedFiles": [
+      "qml/LacunaGeometry.qml",
+      "qml/LacunaTokens.qml",
       "qml/simple-bar/BarHoverSeam.qml",
       "qml/simple-bar/ColorProfile.qml",
       "qml/simple-bar/MotionTokens.qml"
@@ -581,6 +583,7 @@
         "menu/MenuCommandCatalog.qml",
         "menu/MenuContent.qml",
         "menu/MenuEntryFactory.qml",
+        "menu/MenuFlyoutGeometry.js",
         "menu/MenuHeader.qml",
         "menu/MenuRail.qml",
         "menu/MenuRailButton.qml",
