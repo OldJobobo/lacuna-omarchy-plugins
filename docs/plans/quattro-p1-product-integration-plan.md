@@ -280,3 +280,29 @@ Do not mark P1 complete from repository tests alone. Record the supported
 environment, packaged artifact, clean-install result, shell restart result,
 settings round trip, sidebar focus-safety smoke, and media failure fallback in
 this section when the beta gate is actually run.
+
+### 2026-07-26 partial beta-gate evidence
+
+- Environment: Omarchy `4.0.0.r1333.ga466dcc-1`, Quickshell
+  `0.3.0.r18.g10b439f-3`, three active outputs.
+- Repository validation: `368 passed, 5 skipped, 14 subtests passed`;
+  Quattro compatibility and the three-monitor P0 smoke pass.
+- Packaging: deterministic archive/AUR rehearsal passes with 47 plugins and a
+  517-entry package payload. GitHub CI still requires a pushed rerun of the
+  reviewed namcap host-runtime warning policy.
+- Live install: all 47 plugin copies match the checkout. The new ambience host
+  keeps Bottom and Overlay surfaces mapped on every output, suppresses legacy
+  fallback windows only while healthy, and changes real pixel composition when
+  `activeEffects` order reverses without changing the layer list.
+- Visual parity: hosted-versus-legacy reduced-motion captures were exact for
+  six effects, near-exact for tracking lines (normalized RMSE `0.00147`), and
+  within expected animated variation for aurora drift (`0.0791`).
+- State/failure evidence: bar-size mode round-trips without unrelated state
+  loss; failed nightlight application remains failed in the runtime QML probe;
+  media provider filtering activates only the visible result, and paste/focus
+  dismissal behavior passes its component probe.
+
+This is not the final Beta Exit Record. A packaged destructive clean install,
+forced update failure and rollback, uninstall, stock-bar recovery, and a green
+GitHub workflow for the candidate commit remain required before P1 is marked
+complete.
