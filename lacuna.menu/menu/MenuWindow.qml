@@ -2201,6 +2201,7 @@ Item {
     flyoutOpen: root.lacunaEnabled && root.flyoutOpenOnScreen(modelData)
     flyoutInteractive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)
     keyboardInputActive: root.lacunaEnabled && root.activeFlyoutMediaPlayer && root.flyoutInteractiveOnScreen(modelData)
+    shortcutInhibitionActive: menuWindow.keyboardInputActive && mediaPlayerContent.searchInputFocused
     dismissActive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)
     exclusive: sidebarState.exclusive
     panelWidth: root.panelWidth
