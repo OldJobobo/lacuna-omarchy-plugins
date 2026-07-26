@@ -74,6 +74,8 @@ class AurPackagingTests(unittest.TestCase):
         self.assertIn("Dependency quickshell-git detected and implicitly satisfied", rehearsal)
         self.assertIn("Referenced QML module 'qs.Commons'", rehearsal)
         self.assertIn("Referenced QML module 'qs.Ui'", rehearsal)
+        self.assertIn("Referenced QML module 'Quickshell", rehearsal)
+        self.assertIn("Referenced library 'bash'", rehearsal)
 
 
 if __name__ == "__main__":

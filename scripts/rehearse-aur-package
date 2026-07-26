@@ -81,6 +81,10 @@ def main() -> int:
             allowed_warnings = (
                 "Referenced QML module 'qs.Commons'",
                 "Referenced QML module 'qs.Ui'",
+                # The package is an Omarchy host extension; Quickshell modules
+                # are supplied by Omarchy's concrete shell runtime provider.
+                "Referenced QML module 'Quickshell",
+                "Referenced library 'bash'",
                 "Referenced library 'python3'",
                 "Dependency bash detected and implicitly satisfied",
                 "Dependency qt6-declarative detected and implicitly satisfied",
