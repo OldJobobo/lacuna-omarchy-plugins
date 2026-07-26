@@ -1,6 +1,6 @@
 # TASK: Close the visual/UI regression test gaps
 
-Status: executed
+Status: executed; permanent frame-border/ambience/video namespace expectations superseded by `docs/architecture/layer-stacking.md`
 
 Executable plan for an LLM or developer. Gap analysis performed 2026-07-02
 against the real regressions that shipped that week; do not re-derive it.

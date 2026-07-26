@@ -146,9 +146,10 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("active: root.lacunaEnabled && root.frameBorder", menu_window)
         self.assertIn("flyoutVisible: root.flyoutVisibleOnScreen(modelData) && root.menuPanelControllerRef.flyoutProgress > 0.001", menu_window)
         self.assertIn("readonly property bool frameBorder: frameSettings.border === true", bar)
-        self.assertIn("LacunaFrameBorderWindow", bar)
-        self.assertIn("active: root.frameEnabled && root.frameBorder", bar)
+        self.assertIn("borderEnabled: root.frameBorder", bar)
         self.assertIn("borderColor: barTheme.seam", bar)
+        self.assertIn("LacunaFrameBorderWindow", frame)
+        self.assertIn("active: root.active && root.borderEnabled", frame)
         self.assertNotIn("property bool frameBorder: false", adapter)
         self.assertNotIn("property bool frameBorder: false", omarchy_bar)
 
@@ -164,9 +165,9 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('fillColor: "transparent"', border_window)
         self.assertIn("strokeColor: root.borderColor", border_window)
         self.assertIn("strokeWidth: root.borderWidth", border_window)
-        self.assertIn('WlrLayershell.namespace: "lacuna-bar-frame-border"', border_window)
-        self.assertIn("WlrLayershell.layer: WlrLayer.Overlay", border_window)
-        self.assertIn("mask: Region {}", border_window)
+        self.assertIn("Item {", border_window)
+        self.assertNotIn("PanelWindow", border_window)
+        self.assertNotIn("WlrLayershell.", border_window)
         self.assertIn("readonly property real borderInset: Math.max(0, borderWidth / 2)", border_window)
         self.assertIn("readonly property real borderRight: holeRight - borderInset", border_window)
         self.assertIn("readonly property real borderRadius: Math.max(minArcRadius, holeRadius - borderInset)", border_window)
@@ -2172,13 +2173,15 @@ class QmlContractTests(unittest.TestCase):
     def test_ambience_host_orders_siblings_and_suppresses_fallback_windows(self):
         host = read("lacuna.ambience-host/Overlay.qml")
         stack = read("lacuna.ambience-host/AmbienceStack.qml")
-        self.assertEqual(host.count("visible: true"), 2)
+        self.assertIn('readonly property string mappingMode: !effectsEnabled ? "none" : (foregroundOverlay ? "overlay" : "bottom")', host)
+        self.assertIn('visible: root.mappingMode === "bottom"', host)
+        self.assertIn('visible: root.mappingMode === "overlay"', host)
         self.assertEqual(host.count("mask: Region {}"), 2)
         self.assertIn('WlrLayershell.namespace: "lacuna-ambience-host-bottom"', host)
         self.assertIn('WlrLayershell.namespace: "lacuna-ambience-host-overlay"', host)
         self.assertIn("readonly property bool hostReady: true", host)
-        self.assertIn("paintEnabled: root.effectsEnabled && !root.foregroundOverlay", host)
-        self.assertIn("paintEnabled: root.effectsEnabled && root.foregroundOverlay", host)
+        self.assertIn('paintEnabled: root.mappingMode === "bottom"', host)
+        self.assertIn('paintEnabled: root.mappingMode === "overlay"', host)
         self.assertIn("function normalizeActiveEffects(source)", stack)
         self.assertIn("function zForEffect(effectId)", stack)
         self.assertIn("z: root.zForEffect(\"auroraDrift\")", stack)
@@ -2266,7 +2269,6 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.audio/Panel.qml": ["WlrLayer.Overlay"],
             "lacuna.aurora-drift/Overlay.qml": ["root.foregroundOverlay ? WlrLayer.Overlay : WlrLayer.Bottom"],
             "lacuna.background-vignette/Overlay.qml": ["root.ignoreBackgroundAnimationLayer ? WlrLayer.Background : WlrLayer.Bottom"],
-            "lacuna.bar/LacunaFrameBorderWindow.qml": ["WlrLayer.Overlay"],
             "lacuna.bar/LacunaFrameWindow.qml": ["WlrLayer.Top"],
             "lacuna.bar/OmarchyBar.qml": ["WlrLayer.Top", "WlrLayer.Overlay"],
             "lacuna.bluetooth/Panel.qml": ["WlrLayer.Overlay"],
@@ -2293,26 +2295,25 @@ class QmlContractTests(unittest.TestCase):
                 found[path.relative_to(ROOT).as_posix()] = layers
         self.assertEqual(policy, found)
 
-        # Surfaces that must sit UNDER later same-layer UI stay mapped
-        # permanently with content-gated paint; mapping them at toggle time
-        # stacks them above everything already on screen.
+        # The frame stays mapped for its shadow. Inactive ambience/video
+        # surfaces unmap, while the frame border is composed inside the frame.
         frame = read("lacuna.bar/LacunaFrameWindow.qml")
-        border_window = read("lacuna.bar/LacunaFrameBorderWindow.qml")
+        border_item = read("lacuna.bar/LacunaFrameBorderWindow.qml")
         ambience_host = read("lacuna.ambience-host/Overlay.qml")
-        self.assertEqual(ambience_host.count("visible: true"), 2)
-        self.assertNotIn("visible: root.effectsEnabled", ambience_host)
+        video = read("lacuna.media-player-video/Overlay.qml")
+        self.assertIn("visible: true", frame)
+        self.assertIn("readonly property bool isRenderable: active", frame)
+        self.assertNotIn("WlrLayershell.", border_item)
+        self.assertIn('visible: root.mappingMode === "bottom"', ambience_host)
+        self.assertIn('visible: root.mappingMode === "overlay"', ambience_host)
         self.assertEqual(ambience_host.count("mask: Region {}"), 2)
         self.assertIn("loadedEffectCount: root.loadedEffectCount()", ambience_host)
-        for window in [frame, border_window]:
-            self.assertIn("visible: true", window)
-            self.assertNotIn("visible: active", window)
-            self.assertIn("readonly property bool isRenderable: active", window)
+        self.assertIn("visible: true", video)
 
         # Startup mapping order inside the bar host: frame paint below the
         # bar, bar below the hosted menu/sidebar.
         bar = read("lacuna.bar/Bar.qml")
         self.assertLess(bar.index("LacunaFrameWindow {"), bar.index("OmarchyBarAdapter {"))
-        self.assertLess(bar.index("LacunaFrameBorderWindow {"), bar.index("OmarchyBarAdapter {"))
         self.assertLess(bar.index("OmarchyBarAdapter {"), bar.index("MenuWindow {"))
         # Frame reserve exclusive zones must never arrange before the bar at
         # shell start (they would inset the bar by frameThickness, leaving a
@@ -2366,7 +2367,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("property bool waitingForPlayerReady: false", overlay)
         self.assertIn("property bool wallpaperPositionRefreshPending: false", overlay)
         self.assertIn('property string wallpaperPositionRefreshKey: ""', overlay)
-        self.assertIn("readonly property int failureWatchdogDuration: handoffTimeoutDuration", overlay)
+        self.assertIn("readonly property int outputRegistrationTimeoutDuration: 5000", overlay)
         self.assertIn("readonly property bool wallpaperLayerVisible", overlay)
         self.assertIn("readonly property int normalFadeCoverRiseDuration: 300", overlay)
         self.assertIn("readonly property int normalSourceHoldDuration: 150", overlay)
@@ -2374,7 +2375,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("readonly property int normalExitFadeToBlackDuration: 350", overlay)
         self.assertIn("readonly property int normalExitFadeFromBlackDuration: 600", overlay)
         self.assertIn("readonly property int reducedMotionDuration: 75", overlay)
-        self.assertIn("readonly property int handoffTimeoutDuration: 5000", overlay)
+        self.assertIn("property var activeHandoffToken: null", overlay)
         self.assertIn("readonly property int adaptiveReadinessTimeoutDuration: 4000", overlay)
         self.assertIn("readonly property int exitFadeToBlackDuration", overlay)
         self.assertIn("readonly property int exitFadeFromBlackDuration", overlay)
@@ -2407,13 +2408,14 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("fadeCoverStartedAt = Date.now()", overlay)
         self.assertIn("fadeCoverRising = true", overlay)
         self.assertIn("function notePlayerReady()", overlay)
-        self.assertIn("function notePlayerError(message)", overlay)
+        self.assertIn("function notePlayerError(reason)", overlay)
         self.assertIn("function giveUpWallpaper(reason)", overlay)
         self.assertIn("function beginWallpaperExit()", overlay)
         self.assertIn("function clearWallpaperNow()", overlay)
         self.assertIn("exitClearTimer.restart()", overlay)
         self.assertIn("id: exitClearTimer", overlay)
-        self.assertIn("activeSource !== videoSource || activeRevisionKey !== sourceRevisionKey", overlay)
+        self.assertIn("var sourceAssignmentNeeded = activeSource !== videoSource", overlay)
+        self.assertIn("activeRevisionKey !== sourceRevisionKey || presentationRefreshNeeded", overlay)
         self.assertIn("wallpaperFadeGateDelay = fadeCoverDuration", overlay)
         self.assertIn("function fadeCoverRiseRemaining()", overlay)
         self.assertIn("var remainingFadeCoverRise = fadeCoverRiseRemaining()", overlay)
@@ -2421,8 +2423,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("service.updatePlaybackPosition()", overlay)
         self.assertIn("service.refreshBackgroundStream()", overlay)
         self.assertIn("id: wallpaperPositionRefreshTimer", overlay)
-        self.assertIn("id: failureWatchdog", overlay)
-        self.assertIn("root.giveUpWallpaper(\"handoff-timeout\")", overlay)
+        self.assertIn("id: outputRegistrationTimer", overlay)
+        self.assertIn("root.handleOutputRegistrationTimeout()", overlay)
         self.assertIn("wallpaperPositionRefreshKey !== refreshKey", overlay)
         self.assertIn("root.wallpaperPositionRefreshKey = root.videoSource + \"#\" + root.backgroundRequestRevision", overlay)
         self.assertIn("fadeRevealDelay = Math.max(0, mediaReadyMinimumHoldMs - elapsed)", overlay)
@@ -2446,11 +2448,11 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("var hardSeekAllowed = force || now - lastHardSeekAt >= hardSeekCooldownDuration", overlay)
         self.assertIn("if (!hardSeekAllowed) continue", overlay)
         self.assertIn("if (hardSeekFailureCount < 2) return", overlay)
-        self.assertIn("backgroundPlayer.play()", overlay)
-        self.assertIn("backgroundPlayer.pause()", overlay)
+        self.assertIn("player.play()", overlay)
+        self.assertIn("player.pause()", overlay)
         self.assertIn("root.syncVideoPosition(true)", overlay)
         self.assertIn("if (mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia)", overlay)
-        self.assertIn('if (root.activeSource === "") backgroundPlayer.stop()', overlay)
+        self.assertIn('if (root.activeSource === "") player.stop()', overlay)
         self.assertIn("function handleResolveFailure()", overlay)
         self.assertIn("id: resolveRetryTimer", overlay)
         self.assertIn("resolveRetryAttempts: root.resolveRetryAttempts", overlay)
@@ -3256,8 +3258,14 @@ class QmlContractTests(unittest.TestCase):
             "property string presentationMode: \"auto\"",
             "property string presentationState: \"inline\"",
             "readonly property bool desiredBackgroundVideo",
-            "function reportVideoReady(surface, revision, position)",
-            "function reportVideoFailure(surface, revision, reason)",
+            "function reportVideoLoading(surface, token, diagnostics)",
+            "function reportVideoReady(surface, revision, position, token, diagnostics)",
+            "function reportVideoFailure(surface, revision, reason, token, diagnostics)",
+            "function safePresentationFailureReason(reason)",
+            'property string presentationErrorText: ""',
+            "presentationError: root.presentationErrorText",
+            'property string handoffPhase: "idle"',
+            "property bool rendererHandoffDeadlineActive: false",
             "resolvingBackground = false",
             "backgroundStreamUrl = \"\"",
             "backgroundRequestUrl = \"\"",
@@ -3414,7 +3422,14 @@ class QmlContractTests(unittest.TestCase):
         # seeks are not re-issued or judged as drift, and the watchdog only
         # suppresses after repeated failed corrections.
         self.assertIn("if (localPreviewVisible) previewSuppressed = false", tile)
-        self.assertIn('source: root.previewVideoActive && root.localPreviewVisible ? root.previewUrl : ""', tile)
+        self.assertIn('readonly property string desiredPreviewSource: previewRendererActive && localPreviewVisible ? previewUrl : ""', tile)
+        self.assertIn("readonly property bool previewRendererActive: playbackLoaded && previewVideoActive", tile)
+        self.assertIn("function syncPreviewSource()", tile)
+        self.assertIn('service.reportVideoLoading("inline", activePreviewHandoffToken', tile)
+        self.assertIn("id: previewPlayerLoader", tile)
+        self.assertIn("function inlineSourceGenerationIsCurrent(player)", tile)
+        self.assertIn("onPresentationRevisionChanged: syncPreviewSource()", tile)
+        self.assertIn('resetPreviewTelemetry("stopped")', tile)
         self.assertIn("property int previewDriftStrikes: 0", tile)
         self.assertIn("previewDriftStrikes += 1", tile)
         self.assertIn("if (previewDriftStrikes === 2)", tile)

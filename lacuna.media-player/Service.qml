@@ -5,6 +5,7 @@ import QtQuick
 Item {
   id: root
 
+  readonly property string serviceInstanceId: Date.now() + "-" + Math.round(Math.random() * 1000000000)
   property string omarchyPath: ""
   property var shell: null
   property var manifest: null
@@ -28,6 +29,7 @@ Item {
   property bool workerPlayRecoveryPending: false
   property int workerRestartAttempts: 0
   property string workerErrorText: ""
+  property string presentationErrorText: ""
   property int suppressStateReloads: 0
   property string lastWrittenStatePayload: ""
   property bool acceptNextStateReload: false
@@ -96,8 +98,17 @@ Item {
   property bool backgroundResolveFailed: false
   property int videoResolveRevision: 0
   property int activeVideoResolveRevision: -1
+  property int previewResolveGeneration: 0
+  property int backgroundResolveGeneration: 0
   property int presentationRevision: 0
   property string pendingHandoffSurface: ""
+  property string handoffPhase: "idle"
+  property var activeHandoffToken: null
+  property var handoffDiagnostics: ({})
+  property string handoffLastEvent: "idle"
+  property int handoffLoadingAttempts: 0
+  property bool rendererHandoffDeadlineActive: false
+  property int recoveryPresentationRevision: -1
   property var streamUrlCache: ({})
   readonly property int streamUrlCacheTtlMs: 10 * 60 * 1000
   readonly property int streamUrlCacheMaxEntries: 24
@@ -1046,6 +1057,7 @@ Item {
       }
       return
     }
+    previewResolveGeneration += 1
     previewRequestUrl = url
     previewStreamUrl = ""
     resolvingPreview = true
@@ -1085,6 +1097,7 @@ Item {
       backgroundRequestRevision += 1
       return
     }
+    backgroundResolveGeneration += 1
     backgroundRequestUrl = url
     backgroundStreamUrl = ""
     backgroundResolveFailed = false
@@ -1417,80 +1430,311 @@ Item {
     if (presentationMode === "auto") presentationReconcileTimer.restart()
   }
 
+  function expectedHandoffRequestRevision(surface) {
+    return String(surface || "") === "background" ? backgroundRequestRevision : videoResolveRevision
+  }
+
+  function normalizedHandoffToken(token, surface) {
+    if (!token || typeof token !== "object") return null
+    var name = String(token.surface || surface || "")
+    var playback = Number(token.playbackRevision)
+    var presentation = Number(token.presentationRevision)
+    var request = Number(token.requestRevision)
+    var source = Number(token.sourceRevision)
+    if ((name !== "inline" && name !== "background")
+        || !isFinite(playback) || !isFinite(presentation)
+        || !isFinite(request) || !isFinite(source) || source <= 0) return null
+    return {
+      surface: name,
+      playbackRevision: Math.round(playback),
+      presentationRevision: Math.round(presentation),
+      requestRevision: Math.round(request),
+      sourceRevision: Math.round(source)
+    }
+  }
+
+  function handoffTokensEqual(left, right) {
+    return left && right
+      && String(left.surface) === String(right.surface)
+      && Number(left.playbackRevision) === Number(right.playbackRevision)
+      && Number(left.presentationRevision) === Number(right.presentationRevision)
+      && Number(left.requestRevision) === Number(right.requestRevision)
+      && Number(left.sourceRevision) === Number(right.sourceRevision)
+  }
+
+  function handoffTokenIsCurrent(token, surface) {
+    var normalized = normalizedHandoffToken(token, surface)
+    if (!normalized) return false
+    return normalized.surface === String(surface || "")
+      && normalized.playbackRevision === playbackSessionRevision
+      && normalized.presentationRevision === presentationRevision
+      && normalized.requestRevision === expectedHandoffRequestRevision(normalized.surface)
+  }
+
+  function safeDiagnosticLabel(value, fallback) {
+    var text = String(value || "")
+    if (text === "" || text.length > 128 || text.indexOf("://") >= 0) return String(fallback || "")
+    return text
+  }
+
+  function safeDiagnosticCategory(value, allowed, fallback) {
+    var text = String(value || "")
+    return allowed.indexOf(text) >= 0 ? text : String(fallback || "unknown")
+  }
+
+  function safePresentationFailureReason(reason) {
+    var value = String(reason || "").toLowerCase()
+    var allowed = [
+      "adaptive-readiness-timeout", "adaptive-error", "adaptive-seek-correction",
+      "renderer-retry", "renderer-timeout", "output-registration-timeout",
+      "resolve-failed", "invalid-media", "player-error", "seek-correction",
+      "position-convergence-failed"
+    ]
+    if (allowed.indexOf(value) >= 0) return value
+    if (value.indexOf("timed out") >= 0 || value.indexOf("timeout") >= 0) return "renderer-timeout"
+    return "player-error"
+  }
+
+  function safeHandoffDiagnostics(source) {
+    var value = source && typeof source === "object" ? source : ({})
+    var safeStages = ["covering", "loading-renderer", "converging-outputs", "presented", "failed", "status"]
+    var safePlaybackStates = ["missing", "playing", "paused", "stopped", "unknown"]
+    var safeMediaStatuses = ["missing", "no-media", "loading", "loaded", "buffering", "stalled", "buffered", "end", "invalid", "unknown"]
+    var outputs = []
+    var rows = Array.isArray(value.outputs) ? value.outputs : []
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i] && typeof rows[i] === "object" ? rows[i] : ({})
+      outputs.push({
+        name: safeDiagnosticLabel(row.name, "unknown-output"),
+        registered: row.registered === true,
+        sourceMatched: row.sourceMatched === true,
+        ready: row.ready === true,
+        playbackState: safeDiagnosticCategory(row.playbackState, safePlaybackStates, "unknown"),
+        mediaStatus: safeDiagnosticCategory(row.mediaStatus, safeMediaStatuses, "unknown"),
+        converged: row.converged === true,
+        error: row.error === true
+      })
+    }
+    return {
+      stage: safeDiagnosticCategory(value.stage, safeStages, "status"),
+      expectedOutputs: Math.max(0, Math.round(Number(value.expectedOutputs) || 0)),
+      registeredOutputs: Math.max(0, Math.round(Number(value.registeredOutputs) || 0)),
+      readyOutputs: Math.max(0, Math.round(Number(value.readyOutputs) || 0)),
+      outputs: outputs
+    }
+  }
+
+  function clearRendererDeadline() {
+    handoffTimeout.stop()
+    handoffTimeout.token = null
+    rendererHandoffDeadlineActive = false
+  }
+
+  function beginPresentationIntent(phase) {
+    clearRendererDeadline()
+    presentationRecoveryTimer.stop()
+    recoveryPresentationRevision = -1
+    presentationRevision += 1
+    activeHandoffToken = null
+    handoffDiagnostics = ({})
+    presentationErrorText = ""
+    handoffPhase = String(phase || "idle")
+    handoffLastEvent = "intent:" + handoffPhase + ":" + presentationRevision
+  }
+
+  function schedulePresentationRecovery() {
+    recoveryPresentationRevision = presentationRevision
+    presentationRecoveryTimer.restart()
+  }
+
+  function handleRendererHandoffTimeout(expiredToken) {
+    rendererHandoffDeadlineActive = false
+    if (!expiredToken || !handoffTokensEqual(activeHandoffToken, expiredToken)
+        || !handoffTokenIsCurrent(expiredToken, expiredToken.surface)) return false
+    var surface = String(expiredToken.surface || "")
+    if (surface === "background") {
+      return reportVideoFailure("background", playbackSessionRevision,
+        "Background video handoff timed out", expiredToken, handoffDiagnostics)
+    }
+    if (surface === "inline" && pendingHandoffSurface === "inline") {
+      pendingHandoffSurface = ""
+      presentationState = "background"
+      handoffPhase = "presented"
+      backgroundVideoEnabled = true
+      return true
+    }
+    return false
+  }
+
+  function settlePresentationRecovery(revision) {
+    if (Number(revision) !== presentationRevision) return false
+    presentationState = "inline"
+    handoffPhase = "presented"
+    recoveryPresentationRevision = -1
+    return true
+  }
+
   function reconcilePresentationState() {
     if (!playing || !hasTrack || !itemHasVideo(currentTrack)) {
+      beginPresentationIntent("idle")
       pendingHandoffSurface = ""
-      handoffTimeout.stop()
       presentationState = "inline"
       backgroundVideoEnabled = false
       return
     }
 
-    presentationRevision += 1
     if (desiredBackgroundVideo) {
       if (presentationState === "background" && backgroundSurfaceReady) {
+        beginPresentationIntent("presented")
+        pendingHandoffSurface = ""
         backgroundVideoEnabled = true
         return
       }
-      presentationState = "promoting"
+      beginPresentationIntent(backgroundStreamUrl === "" ? "resolving" : "source-ready")
+      // Publish the destination before presentationState changes. Surface
+      // bindings can report loading synchronously from that state change.
       pendingHandoffSurface = "background"
+      presentationState = "promoting"
       backgroundSurfaceReady = false
       backgroundVideoEnabled = true
       resolveBackground(currentTrack)
-      handoffTimeout.restart()
       return
     }
 
     if (presentationState === "background" || presentationState === "promoting" || backgroundVideoEnabled) {
-      presentationState = "demoting"
+      beginPresentationIntent("exiting")
+      if (!inlineSurfaceAvailable) {
+        // Forced inline mode with no visible inline renderer must still remove
+        // the desktop wallpaper. The overlay performs its normal covered exit;
+        // there is no destination renderer to wait for.
+        pendingHandoffSurface = ""
+        presentationState = "inline"
+        backgroundVideoEnabled = false
+        backgroundSurfaceReady = false
+        handoffLastEvent = "inline-without-surface:" + presentationRevision
+        return
+      }
+      // The inline tile can recreate and report its source synchronously when
+      // demoting becomes visible; accept that report against the new intent.
       pendingHandoffSurface = "inline"
+      presentationState = "demoting"
       if (previewStreamUrl === "" && !resolvingPreview) resolvePreview(currentTrack)
-      handoffTimeout.restart()
       return
     }
 
+    beginPresentationIntent("presented")
     pendingHandoffSurface = ""
     presentationState = "inline"
     backgroundVideoEnabled = false
   }
 
-  function reportVideoReady(surface, revision, position) {
+  function reportVideoCovering(surface, playbackRevision, presentation, requestRevision, diagnostics) {
     var name = String(surface || "")
-    if (Number(revision) !== playbackSessionRevision) return
+    if (pendingHandoffSurface !== name
+        || Number(playbackRevision) !== playbackSessionRevision
+        || Number(presentation) !== presentationRevision
+        || Number(requestRevision) !== expectedHandoffRequestRevision(name)) return false
+    handoffDiagnostics = safeHandoffDiagnostics(diagnostics)
+    handoffPhase = "covering"
+    return true
+  }
+
+  function reportVideoLoading(surface, token, diagnostics) {
+    handoffLoadingAttempts += 1
+    var name = String(surface || "")
+    var normalized = normalizedHandoffToken(token, name)
+    if (pendingHandoffSurface !== name || !handoffTokenIsCurrent(normalized, name)) return false
+    if (handoffTokensEqual(activeHandoffToken, normalized)) {
+      handoffDiagnostics = safeHandoffDiagnostics(diagnostics)
+      if (handoffDiagnostics.stage === "converging-outputs") handoffPhase = "converging-outputs"
+      return true
+    }
+    if (activeHandoffToken
+        && String(activeHandoffToken.surface) === normalized.surface
+        && Number(activeHandoffToken.playbackRevision) === normalized.playbackRevision
+        && Number(activeHandoffToken.presentationRevision) === normalized.presentationRevision
+        && Number(activeHandoffToken.requestRevision) === normalized.requestRevision
+        && normalized.sourceRevision <= Number(activeHandoffToken.sourceRevision)) return false
+    activeHandoffToken = normalized
+    handoffLastEvent = "loading:" + name + ":" + normalized.sourceRevision
+    handoffDiagnostics = safeHandoffDiagnostics(diagnostics)
+    handoffPhase = "loading-renderer"
+    handoffTimeout.token = normalized
+    rendererHandoffDeadlineActive = true
+    handoffTimeout.restart()
+    return true
+  }
+
+  function reportVideoReady(surface, revision, position, token, diagnostics) {
+    var name = String(surface || "")
+    if (Number(revision) !== playbackSessionRevision) return false
+    var normalized = normalizedHandoffToken(token, name)
+    if (pendingHandoffSurface === name) {
+      if (!handoffTokenIsCurrent(normalized, name) || !handoffTokensEqual(activeHandoffToken, normalized)) return false
+    } else if (normalized && (!handoffTokenIsCurrent(normalized, name)
+               || (activeHandoffToken && !handoffTokensEqual(activeHandoffToken, normalized)))) {
+      return false
+    }
     if (isFinite(Number(position)) && Number(position) >= 0) {
       var correction = noteSurfacePosition(name, Number(position))
-      if (correction.action !== "none") return
+      if (correction.action !== "none") {
+        handoffPhase = "converging-outputs"
+        handoffLastEvent = "converging:" + name + ":" + (normalized ? normalized.sourceRevision : -1)
+        return false
+      }
     }
+    handoffDiagnostics = safeHandoffDiagnostics(diagnostics)
     if (name === "background") {
       backgroundSurfaceReady = true
       if (pendingHandoffSurface === "background" && desiredBackgroundVideo) {
         pendingHandoffSurface = ""
-        handoffTimeout.stop()
+        clearRendererDeadline()
+        presentationRecoveryTimer.stop()
         presentationState = "background"
+        presentationErrorText = ""
+        handoffPhase = "presented"
+        handoffLastEvent = "ready:background:" + normalized.sourceRevision
       }
-      return
+      return true
     }
     if (name === "inline" && pendingHandoffSurface === "inline") {
       pendingHandoffSurface = ""
-      handoffTimeout.stop()
+      clearRendererDeadline()
+      presentationRecoveryTimer.stop()
       presentationState = "inline"
+      presentationErrorText = ""
       backgroundVideoEnabled = false
       backgroundSurfaceReady = false
+      handoffPhase = "presented"
+      handoffLastEvent = "ready:inline:" + normalized.sourceRevision
+      return true
     }
+    return name === "inline"
   }
 
-  function reportVideoFailure(surface, revision, reason) {
-    if (Number(revision) !== playbackSessionRevision) return
+  function reportVideoFailure(surface, revision, reason, token, diagnostics) {
+    if (Number(revision) !== playbackSessionRevision) return false
     var name = String(surface || "")
-    var failureReason = String(reason || "")
-    var recoverableAdaptiveFailure = name === "background" && failureReason.indexOf("adaptive-") === 0
+    var normalized = normalizedHandoffToken(token, name)
+    if (normalized) {
+      if (!handoffTokenIsCurrent(normalized, name)) return false
+      if (activeHandoffToken && !handoffTokensEqual(activeHandoffToken, normalized)) return false
+      if (!activeHandoffToken) activeHandoffToken = normalized
+    } else if (pendingHandoffSurface === name || activeHandoffToken) {
+      return false
+    }
+    handoffDiagnostics = safeHandoffDiagnostics(diagnostics)
+    clearRendererDeadline()
+    var failureReason = safePresentationFailureReason(reason)
+    var recoverableAdaptiveFailure = name === "background"
+      && (failureReason.indexOf("adaptive-") === 0 || failureReason === "renderer-retry")
     if (recoverableAdaptiveFailure) {
       presentationState = "recovering"
+      handoffPhase = "recovering"
       pendingHandoffSurface = "background"
       backgroundVideoEnabled = true
-      handoffTimeout.restart()
-      workerErrorText = failureReason
-      return
+      presentationErrorText = failureReason
+      return true
     }
     if (name === "inline"
         && progressivePreviewStreamUrl !== ""
@@ -1498,18 +1742,19 @@ Item {
       previewStreamUrl = progressivePreviewStreamUrl
       if (pendingHandoffSurface === "inline") {
         presentationState = "recovering"
+        handoffPhase = "recovering"
         backgroundVideoEnabled = true
-        handoffTimeout.restart()
       }
-      workerErrorText = failureReason
-      return
+      presentationErrorText = failureReason
+      return true
     }
     if (name === "inline" && pendingHandoffSurface === "inline") {
-      presentationState = "recovering"
+      pendingHandoffSurface = ""
+      presentationState = "background"
+      handoffPhase = "presented"
       backgroundVideoEnabled = true
-      handoffTimeout.restart()
-      workerErrorText = failureReason
-      return
+      presentationErrorText = failureReason
+      return true
     }
     if (name === "background") {
       backgroundResolveFailed = true
@@ -1517,15 +1762,16 @@ Item {
     }
     if (pendingHandoffSurface === name || name === "background") {
       presentationState = "recovering"
+      handoffPhase = "recovering"
       pendingHandoffSurface = ""
-      handoffTimeout.stop()
       if (name === "background") {
         presentationFallbackInline = true
         backgroundVideoEnabled = false
       }
-      presentationRecoveryTimer.restart()
+      schedulePresentationRecovery()
     }
-    if (failureReason !== "") workerErrorText = failureReason
+    if (failureReason !== "") presentationErrorText = failureReason
+    return true
   }
 
   function noteSurfacePosition(surface, positionSeconds) {
@@ -1594,31 +1840,70 @@ Item {
   }
 
   function stop() {
+    var cancelledVideoRequest = activeVideoResolveRevision
+    if (workerOperational && cancelledVideoRequest >= 0)
+      postWorker({ type: "cancel", requestId: cancelledVideoRequest })
     sendCommand(["quit"])
+
+    // Invalidate every asynchronous playback/video result before clearing the
+    // public stopped state. Worker events carry playbackSessionRevision;
+    // legacy resolver completions are guarded by the request URLs below.
+    playbackSessionRevision += 1
+    videoResolveRevision += 1
+    activeVideoResolveRevision = -1
+    previewResolveGeneration += 1
+    backgroundResolveGeneration += 1
+    previewRequestUrl = ""
+    backgroundRequestUrl = ""
+    previewStartTimer.stop()
+    backgroundStartTimer.stop()
+    if (previewProc.running) previewProc.running = false
+    if (backgroundProc.running) backgroundProc.running = false
+
     pendingBackgroundEnable = false
     backgroundEnableFallback.stop()
+    presentationReconcileTimer.stop()
+    presentationRecoveryTimer.stop()
     backgroundVideoEnabled = false
+    backgroundSurfaceReady = false
+    presentationFallbackInline = false
     presentationState = "inline"
     pendingHandoffSurface = ""
-    handoffTimeout.stop()
+    handoffPhase = "idle"
+    activeHandoffToken = null
+    handoffDiagnostics = ({})
+    recoveryPresentationRevision = -1
+    clearRendererDeadline()
     backgroundOwnsAudio = false
     backgroundPlaybackSocket = ""
+
+    previewStreamUrl = ""
+    adaptivePreviewStreamUrl = ""
+    progressivePreviewStreamUrl = ""
     backgroundStreamUrl = ""
     adaptiveBackgroundStreamUrl = ""
     progressiveBackgroundStreamUrl = ""
-    backgroundRequestUrl = ""
     backgroundResolveFailed = false
+    resolvingPreview = false
+    resolvingBackground = false
+    previewTelemetry = ({ loaded: false })
+
     playing = false
     paused = false
+    playbackPosition = 0
     playbackDuration = 0
     playbackSamplePosition = 0
     playbackSampledAtMs = 0
+    playbackSamplePaused = false
+    playbackStartedAtMs = 0
+    playbackProbeFailures = 0
     playbackEndHandled = false
-    playbackSessionRevision += 1
     workerPlayPending = false
     workerPlayRecoveryPending = false
-    resolvingPreview = false
-    resolvingBackground = false
+    commandRunning = false
+    errorText = ""
+    workerErrorText = ""
+    presentationErrorText = ""
     status = statusText()
   }
 
@@ -1870,6 +2155,12 @@ Item {
     } else {
       playing = true
     }
+    if (!playing && !paused) {
+      playbackPosition = 0
+      playbackSamplePosition = 0
+      playbackSampledAtMs = 0
+      playbackSamplePaused = false
+    }
     if (playing) status = paused ? "paused" : "playing"
   }
 
@@ -1920,9 +2211,10 @@ Item {
       return
     }
     if (type === "error") {
-      workerErrorText = String(payload.error || payload.message || "Media worker error")
       var errorRevision = payload.revision === undefined ? playbackSessionRevision : Number(payload.revision)
-      if (String(payload.scope || "") === "playback" && errorRevision === playbackSessionRevision && playing) {
+      if (payload.revision !== undefined && errorRevision !== playbackSessionRevision) return
+      workerErrorText = String(payload.error || payload.message || "Media worker error")
+      if (String(payload.scope || "") === "playback" && playing) {
         workerPlayPending = false
         workerPlayRecoveryPending = false
         markPlaybackFailed(workerErrorText)
@@ -1980,6 +2272,14 @@ Item {
     scheduleMediaPlayerSettingsSave()
   }
   onBackgroundVideoEnabledChanged: if (backgroundVideoEnabled && pendingBackgroundEnable) updatePlaybackPosition()
+  onBackgroundStreamUrlChanged: {
+    if (pendingHandoffSurface === "background" && backgroundStreamUrl !== "" && handoffPhase === "resolving")
+      handoffPhase = "source-ready"
+  }
+  onPreviewStreamUrlChanged: {
+    if (pendingHandoffSurface === "inline" && previewStreamUrl !== "" && handoffPhase === "resolving")
+      handoffPhase = "source-ready"
+  }
   onJellyfinConfiguredChanged: {
     if (!jellyfinConfigured && providerFilter === "jellyfin") setProviderFilter("all")
     if (pendingDefaultSuggestions && (ytdlpAvailable || jellyfinConfigured)) loadDefaultSuggestions()
@@ -2077,25 +2377,17 @@ Item {
 
   Timer {
     id: handoffTimeout
+    property var token: null
     interval: 5000
     repeat: false
-    onTriggered: {
-      var surface = root.pendingHandoffSurface
-      if (surface === "background") {
-        root.reportVideoFailure("background", root.playbackSessionRevision, "Background video handoff timed out")
-      } else if (surface === "inline") {
-        root.pendingHandoffSurface = ""
-        root.presentationState = "background"
-        root.backgroundVideoEnabled = true
-      }
-    }
+    onTriggered: root.handleRendererHandoffTimeout(token)
   }
 
   Timer {
     id: presentationRecoveryTimer
     interval: root.lacunaSettings && root.lacunaSettings.reduceMotion === true ? 75 : 350
     repeat: false
-    onTriggered: root.presentationState = "inline"
+    onTriggered: root.settlePresentationRecovery(root.recoveryPresentationRevision)
   }
 
   Timer {
@@ -2194,6 +2486,7 @@ Item {
         return
       }
       previewProc.requestUrl = root.previewRequestUrl
+      previewProc.requestGeneration = root.previewResolveGeneration
       previewProc.output = ""
       previewProc.command = [previewScript, "--config-json", root.youtubeConfigJson, root.previewRequestUrl]
       previewProc.running = true
@@ -2230,6 +2523,7 @@ Item {
         return
       }
       backgroundProc.requestUrl = root.backgroundRequestUrl
+      backgroundProc.requestGeneration = root.backgroundResolveGeneration
       backgroundProc.output = ""
       backgroundProc.command = [backgroundScript, "--config-json", root.youtubeConfigJson, root.backgroundRequestUrl]
       backgroundProc.running = true
@@ -2438,12 +2732,14 @@ Item {
     id: previewProc
     property string output: ""
     property string requestUrl: ""
+    property int requestGeneration: -1
 
     stdout: SplitParser {
       onRead: function(data) { previewProc.output += data }
     }
 
     onExited: function(exitCode) {
+      if (previewProc.requestGeneration !== root.previewResolveGeneration) return
       if (previewProc.requestUrl !== root.previewRequestUrl || previewProc.requestUrl !== root.trackUrl(root.currentTrack)) return
       root.resolvingPreview = false
       if (exitCode !== 0) {
@@ -2507,12 +2803,14 @@ Item {
     id: backgroundProc
     property string output: ""
     property string requestUrl: ""
+    property int requestGeneration: -1
 
     stdout: SplitParser {
       onRead: function(data) { backgroundProc.output += data }
     }
 
     onExited: function(exitCode) {
+      if (backgroundProc.requestGeneration !== root.backgroundResolveGeneration) return
       if (backgroundProc.requestUrl !== root.backgroundRequestUrl || backgroundProc.requestUrl !== root.trackUrl(root.currentTrack)) return
       root.resolvingBackground = false
       if (exitCode !== 0) {
@@ -2777,6 +3075,7 @@ Item {
     function status(): string {
       return JSON.stringify({
         available: root.available,
+        serviceInstanceId: root.serviceInstanceId,
         mpv: root.mpvAvailable,
         ytdlp: root.ytdlpAvailable,
         status: root.status,
@@ -2786,9 +3085,19 @@ Item {
         workerReady: root.workerReady,
         workerConfigured: root.workerConfigured,
         workerError: root.workerErrorText,
+        presentationError: root.presentationErrorText,
         presentationMode: root.presentationMode,
         presentationState: root.presentationState,
+        handoffPhase: root.handoffPhase,
+        presentationRevision: root.presentationRevision,
+        pendingHandoffSurface: root.pendingHandoffSurface,
+        rendererHandoffDeadlineActive: root.rendererHandoffDeadlineActive,
+        activeHandoffToken: root.activeHandoffToken,
+        handoffDiagnostics: root.handoffDiagnostics,
+        handoffLastEvent: root.handoffLastEvent,
+        handoffLoadingAttempts: root.handoffLoadingAttempts,
         desiredBackgroundVideo: root.desiredBackgroundVideo,
+        inlineSurfaceAvailable: root.inlineSurfaceAvailable,
         videoQuality: root.videoQuality,
         providerFilter: root.providerFilter,
         providerStates: root.providerStates,
@@ -2809,6 +3118,8 @@ Item {
         backgroundOwnsAudio: root.backgroundOwnsAudio,
         backgroundPlaybackSocket: root.backgroundPlaybackSocket,
         backgroundRequestRevision: root.backgroundRequestRevision,
+        playbackSessionRevision: root.playbackSessionRevision,
+        videoResolveRevision: root.videoResolveRevision,
         queueLength: root.queue.length,
         favoritesLength: root.favoritesLength,
         refreshingFavorites: root.refreshingFavorites,
@@ -2860,6 +3171,11 @@ Item {
 
     function playPause(): string {
       root.togglePause()
+      return status()
+    }
+
+    function stop(): string {
+      root.stop()
       return status()
     }
 
@@ -2921,6 +3237,7 @@ Item {
     function toggleBackgroundVideo(): string { return mediaPlayerIpc.toggleBackgroundVideo() }
     function refreshBackgroundStream(): string { return mediaPlayerIpc.refreshBackgroundStream() }
     function playPause(): string { return mediaPlayerIpc.playPause() }
+    function stop(): string { return mediaPlayerIpc.stop() }
     function playNext(): string { return mediaPlayerIpc.playNext() }
     function playFavoriteIndex(index: string): string { return mediaPlayerIpc.playFavoriteIndex(index) }
     function playUrl(url: string): string { return mediaPlayerIpc.playUrl(url) }

@@ -238,10 +238,9 @@ Item {
     id: barTheme
   }
 
-  // Declaration order is mapping order, and within a Wayland layer stacking
-  // is mapping order: the always-mapped frame surfaces must be created
-  // before the bar (and the hosted menu below) so the bar and sidebar
-  // render above the frame paint.
+  // Declaration order is mapping order. The single always-mapped Top frame
+  // surface owns fill, shadow, and optional border paint and is created before
+  // the bar and hosted Overlay menu.
   Variants {
     model: root.validBarScreens
 
@@ -265,29 +264,8 @@ Item {
       rightEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && hostedMenu.panelOnRight
       leftOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
       rightOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
-    }
-  }
-
-  Variants {
-    model: root.validBarScreens
-
-    LacunaFrameBorderWindow {
-      required property var modelData
-
-      targetScreen: modelData
-      active: root.frameEnabled && root.frameBorder
-      barPosition: root.position
-      barSize: root.barSize
-      frameThickness: root.frameThickness
-      frameRadius: root.frameRadius
-      cornerPieces: root.cornerPieces
+      borderEnabled: root.frameBorder
       borderColor: barTheme.seam
-      topEdgeOccupied: root.portraitCompanionEdge(modelData) === "top"
-      bottomEdgeOccupied: root.portraitCompanionEdge(modelData) === "bottom"
-      leftEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && !hostedMenu.panelOnRight
-      rightEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && hostedMenu.panelOnRight
-      leftOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
-      rightOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
       attachedFlyoutVisible: root.hostedFlyoutVisibleOnScreen(modelData)
       attachedFlyoutY: hostedMenu.frameBorderAttachedFlyoutYFor ? hostedMenu.frameBorderAttachedFlyoutYFor(modelData) : hostedMenu.frameBorderAttachedFlyoutY
       attachedFlyoutHeight: hostedMenu.frameBorderAttachedFlyoutHeightFor ? hostedMenu.frameBorderAttachedFlyoutHeightFor(modelData) : hostedMenu.frameBorderAttachedFlyoutHeight

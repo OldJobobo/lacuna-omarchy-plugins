@@ -1,6 +1,6 @@
 # TASK: Deterministic layer stacking for all Lacuna surfaces
 
-Status: complete
+Status: complete; permanent-mapping details superseded by the inactive-surface resource policy in `docs/architecture/layer-stacking.md`
 
 Implemented and live-verified 2026-07-02. Kept as the executable record of the
 layering rework so an LLM or developer can extend it without re-deriving the

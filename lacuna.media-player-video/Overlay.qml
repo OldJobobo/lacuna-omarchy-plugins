@@ -21,6 +21,8 @@ Item {
   readonly property string presentationState: service && service.presentationState !== undefined
     ? String(service.presentationState || "inline")
     : (service && service.backgroundVideoEnabled === true ? "background" : "inline")
+  readonly property string pendingHandoffSurface: service && service.pendingHandoffSurface !== undefined
+    ? String(service.pendingHandoffSurface || "") : ""
   readonly property bool desiredBackgroundVideo: {
     // Demotion keeps the background alive until the inline surface reports
     // ready. Promotion likewise loads behind the cover while inline remains.
@@ -58,6 +60,8 @@ Item {
   readonly property int playbackSessionRevision: service && service.playbackSessionRevision !== undefined
     ? Number(service.playbackSessionRevision) || 0
     : backgroundRequestRevision
+  readonly property int presentationRevision: service && service.presentationRevision !== undefined
+    ? Number(service.presentationRevision) || 0 : 0
   readonly property bool backgroundResolveFailed: service && service.backgroundResolveFailed === true
   readonly property string videoSource: backgroundVisible ? highResVideoSource : ""
   readonly property real startPosition: service && service.playbackPosition !== undefined ? Math.max(0, Number(service.playbackPosition) || 0) : 0
@@ -79,7 +83,7 @@ Item {
   readonly property int fadeOutDuration: transitionDuration(normalFadeInDuration)
   readonly property int exitFadeToBlackDuration: transitionDuration(normalExitFadeToBlackDuration)
   readonly property int exitFadeFromBlackDuration: transitionDuration(normalExitFadeFromBlackDuration)
-  readonly property int handoffTimeoutDuration: 5000
+  readonly property int outputRegistrationTimeoutDuration: 5000
   readonly property int adaptiveReadinessTimeoutDuration: 4000
   readonly property int hardSeekCooldownDuration: 1500
   readonly property int transitionSettleDelay: reducedMotion ? 5 : 24
@@ -99,6 +103,8 @@ Item {
   property string lastReportedFailureKey: ""
   property string activeRevisionKey: ""
   property int lastHandledResolveFailureRevision: -1
+  property int sourceRevision: 0
+  property var activeHandoffToken: null
   property bool fadeCoverVisible: false
   property real fadeCoverOpacity: 0
   property double fadeCoverStartedAt: 0
@@ -115,7 +121,6 @@ Item {
   property bool wallpaperPositionRefreshPending: false
   property string wallpaperPositionRefreshKey: ""
   readonly property int mediaReadyMinimumHoldMs: sourceHoldDuration
-  readonly property int failureWatchdogDuration: handoffTimeoutDuration
   readonly property bool wallpaperLayerVisible: wallpaperDesired || activeSource !== "" || exitTransitionActive || fadeCoverVisible
 
   function transitionDuration(normalDuration) {
@@ -160,6 +165,109 @@ Item {
       ready += 1
     }
     return expected > 0 && ready >= expected
+  }
+
+  function playerForScreen(screen) {
+    var name = screen && screen.name !== undefined ? String(screen.name) : ""
+    for (var i = 0; i < videoPlayers.length; i++) {
+      var player = videoPlayers[i]
+      var playerName = player && player.targetScreen && player.targetScreen.name !== undefined
+        ? String(player.targetScreen.name) : ""
+      if (player && (player.targetScreen === screen || (name !== "" && playerName === name))) return player
+    }
+    return null
+  }
+
+  function playbackStateCategory(player) {
+    if (!player) return "missing"
+    if (player.playbackState === MediaPlayer.PlayingState) return "playing"
+    if (player.playbackState === MediaPlayer.PausedState) return "paused"
+    if (player.playbackState === MediaPlayer.StoppedState) return "stopped"
+    return "unknown"
+  }
+
+  function mediaStatusCategory(player) {
+    if (!player) return "missing"
+    if (player.mediaStatus === MediaPlayer.NoMedia) return "no-media"
+    if (player.mediaStatus === MediaPlayer.LoadingMedia) return "loading"
+    if (player.mediaStatus === MediaPlayer.LoadedMedia) return "loaded"
+    if (player.mediaStatus === MediaPlayer.BufferingMedia) return "buffering"
+    if (player.mediaStatus === MediaPlayer.StalledMedia) return "stalled"
+    if (player.mediaStatus === MediaPlayer.BufferedMedia) return "buffered"
+    if (player.mediaStatus === MediaPlayer.EndOfMedia) return "end"
+    if (player.mediaStatus === MediaPlayer.InvalidMedia) return "invalid"
+    return "unknown"
+  }
+
+  function outputDiagnostics(stage) {
+    var screens = Quickshell.screens || []
+    var outputs = []
+    var registered = 0
+    var ready = 0
+    var target = Math.max(0, startPosition * 1000)
+    for (var i = 0; i < screens.length; i++) {
+      var screen = screens[i]
+      if (!outputMatches(screen)) continue
+      var player = playerForScreen(screen)
+      var sourceMatched = player !== null && String(player.source) === activeSource && activeSource !== ""
+      var converged = sourceMatched && Math.abs(target - Number(player.position || 0)) < 400
+      if (player) registered += 1
+      if (sourceMatched && player.lacunaReady && converged) ready += 1
+      outputs.push({
+        name: screen && screen.name !== undefined ? String(screen.name) : "",
+        registered: player !== null,
+        sourceMatched: sourceMatched,
+        ready: sourceMatched && player.lacunaReady === true,
+        playbackState: playbackStateCategory(player),
+        mediaStatus: mediaStatusCategory(player),
+        converged: converged,
+        error: player !== null && player.mediaStatus === MediaPlayer.InvalidMedia
+      })
+    }
+    return {
+      stage: String(stage || ""),
+      expectedOutputs: outputs.length,
+      registeredOutputs: registered,
+      readyOutputs: ready,
+      outputs: outputs
+    }
+  }
+
+  function makeHandoffToken(nextSourceRevision) {
+    return {
+      surface: "background",
+      playbackRevision: playbackSessionRevision,
+      presentationRevision: presentationRevision,
+      requestRevision: backgroundRequestRevision,
+      sourceRevision: Math.max(1, Number(nextSourceRevision) || 1)
+    }
+  }
+
+  function handoffTokenMatchesCurrent(token) {
+    return token
+      && Number(token.playbackRevision) === playbackSessionRevision
+      && Number(token.presentationRevision) === presentationRevision
+      && Number(token.requestRevision) === backgroundRequestRevision
+      && Number(token.sourceRevision) === sourceRevision
+  }
+
+  function ensureFailureToken() {
+    if (handoffTokenMatchesCurrent(activeHandoffToken)) return activeHandoffToken
+    sourceRevision += 1
+    activeHandoffToken = makeHandoffToken(sourceRevision)
+    return activeHandoffToken
+  }
+
+  function backgroundSourceGenerationIsCurrent(player) {
+    return player && handoffTokenMatchesCurrent(activeHandoffToken)
+      && Number(player.lacunaSourceRevision) === sourceRevision
+      && String(player.source || "") === activeSource
+  }
+
+  function reportLoading(stage) {
+    if (service && typeof service.reportVideoLoading === "function" && activeHandoffToken)
+      service.reportVideoLoading("background", activeHandoffToken,
+        outputDiagnostics(String(stage || "loading-renderer")))
   }
 
   function resolveFrameRect(screen) {
@@ -220,6 +328,7 @@ Item {
   }
   onPresentationModeChanged: syncWallpaper()
   onPresentationStateChanged: syncWallpaper()
+  onPresentationRevisionChanged: syncWallpaper()
   onDesiredBackgroundVideoChanged: syncWallpaper()
   onAdaptiveVideoSourceChanged: syncWallpaper()
   onProgressiveVideoSourceChanged: syncWallpaper()
@@ -260,9 +369,8 @@ Item {
   }
 
   function reportReady() {
-    var key = playbackSessionRevision + "#" + activeSource
+    var key = playbackSessionRevision + "#" + sourceRevision
     if (lastReportedReadyKey === key) return
-    lastReportedReadyKey = key
     var surfacePosition = startPosition
     for (var i = 0; i < videoPlayers.length; i++) {
       var player = videoPlayers[i]
@@ -271,17 +379,21 @@ Item {
       break
     }
     if (service && typeof service.reportVideoReady === "function") {
-      service.reportVideoReady("background", playbackSessionRevision, surfacePosition)
+      var accepted = service.reportVideoReady("background", playbackSessionRevision, surfacePosition,
+        activeHandoffToken, outputDiagnostics("presented"))
+      if (accepted === true) lastReportedReadyKey = key
     }
   }
 
   function reportFailure(reason) {
     var normalizedReason = String(reason || "unknown")
-    var key = playbackSessionRevision + "#" + activeSource + "#" + normalizedReason
+    var token = ensureFailureToken()
+    var key = playbackSessionRevision + "#" + token.sourceRevision + "#" + normalizedReason
     if (lastReportedFailureKey === key) return
     lastReportedFailureKey = key
     if (service && typeof service.reportVideoFailure === "function") {
-      service.reportVideoFailure("background", playbackSessionRevision, normalizedReason)
+      service.reportVideoFailure("background", playbackSessionRevision, normalizedReason,
+        token, outputDiagnostics("failed"))
     }
   }
 
@@ -299,7 +411,10 @@ Item {
     fadeCoverRising = true
     fadeCoverDuration = Math.max(1, Number(duration) || fadeCoverRiseDuration)
     fadeCoverOpacity = 1
-    failureWatchdog.restart()
+    if (service && typeof service.reportVideoCovering === "function")
+      service.reportVideoCovering("background", playbackSessionRevision, presentationRevision,
+        backgroundRequestRevision, outputDiagnostics("covering"))
+    if (!allMatchedPlayersRegistered()) outputRegistrationTimer.restart()
   }
 
   function fadeCoverRiseRemaining() {
@@ -315,7 +430,7 @@ Item {
 
   function releaseFadeCoverNow() {
     fadeRevealTimer.stop()
-    failureWatchdog.stop()
+    outputRegistrationTimer.stop()
     waitingForPlayerReady = false
     fadeCoverRising = false
     fadeCoverDuration = clearingWallpaperAfterExit ? exitFadeFromBlackDuration : fadeOutDuration
@@ -335,6 +450,7 @@ Item {
   function notePlayerReady() {
     if (!waitingForPlayerReady || activeSource === "" || exitTransitionActive || !wallpaperDesired) return
     if (!allMatchedPlayersReadyFor(activeSource) || !activePlayersConverged(400)) {
+      reportLoading("converging-outputs")
       syncVideoPosition(false)
       readyConvergenceTimer.restart()
       return
@@ -350,21 +466,22 @@ Item {
     releaseFadeCoverSoon()
   }
 
-  function notePlayerError(message) {
+  function notePlayerError(reason) {
     if (activeSource === "" || exitTransitionActive || !wallpaperDesired) return
     if (activeCandidateKind === "adaptive" && usingProgressiveFallback) return
-    console.warn("lacuna.media-player-video: player error:", message, "restartAttempts:", mediaRestartAttempts)
+    var category = String(reason || "player-error")
+    console.warn("lacuna.media-player-video: player failure:", category, "restartAttempts:", mediaRestartAttempts)
     if (activeCandidateKind === "adaptive" && switchToProgressive("adaptive-error")) return
     if (mediaRestartAttempts < 2 && service && typeof service.refreshBackgroundStream === "function") {
       mediaRestartAttempts += 1
       waitingForPlayerReady = true
+      reportFailure("renderer-retry")
       holdFadeCover(fadeCoverRiseDuration)
       service.refreshBackgroundStream()
-      failureWatchdog.restart()
       return
     }
-    reportFailure(message || "player-error")
-    giveUpWallpaper(message || "player-error")
+    reportFailure(category)
+    giveUpWallpaper(category)
   }
 
   function switchToProgressive(reason) {
@@ -405,7 +522,7 @@ Item {
     fadeRevealTimer.stop()
     adaptiveReadinessTimer.stop()
     driftValidationTimer.stop()
-    failureWatchdog.stop()
+    outputRegistrationTimer.stop()
     waitingForPlayerReady = false
     readyConvergenceTimer.stop()
     pendingGiveUpReason = String(reason || "unknown")
@@ -428,6 +545,7 @@ Item {
     activeSource = ""
     activeRevisionKey = ""
     activeCandidateKind = "none"
+    activeHandoffToken = null
     activeStartPosition = 0
     mediaRestartAttempts = 0
     wallpaperPositionRefreshPending = false
@@ -473,8 +591,11 @@ Item {
     }
 
     var sourceRevisionKey = videoSource + "#" + backgroundRequestRevision + "#" + playbackSessionRevision
-    if ((activeSource !== videoSource || activeRevisionKey !== sourceRevisionKey)
-        && !fadeCoverRising && fadeCoverOpacity <= 0.001) {
+    var presentationRefreshNeeded = pendingHandoffSurface === "background"
+      && (!activeHandoffToken || Number(activeHandoffToken.presentationRevision) !== presentationRevision)
+    var sourceAssignmentNeeded = activeSource !== videoSource
+      || activeRevisionKey !== sourceRevisionKey || presentationRefreshNeeded
+    if (sourceAssignmentNeeded && !fadeCoverRising && fadeCoverOpacity <= 0.001) {
       // Every appearance dips quickly to black and then reveals when the
       // player is actually ready — enabling the wallpaper feels the same as
       // a track change.
@@ -495,7 +616,11 @@ Item {
     // and target changes can lag behind the global cover transition. Never
     // assign a source until every currently matched output has registered its
     // player; each late player also owns a local opaque cover until ready.
-    if (!allMatchedPlayersRegistered()) return
+    if (!allMatchedPlayersRegistered()) {
+      if (!outputRegistrationTimer.running) outputRegistrationTimer.restart()
+      return
+    }
+    outputRegistrationTimer.stop()
 
     var refreshKey = sourceRevisionKey
     if (wallpaperPositionRefreshKey !== refreshKey && !wallpaperPositionRefreshPending && service && typeof service.updatePlaybackPosition === "function") {
@@ -505,15 +630,23 @@ Item {
       return
     }
 
-    activeSource = videoSource
-    activeRevisionKey = refreshKey
-    activeCandidateKind = adaptiveVideoSource !== "" && activeSource === adaptiveVideoSource && !usingProgressiveFallback
+    if (!sourceAssignmentNeeded) {
+      if (waitingForPlayerReady && anyPlayerReadyFor(activeSource)) notePlayerReady()
+      return
+    }
+
+    var nextSourceRevision = sourceRevision + 1
+    activeHandoffToken = makeHandoffToken(nextSourceRevision)
+    activeCandidateKind = adaptiveVideoSource !== "" && videoSource === adaptiveVideoSource && !usingProgressiveFallback
       ? "adaptive"
       : "progressive"
+    activeSource = videoSource
+    activeRevisionKey = refreshKey
+    sourceRevision = nextSourceRevision
     activeSourceAssignedAt = Date.now()
     activeStartPosition = Math.max(0, Math.floor(startPosition))
     waitingForPlayerReady = true
-    failureWatchdog.restart()
+    reportLoading()
     if (activeCandidateKind === "adaptive") adaptiveReadinessTimer.restart()
     else adaptiveReadinessTimer.stop()
     syncVideoPosition(true)
@@ -527,7 +660,7 @@ Item {
     wallpaperFadeGateTimer.stop()
     fadeRevealTimer.stop()
     fadeHideTimer.stop()
-    failureWatchdog.stop()
+    outputRegistrationTimer.stop()
     adaptiveReadinessTimer.stop()
     readyConvergenceTimer.stop()
     driftValidationTimer.stop()
@@ -551,6 +684,7 @@ Item {
     activeSource = ""
     activeRevisionKey = ""
     activeCandidateKind = "none"
+    activeHandoffToken = null
     activeStartPosition = 0
     activeSourceAssignedAt = 0
     mediaRestartAttempts = 0
@@ -558,6 +692,7 @@ Item {
     wallpaperPositionRefreshPending = false
     wallpaperPositionRefreshKey = ""
     wallpaperFadeGateTimer.stop()
+    outputRegistrationTimer.stop()
     adaptiveReadinessTimer.stop()
     driftValidationTimer.stop()
     readyConvergenceTimer.stop()
@@ -602,6 +737,14 @@ Item {
       driftValidationPending = true
       driftValidationTimer.restart()
     }
+  }
+
+  function handleOutputRegistrationTimeout() {
+    if (!wallpaperDesired || exitTransitionActive) return false
+    if (allMatchedPlayersRegistered()) return false
+    reportFailure("output-registration-timeout")
+    giveUpWallpaper("output-registration-timeout")
+    return true
   }
 
   function validateHardSeek() {
@@ -685,23 +828,10 @@ Item {
   }
 
   Timer {
-    id: failureWatchdog
-    interval: root.failureWatchdogDuration
+    id: outputRegistrationTimer
+    interval: root.outputRegistrationTimeoutDuration
     repeat: false
-    onTriggered: {
-      if (!root.wallpaperDesired || root.exitTransitionActive) return
-      // yt-dlp resolves can outlast the watchdog window (up to two 18s
-      // attempts); while one is in flight, keep waiting instead of dropping
-      // the wallpaper for a resolve that is about to succeed.
-      if (root.service && root.service.resolvingBackground === true) {
-        restart()
-        return
-      }
-      if (root.waitingForHighRes || root.waitingForPlayerReady || root.backgroundResolveFailed) {
-        root.reportFailure("handoff-timeout")
-        root.giveUpWallpaper("handoff-timeout")
-      }
-    }
+    onTriggered: root.handleOutputRegistrationTimeout()
   }
 
   Timer {
@@ -814,10 +944,23 @@ Item {
           id: videoContent
           anchors.fill: parent
           property bool localPlayerReady: false
+          readonly property var currentPlayer: backgroundPlayerLoader.item
           readonly property real localCoverOpacity: localPlayerReady ? root.fadeCoverOpacity : 1
 
-          function markLocalPlayerReady() {
-            backgroundPlayer.lacunaReady = true
+          function playerEventIsCurrent(player) {
+            return player && player === currentPlayer && root.backgroundSourceGenerationIsCurrent(player)
+          }
+
+          function recreatePlayer() {
+            localPlayerReady = false
+            backgroundPlayerLoader.active = false
+            backgroundPlayerLoader.generation = root.sourceRevision
+            backgroundPlayerLoader.active = true
+          }
+
+          function markLocalPlayerReady(player) {
+            if (!playerEventIsCurrent(player)) return
+            player.lacunaReady = true
             root.syncVideoPosition(true)
             localPlayerReady = true
             root.notePlayerReady()
@@ -834,49 +977,63 @@ Item {
             color: "transparent"
             clip: true
 
-            MediaPlayer {
-              id: backgroundPlayer
-              property var targetScreen: videoWindow.modelData
-              property bool lacunaReady: false
-              source: root.activeSource
-              videoOutput: backgroundOutput
-              audioOutput: AudioOutput {
-                muted: true
-                volume: 0
-              }
-              loops: MediaPlayer.Infinite
-              onSourceChanged: {
-                lacunaReady = false
-                videoContent.localPlayerReady = false
-                root.syncVideoPosition(true)
-                if (root.backgroundPlaying) play()
-              }
-              onPlaybackStateChanged: {
-                if (playbackState === MediaPlayer.PlayingState) {
-                  // A handoff can resume the same source without onSourceChanged.
-                  // Force a fresh lock to the live mpv clock in that case.
-                  videoContent.markLocalPlayerReady()
+            Loader {
+              id: backgroundPlayerLoader
+              property int generation: 0
+              active: true
+              sourceComponent: backgroundPlayerComponent
+            }
+
+            Component {
+              id: backgroundPlayerComponent
+
+              MediaPlayer {
+                id: backgroundPlayerInstance
+                property var targetScreen: videoWindow.modelData
+                property bool lacunaReady: false
+                readonly property int lacunaSourceRevision: backgroundPlayerLoader.generation
+                source: root.activeSource
+                videoOutput: backgroundOutput
+                audioOutput: AudioOutput {
+                  muted: true
+                  volume: 0
                 }
-                if (playbackState !== MediaPlayer.PlayingState) playbackRate = 1.0
-              }
-              onMediaStatusChanged: {
-                if (mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia) {
-                  videoContent.markLocalPlayerReady()
+                loops: MediaPlayer.Infinite
+                onSourceChanged: {
+                  lacunaReady = false
+                  videoContent.localPlayerReady = false
+                  root.syncVideoPosition(true)
+                  if (root.backgroundPlaying) play()
                 }
-                if (mediaStatus === MediaPlayer.InvalidMedia) root.notePlayerError("invalid-media")
-              }
-              onErrorOccurred: function(error, errorString) {
-                if (error !== MediaPlayer.NoError) root.notePlayerError(errorString)
-              }
-              Component.onCompleted: {
-                root.videoPlayers.push(backgroundPlayer)
-                root.syncVideoPosition(true)
-                root.syncWallpaper()
-                if (root.backgroundPlaying) play()
-              }
-              Component.onDestruction: {
-                var index = root.videoPlayers.indexOf(backgroundPlayer)
-                if (index >= 0) root.videoPlayers.splice(index, 1)
+                onPlaybackStateChanged: {
+                  if (!videoContent.playerEventIsCurrent(backgroundPlayerInstance)) return
+                  if (playbackState === MediaPlayer.PlayingState) {
+                    // A handoff can resume the same source without onSourceChanged.
+                    // Force a fresh lock to the live mpv clock in that case.
+                    videoContent.markLocalPlayerReady(backgroundPlayerInstance)
+                  }
+                  if (playbackState !== MediaPlayer.PlayingState) playbackRate = 1.0
+                }
+                onMediaStatusChanged: {
+                  if (!videoContent.playerEventIsCurrent(backgroundPlayerInstance)) return
+                  if (mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia)
+                    videoContent.markLocalPlayerReady(backgroundPlayerInstance)
+                  if (mediaStatus === MediaPlayer.InvalidMedia) root.notePlayerError("invalid-media")
+                }
+                onErrorOccurred: function(error, errorString) {
+                  if (videoContent.playerEventIsCurrent(backgroundPlayerInstance) && error !== MediaPlayer.NoError)
+                    root.notePlayerError("player-error")
+                }
+                Component.onCompleted: {
+                  root.videoPlayers.push(backgroundPlayerInstance)
+                  root.syncVideoPosition(true)
+                  root.syncWallpaper()
+                  if (root.backgroundPlaying) play()
+                }
+                Component.onDestruction: {
+                  var index = root.videoPlayers.indexOf(backgroundPlayerInstance)
+                  if (index >= 0) root.videoPlayers.splice(index, 1)
+                }
               }
             }
 
@@ -911,22 +1068,28 @@ Item {
 
           Connections {
             target: root
+            function onSourceRevisionChanged() { videoContent.recreatePlayer() }
             function onActiveSourceChanged() {
-              if (root.activeSource === "") backgroundPlayer.stop()
-              else if (root.backgroundPlaying) backgroundPlayer.play()
+              var player = videoContent.currentPlayer
+              if (!player) return
+              if (root.activeSource === "") player.stop()
+              else if (root.backgroundPlaying) player.play()
             }
             function onBackgroundPlayingChanged() {
+              var player = videoContent.currentPlayer
+              if (!player) return
               if (root.backgroundPlaying) {
                 root.syncVideoPosition(true)
-                backgroundPlayer.play()
+                player.play()
               } else {
-                backgroundPlayer.pause()
+                player.pause()
               }
             }
             function onWallpaperDesiredChanged() {
-              if (root.wallpaperDesired && root.backgroundPlaying) {
+              var player = videoContent.currentPlayer
+              if (player && root.wallpaperDesired && root.backgroundPlaying) {
                 root.syncVideoPosition(true)
-                backgroundPlayer.play()
+                player.play()
               }
             }
           }
@@ -967,6 +1130,9 @@ Item {
         backgroundVideoEnabled: root.service && root.service.backgroundVideoEnabled === true,
         presentationMode: root.presentationMode,
         presentationState: root.presentationState,
+        handoffPhase: root.service && root.service.handoffPhase !== undefined ? String(root.service.handoffPhase || "") : "",
+        rendererHandoffDeadlineActive: root.service && root.service.rendererHandoffDeadlineActive === true,
+        presentationError: root.service && root.service.presentationErrorText !== undefined ? String(root.service.presentationErrorText || "") : "",
         desiredBackgroundVideo: root.desiredBackgroundVideo,
         videoQuality: root.videoQuality,
         playing: root.service && root.service.playing === true,
@@ -991,17 +1157,23 @@ Item {
         fadeCoverOpacity: root.fadeCoverOpacity,
         fadeCoverDuration: root.fadeCoverDuration,
         fadeRevealDelay: root.fadeRevealDelay,
+        fadeCoverAgeMs: root.fadeCoverStartedAt > 0 ? Math.max(0, Date.now() - root.fadeCoverStartedAt) : 0,
         wallpaperLayerVisible: root.wallpaperLayerVisible,
         loadedPlayerCount: root.videoPlayers.length,
         expectedPlayerCount: root.expectedMatchedPlayerCount(),
         registeredPlayerCount: root.registeredMatchedPlayerCount(),
         matchedPlayersRegistered: root.allMatchedPlayersRegistered(),
         wallpaperFadeGateDelay: root.wallpaperFadeGateDelay,
-        failureWatchdogDuration: root.failureWatchdogDuration,
+        outputRegistrationTimeoutDuration: root.outputRegistrationTimeoutDuration,
+        outputDiagnostics: root.outputDiagnostics("status"),
+        activeHandoffToken: root.activeHandoffToken,
+        sourceRevision: root.sourceRevision,
         adaptiveReadinessTimeoutDuration: root.adaptiveReadinessTimeoutDuration,
         reducedMotion: root.reducedMotion,
         wallpaperPositionRefreshPending: root.wallpaperPositionRefreshPending,
-        wallpaperPositionRefreshKey: root.wallpaperPositionRefreshKey,
+        // Preserve the compatibility field without exposing the signed stream
+        // URL embedded in the internal refresh key.
+        wallpaperPositionRefreshKey: root.wallpaperPositionRefreshKey !== "" ? "set" : "",
         exitTransitionActive: root.exitTransitionActive,
         clearingWallpaperAfterExit: root.clearingWallpaperAfterExit,
         activeStartPosition: root.activeStartPosition,

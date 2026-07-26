@@ -21,6 +21,7 @@ Item {
     ? lacunaSettings.backgroundEffects : ({})
   readonly property bool effectsEnabled: settingsLoaded && backgroundEffects.enabled !== false
   readonly property bool foregroundOverlay: backgroundEffects.foregroundOverlay === true
+  readonly property string mappingMode: !effectsEnabled ? "none" : (foregroundOverlay ? "overlay" : "bottom")
   readonly property var activeEffects: Array.isArray(backgroundEffects.activeEffects)
     ? backgroundEffects.activeEffects
     : [String(backgroundEffects.activeEffect || backgroundEffects.selectedEffect || backgroundEffects.currentEffect || "trackingLines")]
@@ -94,7 +95,7 @@ Item {
       required property var modelData
 
       screen: modelData
-      visible: true
+      visible: root.mappingMode === "bottom"
       color: "transparent"
       WlrLayershell.namespace: "lacuna-ambience-host-bottom"
       WlrLayershell.layer: WlrLayer.Bottom
@@ -114,7 +115,7 @@ Item {
         shell: root.shell
         targetScreen: bottomWindow.modelData
         activeEffects: root.activeEffects
-        paintEnabled: root.effectsEnabled && !root.foregroundOverlay
+        paintEnabled: root.mappingMode === "bottom"
         Component.onCompleted: root.registerProductionStack(this)
         Component.onDestruction: root.unregisterProductionStack(this)
       }
@@ -129,7 +130,9 @@ Item {
       required property var modelData
 
       screen: modelData
-      visible: true
+      // True foreground mode: this dynamically mapped Overlay may paint above
+      // Overlay UI that was already mapped. Its empty mask remains pass-through.
+      visible: root.mappingMode === "overlay"
       color: "transparent"
       WlrLayershell.namespace: "lacuna-ambience-host-overlay"
       WlrLayershell.layer: WlrLayer.Overlay
@@ -149,7 +152,7 @@ Item {
         shell: root.shell
         targetScreen: overlayWindow.modelData
         activeEffects: root.activeEffects
-        paintEnabled: root.effectsEnabled && root.foregroundOverlay
+        paintEnabled: root.mappingMode === "overlay"
         Component.onCompleted: root.registerProductionStack(this)
         Component.onDestruction: root.unregisterProductionStack(this)
       }
@@ -165,10 +168,11 @@ Item {
         foregroundOverlay: root.foregroundOverlay,
         activeEffects: root.normalizedOrder(),
         loadedEffectCount: root.loadedEffectCount(),
+        mappingMode: root.mappingMode,
+        mappedSurfaceCount: root.mappingMode === "none" ? 0 : Quickshell.screens.length,
         z: root.zMap(),
-        bottomRenderable: root.effectsEnabled && !root.foregroundOverlay,
-        overlayRenderable: root.effectsEnabled && root.foregroundOverlay,
-        surfacesPermanentlyMapped: true
+        bottomRenderable: root.mappingMode === "bottom",
+        overlayRenderable: root.mappingMode === "overlay"
       })
     }
   }

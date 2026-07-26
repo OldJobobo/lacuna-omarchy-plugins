@@ -32,6 +32,12 @@ Item {
   property int previewDriftStrikes: 0
   property int previewLastSeekTarget: -1
   property double previewLastSeekAt: 0
+  property int previewSourceRevision: 0
+  property string assignedPreviewSource: ""
+  property bool previewLoadingReportPending: false
+  property bool previewLoadingAccepted: false
+  property var activePreviewHandoffToken: null
+  readonly property var previewPlayer: previewPlayerLoader.item
   property real videoReveal: hasTrack ? 1 : 0
   property real layoutReveal: hasTrack ? 1 : 0
 
@@ -76,6 +82,9 @@ Item {
     && service.lacunaSettings.reduceMotion === true
   readonly property bool previewActive: previewUrl !== ""
   readonly property bool previewVideoActive: previewActive && !previewSuppressed
+  readonly property bool previewRendererActive: playbackLoaded && previewVideoActive
+  readonly property string desiredPreviewSource: previewRendererActive && localPreviewVisible ? previewUrl : ""
+  readonly property bool previewSourceLoaded: previewPlayer !== null && String(previewPlayer.source || "") !== ""
   readonly property real playbackPosition: service && service.playbackPosition !== undefined ? Math.max(0, Number(service.playbackPosition) || 0) : 0
   readonly property int favoritesRevision: service && service.favoritesRevision !== undefined ? Number(service.favoritesRevision) : 0
   readonly property bool currentFavorite: favoritesRevision >= 0 && service && service.currentFavorite === true
@@ -83,6 +92,12 @@ Item {
   readonly property int streamVolume: service && service.volume !== undefined ? Number(service.volume) : 70
   readonly property int playbackRevision: service && service.playbackSessionRevision !== undefined
     ? Number(service.playbackSessionRevision) : 0
+  readonly property int presentationRevision: service && service.presentationRevision !== undefined
+    ? Number(service.presentationRevision) : 0
+  readonly property string pendingHandoffSurface: service && service.pendingHandoffSurface !== undefined
+    ? String(service.pendingHandoffSurface || "") : ""
+  readonly property int previewRequestRevision: service && service.videoResolveRevision !== undefined
+    ? Number(service.videoResolveRevision) : 0
   readonly property int tileInset: compact ? 8 : 10
   readonly property int previewWidth: Math.max(120, width - (tileInset * 2))
   readonly property int previewHeight: Math.round(previewWidth * 0.5625)
@@ -145,7 +160,7 @@ Item {
     previewLastSeekAt = 0
     previewLastTelemetryAt = Date.now()
     previewLastEvent = reason || "reset"
-    previewPlayer.playbackRate = 1
+    if (previewPlayer) previewPlayer.playbackRate = 1
   }
 
   function reportInlineAvailability() {
@@ -153,21 +168,125 @@ Item {
       service.setInlineSurfaceAvailable(root.visible && root.width > 0 && root.height > 0)
   }
 
-  function reportInlineReady() {
-    if (!service || typeof service.reportVideoReady !== "function" || !previewVideoActive || !localPreviewVisible)
+  function makeInlineHandoffToken(nextSourceRevision) {
+    return {
+      surface: "inline",
+      playbackRevision: playbackRevision,
+      presentationRevision: presentationRevision,
+      requestRevision: previewRequestRevision,
+      sourceRevision: Math.max(1, Number(nextSourceRevision) || 1)
+    }
+  }
+
+  function inlineHandoffDiagnostics(stage) {
+    var player = previewPlayer
+    var registered = player !== null && previewSourceLoaded
+    var ready = player !== null && previewCanSeek()
+    return {
+      stage: String(stage || ""),
+      expectedOutputs: localPreviewVisible ? 1 : 0,
+      registeredOutputs: registered ? 1 : 0,
+      readyOutputs: ready ? 1 : 0,
+      outputs: [{
+        name: "inline",
+        registered: registered,
+        sourceMatched: registered,
+        ready: ready,
+        playbackState: player ? playerStateName(player.playbackState) : "stopped",
+        mediaStatus: player ? mediaStatusName(player.mediaStatus) : "no-media",
+        converged: player ? Math.abs(player.position - Math.max(0, Math.round(playbackPosition * 1000))) < 400 : false,
+        error: player ? player.mediaStatus === MediaPlayer.InvalidMedia : false
+      }]
+    }
+  }
+
+  function inlineTokenIsCurrent() {
+    return activePreviewHandoffToken
+      && Number(activePreviewHandoffToken.playbackRevision) === playbackRevision
+      && Number(activePreviewHandoffToken.presentationRevision) === presentationRevision
+      && Number(activePreviewHandoffToken.requestRevision) === previewRequestRevision
+      && Number(activePreviewHandoffToken.sourceRevision) === previewSourceRevision
+  }
+
+  function inlineSourceGenerationIsCurrent(player) {
+    return player && inlineTokenIsCurrent()
+      && Number(player.lacunaSourceRevision) === previewSourceRevision
+      && String(player.source || "") === assignedPreviewSource
+  }
+
+  function previewEventIsCurrent(player) {
+    return player && player === previewPlayer && inlineSourceGenerationIsCurrent(player)
+  }
+
+  function recreatePreviewPlayer() {
+    previewPlayerLoader.active = false
+    previewPlayerLoader.generation = previewSourceRevision
+    previewPlayerLoader.active = true
+  }
+
+  function reportInlineLoading() {
+    if (!root.visible) return
+    if (previewLoadingReportPending && activePreviewHandoffToken && assignedPreviewSource !== ""
+        && service && typeof service.reportVideoLoading === "function") {
+      previewLoadingAccepted = service.reportVideoLoading("inline", activePreviewHandoffToken,
+        inlineHandoffDiagnostics("loading-renderer")) === true
+      // A presentation revision can reach this tile before the service has
+      // published pendingHandoffSurface. Keep the report pending and retry
+      // when that destination binding changes instead of losing the handoff.
+      previewLoadingReportPending = !previewLoadingAccepted
+    }
+  }
+
+  function finishPreviewPlayerLoad() {
+    if (!previewPlayer) return
+    reportInlineLoading()
+    syncPreviewPlayback()
+  }
+
+  function syncPreviewSource() {
+    var desired = String(desiredPreviewSource || "")
+    if (desired === "") {
+      if (assignedPreviewSource === "" && !activePreviewHandoffToken) return
+      activePreviewHandoffToken = null
+      assignedPreviewSource = ""
+      previewLoadingReportPending = false
+      recreatePreviewPlayer()
+      return
+    }
+    if (assignedPreviewSource === desired && inlineTokenIsCurrent()) return
+    previewSourceRevision += 1
+    activePreviewHandoffToken = makeInlineHandoffToken(previewSourceRevision)
+    assignedPreviewSource = desired
+    previewLoadingAccepted = false
+    previewLoadingReportPending = true
+    recreatePreviewPlayer()
+    // Loader onLoaded can be coalesced when an existing player is replaced in
+    // one event turn. Report the assigned generation directly as well; the
+    // service treats duplicate loading for the same token as idempotent.
+    reportInlineLoading()
+  }
+
+  function reportInlineReady(player) {
+    var renderer = player || previewPlayer
+    if (!previewEventIsCurrent(renderer) || !service || typeof service.reportVideoReady !== "function"
+        || !previewVideoActive || !localPreviewVisible)
       return
 
     var target = Math.max(0, Math.round(playbackPosition * 1000))
-    if (Math.abs(previewPlayer.position - target) < 400
-        && (previewPlayer.playbackState === MediaPlayer.PlayingState
-          || previewPlayer.mediaStatus === MediaPlayer.LoadedMedia
-          || previewPlayer.mediaStatus === MediaPlayer.BufferedMedia))
-      service.reportVideoReady("inline", playbackRevision, Math.max(0, Number(previewPlayer.position) || 0) / 1000)
+    if (Math.abs(renderer.position - target) < 400
+        && (renderer.playbackState === MediaPlayer.PlayingState
+          || renderer.mediaStatus === MediaPlayer.LoadedMedia
+          || renderer.mediaStatus === MediaPlayer.BufferedMedia))
+      service.reportVideoReady("inline", playbackRevision,
+        Math.max(0, Number(renderer.position) || 0) / 1000,
+        activePreviewHandoffToken, inlineHandoffDiagnostics("presented"))
   }
 
-  function reportInlineFailure(reason) {
-    if (service && typeof service.reportVideoFailure === "function")
-      service.reportVideoFailure("inline", playbackRevision, reason || "renderer")
+  function reportInlineFailure(reason, player) {
+    var renderer = player || previewPlayer
+    if (previewEventIsCurrent(renderer) && service && typeof service.reportVideoFailure === "function")
+      service.reportVideoFailure("inline", playbackRevision, reason || "renderer",
+        activePreviewHandoffToken, inlineHandoffDiagnostics("failed"))
   }
 
   function samplePreviewTelemetry(reason) {
@@ -187,7 +306,7 @@ Item {
 
   function previewDiagnosticPayload() {
     return {
-      loaded: true,
+      loaded: playbackLoaded && String(previewPlayer.source || "") !== "",
       available: available,
       hasTrack: hasTrack,
       playing: playing,
@@ -212,11 +331,37 @@ Item {
       lastTelemetryAgeMs: previewLastTelemetryAt > 0 ? Math.max(0, Math.round(Date.now() - previewLastTelemetryAt)) : 0,
       lastEvent: previewLastEvent,
       likelyFrozen: previewPlayer.playbackState === MediaPlayer.PlayingState && previewStablePositionTicks >= 4,
-      backgroundVideoEnabled: service && service.backgroundVideoEnabled === true
+      backgroundVideoEnabled: service && service.backgroundVideoEnabled === true,
+      serviceInstanceId: service && service.serviceInstanceId ? String(service.serviceInstanceId) : "",
+      presentationRevision: presentationRevision,
+      requestRevision: previewRequestRevision,
+      sourceRevision: previewSourceRevision,
+      tokenPresent: activePreviewHandoffToken !== null,
+      tokenPlaybackRevision: activePreviewHandoffToken ? Number(activePreviewHandoffToken.playbackRevision) : -1,
+      tokenPresentationRevision: activePreviewHandoffToken ? Number(activePreviewHandoffToken.presentationRevision) : -1,
+      tokenRequestRevision: activePreviewHandoffToken ? Number(activePreviewHandoffToken.requestRevision) : -1,
+      tokenSourceRevision: activePreviewHandoffToken ? Number(activePreviewHandoffToken.sourceRevision) : -1,
+      loadingReportPending: previewLoadingReportPending,
+      loadingAccepted: previewLoadingAccepted,
+      sourceAssigned: assignedPreviewSource !== "",
+      playerPresent: previewPlayer !== null,
+      tileVisible: root.visible
     }
   }
 
   function syncPreviewPlayback() {
+    if (!previewPlayer) return
+    if (!playbackLoaded) {
+      previewPositionSettleTimer.stop()
+      previewRecoveryTimer.stop()
+      previewPositionPending = false
+      previewRecoveryAttempts = 0
+      previewPlaybackStartedAt = 0
+      resetPreviewTelemetry("stopped")
+      previewPlayer.stop()
+      samplePreviewTelemetry("stopped")
+      return
+    }
     if (!previewVideoActive) {
       previewPositionSettleTimer.stop()
       previewRecoveryTimer.stop()
@@ -260,9 +405,9 @@ Item {
   }
 
   function previewCanSeek() {
-    return previewPlayer.mediaStatus === MediaPlayer.LoadedMedia
+    return previewPlayer && (previewPlayer.mediaStatus === MediaPlayer.LoadedMedia
       || previewPlayer.mediaStatus === MediaPlayer.BufferedMedia
-      || previewPlayer.playbackState === MediaPlayer.PlayingState
+      || previewPlayer.playbackState === MediaPlayer.PlayingState)
   }
 
   function previewBuffering() {
@@ -377,10 +522,21 @@ Item {
     syncPreviewPlayback()
     syncAdaptiveReadinessTimer()
   }
+  onPlaybackLoadedChanged: {
+    syncPreviewPlayback()
+    syncAdaptiveReadinessTimer()
+  }
   onPreviewActiveChanged: {
     syncPreviewPlayback()
     syncAdaptiveReadinessTimer()
   }
+  onDesiredPreviewSourceChanged: syncPreviewSource()
+  onPlaybackRevisionChanged: syncPreviewSource()
+  onPresentationRevisionChanged: syncPreviewSource()
+  onPendingHandoffSurfaceChanged: {
+    if (pendingHandoffSurface === "inline") reportInlineLoading()
+  }
+  onPreviewRequestRevisionChanged: syncPreviewSource()
   onPreviewUrlChanged: {
     previewSuppressed = false
     syncAdaptiveReadinessTimer()
@@ -396,11 +552,20 @@ Item {
     reportInlineAvailability()
   }
   onPlaybackPositionChanged: if (previewPositionPending) syncPreviewPosition(false)
-  onVisibleChanged: reportInlineAvailability()
+  onVisibleChanged: {
+    reportInlineAvailability()
+    if (visible) {
+      syncPreviewSource()
+      reportInlineLoading()
+    }
+  }
   onWidthChanged: reportInlineAvailability()
   onHeightChanged: reportInlineAvailability()
 
-  Component.onCompleted: reportInlineAvailability()
+  Component.onCompleted: {
+    reportInlineAvailability()
+    syncPreviewSource()
+  }
   Component.onDestruction: {
     if (service && typeof service.setInlineSurfaceAvailable === "function")
       service.setInlineSurfaceAvailable(false)
@@ -477,53 +642,68 @@ Item {
       visible: root.videoReveal > 0.01
       clip: true
 
-      MediaPlayer {
-        id: previewPlayer
-        // Unload while the video lives on the desktop: resuming a stale
-        // network stream in place and seeking it does not converge; a fresh
-        // load on return (the same path as track start) does.
-        source: root.previewVideoActive && root.localPreviewVisible ? root.previewUrl : ""
-        videoOutput: previewOutput
-        audioOutput: AudioOutput {
-          muted: true
-          volume: 0
-        }
-        loops: MediaPlayer.Infinite
-        onSourceChanged: {
-          root.resetPreviewTelemetry("source")
-          root.syncPreviewPlayback()
-        }
-        onPlaybackStateChanged: {
-          root.samplePreviewTelemetry("playback-" + root.playerStateName(playbackState))
-          if (playbackState === MediaPlayer.PlayingState) {
-            // Returning from the background can reuse the same source. Lock
-            // immediately instead of waiting for the settle timer.
-            root.syncPreviewPosition(true)
-            previewAdaptiveReadinessTimer.stop()
-            root.previewRecoveryAttempts = 0
-            root.previewPlaybackStartedAt = Date.now()
-            previewRecoveryTimer.stop()
-            previewPositionSettleTimer.interval = 1800
-            previewPositionSettleTimer.restart()
-            root.reportInlineReady()
-          } else if (root.previewVideoActive && root.localPreviewVisible && root.playing) {
-            previewRecoveryTimer.restart()
+      Loader {
+        id: previewPlayerLoader
+        property int generation: 0
+        active: true
+        sourceComponent: previewPlayerComponent
+        onLoaded: root.finishPreviewPlayerLoad()
+      }
+
+      Component {
+        id: previewPlayerComponent
+
+        MediaPlayer {
+          id: previewPlayerInstance
+          readonly property int lacunaSourceRevision: previewPlayerLoader.generation
+          // Each token generation gets a new QtMultimedia instance. Late
+          // backend events from a destroyed adaptive instance therefore
+          // cannot be reported with the current progressive token.
+          source: root.assignedPreviewSource
+          videoOutput: previewOutput
+          audioOutput: AudioOutput {
+            muted: true
+            volume: 0
           }
-        }
-        onMediaStatusChanged: {
-          root.samplePreviewTelemetry("media-" + root.mediaStatusName(mediaStatus))
-          if (mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia) {
-            previewAdaptiveReadinessTimer.stop()
-            if (root.playing && root.localPreviewVisible) previewPlayer.play()
-            if (root.playing && root.localPreviewVisible) root.syncPreviewPosition(true)
-            if (root.previewPositionPending && !root.previewStartupSettling()) {
-              previewPositionSettleTimer.interval = 350
+          loops: MediaPlayer.Infinite
+          onSourceChanged: {
+            root.resetPreviewTelemetry("source")
+            root.syncPreviewPlayback()
+          }
+          onPlaybackStateChanged: {
+            if (!root.previewEventIsCurrent(previewPlayerInstance)) return
+            root.samplePreviewTelemetry("playback-" + root.playerStateName(playbackState))
+            if (playbackState === MediaPlayer.PlayingState) {
+              // Returning from the background can reuse the same source. Lock
+              // immediately instead of waiting for the settle timer.
+              root.syncPreviewPosition(true)
+              previewAdaptiveReadinessTimer.stop()
+              root.previewRecoveryAttempts = 0
+              root.previewPlaybackStartedAt = Date.now()
+              previewRecoveryTimer.stop()
+              previewPositionSettleTimer.interval = 1800
               previewPositionSettleTimer.restart()
+              root.reportInlineReady(previewPlayerInstance)
+            } else if (root.previewVideoActive && root.localPreviewVisible && root.playing) {
+              previewRecoveryTimer.restart()
             }
-            root.reportInlineReady()
-          } else if (mediaStatus === MediaPlayer.InvalidMedia && root.previewVideoActive && root.localPreviewVisible && root.playing) {
-            root.reportInlineFailure("invalid-media")
-            previewRecoveryTimer.restart()
+          }
+          onMediaStatusChanged: {
+            if (!root.previewEventIsCurrent(previewPlayerInstance)) return
+            root.samplePreviewTelemetry("media-" + root.mediaStatusName(mediaStatus))
+            if (mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia) {
+              previewAdaptiveReadinessTimer.stop()
+              if (root.playing && root.localPreviewVisible) previewPlayerInstance.play()
+              if (root.playing && root.localPreviewVisible) root.syncPreviewPosition(true)
+              if (root.previewPositionPending && !root.previewStartupSettling()) {
+                previewPositionSettleTimer.interval = 350
+                previewPositionSettleTimer.restart()
+              }
+              root.reportInlineReady(previewPlayerInstance)
+            } else if (mediaStatus === MediaPlayer.InvalidMedia && root.previewVideoActive && root.localPreviewVisible && root.playing) {
+              root.reportInlineFailure("invalid-media", previewPlayerInstance)
+              previewRecoveryTimer.restart()
+            }
           }
         }
       }
@@ -531,7 +711,7 @@ Item {
       VideoOutput {
         id: previewOutput
         anchors.fill: parent
-        visible: root.previewVideoActive
+        visible: root.previewRendererActive
         fillMode: VideoOutput.PreserveAspectCrop
       }
 
@@ -542,7 +722,8 @@ Item {
         source: thumbnailFailed && root.thumbnailFallback !== "" ? root.thumbnailFallback : primaryThumbnail
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
-        opacity: root.previewVideoActive && previewPlayer.playbackState === MediaPlayer.PlayingState ? 0 : 1
+        opacity: root.previewVideoActive && root.previewPlayer
+          && root.previewPlayer.playbackState === MediaPlayer.PlayingState ? 0 : 1
         visible: root.thumbnail !== "" && status !== Image.Error && opacity > 0
         onPrimaryThumbnailChanged: thumbnailFailed = false
         onStatusChanged: if (status === Image.Error && root.thumbnailFallback !== "") thumbnailFailed = true

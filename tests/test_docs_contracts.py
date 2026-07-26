@@ -15,6 +15,22 @@ class DocsContractTests(unittest.TestCase):
             self.assertIn(name, design)
         self.assertIn("[design-system entry point](DESIGN.md)", readme)
 
+    def test_aur_policy_publishes_approved_beta_rc_and_stable_versions(self):
+        release = (ROOT / "docs/development/release.md").read_text(encoding="utf-8")
+        install = (ROOT / "docs/install.md").read_text(encoding="utf-8")
+        package = (ROOT / "packaging/aur/README.md").read_text(encoding="utf-8")
+        submission = (ROOT / "packaging/aur/SUBMISSION.md").read_text(encoding="utf-8")
+        for text in [release, install, package, submission]:
+            self.assertIn("beta", text)
+            self.assertIn("RC", text)
+            self.assertIn("stable", text)
+        self.assertIn("0.1.0beta.1", release)
+        self.assertIn("0.1.0beta.1", install)
+        self.assertIn("single", submission)
+        self.assertIn("`lacuna-omarchy-plugins` AUR package", submission)
+        self.assertNotIn("GitHub prereleases only", package)
+        self.assertNotIn("Do not submit beta or RC", release)
+
     def test_typography_spec_defines_distinct_tracking_roles(self):
         typography = (ROOT / "docs/lacuna-design-system/04-typography.md").read_text(encoding="utf-8")
         self.assertIn("## Tracking roles", typography)

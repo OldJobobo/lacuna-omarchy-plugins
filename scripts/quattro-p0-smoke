@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE_PLUGIN_IDS = {"lacuna.bar", "lacuna.state", "lacuna.shell-settings", "lacuna.menu"}
@@ -41,19 +41,81 @@ def parse_json(command: list[str]) -> object:
         raise RuntimeError(f"{' '.join(command)} did not return JSON:\n{output[-2000:]}") from error
 
 
-def check_layers(monitors: list[dict], layers: str) -> list[str]:
+def monitor_is_portrait(monitor: dict) -> bool:
+    try:
+        width = float(monitor.get("width", 0)) / max(0.01, float(monitor.get("scale", 1) or 1))
+        height = float(monitor.get("height", 0)) / max(0.01, float(monitor.get("scale", 1) or 1))
+    except (TypeError, ValueError):
+        return False
+    transform = int(monitor.get("transform", 0) or 0)
+    if transform in (1, 3, 5, 7):
+        width, height = height, width
+    return width > 0 and height > width
+
+
+def namespace_present(block: str, namespace: str) -> bool:
+    return re.search(
+        rf"^.*namespace:\s*{re.escape(namespace)}(?:,\s*pid:.*)?\s*$",
+        block,
+        re.MULTILINE,
+    ) is not None
+
+
+def check_layers(
+    monitors: list[dict],
+    layers: str,
+    *,
+    bar_position: str = "top",
+    portrait_split_enabled: bool = True,
+    frame_enabled: bool = True,
+) -> list[str]:
     failures: list[str] = []
+    horizontal_bar = bar_position in ("top", "bottom")
     for monitor in monitors:
         name = str(monitor.get("name", ""))
+        safe_name = re.sub(r"[^A-Za-z0-9_-]", "-", name) or "screen"
         match = re.search(rf"Monitor {re.escape(name)}:\n(.*?)(?=\nMonitor |\Z)", layers, re.DOTALL)
         if not match:
             failures.append(f"missing hyprctl layers section for {name}")
             continue
         block = match.group(1)
-        for namespace in ("lacuna-bar-frame", "lacuna-bar-frame-border", "lacuna-bar-portrait-companion"):
-            if f"namespace: {namespace}" not in block:
-                failures.append(f"{name} is missing {namespace}")
+        if not namespace_present(block, "lacuna-bar-frame"):
+            failures.append(f"{name} is missing lacuna-bar-frame")
+        if namespace_present(block, "lacuna-bar-frame-border"):
+            failures.append(f"{name} still maps removed lacuna-bar-frame-border")
+
+        companion_expected = portrait_split_enabled and horizontal_bar and monitor_is_portrait(monitor)
+        companion_present = namespace_present(block, "lacuna-bar-portrait-companion")
+        if companion_expected and not companion_present:
+            failures.append(f"{name} is missing portrait companion")
+        if not companion_expected and companion_present:
+            failures.append(f"{name} has unexpected portrait companion")
+
+        companion_edge = ""
+        if companion_expected:
+            companion_edge = "bottom" if bar_position == "top" else "top"
+        expected_reserve_edges = ({"top", "bottom", "left", "right"} - {bar_position, companion_edge}) if frame_enabled else set()
+        for edge in ("top", "bottom", "left", "right"):
+            frame_reserve = f"lacuna-bar-frame-reserve-{safe_name}-{edge}"
+            sidebar_reserve_suffix = f"-sidebar-reserve-{safe_name}-{edge}"
+            frame_reserve_present = namespace_present(block, frame_reserve)
+            sidebar_reserve_present = sidebar_reserve_suffix in block
+            if edge in expected_reserve_edges:
+                if not frame_reserve_present and not sidebar_reserve_present:
+                    failures.append(f"{name} is missing {edge} frame/sidebar reserve")
+            elif frame_reserve_present:
+                failures.append(f"{name} has unexpected {edge} frame reserve")
     return failures
+
+
+def load_lacuna_settings() -> dict:
+    config_home = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    path = config_home / "omarchy" / "lacuna" / "settings.json"
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
 
 
 def main() -> int:
@@ -63,6 +125,14 @@ def main() -> int:
     print(compatibility)
     if compatibility_code != 0:
         failures.append("Quattro compatibility check failed")
+
+    shell_config: dict = {}
+    try:
+        parsed_config = parse_json(["omarchy-shell", "shell", "listShellConfig"])
+        if isinstance(parsed_config, dict):
+            shell_config = parsed_config
+    except RuntimeError as error:
+        failures.append(str(error))
 
     try:
         plugins = parse_json(["omarchy-shell", "shell", "listPlugins"])
@@ -92,7 +162,17 @@ def main() -> int:
         if layers_code != 0:
             failures.append(f"hyprctl layers failed:\n{layers}")
         else:
-            failures.extend(check_layers(monitors, layers))
+            lacuna_settings = load_lacuna_settings()
+            bar_config = shell_config.get("bar") if isinstance(shell_config.get("bar"), dict) else {}
+            frame_settings = lacuna_settings.get("frame") if isinstance(lacuna_settings.get("frame"), dict) else {}
+            presentation_settings = lacuna_settings.get("barPresentation") if isinstance(lacuna_settings.get("barPresentation"), dict) else {}
+            failures.extend(check_layers(
+                monitors,
+                layers,
+                bar_position=str(bar_config.get("position") or "top"),
+                portrait_split_enabled=presentation_settings.get("portraitSplit") is not False,
+                frame_enabled=str(frame_settings.get("mode") or "off") == "fullframe",
+            ))
         focused = [str(entry.get("name")) for entry in monitors if entry.get("focused")]
         print(f"Layer surfaces: {len(monitors)} monitors checked; focused={focused or ['unknown']}")
     except RuntimeError as error:

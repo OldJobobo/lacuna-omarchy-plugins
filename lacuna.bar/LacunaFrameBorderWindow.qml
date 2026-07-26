@@ -1,13 +1,12 @@
-import Quickshell
-import Quickshell.Wayland
 import QtQuick
 import QtQuick.Shapes
 import "../lacuna.menu/components"
 
-PanelWindow {
+// In-window frame-border paint. Despite the legacy filename this is an Item,
+// not a layer-shell window; LacunaFrameWindow owns the mapped surface.
+Item {
   id: root
 
-  property var targetScreen: null
   property bool active: false
   property string barPosition: "top"
   property int barSize: 0
@@ -66,25 +65,7 @@ PanelWindow {
 
   LacunaGeometry { id: lacunaGeometry }
 
-  // Always mapped (see LacunaFrameWindow): mapping at toggle time would
-  // stack the border above transient Overlay panels opened earlier. The
-  // Shape below gates all paint via isRenderable while inactive.
-  visible: true
-  screen: targetScreen
-  color: "transparent"
-  WlrLayershell.namespace: "lacuna-bar-frame-border"
-  WlrLayershell.layer: WlrLayer.Overlay
-  WlrLayershell.exclusionMode: ExclusionMode.Ignore
-  WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-
-  anchors {
-    top: true
-    bottom: true
-    left: true
-    right: true
-  }
-
-  mask: Region {}
+  visible: isRenderable
 
   Shape {
     id: frameBorderSource

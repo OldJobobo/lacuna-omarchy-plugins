@@ -428,6 +428,7 @@ class MediaWorker:
         socket_path = os.path.abspath(os.path.expanduser(socket_path))
         if socket_path == self.socket_path and runtime_dir == self.runtime_dir:
             return
+        self._terminate_owned_mpv()
         if self.mpv:
             self.mpv.stop()
         self.runtime_dir = runtime_dir
@@ -498,8 +499,7 @@ class MediaWorker:
         except (OSError, ValueError):
             return 0
 
-    def _owned_pid_alive(self) -> bool:
-        pid = self._read_pid()
+    def _pid_matches_mpv(self, pid: int) -> bool:
         if pid <= 0:
             return False
         try:
@@ -509,11 +509,20 @@ class MediaWorker:
         argv = [part.decode("utf-8", errors="replace") for part in raw.split(b"\0") if part]
         return bool(argv and os.path.basename(argv[0]) == "mpv" and f"--input-ipc-server={self.socket_path}" in argv)
 
-    def _remove_stale_runtime_files(self) -> None:
-        if self.mpv and self.mpv.connected:
-            return
-        if self._owned_pid_alive():
-            return
+    def _owned_pid_alive(self) -> bool:
+        return self._pid_matches_mpv(self._read_pid())
+
+    @staticmethod
+    def _wait_for_pid_disappearance(pid: int, timeout: float) -> bool:
+        if pid <= 0:
+            return True
+        deadline = time.monotonic() + timeout
+        path = Path(f"/proc/{pid}")
+        while path.exists() and time.monotonic() < deadline:
+            time.sleep(0.02)
+        return not path.exists()
+
+    def _remove_runtime_files(self) -> None:
         for path in (self.socket_path, self._pid_path()):
             try:
                 os.unlink(path)
@@ -521,6 +530,97 @@ class MediaWorker:
                 pass
             except OSError:
                 pass
+
+    def _remove_stale_runtime_files(self) -> None:
+        if self.mpv and self.mpv.connected:
+            return
+        if self._owned_pid_alive():
+            return
+        self._remove_runtime_files()
+
+    def _reap_finished_mpv(self) -> bool:
+        process = self.mpv_process
+        if process is None or process.poll() is None:
+            return False
+        try:
+            process.wait(timeout=0)
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        self.mpv_process = None
+        if self.mpv:
+            self.mpv._close_client()
+        self._remove_runtime_files()
+        return True
+
+    @staticmethod
+    def _signal_process_group(process: subprocess.Popen[bytes], sig: signal.Signals) -> None:
+        try:
+            os.killpg(process.pid, sig)
+        except (ProcessLookupError, PermissionError, OSError):
+            try:
+                process.send_signal(sig)
+            except (ProcessLookupError, OSError):
+                pass
+
+    def _terminate_owned_mpv(self, request_quit: bool = True) -> None:
+        process = self.mpv_process
+        if process is None:
+            if request_quit and self.mpv and self.mpv.connected:
+                inherited_pid = self._read_pid()
+                try:
+                    self.mpv.request(["quit"], timeout=0.75)
+                except (ConnectionError, OSError, TimeoutError):
+                    pass
+                disappeared = self._wait_for_pid_disappearance(inherited_pid, 0.75)
+                if not disappeared and self._pid_matches_mpv(inherited_pid):
+                    try:
+                        os.kill(inherited_pid, signal.SIGTERM)
+                    except OSError:
+                        pass
+                    disappeared = self._wait_for_pid_disappearance(inherited_pid, 0.5)
+                if not disappeared and self._pid_matches_mpv(inherited_pid):
+                    try:
+                        os.kill(inherited_pid, signal.SIGKILL)
+                    except OSError:
+                        pass
+                    self._wait_for_pid_disappearance(inherited_pid, 0.5)
+                # An inherited process is not our child and cannot be wait()ed
+                # here. Its parent must reap it; the bounded disappearance wait
+                # above avoids racing a same-socket replacement in the normal
+                # case without ever wait()ing or signaling an unrelated PID.
+                self.mpv._close_client()
+                self._remove_runtime_files()
+            else:
+                self._remove_stale_runtime_files()
+            return
+        if process.poll() is None and request_quit and self.mpv and self.mpv.connected:
+            try:
+                self.mpv.request(["quit"], timeout=0.75)
+            except (ConnectionError, OSError, TimeoutError):
+                pass
+        try:
+            process.wait(timeout=1.0)
+        except subprocess.TimeoutExpired:
+            self._signal_process_group(process, signal.SIGTERM)
+            try:
+                process.wait(timeout=0.75)
+            except subprocess.TimeoutExpired:
+                self._signal_process_group(process, signal.SIGKILL)
+                try:
+                    process.wait(timeout=0.75)
+                except subprocess.TimeoutExpired as exc:
+                    raise RuntimeError("mpv process did not terminate") from exc
+        finally:
+            if process.poll() is not None:
+                try:
+                    process.wait(timeout=0)
+                except (OSError, subprocess.TimeoutExpired):
+                    pass
+                if self.mpv_process is process:
+                    self.mpv_process = None
+                if self.mpv:
+                    self.mpv._close_client()
+                self._remove_runtime_files()
 
     def _youtube_auth_args(self, config: dict[str, Any]) -> list[str]:
         if config.get("enabled") is not True:
@@ -546,6 +646,9 @@ class MediaWorker:
         executable = shutil.which("mpv")
         if not executable:
             raise RuntimeError("mpv is not installed")
+        self._reap_finished_mpv()
+        if self.mpv_process is not None and self.mpv_process.poll() is None:
+            raise RuntimeError("owned mpv process is already running")
         self._remove_stale_runtime_files()
         command = [
             executable,
@@ -575,11 +678,15 @@ class MediaWorker:
             stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
-        pid_path = self._pid_path()
-        fd = os.open(pid_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-        os.fchmod(fd, 0o600)
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(str(self.mpv_process.pid))
+        try:
+            pid_path = self._pid_path()
+            fd = os.open(pid_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            os.fchmod(fd, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(str(self.mpv_process.pid))
+        except Exception:
+            self._terminate_owned_mpv(request_quit=False)
+            raise
 
     def _ensure_mpv(self) -> MpvConnection:
         assert self.mpv is not None
@@ -592,18 +699,22 @@ class MediaWorker:
         if self._owned_pid_alive():
             if self.mpv.wait_connected(2.5):
                 return self.mpv
-            pid = self._read_pid()
-            try:
-                os.kill(pid, signal.SIGTERM)
-            except OSError:
-                pass
-            deadline = time.monotonic() + 1.0
-            while self._owned_pid_alive() and time.monotonic() < deadline:
-                time.sleep(0.05)
-            if self._owned_pid_alive():
-                raise RuntimeError("existing mpv process is not responding")
+            if self.mpv_process is not None and self.mpv_process.pid == self._read_pid():
+                self._terminate_owned_mpv(request_quit=False)
+            else:
+                pid = self._read_pid()
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                except OSError:
+                    pass
+                deadline = time.monotonic() + 1.0
+                while self._owned_pid_alive() and time.monotonic() < deadline:
+                    time.sleep(0.05)
+                if self._owned_pid_alive():
+                    raise RuntimeError("existing mpv process is not responding")
         self._launch_mpv()
         if not self.mpv.wait_connected(4.0):
+            self._terminate_owned_mpv(request_quit=False)
             raise RuntimeError("mpv did not open its IPC socket")
         return self.mpv
 
@@ -769,7 +880,8 @@ class MediaWorker:
         if not isinstance(command, list) or not command or not isinstance(command[0], str):
             raise ValueError("command must be a non-empty mpv command array")
         request_id = message.get("requestId")
-        if command[0] == "quit" and self.mpv and not self.mpv.connected and not self._owned_pid_alive():
+        if command[0] == "quit":
+            self._terminate_owned_mpv()
             self.emit({"type": "command-result", "requestId": request_id, "ok": True})
             return
         mpv = self._ensure_mpv()
@@ -1236,12 +1348,14 @@ class MediaWorker:
 
     def shutdown(self, message: dict[str, Any]) -> None:
         self._cancel_provider_jobs()
+        self._terminate_owned_mpv()
         self.emit({"type": "shutdown", "ok": True})
         self.stop_event.set()
 
     def close(self) -> None:
         self.stop_event.set()
         self._cancel_provider_jobs()
+        self._terminate_owned_mpv()
         if self.mpv:
             self.mpv.stop()
 

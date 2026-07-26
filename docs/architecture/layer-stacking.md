@@ -20,12 +20,11 @@ toggle time). Hence the rules below.
 1. **Pick the correct level first.** Never compensate for a wrong level with
    map-order tricks.
 2. **Surfaces that must sit under later same-level UI stay mapped
-   permanently** (`visible: true`) with content-gated paint (`isRenderable`
-   or equivalent) and an empty input mask. Toggling `visible` on such a
-   surface remaps it to the top of its level.
+   permanently** unless an explicit resource-lifecycle exception below applies.
+   Toggling `visible` remaps a surface to the top of its level.
 3. **Declaration order in the host is the intended order for Lacuna-owned
    surfaces, not a guarantee about the Omarchy bar.** In `lacuna.bar/Bar.qml`
-   the frame surfaces are declared before `OmarchyBarAdapter`, which is
+   the frame surface is declared before `OmarchyBarAdapter`, which is
    declared before `MenuWindow`, and the layer-policy contract test pins this.
    Quattro maps the host-owned `omarchy-bar` on its own schedule; on the
    current build `hyprctl layers` reports `omarchy-bar` before
@@ -49,10 +48,10 @@ toggle time). Hence the rules below.
 
 | Level | Surfaces | Notes |
 | --- | --- | --- |
-| background | `omarchy-background` (Omarchy), `lacuna-media-player-video`, `lacuna-background-vignette` (ignore-animations mode) | Video wallpaper carries its own fade cover internally. |
-| bottom | `lacuna-ambience-host-bottom` (always mapped), fallback ambience overlays (`aurora-drift`, `cinematic-light`, `crt`, `dust-motes`, `film-grain`, `god-rays`, `rainfall`, `vhs`), `lacuna-desktop-clock`, `lacuna-background-vignette` (default) | The host gates content rather than window visibility. Legacy effect windows paint only when the host is absent. |
-| top | `omarchy-bar`, `lacuna-bar-portrait-companion` (portrait split outputs only), `lacuna-bar-frame` (always mapped), frame/sidebar reserve windows | Companion bars occupy the opposite horizontal edge and cannot overlap the primary, so no inactive companion surface is created on landscape outputs. Frame geometry excludes both occupied horizontal strips, so map order is irrelevant. |
-| overlay | `lacuna-ambience-host-overlay` (always mapped), `lacuna-bar-frame-border` (always mapped, maps first), `lacuna-menu` sidebar, transient panels (`audio`, `bluetooth`, `network`, `power`), `omarchy-bar-drag-ghost`, non-exclusive Lacuna panels, fallback ambience overlays in `foregroundOverlay` mode | Both ambience host levels stay mapped; only the selected level paints. The sidebar is above the persistent Top-level frame surface on every output; its input mask still covers only the sidebar/flyout geometry. |
+| background | `omarchy-background` (Omarchy), `lacuna-media-player-video`, `lacuna-background-vignette` (ignore-animations mode) | Video surfaces remain mapped to preserve reliable background-layer presentation and carry their fade cover internally. |
+| bottom | `lacuna-ambience-host-bottom` (enabled bottom mode only), fallback ambience overlays, `lacuna-desktop-clock`, `lacuna-background-vignette` (default) | Disabled ambience maps no host surface. |
+| top | `omarchy-bar`, `lacuna-bar-portrait-companion` (portrait split outputs only), `lacuna-bar-frame` (always mapped), frame/sidebar reserve windows | The frame surface also owns optional border paint, eliminating a separate Overlay surface. |
+| overlay | `lacuna-ambience-host-overlay` (enabled foreground mode only), `lacuna-menu` sidebar, transient panels, `omarchy-bar-drag-ghost`, non-exclusive Lacuna panels | Foreground ambience is a true foreground effect: when enabled dynamically it may paint above already-mapped Overlay UI, but its input mask is empty. |
 
 ## Verifying live
 
@@ -62,9 +61,10 @@ hyprctl layers
 
 Within `Layer level 2 (top)` the current Quattro list is expected to show
 `omarchy-bar`, one `lacuna-bar-portrait-companion` per portrait split output,
-and `lacuna-bar-frame`; the open `lacuna-menu` sidebar appears in
-`Layer level 3 (overlay)` above them. Both `lacuna-ambience-host-bottom` and `lacuna-ambience-host-overlay` must remain
-listed before and after effect reorder or layer-mode changes. The exact bar/frame order is
+and `lacuna-bar-frame`; there is no `lacuna-bar-frame-border` namespace.
+The open `lacuna-menu` sidebar appears in Overlay. Disabled ambience has no
+host namespaces; enabled ambience has exactly one selected host per output.
+The exact bar/frame order is
 host-controlled; verify that `LacunaFrameWindow.qml` still excludes the bar
 strip. Frame surfaces appear even when their paint is inactive and are
 intentionally always mapped (rule 2). Portrait companion surfaces exist only
@@ -74,20 +74,20 @@ reserve.
 
 ## Resource policy
 
-A mapped layer shell and its heavyweight content have separate lifecycles.
-Surfaces whose map order is load-bearing stay mapped, but inactive content must
-not retain decoders, effect trees, or per-widget follower processes:
+Mapped shells and heavyweight content share explicit resource lifecycles:
 
-- Both ambience host shells remain mapped on every output. Only the selected
-  effects in the currently painting stack are instantiated; disabled and
-  inactive stacks contain no production effect objects.
-- Media-player video shells remain mapped on every output. `MediaPlayer`,
-  `VideoOutput`, and the in-window fade cover load only on matching outputs
-  while the wallpaper lifecycle is active, and remain loaded through the
-  two-phase exit fade before teardown.
-- Frame and frame-border shells remain mapped because their relative order is
-  load-bearing. Portrait companion bars are the exception: they occupy a
-  disjoint opposite edge and are created only on portrait split outputs.
+- Disabled ambience maps neither host. Enabled ambience maps exactly the chosen
+  Bottom or Overlay host and instantiates only selected effects. Dynamic Bottom
+  mapping may place ambience above an already-mapped desktop clock or default
+  Bottom vignette; foreground Overlay mode likewise accepts overpainting
+  already-mapped Overlay UI. These are explicit resource-first semantics.
+- Media-player video surfaces remain mapped because dynamically revealing a
+  previously hidden Background `PanelWindow` is not reliable in the live shell.
+  Decoder/player content remains lazy and the existing black-cover lifecycle
+  still gates entry, playback, normal/failure exit, and fade settlement.
+- The persistent Top frame owns fill, shadow, and optional border paint as
+  siblings. There is no separate frame-border surface. Portrait companions
+  exist only on effective portrait split outputs.
 - Shared status followers such as Voxtype belong to one shell service, not to
   each monitor-local widget instance.
 

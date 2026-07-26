@@ -27,6 +27,11 @@ PanelWindow {
   property bool rightEdgeOccupied: false
   property real leftOccupiedWidth: 0
   property real rightOccupiedWidth: 0
+  property bool borderEnabled: false
+  property color borderColor: Qt.rgba(1, 1, 1, 0.18)
+  property bool attachedFlyoutVisible: false
+  property real attachedFlyoutY: 0
+  property real attachedFlyoutHeight: 0
 
   readonly property int t: Math.max(1, frameThickness)
   readonly property int r: Math.max(t, frameRadius)
@@ -315,6 +320,28 @@ PanelWindow {
         }
       }
     }
+  }
 
+  // Compose border paint in the Top frame surface so it never allocates a
+  // second Overlay layer-shell surface or remaps above sidebar/panel UI.
+  LacunaFrameBorderWindow {
+    anchors.fill: parent
+    z: 2
+    active: root.active && root.borderEnabled
+    barPosition: root.barPosition
+    barSize: root.barSize
+    frameThickness: root.frameThickness
+    frameRadius: root.frameRadius
+    cornerPieces: root.cornerPieces
+    borderColor: root.borderColor
+    topEdgeOccupied: root.topEdgeOccupied
+    bottomEdgeOccupied: root.bottomEdgeOccupied
+    leftEdgeOccupied: root.leftEdgeOccupied
+    rightEdgeOccupied: root.rightEdgeOccupied
+    leftOccupiedWidth: root.leftOccupiedWidth
+    rightOccupiedWidth: root.rightOccupiedWidth
+    attachedFlyoutVisible: root.attachedFlyoutVisible
+    attachedFlyoutY: root.attachedFlyoutY
+    attachedFlyoutHeight: root.attachedFlyoutHeight
   }
 }

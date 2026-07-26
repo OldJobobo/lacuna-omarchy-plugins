@@ -89,7 +89,7 @@ class BarScreenModelTests(unittest.TestCase):
         self.assertIn("function popupContextFor(surfacePosition, anchorItem, moduleId, owningScreen)", qml)
         self.assertEqual(2, qml.count("model: root.validBarScreens"))
         self.assertEqual(1, qml.count("model: root.portraitCompanionScreens"))
-        self.assertEqual(2, host.count("model: root.validBarScreens"))
+        self.assertEqual(1, host.count("model: root.validBarScreens"))
 
     def test_edit_mode_gates_dragging_and_cleans_up(self):
         qml = (ROOT / "lacuna.bar" / "OmarchyBar.qml").read_text(encoding="utf-8")

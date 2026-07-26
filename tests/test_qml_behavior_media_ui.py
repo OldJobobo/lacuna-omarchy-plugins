@@ -137,6 +137,126 @@ ShellRoot {{
         self.assertEqual(row["presentationMode"], "background", output[-2000:])
         self.assertTrue(row["jellyfinLoading"], output[-2000:])
 
+    def test_inline_renderer_keeps_pause_buffer_but_unloads_on_stop(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var tile: null
+
+  QtObject {{
+    id: service
+    property bool available: true
+    property bool hasTrack: true
+    property bool playing: true
+    property bool paused: false
+    property string presentationState: "inline"
+    property bool backgroundVideoEnabled: false
+    property string displayTitle: "Track"
+    property string thumbnail: ""
+    property string previewStreamUrl: "file:///dev/null?stable"
+    property string adaptivePreviewStreamUrl: ""
+    property string progressivePreviewStreamUrl: "file:///dev/null?stable"
+    property real playbackPosition: 0
+    property int playbackSessionRevision: 3
+    property int presentationRevision: 4
+    property int videoResolveRevision: 8
+    property int favoritesRevision: 0
+    property bool currentFavorite: false
+    property string repeatMode: "none"
+    property int volume: 70
+    property var currentTrack: ({{ title: "Track" }})
+    property var lacunaSettings: ({{ reduceMotion: true }})
+    property int loadingCalls: 0
+    property var lastLoadingToken: null
+    function statusText() {{ return playing ? (paused ? "Paused" : "Playing") : "Stopped" }}
+    function setInlineSurfaceAvailable(value) {{}}
+    function updatePreviewTelemetry(value) {{}}
+    function reportVideoLoading(surface, token, diagnostics) {{ loadingCalls += 1; lastLoadingToken = token; return true }}
+    function reportVideoReady(surface, revision, position) {{}}
+    function reportVideoFailure(surface, revision, reason) {{}}
+  }}
+
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.menu/menu/MediaPlayerTile.qml')}", Component.PreferSynchronous)
+    if (component.status !== Component.Ready) {{
+      console.log("BEHAVE_ERR " + component.errorString())
+      Qt.quit()
+      return
+    }}
+    tile = component.createObject(root, {{ service: service, width: 300 }})
+    probe.restart()
+  }}
+
+  Timer {{
+    id: probe
+    interval: 30
+    onTriggered: {{
+      var activeLoaded = tile.previewSourceLoaded
+      var initialLoadingCalls = service.loadingCalls
+      var firstSourceRevision = service.lastLoadingToken.sourceRevision
+      var oldGeneration = {{ source: tile.assignedPreviewSource, lacunaSourceRevision: firstSourceRevision }}
+      service.presentationState = "promoting"
+      service.presentationRevision = 5
+      var promotionSourceRevision = service.lastLoadingToken.sourceRevision
+      service.presentationState = "demoting"
+      service.presentationRevision = 6
+      var newestPresentationRevision = service.lastLoadingToken.presentationRevision
+      var demotionSourceRevision = service.lastLoadingToken.sourceRevision
+      var lateOldEventAccepted = tile.inlineSourceGenerationIsCurrent(oldGeneration)
+      var newestGenerationAccepted = tile.inlineSourceGenerationIsCurrent({{
+        source: tile.assignedPreviewSource,
+        lacunaSourceRevision: demotionSourceRevision
+      }})
+      service.paused = true
+      var pausedLoaded = tile.previewSourceLoaded
+      service.playing = false
+      var stoppedLoaded = tile.previewSourceLoaded
+      service.paused = false
+      service.playing = true
+      var replayLoaded = tile.previewSourceLoaded
+      var secondSourceRevision = service.lastLoadingToken.sourceRevision
+      service.playing = false
+      console.log("BEHAVE " + JSON.stringify({{
+        activeLoaded: activeLoaded,
+        pausedLoaded: pausedLoaded,
+        stoppedLoaded: stoppedLoaded,
+        replayLoaded: replayLoaded,
+        loadingCalls: service.loadingCalls,
+        newLoadingCalls: service.loadingCalls - initialLoadingCalls,
+        firstSourceRevision: firstSourceRevision,
+        promotionSourceRevision: promotionSourceRevision,
+        demotionSourceRevision: demotionSourceRevision,
+        newestPresentationRevision: newestPresentationRevision,
+        lateOldEventAccepted: lateOldEventAccepted,
+        newestGenerationAccepted: newestGenerationAccepted,
+        secondSourceRevision: secondSourceRevision,
+        rendererActive: tile.previewRendererActive
+      }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        row = parse_behave(output)[-1]
+        self.assertTrue(row["activeLoaded"], output[-2000:])
+        self.assertTrue(row["pausedLoaded"], output[-2000:])
+        self.assertFalse(row["stoppedLoaded"], output[-2000:])
+        self.assertTrue(row["replayLoaded"], output[-2000:])
+        self.assertGreaterEqual(row["loadingCalls"], 4, output[-2000:])
+        self.assertEqual(row["newLoadingCalls"], 3, output[-2000:])
+        self.assertGreater(row["promotionSourceRevision"], row["firstSourceRevision"])
+        self.assertGreater(row["demotionSourceRevision"], row["promotionSourceRevision"])
+        self.assertEqual(row["newestPresentationRevision"], 6)
+        self.assertFalse(row["lateOldEventAccepted"])
+        self.assertTrue(row["newestGenerationAccepted"])
+        self.assertGreater(row["secondSourceRevision"], row["demotionSourceRevision"])
+        self.assertFalse(row["rendererActive"], output[-2000:])
+
     def test_inline_adaptive_timeout_ignores_hidden_and_paused_renderer(self):
         qml = f"""
 import Quickshell

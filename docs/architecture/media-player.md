@@ -54,15 +54,65 @@ new track, explicit presentation choice, or manual stream refresh retries it.
 
 `presentationMode` is `inline`, `background`, or `auto`. Auto uses inline video
 while an inline surface is available and promotes to the background otherwise.
-The service transitions through `promoting`, `background`, `demoting`, and
-`recovering`; the old surface remains alive until the destination reports
-ready. Handoffs time out after five seconds.
+The public compatibility state remains `inline`, `promoting`, `background`,
+`demoting`, or `recovering`; the old surface remains alive until the destination
+reports ready.
+
+Internally, `handoffPhase` distinguishes `idle`, `resolving`, `source-ready`,
+`covering`, `loading-renderer`, `converging-outputs`, `presented`, `recovering`,
+and `exiting`. Provider resolution does not consume the five-second renderer
+budget. The service starts that deadline only after a surface assigns its
+source and reports `reportVideoLoading()`.
+
+Every loading/ready/failure callback carries a URL-free handoff token containing
+the surface, playback revision, presentation revision, request revision, and a
+surface-local source revision. Repeated loading for the same token is
+idempotent; stale source, retry, timeout, and recovery callbacks cannot mutate a
+newer presentation intent. IPC exposes the internal phase, token, deadline
+state, and sanitized output diagnostics without signed URLs or raw backend
+errors. Internal URL-bearing refresh keys are reduced to a `set`/empty
+compatibility marker at the IPC boundary.
 
 Background source changes raise the black cover for 300ms, hold for 150ms,
 then reveal over 750ms. Exit uses 350ms to black and 600ms back to the Lacuna
 frame. Reduced motion uses 75ms transitions. The background layer remains
 mapped to preserve layer-shell ordering and gates only its in-window paint.
+The overlay owns only fade settlement, adaptive fallback, drift validation,
+and a pre-source output-registration guard. The service is the sole generic
+renderer-deadline owner. When forced inline mode is selected while no visible
+inline renderer exists, the service does not wait for a destination that cannot
+report readiness; it commits the public inline state and lets the background
+overlay perform its normal covered exit.
+
+Background readiness is all-or-nothing across matched outputs for the beta: all
+players must register, match the source, report ready, and converge to the
+service clock. If one output cannot register or the renderer deadline expires,
+the whole background presentation falls back cleanly rather than leaving a
+partial or indefinitely black desktop. `stop()` is available over IPC so gated
+live probes can always restore a zero-player stopped state.
 
 Adaptive quality prefers a 720p-capable HLS candidate. A stable progressive
 360p candidate is retained for readiness timeout, playback error, or repeated
-drift failure.
+drift failure. Inline and background QtMultimedia players are recreated for
+each source revision; signal handlers additionally verify the instance and
+source generation, so queued events from a destroyed adaptive player cannot be
+reported with a newer progressive token.
+
+### Opt-in live validation
+
+`tests/test_live_visual.py` never reads favorites or persisted media URLs. Set
+`LACUNA_LIVE_VISUAL=1` and provide explicit non-secret fixtures:
+
+- `LACUNA_LIVE_MEDIA_TEST_URL` enables cold start, inline/background handoff,
+  cover-duration, and stop-cleanup checks.
+- `LACUNA_LIVE_MEDIA_SWITCH_URL` additionally checks a real playing-track
+  source replacement under the opaque cover.
+- `LACUNA_LIVE_MEDIA_FAILURE_URL` enables terminal failure and black-cover
+  settlement checks.
+
+Physical output hotplug is intentionally not automated because disconnecting a
+user display is destructive and compositor-specific. Shell-restart and output
+hotplug remain explicit manual release checks: use disposable test media, stop
+playback afterward, verify every matched output converges, and verify the cover
+settles below `0.001`. These checks must not be claimed unless they were run on
+the target compositor and output topology.

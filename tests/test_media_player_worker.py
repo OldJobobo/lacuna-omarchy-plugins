@@ -1,22 +1,21 @@
 """Behavior tests for the persistent Lacuna media backend worker."""
 
-import json
 import importlib.machinery
 import importlib.util
+import json
 import os
 import select
 import shutil
-import signal
 import stat
 import subprocess
 import sys
 import tempfile
 import time
-import urllib.parse
 import unittest
-from unittest import mock
+import urllib.parse
 from pathlib import Path
-
+from types import SimpleNamespace
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKER = ROOT / "lacuna.media-player" / "scripts" / "media-player-worker"
@@ -31,7 +30,7 @@ def write_exec(path: Path, body: str) -> None:
 class WorkerProcess:
     def __init__(self, tmp: Path, *, path: str | None = None, script_dir: Path | None = None) -> None:
         runtime = tmp / "runtime"
-        runtime.mkdir(mode=0o700)
+        runtime.mkdir(mode=0o700, exist_ok=True)
         command = [
             sys.executable,
             str(WORKER),
@@ -246,6 +245,158 @@ class MediaPlayerWorkerTests(unittest.TestCase):
 
             self.assertTrue(result["ok"])
             self.assertFalse((tmp / "runtime" / "mpv.pid").exists())
+
+    def test_repeated_play_and_quit_reaps_owned_mpv_without_zombies(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            bin_dir.mkdir()
+            write_exec(
+                bin_dir / "mpv",
+                f"#!{sys.executable}\n"
+                "import json, os, pathlib, socket, sys\n"
+                "socket_path = next(arg.split('=', 1)[1] for arg in sys.argv if arg.startswith('--input-ipc-server='))\n"
+                "pathlib.Path(socket_path).unlink(missing_ok=True)\n"
+                "server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)\n"
+                "server.bind(socket_path); server.listen(1)\n"
+                "conn, _ = server.accept(); buffer = b''\n"
+                "done = False\n"
+                "while not done:\n"
+                "  chunk = conn.recv(65536)\n"
+                "  if not chunk: break\n"
+                "  buffer += chunk\n"
+                "  while b'\\n' in buffer:\n"
+                "    raw, buffer = buffer.split(b'\\n', 1)\n"
+                "    if not raw: continue\n"
+                "    msg = json.loads(raw); cmd = msg.get('command', [])\n"
+                "    conn.sendall((json.dumps({'request_id': msg.get('request_id'), 'error':'success'}) + '\\n').encode())\n"
+                "    if cmd and cmd[0] == 'quit': done = True; break\n"
+                "conn.close(); server.close()\n",
+            )
+            worker = WorkerProcess(tmp, path=f"{bin_dir}:{os.environ.get('PATH', '')}")
+            try:
+                for revision in (1, 2, 3):
+                    worker.send({
+                        "type": "play",
+                        "revision": revision,
+                        "track": {"provider": "youtube", "url": f"https://example.test/{revision}"},
+                    })
+                    worker.wait_for(
+                        lambda event, revision=revision: event.get("type") == "play-result"
+                        and event.get("revision") == revision,
+                        timeout=6,
+                    )
+                    pid_path = tmp / "runtime" / "mpv.pid"
+                    pid = int(pid_path.read_text(encoding="utf-8"))
+                    self.assertTrue(Path(f"/proc/{pid}").exists())
+                    request_id = f"quit-{revision}"
+                    worker.send({"type": "command", "requestId": request_id, "command": ["quit"]})
+                    result = worker.wait_for(
+                        lambda event, request_id=request_id: event.get("type") == "command-result"
+                        and event.get("requestId") == request_id
+                    )
+                    self.assertTrue(result["ok"])
+                    self.assertFalse(Path(f"/proc/{pid}").exists(), f"mpv {pid} was not reaped")
+                    self.assertFalse(pid_path.exists())
+            finally:
+                worker.close()
+
+    def test_quit_waits_for_inherited_connected_mpv_parent_to_reap(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            runtime = tmp / "runtime"
+            bin_dir = tmp / "bin"
+            runtime.mkdir()
+            bin_dir.mkdir()
+            fake_mpv = bin_dir / "mpv"
+            write_exec(
+                fake_mpv,
+                f"#!{sys.executable}\n"
+                "import json, os, pathlib, socket, sys\n"
+                "socket_path = next(arg.split('=', 1)[1] for arg in sys.argv if arg.startswith('--input-ipc-server='))\n"
+                "pathlib.Path(socket_path).unlink(missing_ok=True)\n"
+                "pathlib.Path(socket_path).with_name('mpv.pid').write_text(str(os.getpid()))\n"
+                "server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)\n"
+                "server.bind(socket_path); server.listen(1)\n"
+                "conn, _ = server.accept(); buffer = b''; done = False\n"
+                "while not done:\n"
+                "  chunk = conn.recv(65536)\n"
+                "  if not chunk: break\n"
+                "  buffer += chunk\n"
+                "  while b'\\n' in buffer:\n"
+                "    raw, buffer = buffer.split(b'\\n', 1)\n"
+                "    if not raw: continue\n"
+                "    msg = json.loads(raw); cmd = msg.get('command', [])\n"
+                "    conn.sendall((json.dumps({'request_id': msg.get('request_id'), 'error':'success'}) + '\\n').encode())\n"
+                "    if cmd and cmd[0] == 'quit': done = True; break\n"
+                "conn.close(); server.close()\n",
+            )
+            socket_path = runtime / "mpv.sock"
+            launcher_code = (
+                "import subprocess, sys\n"
+                "child = subprocess.Popen([sys.argv[1], '--input-ipc-server=' + sys.argv[2]])\n"
+                "raise SystemExit(child.wait())\n"
+            )
+            launcher = subprocess.Popen(
+                [sys.executable, "-c", launcher_code, str(fake_mpv), str(socket_path)]
+            )
+            worker = None
+            try:
+                deadline = time.monotonic() + 2
+                while not (runtime / "mpv.pid").exists() and time.monotonic() < deadline:
+                    time.sleep(0.02)
+                inherited_pid = int((runtime / "mpv.pid").read_text(encoding="utf-8"))
+                worker = WorkerProcess(tmp, path=f"{bin_dir}:{os.environ.get('PATH', '')}")
+                worker.wait_for(
+                    lambda event: event.get("type") == "playback" and event.get("running") is True,
+                    timeout=3,
+                )
+                worker.send({"type": "command", "requestId": "inherited-quit", "command": ["quit"]})
+                result = worker.wait_for(
+                    lambda event: event.get("type") == "command-result"
+                    and event.get("requestId") == "inherited-quit",
+                    timeout=3,
+                )
+                self.assertTrue(result["ok"])
+                self.assertFalse(Path(f"/proc/{inherited_pid}").exists())
+                self.assertEqual(launcher.wait(timeout=2), 0)
+            finally:
+                if worker is not None:
+                    worker.close()
+                if launcher.poll() is None:
+                    launcher.terminate()
+                    launcher.wait(timeout=2)
+
+    def test_close_terminates_and_reaps_startup_stalled_owned_mpv(self):
+        loader = importlib.machinery.SourceFileLoader("lacuna_media_worker_stalled_test", str(WORKER))
+        spec = importlib.util.spec_from_loader(loader.name, loader)
+        module = importlib.util.module_from_spec(spec)
+        loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            bin_dir = tmp / "bin"
+            runtime = tmp / "runtime"
+            bin_dir.mkdir()
+            write_exec(
+                bin_dir / "mpv",
+                f"#!{sys.executable}\nimport time\ntime.sleep(30)\n",
+            )
+            args = SimpleNamespace(
+                runtime_dir=str(runtime),
+                socket=str(runtime / "mpv.sock"),
+                settings_file="",
+                script_dir=str(tmp),
+            )
+            with mock.patch.dict(os.environ, {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"}):
+                media_worker = module.MediaWorker(args)
+                try:
+                    media_worker._launch_mpv()
+                    pid = media_worker.mpv_process.pid
+                    self.assertTrue(Path(f"/proc/{pid}").exists())
+                finally:
+                    media_worker.close()
+            self.assertFalse(Path(f"/proc/{pid}").exists(), f"stalled mpv {pid} was not reaped")
+            self.assertFalse((runtime / "mpv.pid").exists())
 
     def test_protocol_errors_are_nonfatal_and_shutdown_is_clean(self):
         with tempfile.TemporaryDirectory() as tmpdir:
