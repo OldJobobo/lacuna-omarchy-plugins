@@ -1,31 +1,30 @@
 # Lacuna for Omarchy
 
-Lacuna is a cohesive desktop layer for Omarchy: a custom bar and frame,
-attached sidebar, focused system flyouts, expressive widgets, and optional
-desktop ambience—all running inside Omarchy's existing shell.
-
-It is designed for people who want a desktop with a distinct visual identity
-without giving up Omarchy's plugin system, settings, services, or recovery
-tools.
+A complete visual shell for Omarchy: a custom bar and frame, an attached utility
+sidebar, focused system controls, expressive widgets, and optional desktop
+ambience—all inside the Omarchy shell you already use.
 
 ![Lacuna desktop with its custom bar, frame, sidebar, and desktop clock](docs/screenshots/readme/lacuna-desktop.webp)
 
-## What You Get
+> [!IMPORTANT]
+> Lacuna is prerelease software preparing for `0.1.0-beta.1`. The current build
+> is usable and transactionally installed, but expect changes before the stable
+> `0.1.0` release.
 
-- A Lacuna-owned bar and full-screen frame with deliberate seam and connector
-  geometry.
-- A persistent sidebar for launching apps, controlling media, and reaching
-  Lacuna and Omarchy settings.
-- Integrated audio, network, Bluetooth, power, notifications, tray, weather,
-  workspace, clock, and system-status widgets.
+## What Lacuna Changes
+
+Lacuna gives Omarchy a distinct, connected desktop without replacing its plugin
+system or starting a second shell.
+
+- A Lacuna bar, full-screen frame, and attached sidebar designed as one surface.
+- Quick access to apps, media, audio, network, Bluetooth, power,
+  notifications, weather, workspaces, and system actions.
 - Theme and wallpaper controls that follow the active Omarchy palette.
-- Optional desktop treatments including a large adaptive clock and ambience
-  overlays.
-- Transactional install, update, rollback, and uninstall workflows that
-  preserve your current shell configuration before making changes.
-
-Lacuna stays inside Omarchy's single Quickshell process. It does not launch a
-second shell alongside your desktop.
+- Configurable desktop clock, frame, sidebar, color profiles, and launchers.
+- Optional ordered ambience effects such as film grain, rainfall, aurora,
+  tracking lines, CRT, and VHS treatments.
+- Transactional install, update, rollback, and uninstall workflows that protect
+  your existing Omarchy configuration.
 
 <table>
   <tr>
@@ -38,95 +37,150 @@ second shell alongside your desktop.
   </tr>
 </table>
 
+## Requirements
+
+- A working, up-to-date [Omarchy](https://omarchy.org/) installation.
+- Git for installing from this repository.
+- ImageMagick is optional; the desktop clock uses it for adaptive wallpaper
+  contrast and falls back to theme colors when it is unavailable.
+
+The current beta candidate is reviewed against Omarchy
+`4.0.0.r1333.ga466dcc-1` and Quickshell `0.3.0.r18.g10b439f-3`. See the
+[compatibility ledger](docs/architecture/quattro-compatibility.md) for the
+latest validated host versions.
+
+## Choose Your Setup
+
+**Full** is the recommended experience. It installs the Lacuna bar, frame,
+sidebar, settings, widgets, theme workflow, and visual surfaces with the
+recommended layout.
+
+Other supported setups are:
+
+- **Core:** bar, frame, sidebar, state, and settings foundation.
+- **Native replacements:** Lacuna-styled versions of common Omarchy bar
+  widgets without the complete desktop composition.
+- **Ambience:** desktop clock, vignette, and ordered background effects.
+- **A la carte:** individual standalone widgets such as Weather, Workspaces,
+  Codex Usage, Claude Usage, or Desktop Clock.
+
+Browse the [plugin catalog](docs/plugins/README.md) for the complete list.
+
 ## Install
 
-Clone the repository, enter it, and launch the guided installer:
+Clone the repository and start the guided installer:
 
 ```bash
-git clone https://github.com/OldJobobo/lacuna-omarchy-plugins.git ~/lacuna
-cd ~/lacuna
+git clone https://github.com/OldJobobo/lacuna-omarchy-plugins.git "$HOME/lacuna"
+cd "$HOME/lacuna"
 ./scripts/lacuna
 ```
 
-The installer also works from a downloaded and extracted repository archive;
-run `./scripts/lacuna` from the extracted directory.
+Choose **Full Lacuna install** unless you specifically want a smaller setup.
+The installer previews its plan, snapshots your current shell and Lacuna state,
+stages and verifies the plugins, applies the recommended layout, and reloads
+the Omarchy shell.
 
-Choose **Full Lacuna install** for the complete experience. The installer
-stages the plugins, selects the Lacuna bar, applies its recommended layout,
-rescans plugins, and reloads the shell.
-
-Preview the same operation without changing your system:
+To inspect the full installation without changing anything:
 
 ```bash
 ./scripts/lacuna install --profile full --dry-run
 ```
 
-For smaller setups, install only the core shell or the Lacuna replacements for
-Omarchy's native bar widgets:
+Scripted installs are also available:
 
 ```bash
+./scripts/lacuna install --profile full
 ./scripts/lacuna install --profile core
-./scripts/lacuna install --profile native --activate
+./scripts/lacuna install --profile ambience --activate
 ```
 
-See [Install and update](docs/install.md) for custom plugin selection, manual
-Omarchy source installation, updates, rollback behavior, uninstalling, and the
-release-gated AUR package workflow.
+See [Install and update](docs/install.md) for custom selection, manual source
+installation, package behavior, and advanced recovery details.
+
+## After Installation
+
+The shell reloads into the Lacuna layout when installation finishes.
+
+- Use the sidebar for launchers, controls, media, and system actions.
+- Open the gear control at the bottom of the sidebar for Lacuna appearance,
+  layout, application, media, and ambience settings.
+- Use **Omarchy Settings** for bar placement and individual widget options.
+- Continue changing themes and wallpapers through Omarchy; Lacuna follows the
+  active palette automatically.
+
+Lacuna settings are stored separately from Omarchy's shell layout, so normal
+Omarchy tooling remains available. Read [Configuration](docs/configuration.md)
+for the complete settings model.
 
 ## Make It Yours
 
-Lacuna supports two complementary configuration surfaces:
+Start with the two color profiles:
 
-- Omarchy Settings controls bar placement and per-widget options stored in
-  `~/.config/omarchy/shell.json`.
-- Lacuna settings control the frame, sidebar, color profile, preferred apps,
-  quick launchers, and other Lacuna-owned behavior stored in
-  `~/.config/omarchy/lacuna/settings.json`.
+- **Semantic** keeps the bar restrained and foreground-led.
+- **Colorful** lets widgets draw more actively from the current theme.
 
-Use the `semantic` color profile for a restrained foreground-led bar or
-`colorful` to let widgets draw more actively from the current Omarchy theme.
-Read [Configuration](docs/configuration.md) for the full settings model.
+From Lacuna Settings you can also:
 
-## Pick Your Experience
+- turn the frame, shadow, and border treatments on or off;
+- choose which monitor owns the sidebar;
+- change quick-launch and preferred applications;
+- configure the desktop clock;
+- enable, tune, and reorder ambience effects;
+- switch between full, compact, and theme-provided bar sizing.
 
-- **Full:** the custom bar, frame, sidebar, Lacuna widgets, theme workflow, and
-  optional visual surfaces.
-- **Core:** the Lacuna bar, frame, sidebar, state, and settings foundation.
-- **Native replacements:** Lacuna-styled alternatives for common Omarchy bar
-  widgets without requiring the full desktop composition.
-- **A la carte:** standalone widgets and overlays such as Clock, Weather,
-  Workspaces, Codex Usage, Claude Usage, Desktop Clock, and Rainfall.
+## Update
 
-Browse the [plugin catalog](docs/plugins/README.md) for the available surfaces
-and their install boundaries.
+From the cloned repository:
 
-## Safety And Recovery
+```bash
+cd "$HOME/lacuna"
+git pull --ff-only
+./scripts/lacuna update --yes
+```
 
-Before an install or update, Lacuna snapshots the active Omarchy shell and
-Lacuna state. Plugins are staged through temporary directories and verified
-before the operation is accepted. If validation, rescan, or activation fails,
-the previous plugin copies and shell configuration are restored.
+Preview an update first with `./scripts/lacuna update --dry-run`. Updates are
+transactional: if verification or shell reload fails, the touched plugin copies
+and shell configuration are restored.
 
+## Uninstall And Recovery
+
+Remove all Lacuna plugins while retaining your Lacuna preferences:
+
+```bash
+./scripts/lacuna uninstall --all
+```
+
+Add `--purge-state` only when you also want to delete Lacuna's saved settings.
 Return to Omarchy's stock bar at any time with:
 
 ```bash
 omarchy plugin bar reset
 ```
 
+For a quick health report or shell restart:
+
+```bash
+./scripts/lacuna status
+omarchy restart shell
+```
+
+See [Troubleshooting](docs/development/troubleshooting.md) when a plugin does not
+appear or a runtime action fails.
+
 ## Project Status
 
-Lacuna is currently at version `0.1.0` and is being prepared for its first
-Quattro beta. The core shell is usable now, while compatibility, accessibility,
-packaging, and release validation continue to be hardened.
+Lacuna is preparing for its first public beta. Repository checks, live
+multi-monitor validation, rollback behavior, and release packaging are actively
+maintained; stable AUR publication remains planned for `0.1.0`.
 
-Follow the [project roadmap](docs/roadmap.md) for current priorities. Plans and
-historical design records live in the [planning ledger](docs/plans/README.md).
+Follow the [roadmap](docs/roadmap.md) for current priorities. Historical design
+and implementation records live in the [planning ledger](docs/plans/README.md).
 
-## For Contributors
+## Contributing
 
-The repository uses one top-level `lacuna.*` directory per Omarchy plugin so
-Omarchy can install directly from the source. Run the complete local validation
-before publishing changes:
+The repository keeps each Omarchy plugin in its own top-level `lacuna.*`
+directory. Before publishing a change, run:
 
 ```bash
 ./scripts/check.sh
