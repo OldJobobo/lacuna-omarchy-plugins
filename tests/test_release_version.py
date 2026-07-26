@@ -45,14 +45,16 @@ class ReleaseVersionTests(unittest.TestCase):
             root = Path(tmp)
             version_file = root / "VERSION"
             manifest = root / "lacuna.test" / "manifest.json"
+            supplemental_version = root / "lacuna.test" / "VERSION"
             pkgbuild = root / "PKGBUILD"
             srcinfo = root / ".SRCINFO"
             manifest.parent.mkdir()
             version_file.write_text("0.1.0\n", encoding="utf-8")
             manifest.write_text('{"id":"lacuna.test","version":"0.1.0"}\n', encoding="utf-8")
+            supplemental_version.write_text("0.1.0\n", encoding="utf-8")
             pkgbuild.write_text("_upstream_version=0.1.0\n_source_sha256=SKIP\npkgrel=1\n", encoding="utf-8")
             srcinfo.write_text("pkgver = 0.1.0\n", encoding="utf-8")
-            files = [version_file, manifest, pkgbuild, srcinfo]
+            files = [version_file, manifest, supplemental_version, pkgbuild, srcinfo]
             before = {path: path.read_bytes() for path in files}
             with (
                 mock.patch.object(module, "ROOT", root),
@@ -60,6 +62,7 @@ class ReleaseVersionTests(unittest.TestCase):
                 mock.patch.object(module, "PKGBUILD", pkgbuild),
                 mock.patch.object(module, "SRCINFO", srcinfo),
                 mock.patch.object(module, "manifest_paths", return_value=[manifest]),
+                mock.patch.object(module, "supplemental_version_paths", return_value=[supplemental_version]),
                 mock.patch.object(module.json, "dumps", side_effect=RuntimeError("injected")),
             ):
                 self.assertEqual(module.set_version("0.2.0", False), 1)

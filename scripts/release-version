@@ -28,6 +28,10 @@ def manifest_paths() -> list[Path]:
     return sorted(ROOT.glob("lacuna.*/manifest.json"))
 
 
+def supplemental_version_paths() -> list[Path]:
+    return sorted(ROOT.glob("lacuna.*/VERSION"))
+
+
 def updated_pkgbuild(content: str, version: str) -> str:
     replacements = [
         (r"^_upstream_version=.+$", f"_upstream_version={version}"),
@@ -65,6 +69,10 @@ def check() -> int:
         actual = str(json.loads(path.read_text(encoding="utf-8")).get("version", ""))
         if actual != version:
             errors.append(f"{path.relative_to(ROOT)}: {actual or '<missing>'} != {version}")
+    for path in supplemental_version_paths():
+        actual = path.read_text(encoding="utf-8").strip()
+        if actual != version:
+            errors.append(f"{path.relative_to(ROOT)}: {actual or '<missing>'} != {version}")
     if pkgbuild_version() != version:
         errors.append(f"packaging/aur/PKGBUILD: {pkgbuild_version() or '<missing>'} != {version}")
     srcinfo = SRCINFO.read_text(encoding="utf-8")
@@ -87,7 +95,7 @@ def set_version(version: str, dry_run: bool) -> int:
         print(error, file=sys.stderr)
         return 2
 
-    targets = [VERSION_FILE, *manifest_paths(), PKGBUILD, SRCINFO]
+    targets = [VERSION_FILE, *manifest_paths(), *supplemental_version_paths(), PKGBUILD, SRCINFO]
     print(f"Release version plan: {version}")
     for path in targets:
         print(f"  update {path.relative_to(ROOT)}")
@@ -101,6 +109,8 @@ def set_version(version: str, dry_run: bool) -> int:
             data = json.loads(path.read_text(encoding="utf-8"))
             data["version"] = version
             atomic_write(path, (json.dumps(data, indent=2, ensure_ascii=False) + "\n").encode())
+        for path in supplemental_version_paths():
+            atomic_write(path, (version + "\n").encode())
 
         pkgbuild = updated_pkgbuild(PKGBUILD.read_text(encoding="utf-8"), version)
         atomic_write(PKGBUILD, pkgbuild.encode())
