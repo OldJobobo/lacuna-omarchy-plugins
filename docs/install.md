@@ -47,10 +47,12 @@ Preview any install without changing the system:
 
 The installer performs a dependency preflight before staging. A non-dry-run
 preserves the current `shell.json` and Lacuna `settings.json` under
-`~/.config/omarchy/lacuna/backups/`, stages each plugin through a temporary
+`${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/lacuna/backups/`, stages each plugin through a temporary
 directory, and retains the previous installed copy as a hidden plugin backup.
 If validation, rescan, or shell activation fails, the staged copies and shell
-configuration are restored and the previous shell is reloaded.
+configuration are restored and the previous shell is reloaded. Mutating
+installer commands are serialized through a per-user transaction lock, and
+configuration/plugin staging uses operation-owned temporary paths.
 
 Stage a full install without enabling it:
 

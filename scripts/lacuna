@@ -4,12 +4,15 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import filecmp
 import json
 import os
 import shutil
 import subprocess
 import sys
+import tempfile
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -594,9 +597,24 @@ def write_shell_config(config: dict) -> None:
     path = shell_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(config, indent=2) + "\n"
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(payload, encoding="utf-8")
-    tmp.replace(path)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.tmp.",
+            delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        temporary = None
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def runtime_state_paths() -> list[Path]:
@@ -1016,24 +1034,26 @@ def stage_plugin(
         return 0
 
     target.parent.mkdir(parents=True, exist_ok=True)
-    stage = target.parent / f".{plugin_id}.tmp.{os.getpid()}"
-    remove_path(stage)
+    stage = Path(tempfile.mkdtemp(prefix=f".{plugin_id}.tmp.", dir=target.parent))
     backup = None
     try:
         shutil.copytree(
             source_dir,
             stage,
             symlinks=True,
+            dirs_exist_ok=True,
             ignore=shutil.ignore_patterns("__pycache__"),
         )
         backup = backup_target(target)
         shutil.move(str(stage), str(target))
         if changes is not None:
             changes.append((target, backup))
-    except Exception as error:
+    except BaseException as error:
         remove_path(stage)
         if backup and backup.exists() and not target.exists():
             shutil.move(str(backup), str(target))
+        if not isinstance(error, Exception):
+            raise
         print(f"Failed to stage {plugin_id}: {error}")
         return 1
     if backup:
@@ -1519,18 +1539,18 @@ def menu(args: argparse.Namespace) -> int:
         args.apply_layout = True
         print("\nFull install will stage and activate the Lacuna Bar setup.")
         print("It will select lacuna.bar, apply the Lacuna bar layout, and restart Omarchy shell once.")
-        return install(args)
+        return run_mutation(install, args)
     if action == "Custom install":
         args.command = "install"
         next_args = custom_install_menu(args)
-        return install(next_args) if next_args else 0
+        return run_mutation(install, next_args) if next_args else 0
     if action == "Update installed Lacuna plugins":
         args.command = "update"
-        return update(args)
+        return run_mutation(update, args)
     if action == "Uninstall Lacuna":
         args.command = "uninstall"
         next_args = uninstall_menu(args)
-        return uninstall(next_args) if next_args else 0
+        return run_mutation(uninstall, next_args) if next_args else 0
     if action == "Status":
         return status(args)
     return 0
@@ -1630,21 +1650,46 @@ def normalize_args(args: argparse.Namespace) -> argparse.Namespace:
     return args
 
 
+@contextmanager
+def installer_transaction_lock():
+    """Serialize each complete installer mutation, including reload and rollback."""
+    lock_path = omarchy_config_home() / "omarchy" / "lacuna-installer.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+        os.close(descriptor)
+
+
+def run_mutation(operation, args: argparse.Namespace) -> int:
+    if args.dry_run:
+        return operation(args)
+    with installer_transaction_lock():
+        return operation(args)
+
+
+def dispatch(args: argparse.Namespace) -> int:
+    if args.command == "install":
+        return run_mutation(install, args)
+    if args.command == "uninstall":
+        return run_mutation(uninstall, args)
+    if args.command == "update":
+        return run_mutation(update, args)
+    if args.command == "status":
+        return status(args)
+    if sys.stdin.isatty():
+        return menu(args)
+    parser().print_help()
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = normalize_args(parser().parse_args(argv))
     try:
-        if args.command == "install":
-            return install(args)
-        if args.command == "uninstall":
-            return uninstall(args)
-        if args.command == "update":
-            return update(args)
-        if args.command == "status":
-            return status(args)
-        if sys.stdin.isatty():
-            return menu(args)
-        parser().print_help()
-        return 0
+        return dispatch(args)
     except KeyboardInterrupt:
         print("\nInterrupted. Installed plugins may be staged; check with: omarchy plugin list")
         return 130

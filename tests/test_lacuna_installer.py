@@ -1,8 +1,10 @@
+import fcntl
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -77,6 +79,56 @@ class LacunaInstallerTests(unittest.TestCase):
                 self.assertEqual(module.plugins_dir(), home / ".config/omarchy/plugins")
                 self.assertEqual(module.shell_config_path(), home / ".config/omarchy/shell.json")
                 self.assertEqual(module.lacuna_state_dir(), xdg_config / "omarchy/lacuna")
+
+    def test_installer_transaction_lock_serializes_processes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            lock_path = config_home / "omarchy" / "lacuna-installer.lock"
+            lock_path.parent.mkdir(parents=True)
+            helper = f'''import importlib.machinery
+import importlib.util
+import sys
+loader = importlib.machinery.SourceFileLoader("installer_lock_child", {str(INSTALLER)!r})
+spec = importlib.util.spec_from_loader("installer_lock_child", loader)
+module = importlib.util.module_from_spec(spec)
+sys.modules["installer_lock_child"] = module
+loader.exec_module(module)
+with module.installer_transaction_lock():
+    print("acquired", flush=True)
+'''
+            env = os.environ.copy()
+            env["LACUNA_OMARCHY_CONFIG_HOME"] = str(config_home)
+            with lock_path.open("w") as lock_file:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+                proc = subprocess.Popen(
+                    [sys.executable, "-c", helper],
+                    env=env,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                try:
+                    time.sleep(0.15)
+                    self.assertIsNone(proc.poll(), "installer bypassed the transaction lock")
+                finally:
+                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                stdout, stderr = proc.communicate(timeout=5)
+            self.assertEqual(proc.returncode, 0, stderr)
+            self.assertEqual(stdout.strip(), "acquired")
+
+    def test_shell_config_write_uses_owned_unique_temporary(self):
+        module = load_installer_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            legacy_tmp = config_home / "omarchy" / "shell.json.tmp"
+            legacy_tmp.parent.mkdir(parents=True)
+            legacy_tmp.write_text("do-not-touch\n", encoding="utf-8")
+            config = module.default_shell_config()
+            with mock.patch.dict(module.os.environ, {"LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}):
+                module.write_shell_config(config)
+            self.assertEqual(legacy_tmp.read_text(encoding="utf-8"), "do-not-touch\n")
+            self.assertEqual(module.json.loads((config_home / "omarchy" / "shell.json").read_text()), config)
+            self.assertEqual(list(legacy_tmp.parent.glob(".shell.json.tmp.*")), [])
 
     def test_core_profile_dry_run_uses_current_omarchy_plugin_routes(self):
         result = run_lacuna(["install", "--profile", "core", "--dry-run", "--yes"])
@@ -263,6 +315,46 @@ class LacunaInstallerTests(unittest.TestCase):
         self.assertTrue(manifest_staged)
         self.assertFalse(pycache_staged)
 
+    def test_stage_plugin_does_not_remove_stale_pid_temporary(self):
+        module = load_installer_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_home = tmp_path / "config"
+            source = tmp_path / "repo" / "lacuna.fake"
+            source.mkdir(parents=True)
+            (source / "manifest.json").write_text('{"id":"lacuna.fake"}\n', encoding="utf-8")
+            stale = config_home / "omarchy" / "plugins" / f".lacuna.fake.tmp.{os.getpid()}"
+            stale.mkdir(parents=True)
+            (stale / "sentinel").write_text("owned elsewhere\n", encoding="utf-8")
+
+            with mock.patch.object(module, "ROOT", tmp_path / "repo"), \
+                mock.patch.dict(module.os.environ, {"LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}), \
+                mock.patch.object(module, "validate_plugin", return_value=0):
+                result = module.stage_plugin("lacuna.fake", dry_run=False, reinstall=True)
+
+            self.assertEqual(result, 0)
+            self.assertEqual((stale / "sentinel").read_text(encoding="utf-8"), "owned elsewhere\n")
+            self.assertTrue((config_home / "omarchy" / "plugins" / "lacuna.fake" / "manifest.json").is_file())
+
+    def test_interrupted_stage_cleans_owned_temporary_directory(self):
+        module = load_installer_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_home = tmp_path / "config"
+            source = tmp_path / "repo" / "lacuna.fake"
+            source.mkdir(parents=True)
+            (source / "manifest.json").write_text('{"id":"lacuna.fake"}\n', encoding="utf-8")
+
+            with mock.patch.object(module, "ROOT", tmp_path / "repo"), \
+                mock.patch.dict(module.os.environ, {"LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}), \
+                mock.patch.object(module, "validate_plugin", return_value=0), \
+                mock.patch.object(module.shutil, "copytree", side_effect=KeyboardInterrupt):
+                with self.assertRaises(KeyboardInterrupt):
+                    module.stage_plugin("lacuna.fake", dry_run=False, reinstall=True)
+
+            plugin_root = config_home / "omarchy" / "plugins"
+            self.assertEqual(list(plugin_root.glob(".lacuna.fake.tmp.*")), [])
+
     def test_failed_batch_rescan_restores_all_previous_plugin_copies(self):
         module = load_installer_module()
 
@@ -399,6 +491,7 @@ class LacunaInstallerTests(unittest.TestCase):
         args = module.normalize_args(module.parser().parse_args([]))
 
         with mock.patch.object(module, "choose", return_value="Full Lacuna install"), \
+            mock.patch.object(module, "run_mutation", side_effect=lambda operation, value: operation(value)), \
             mock.patch.object(module, "install", return_value=0) as install:
             result = module.menu(args)
 
