@@ -8,7 +8,7 @@ It is designed for people who want a desktop with a distinct visual identity
 without giving up Omarchy's plugin system, settings, services, or recovery
 tools.
 
-![Lacuna desktop with its custom bar, frame, sidebar, and overlays](docs/screenshots/reference/01-desktop-bar-overlays.png)
+![Lacuna desktop with its custom bar, frame, sidebar, and desktop clock](docs/screenshots/readme/lacuna-desktop.webp)
 
 ## What You Get
 
@@ -26,6 +26,17 @@ tools.
 
 Lacuna stays inside Omarchy's single Quickshell process. It does not launch a
 second shell alongside your desktop.
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/readme/lacuna-appearance.webp" alt="Lacuna Appearance settings attached to the sidebar"></td>
+    <td><img src="docs/screenshots/readme/lacuna-animations.webp" alt="Lacuna ordered background animation settings"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Appearance and frame controls</strong></td>
+    <td align="center"><strong>Ordered desktop ambience</strong></td>
+  </tr>
+</table>
 
 ## Install
 
