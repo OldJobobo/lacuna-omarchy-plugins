@@ -32,10 +32,10 @@ def write_exec(path: Path, body: str) -> None:
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
-def run(cmd, env_overrides) -> subprocess.CompletedProcess:
+def run(cmd, env_overrides, timeout=None) -> subprocess.CompletedProcess:
     env = dict(os.environ)
     env.update(env_overrides)
-    return subprocess.run(cmd, env=env, capture_output=True, text=True)
+    return subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=timeout)
 
 
 def load_script(path: Path, name: str):
@@ -538,6 +538,14 @@ class PreloadThemeSwitcherTests(unittest.TestCase):
             "OMARCHY_THEMES_PATH": str(tmp / "omarchy-themes"),
             "XDG_CACHE_HOME": str(tmp / "cache"),
         }
+
+    def test_missing_reason_value_fails_without_looping(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            result = run([str(self.SCRIPT), "--reason"], self._env(tmp), timeout=3)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("--reason requires a non-empty label", result.stderr)
 
     def test_builds_preview_symlinks_and_warms_cache(self):
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -17,7 +17,11 @@ REASON="manual"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --reason)
-      REASON="${2:-manual}"
+      if [[ $# -lt 2 || -z ${2:-} || ${2:-} == --* ]]; then
+        printf '%s\n' 'error: --reason requires a non-empty label' >&2
+        exit 2
+      fi
+      REASON="$2"
       shift 2
       ;;
     --help|-h)
