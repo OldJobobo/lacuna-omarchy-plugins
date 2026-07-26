@@ -12,6 +12,8 @@ Item {
   readonly property int settingsSchemaVersion: 1
   readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy/lacuna"
   readonly property string settingsFile: configDir + "/settings.json"
+  readonly property bool primarySettingsService: String(Qt.resolvedUrl(".")).indexOf("/lacuna.state/") >= 0
+  readonly property string settingsIpcTarget: primarySettingsService ? "lacuna-settings-state" : "lacuna-menu-settings-state"
   property var data: defaultData()
   property bool settingsPermissionChangePending: false
   property var lastLoadedData: defaultData()
@@ -942,6 +944,37 @@ Item {
     path: root.settingsFile + ".bak"
     atomicWrites: true
     printErrors: false
+  }
+
+  IpcHandler {
+    target: root.settingsIpcTarget
+
+    function status(): string {
+      return JSON.stringify({ ready: root.hasLoaded, settingsFile: root.settingsFile })
+    }
+
+    function patchBarSize(payload: string): string {
+      if (!root.hasLoaded) return JSON.stringify({ ok: false, error: "settings not loaded" })
+      var patch
+      try {
+        patch = JSON.parse(String(payload || "{}"))
+      } catch (e) {
+        return JSON.stringify({ ok: false, error: "invalid patch" })
+      }
+      if (!patch || typeof patch !== "object" || !Array.isArray(patch.keys) || !patch.values || typeof patch.values !== "object") {
+        return JSON.stringify({ ok: false, error: "invalid patch" })
+      }
+
+      var next = root.normalize(root.data)
+      for (var i = 0; i < patch.keys.length; i++) {
+        var key = String(patch.keys[i] || "")
+        if (key === "barSizeMode" || key === "compact" || key === "barSizeSnapshot" || key === "sizeTransition") {
+          next[key] = patch.values[key]
+        }
+      }
+      root.save(next)
+      return JSON.stringify({ ok: true, data: root.data })
+    }
   }
 
   Process {

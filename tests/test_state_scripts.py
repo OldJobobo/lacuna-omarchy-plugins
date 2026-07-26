@@ -1,3 +1,5 @@
+import fcntl
+import importlib.machinery
 import importlib.util
 import json
 import os
@@ -8,6 +10,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,9 +35,10 @@ def read_json(path):
 
 
 def load_module(path, name):
-    spec = importlib.util.spec_from_file_location(name, path)
+    loader = importlib.machinery.SourceFileLoader(name, str(path))
+    spec = importlib.util.spec_from_loader(name, loader)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    loader.exec_module(module)
     return module
 
 
@@ -174,6 +178,105 @@ class StateScriptTests(unittest.TestCase):
             self.assertIs(after["compact"], True)
             self.assertGreater(after["sizeTransition"]["holdUntil"], 0)
             assert_preserved(self, before, after)
+
+    def test_bar_size_state_merges_owned_keys_into_fresh_settings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home, omarchy_path, settings_path, before = seed_config(Path(tmp))
+            old_config = os.environ.get("XDG_CONFIG_HOME")
+            old_omarchy = os.environ.get("OMARCHY_PATH")
+            os.environ["XDG_CONFIG_HOME"] = str(config_home)
+            os.environ["OMARCHY_PATH"] = str(omarchy_path)
+            try:
+                module = load_module(BAR_SIZE_STATE, "bar_size_state_merge_test")
+                stale = module.load_settings()
+                concurrent = read_json(settings_path)
+                concurrent["preferredApps"]["editor"] = "concurrent-editor"
+                concurrent["futureSetting"] = {"preserve": True}
+                write_json(settings_path, concurrent)
+                legacy_tmp = settings_path.with_suffix(".json.tmp")
+                legacy_tmp.write_text("do-not-touch\n", encoding="utf-8")
+
+                stale["barSizeMode"] = "compact"
+                stale["compact"] = True
+                stale["sizeTransition"] = {"holdCompact": False, "holdUntil": 123}
+                with module.settings_transaction():
+                    merged = module.save_settings(stale)
+            finally:
+                if old_config is None:
+                    os.environ.pop("XDG_CONFIG_HOME", None)
+                else:
+                    os.environ["XDG_CONFIG_HOME"] = old_config
+                if old_omarchy is None:
+                    os.environ.pop("OMARCHY_PATH", None)
+                else:
+                    os.environ["OMARCHY_PATH"] = old_omarchy
+
+            after = read_json(settings_path)
+            self.assertEqual(after["preferredApps"]["editor"], "concurrent-editor")
+            self.assertEqual(after["futureSetting"], {"preserve": True})
+            self.assertEqual(after["barSizeMode"], "compact")
+            self.assertTrue(after["compact"])
+            self.assertEqual(merged, after)
+            self.assertEqual(legacy_tmp.read_text(encoding="utf-8"), "do-not-touch\n")
+
+    def test_bar_size_state_routes_live_commit_through_state_service(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home, omarchy_path, _settings_path, _before = seed_config(Path(tmp))
+            old_config = os.environ.get("XDG_CONFIG_HOME")
+            old_omarchy = os.environ.get("OMARCHY_PATH")
+            os.environ["XDG_CONFIG_HOME"] = str(config_home)
+            os.environ["OMARCHY_PATH"] = str(omarchy_path)
+            try:
+                module = load_module(BAR_SIZE_STATE, "bar_size_state_ipc_test")
+                expected = module.load_settings()
+                expected["barSizeMode"] = "compact"
+                expected["compact"] = True
+                status = subprocess.CompletedProcess(
+                    [], 0, json.dumps({"ready": True, "settingsFile": str(module.SETTINGS_PATH)}) + "\n", ""
+                )
+                committed = subprocess.CompletedProcess(
+                    [], 0, json.dumps({"ok": True, "data": expected}) + "\n", ""
+                )
+                with mock.patch.object(module.subprocess, "run", side_effect=[status, committed]) as run:
+                    result = module.save_settings_via_state_service(expected)
+            finally:
+                if old_config is None:
+                    os.environ.pop("XDG_CONFIG_HOME", None)
+                else:
+                    os.environ["XDG_CONFIG_HOME"] = old_config
+                if old_omarchy is None:
+                    os.environ.pop("OMARCHY_PATH", None)
+                else:
+                    os.environ["OMARCHY_PATH"] = old_omarchy
+
+            self.assertEqual(result, expected)
+            self.assertEqual(run.call_args_list[0].args[0][-1], "status")
+            self.assertEqual(run.call_args_list[1].args[0][1:3], ["lacuna-settings-state", "patchBarSize"])
+            patch = json.loads(run.call_args_list[1].args[0][3])
+            self.assertEqual(set(patch["keys"]), {"barSizeMode", "compact", "barSizeSnapshot", "sizeTransition"})
+
+    def test_bar_size_state_serializes_mutating_processes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home, omarchy_path, _settings_path, _before = seed_config(Path(tmp))
+            lock_path = config_home / "omarchy" / "lacuna" / "settings.lock"
+            lock_path.parent.mkdir(parents=True, exist_ok=True)
+            with lock_path.open("w") as lock_file:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+                proc = subprocess.Popen(
+                    [sys.executable, str(BAR_SIZE_STATE), "compact"],
+                    env=env_for(config_home, omarchy_path),
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                try:
+                    time.sleep(0.15)
+                    self.assertIsNone(proc.poll(), "bar-size writer bypassed the settings lock")
+                finally:
+                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                stdout, stderr = proc.communicate(timeout=5)
+            self.assertEqual(proc.returncode, 0, stderr)
+            self.assertEqual(json.loads(stdout)["mode"], "compact")
 
     def test_bar_size_state_restores_theme_snapshot(self):
         with tempfile.TemporaryDirectory() as tmp:

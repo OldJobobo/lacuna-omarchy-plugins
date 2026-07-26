@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
 import base64
+import fcntl
 import json
 import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
 
@@ -14,6 +17,8 @@ HOME = Path.home()
 CONFIG_HOME = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config"))
 OMARCHY_PATH = Path(os.environ.get("OMARCHY_PATH", HOME / ".local/share/omarchy"))
 SETTINGS_PATH = CONFIG_HOME / "omarchy" / "lacuna" / "settings.json"
+SETTINGS_LOCK_PATH = SETTINGS_PATH.with_name("settings.lock")
+OWNED_SETTINGS_KEYS = ("barSizeMode", "compact", "barSizeSnapshot", "sizeTransition")
 THEME_DIR = CONFIG_HOME / "omarchy" / "current" / "theme"
 THEME_NAME_PATH = CONFIG_HOME / "omarchy" / "current" / "theme.name"
 COLORS_PATH = THEME_DIR / "colors.toml"
@@ -65,11 +70,98 @@ def load_settings():
     return data
 
 
+@contextmanager
+def settings_transaction():
+    SETTINGS_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+    descriptor = os.open(SETTINGS_LOCK_PATH, os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+        os.close(descriptor)
+
+
+def atomic_write_text(path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.tmp.",
+            delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        temporary = None
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def parse_ipc_json(raw):
+    for line in reversed(str(raw or "").splitlines()):
+        try:
+            value = json.loads(line)
+        except Exception:
+            continue
+        if isinstance(value, dict):
+            return value
+    return None
+
+
+def save_settings_via_state_service(data):
+    """Route live mutations through the QML owner so FileView writes cannot race us."""
+    try:
+        status = subprocess.run(
+            ["omarchy-shell", "lacuna-settings-state", "status"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=1,
+        )
+        state = parse_ipc_json(status.stdout)
+        if status.returncode != 0 or not state or not state.get("ready"):
+            return None
+        if Path(str(state.get("settingsFile", ""))) != SETTINGS_PATH:
+            return None
+
+        patch = {
+            "keys": list(OWNED_SETTINGS_KEYS),
+            "values": {key: data.get(key) for key in OWNED_SETTINGS_KEYS},
+        }
+        result = subprocess.run(
+            ["omarchy-shell", "lacuna-settings-state", "patchBarSize", json.dumps(patch, separators=(",", ":"))],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        response = parse_ipc_json(result.stdout)
+        if result.returncode == 0 and response and response.get("ok") and isinstance(response.get("data"), dict):
+            return response["data"]
+    except (OSError, subprocess.SubprocessError, ValueError):
+        pass
+    return None
+
+
 def save_settings(data):
-    SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    tmp = SETTINGS_PATH.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    tmp.replace(SETTINGS_PATH)
+    committed = save_settings_via_state_service(data)
+    if committed is not None:
+        return committed
+
+    # Headless fallback: re-read at commit time and overlay only bar-size-owned
+    # keys. Live shell writes use the serialized state-service IPC path above.
+    merged = load_settings()
+    for key in OWNED_SETTINGS_KEYS:
+        merged[key] = data.get(key)
+    atomic_write_text(SETTINGS_PATH, json.dumps(merged, indent=2) + "\n")
+    return merged
 
 
 def theme_name():
@@ -204,8 +296,7 @@ def apply_mode(data, mode):
             "holdCompact": old_compact,
             "holdUntil": int((time.time() + 0.056) * 1000),
         }
-        save_settings(data)
-        return data
+        return save_settings(data)
 
     old_compact = bool(data.get("compact", False))
     current_values = parse_bar_values(raw)
@@ -234,12 +325,10 @@ def apply_mode(data, mode):
         "holdCompact": old_compact,
         "holdUntil": int((time.time() + 0.056) * 1000),
     }
-    save_settings(data)
+    data = save_settings(data)
 
     if next_raw != raw:
-        tmp = SHELL_PATH.with_suffix(".toml.tmp")
-        tmp.write_text(next_raw, encoding="utf-8")
-        tmp.replace(SHELL_PATH)
+        atomic_write_text(SHELL_PATH, next_raw)
         reload_shell_theme()
 
     return data
@@ -259,18 +348,21 @@ def emit(data):
 
 
 def main():
-    data = load_settings()
     action = sys.argv[1] if len(sys.argv) > 1 else "get"
+    if action == "get":
+        emit(load_settings())
+        return
 
-    if action == "toggle":
-        next_mode = "compact" if data.get("barSizeMode") == "full" else "full"
-        data = apply_mode(data, next_mode)
-    elif action == "reapply":
-        data = apply_mode(data, data.get("barSizeMode") if data.get("barSizeMode") in ("theme", "compact", "full") else "full")
-    elif action in ("theme", "compact", "full"):
-        data = apply_mode(data, action)
-
-    emit(data)
+    with settings_transaction():
+        data = load_settings()
+        if action == "toggle":
+            next_mode = "compact" if data.get("barSizeMode") == "full" else "full"
+            data = apply_mode(data, next_mode)
+        elif action == "reapply":
+            data = apply_mode(data, data.get("barSizeMode") if data.get("barSizeMode") in ("theme", "compact", "full") else "full")
+        elif action in ("theme", "compact", "full"):
+            data = apply_mode(data, action)
+        emit(data)
 
 
 if __name__ == "__main__":

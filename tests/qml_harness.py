@@ -28,7 +28,13 @@ def qml_url(path: str | Path) -> str:
     return f"file://{qml}"
 
 
-def run_quickshell(qml: str, *, timeout: int = 60, config_home: Path | None = None) -> str:
+def run_quickshell(
+    qml: str,
+    *,
+    timeout: int = 60,
+    config_home: Path | None = None,
+    env_overrides: dict[str, str] | None = None,
+) -> str:
     if QUICKSHELL is None:
         raise RuntimeError("quickshell is not available")
 
@@ -47,6 +53,8 @@ def run_quickshell(qml: str, *, timeout: int = 60, config_home: Path | None = No
         env["QT_QPA_PLATFORM"] = "wayland"
         if config_home is not None:
             env["XDG_CONFIG_HOME"] = str(config_home)
+        if env_overrides:
+            env.update(env_overrides)
         proc = subprocess.run(
             [QUICKSHELL, "-p", str(shell)],
             env=env,

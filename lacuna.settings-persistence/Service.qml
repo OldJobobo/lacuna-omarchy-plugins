@@ -185,7 +185,7 @@ Item {
     nightlightApplyProc.reason = String(reason || "manual")
     nightlightApplyProc.appliedTemperature = targetNightlightTemperature(enabled)
     var temp = String(nightlightApplyProc.appliedTemperature)
-    nightlightApplyProc.command = ["bash", "-c", "if ! pgrep -x hyprsunset >/dev/null; then setsid uwsm-app -- hyprsunset >/dev/null 2>&1 & sleep 1; fi; hyprctl hyprsunset temperature " + temp + " >/dev/null 2>&1; omarchy-shell -q omarchy.indicators refresh"]
+    nightlightApplyProc.command = ["bash", "-c", "if ! pgrep -x hyprsunset >/dev/null; then setsid uwsm-app -- hyprsunset >/dev/null 2>&1 & sleep 1; fi; hyprctl hyprsunset temperature " + temp + " >/dev/null 2>&1; apply_status=$?; omarchy-shell -q omarchy.indicators refresh >/dev/null 2>&1 || true; exit $apply_status"]
     nightlightApplyProc.running = true
   }
 

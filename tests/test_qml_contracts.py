@@ -549,6 +549,9 @@ class QmlContractTests(unittest.TestCase):
         fixture = read_json("tests/fixtures/full-settings.json")
 
         self.assertEqual(state, menu)
+        self.assertIn('"lacuna-settings-state"', state)
+        self.assertIn("function patchBarSize(payload: string): string", state)
+        self.assertIn('key === "barSizeMode"', state)
         for qml in [state, menu]:
             self.assertIn("settingsSchemaVersion: 1", qml)
             self.assertIn("function migrateSettings", qml)
@@ -692,6 +695,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("function targetNightlightTemperature", qml)
         self.assertIn("temp < 5000", qml)
         self.assertIn("nightlightApplyProc.appliedTemperature", qml)
+        self.assertIn("apply_status=$?", qml)
+        self.assertIn("exit $apply_status", qml)
         self.assertNotIn("expected ? 4000 : 6000", qml)
 
     def test_custom_quick_launch_context_menu_can_delete_items(self):

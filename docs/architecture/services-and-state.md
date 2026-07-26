@@ -45,7 +45,11 @@ unique output names for `pinned` mode and can contain one or several names.
 The sidebar may be mirrored to every selected output, but an open flyout is
 kept on the active/focused selected output only.
 
-Scripts that rewrite this file must preserve existing keys.
+Scripts that rewrite this file must preserve existing keys. The bar-size
+helper routes live mutations through `lacuna.state`'s `lacuna-settings-state`
+IPC target so updates serialize with the QML owner. When the shell is not
+running, it takes the shared `settings.lock`, re-reads at commit time, overlays
+only bar-size-owned keys, and uses an operation-owned atomic temporary file.
 
 ### Canonical settings shape
 
