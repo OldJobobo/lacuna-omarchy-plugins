@@ -496,7 +496,9 @@
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
-      "recommends": [],
+      "recommends": [
+        "lacuna.voxtype"
+      ],
       "entryPoints": {
         "barWidget": "Widget.qml"
       },
@@ -1159,6 +1161,7 @@
     {
       "id": "lacuna.voxtype",
       "kinds": [
+        "service",
         "bar-widget"
       ],
       "stability": "stable",
@@ -1167,12 +1170,14 @@
       "requires": [],
       "recommends": [],
       "entryPoints": {
+        "service": "Service.qml",
         "barWidget": "Widget.qml"
       },
       "files": [
         "BarHoverSeam.qml",
         "ColorProfile.qml",
         "MotionTokens.qml",
+        "Service.qml",
         "Widget.qml",
         "manifest.json"
       ]

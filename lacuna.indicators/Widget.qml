@@ -12,8 +12,9 @@ Item {
   property bool recording: false
   property int reminderCount: 0
   property string reminderTooltip: "Reminders"
-  property string dictationState: "idle"
+  property var voxtypeService: null
 
+  readonly property string dictationState: voxtypeService ? String(voxtypeService.dictationState || "idle") : "idle"
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
   readonly property color background: bar ? bar.background : "#101315"
@@ -58,6 +59,21 @@ Item {
 
   function parseData(raw) {
     try { return JSON.parse(String(raw || "{}")) } catch (e) { return {} }
+  }
+
+  function resolveVoxtypeService() {
+    if (voxtypeService) return
+    if (bar && bar.shell && typeof bar.shell.ensureService === "function") {
+      var ensured = bar.shell.ensureService("lacuna.voxtype")
+      if (ensured) {
+        voxtypeService = ensured
+        return
+      }
+    }
+    if (bar && bar.shell && typeof bar.shell.serviceFor === "function") {
+      var existing = bar.shell.serviceFor("lacuna.voxtype")
+      if (existing) voxtypeService = existing
+    }
   }
 
   function refresh() {
@@ -191,7 +207,18 @@ Item {
     animationDisabled: colorProfile.reduceMotion
   }
 
-  Component.onCompleted: refresh()
+  Component.onCompleted: {
+    resolveVoxtypeService()
+    refresh()
+  }
+  onBarChanged: resolveVoxtypeService()
+
+  Timer {
+    interval: 1000
+    running: root.voxtypeService === null
+    repeat: true
+    onTriggered: root.resolveVoxtypeService()
+  }
 
   Timer {
     interval: 5000
@@ -252,17 +279,6 @@ Item {
       if (exitCode !== 0) {
         root.reminderCount = 0
         root.reminderTooltip = "Reminders"
-      }
-    }
-  }
-
-  Process {
-    command: ["omarchy", "voxtype", "status"]
-    running: true
-    stdout: SplitParser {
-      onRead: function(data) {
-        var parsed = root.parseData(data)
-        root.dictationState = String(parsed.alt || parsed.class || "idle")
       }
     }
   }

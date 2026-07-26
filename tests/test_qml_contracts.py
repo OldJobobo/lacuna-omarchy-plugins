@@ -2302,6 +2302,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertEqual(ambience_host.count("visible: true"), 2)
         self.assertNotIn("visible: root.effectsEnabled", ambience_host)
         self.assertEqual(ambience_host.count("mask: Region {}"), 2)
+        self.assertIn("loadedEffectCount: root.loadedEffectCount()", ambience_host)
         for window in [frame, border_window]:
             self.assertIn("visible: true", window)
             self.assertNotIn("visible: active", window)
@@ -2323,6 +2324,8 @@ class QmlContractTests(unittest.TestCase):
 
         omarchy_bar = read("lacuna.bar/OmarchyBar.qml")
         self.assertIn('"lacuna-bar-portrait-companion"', omarchy_bar)
+        self.assertIn("readonly property var portraitCompanionScreens", omarchy_bar)
+        self.assertIn("model: root.portraitCompanionScreens", omarchy_bar)
         self.assertIn('visible: band === "companion" ? true : !root.barHidden', omarchy_bar)
         self.assertIn("WlrLayershell.exclusionMode: barWindow.surfaceActive ? ExclusionMode.Auto : ExclusionMode.Ignore", omarchy_bar)
         self.assertNotIn("exclusiveZone:", omarchy_bar)
@@ -2383,7 +2386,9 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("AudioOutput", overlay)
         self.assertIn("muted: true", overlay)
         self.assertIn("fillMode: VideoOutput.PreserveAspectCrop", overlay)
-        self.assertIn("source: videoWindow.renderable ? root.activeSource : \"\"", overlay)
+        self.assertIn("active: videoWindow.renderable", overlay)
+        self.assertIn("sourceComponent: videoContentComponent", overlay)
+        self.assertIn("source: root.activeSource", overlay)
         self.assertIn('WlrLayershell.namespace: "lacuna-media-player-video"', overlay)
         # The fade cover must live inside the video window (deterministic
         # sibling z-order), never as a second layer-shell surface whose
@@ -2421,8 +2426,10 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("wallpaperPositionRefreshKey !== refreshKey", overlay)
         self.assertIn("root.wallpaperPositionRefreshKey = root.videoSource + \"#\" + root.backgroundRequestRevision", overlay)
         self.assertIn("fadeRevealDelay = Math.max(0, mediaReadyMinimumHoldMs - elapsed)", overlay)
-        self.assertIn("visible: videoWindow.renderable", overlay)
-        self.assertIn("visible: root.fadeCoverVisible", overlay)
+        self.assertIn("active: videoWindow.renderable", overlay)
+        self.assertIn("readonly property real localCoverOpacity: localPlayerReady ? root.fadeCoverOpacity : 1", overlay)
+        self.assertIn("visible: true", overlay)
+        self.assertIn("opacity: videoContent.localCoverOpacity", overlay)
         self.assertIn("interval: root.fadeRevealDelay", overlay)
         self.assertIn("id: wallpaperFadeGateTimer", overlay)
         self.assertIn("interval: 500", overlay)

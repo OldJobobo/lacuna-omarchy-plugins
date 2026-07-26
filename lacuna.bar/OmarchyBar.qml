@@ -107,6 +107,9 @@ Item {
   property var clickTargets: []
   property var debugModuleSlots: []
   readonly property var validBarScreens: ScreenModel.validScreens(Quickshell.screens)
+  readonly property var portraitCompanionScreens: validBarScreens.filter(function(screen) {
+    return root.portraitSplitEffective(screen)
+  })
 
   function screenName(screen) {
     return ScreenModel.screenName(screen)
@@ -885,10 +888,11 @@ Item {
     }
   }
 
-  // Kept mapped on every valid output. Inactive companion instances have no
-  // paint, input region, or exclusive zone, preserving same-layer map order.
+  // Companion bars occupy the opposite horizontal edge and cannot overlap
+  // the primary bar, so only portrait outputs that actually use the split
+  // need a mapped surface.
   Variants {
-    model: root.validBarScreens
+    model: root.portraitCompanionScreens
 
     delegate: Component {
       BarPanel {

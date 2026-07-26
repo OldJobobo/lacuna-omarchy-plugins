@@ -65,6 +65,76 @@ def center_rgb(path: Path) -> tuple[int, int, int]:
 
 @unittest.skipUnless(HAVE_SESSION, "needs a quickshell binary and a Wayland session")
 class QmlAmbienceOrderBehaviorTests(unittest.TestCase):
+    def test_production_effects_load_only_for_painting_selected_stack(self):
+        qml = f'''
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  Item {{
+    id: host
+    width: 32
+    height: 32
+
+    Loader {{
+      id: stackLoader
+      anchors.fill: parent
+      source: "{qml_url('lacuna.ambience-host/AmbienceStack.qml')}"
+      onLoaded: {{
+        item.activeEffects = ["auroraDrift", "filmGrain"]
+        item.paintEnabled = false
+        disabledProbe.restart()
+      }}
+    }}
+
+    Timer {{
+      id: disabledProbe
+      interval: 40
+      onTriggered: {{
+        var stack = stackLoader.item
+        host.propertyA = stack.activeProductionEffectCount
+        stack.paintEnabled = true
+        enabledProbe.restart()
+      }}
+    }}
+    property int propertyA: -1
+    property var firstIdentity: null
+    property var secondIdentity: null
+
+    Timer {{
+      id: enabledProbe
+      interval: 120
+      onTriggered: {{
+        var stack = stackLoader.item
+        host.firstIdentity = stack.productionEffectObject("auroraDrift")
+        host.secondIdentity = stack.productionEffectObject("filmGrain")
+        var enabledCount = stack.activeProductionEffectCount
+        stack.activeEffects = ["filmGrain", "auroraDrift"]
+        Qt.callLater(function() {{
+          console.log("BEHAVE " + JSON.stringify({{
+            disabledCount: host.propertyA,
+            enabledCount: enabledCount,
+            sameFirst: host.firstIdentity === stack.productionEffectObject("auroraDrift"),
+            sameSecond: host.secondIdentity === stack.productionEffectObject("filmGrain"),
+            frontZ: stack.zForEffect("filmGrain"),
+            backZ: stack.zForEffect("auroraDrift")
+          }}))
+          Qt.quit()
+        }})
+      }}
+    }}
+  }}
+}}
+'''
+        output = run_quickshell(qml, timeout=10)
+        require_no_qml_errors(output)
+        row = parse_behave(output)[-1]
+        self.assertEqual(row["disabledCount"], 0, output[-2000:])
+        self.assertEqual(row["enabledCount"], 2, output[-2000:])
+        self.assertTrue(row["sameFirst"], output[-2000:])
+        self.assertTrue(row["sameSecond"], output[-2000:])
+        self.assertGreater(row["frontZ"], row["backZ"], output[-2000:])
+
     def test_reorder_changes_pixel_and_z_without_recreating_stack_objects(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             first = Path(temp_dir) / "front-red.png"

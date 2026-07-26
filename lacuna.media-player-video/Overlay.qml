@@ -128,6 +128,40 @@ Item {
     return name === targetOutput
   }
 
+  function expectedMatchedPlayerCount() {
+    var screens = Quickshell.screens || []
+    var count = 0
+    for (var i = 0; i < screens.length; i++) {
+      if (outputMatches(screens[i])) count += 1
+    }
+    return count
+  }
+
+  function registeredMatchedPlayerCount() {
+    var count = 0
+    for (var i = 0; i < videoPlayers.length; i++) {
+      var player = videoPlayers[i]
+      if (player && outputMatches(player.targetScreen)) count += 1
+    }
+    return count
+  }
+
+  function allMatchedPlayersRegistered() {
+    var expected = expectedMatchedPlayerCount()
+    return expected > 0 && registeredMatchedPlayerCount() >= expected
+  }
+
+  function allMatchedPlayersReadyFor(source) {
+    var expected = expectedMatchedPlayerCount()
+    var ready = 0
+    for (var i = 0; i < videoPlayers.length; i++) {
+      var player = videoPlayers[i]
+      if (!player || !outputMatches(player.targetScreen) || String(player.source) !== source || !player.lacunaReady) continue
+      ready += 1
+    }
+    return expected > 0 && ready >= expected
+  }
+
   function resolveFrameRect(screen) {
     if (root.shell && root.shell.bar && typeof root.shell.bar.lacunaFrameContentRect === "function") {
       var rect = root.shell.bar.lacunaFrameContentRect(screen)
@@ -300,7 +334,7 @@ Item {
 
   function notePlayerReady() {
     if (!waitingForPlayerReady || activeSource === "" || exitTransitionActive || !wallpaperDesired) return
-    if (!activePlayersConverged(400)) {
+    if (!allMatchedPlayersReadyFor(activeSource) || !activePlayersConverged(400)) {
       syncVideoPosition(false)
       readyConvergenceTimer.restart()
       return
@@ -456,6 +490,12 @@ Item {
       wallpaperFadeGateTimer.restart()
       return
     }
+
+    // Loader creation is synchronous in the common case, but output hotplug
+    // and target changes can lag behind the global cover transition. Never
+    // assign a source until every currently matched output has registered its
+    // player; each late player also owns a local opaque cover until ready.
+    if (!allMatchedPlayersRegistered()) return
 
     var refreshKey = sourceRevisionKey
     if (wallpaperPositionRefreshKey !== refreshKey && !wallpaperPositionRefreshPending && service && typeof service.updatePlaybackPosition === "function") {
@@ -759,108 +799,140 @@ Item {
         right: true
       }
 
-      Rectangle {
-        id: videoFrame
+      Loader {
+        id: videoContentLoader
+        anchors.fill: parent
+        active: videoWindow.renderable
+        sourceComponent: videoContentComponent
+        onLoaded: root.syncWallpaper()
+      }
 
-        x: Math.round(videoWindow.frameRect.x)
-        y: Math.round(videoWindow.frameRect.y)
-        width: Math.round(videoWindow.frameRect.width)
-        height: Math.round(videoWindow.frameRect.height)
-        radius: Math.max(0, Number(videoWindow.frameRect.radius || 0))
-        color: "transparent"
-        clip: true
-        visible: videoWindow.renderable
+      Component {
+        id: videoContentComponent
 
-        MediaPlayer {
-          id: backgroundPlayer
-          source: videoWindow.renderable ? root.activeSource : ""
-          videoOutput: backgroundOutput
-          audioOutput: AudioOutput {
-            muted: true
-            volume: 0
-          }
-          loops: MediaPlayer.Infinite
-          onSourceChanged: {
+        Item {
+          id: videoContent
+          anchors.fill: parent
+          property bool localPlayerReady: false
+          readonly property real localCoverOpacity: localPlayerReady ? root.fadeCoverOpacity : 1
+
+          function markLocalPlayerReady() {
+            backgroundPlayer.lacunaReady = true
             root.syncVideoPosition(true)
-            if (root.backgroundPlaying) play()
+            localPlayerReady = true
+            root.notePlayerReady()
           }
-          onPlaybackStateChanged: {
-            if (playbackState === MediaPlayer.PlayingState) {
-              // A handoff can resume the same source without onSourceChanged.
-              // Force a fresh lock to the live mpv clock in that case.
-              root.syncVideoPosition(true)
-              root.notePlayerReady()
+
+          Rectangle {
+            id: videoFrame
+
+            x: Math.round(videoWindow.frameRect.x)
+            y: Math.round(videoWindow.frameRect.y)
+            width: Math.round(videoWindow.frameRect.width)
+            height: Math.round(videoWindow.frameRect.height)
+            radius: Math.max(0, Number(videoWindow.frameRect.radius || 0))
+            color: "transparent"
+            clip: true
+
+            MediaPlayer {
+              id: backgroundPlayer
+              property var targetScreen: videoWindow.modelData
+              property bool lacunaReady: false
+              source: root.activeSource
+              videoOutput: backgroundOutput
+              audioOutput: AudioOutput {
+                muted: true
+                volume: 0
+              }
+              loops: MediaPlayer.Infinite
+              onSourceChanged: {
+                lacunaReady = false
+                videoContent.localPlayerReady = false
+                root.syncVideoPosition(true)
+                if (root.backgroundPlaying) play()
+              }
+              onPlaybackStateChanged: {
+                if (playbackState === MediaPlayer.PlayingState) {
+                  // A handoff can resume the same source without onSourceChanged.
+                  // Force a fresh lock to the live mpv clock in that case.
+                  videoContent.markLocalPlayerReady()
+                }
+                if (playbackState !== MediaPlayer.PlayingState) playbackRate = 1.0
+              }
+              onMediaStatusChanged: {
+                if (mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia) {
+                  videoContent.markLocalPlayerReady()
+                }
+                if (mediaStatus === MediaPlayer.InvalidMedia) root.notePlayerError("invalid-media")
+              }
+              onErrorOccurred: function(error, errorString) {
+                if (error !== MediaPlayer.NoError) root.notePlayerError(errorString)
+              }
+              Component.onCompleted: {
+                root.videoPlayers.push(backgroundPlayer)
+                root.syncVideoPosition(true)
+                root.syncWallpaper()
+                if (root.backgroundPlaying) play()
+              }
+              Component.onDestruction: {
+                var index = root.videoPlayers.indexOf(backgroundPlayer)
+                if (index >= 0) root.videoPlayers.splice(index, 1)
+              }
             }
-            if (playbackState !== MediaPlayer.PlayingState) playbackRate = 1.0
-          }
-          onMediaStatusChanged: {
-            if (mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia) {
-              root.syncVideoPosition(true)
-              root.notePlayerReady()
+
+            VideoOutput {
+              id: backgroundOutput
+              anchors.fill: parent
+              fillMode: VideoOutput.PreserveAspectCrop
             }
-            if (mediaStatus === MediaPlayer.InvalidMedia) root.notePlayerError("invalid-media")
-          }
-          onErrorOccurred: function(error, errorString) {
-            if (error !== MediaPlayer.NoError) root.notePlayerError(errorString)
-          }
-          Component.onCompleted: root.videoPlayers.push(backgroundPlayer)
-          Component.onDestruction: {
-            var index = root.videoPlayers.indexOf(backgroundPlayer)
-            if (index >= 0) root.videoPlayers.splice(index, 1)
-          }
-        }
 
-        VideoOutput {
-          id: backgroundOutput
-          anchors.fill: parent
-          visible: videoWindow.renderable
-          fillMode: VideoOutput.PreserveAspectCrop
-        }
+            Rectangle {
+              id: fadeCover
 
-        Rectangle {
-          id: fadeCover
+              // The black cover lives inside the video window, above the
+              // VideoOutput: sibling z-order is deterministic, whereas stacking
+              // two separate layer-shell surfaces is map-order dependent and
+              // could leave the video on top of its own cover, turning every
+              // fade into an abrupt pop-in.
+              anchors.fill: parent
+              z: 10
+              color: "#000000"
+              visible: true
+              opacity: videoContent.localCoverOpacity
 
-          // The black cover lives inside the video window, above the
-          // VideoOutput: sibling z-order is deterministic, whereas stacking
-          // two separate layer-shell surfaces is map-order dependent and
-          // could leave the video on top of its own cover, turning every
-          // fade into an abrupt pop-in.
-          anchors.fill: parent
-          z: 10
-          color: "#000000"
-          visible: root.fadeCoverVisible
-          opacity: root.fadeCoverOpacity
-
-          Behavior on opacity {
-            NumberAnimation {
-              duration: root.fadeCoverDuration
-              easing.type: Easing.InOutQuad
+              Behavior on opacity {
+                NumberAnimation {
+                  duration: root.fadeCoverDuration
+                  easing.type: Easing.InOutQuad
+                }
+              }
             }
           }
-        }
 
-        Connections {
-          target: root
-          function onActiveSourceChanged() {
-            if (root.activeSource === "") backgroundPlayer.stop()
-            else if (root.backgroundPlaying && videoWindow.renderable) backgroundPlayer.play()
-          }
-          function onBackgroundPlayingChanged() {
-            if (root.backgroundPlaying && videoWindow.renderable) {
-              root.syncVideoPosition(true)
-              backgroundPlayer.play()
-            } else {
-              backgroundPlayer.pause()
+          Connections {
+            target: root
+            function onActiveSourceChanged() {
+              if (root.activeSource === "") backgroundPlayer.stop()
+              else if (root.backgroundPlaying) backgroundPlayer.play()
             }
-          }
-          function onWallpaperDesiredChanged() {
-            if (root.wallpaperDesired && root.backgroundPlaying && videoWindow.renderable) {
-              root.syncVideoPosition(true)
-              backgroundPlayer.play()
+            function onBackgroundPlayingChanged() {
+              if (root.backgroundPlaying) {
+                root.syncVideoPosition(true)
+                backgroundPlayer.play()
+              } else {
+                backgroundPlayer.pause()
+              }
+            }
+            function onWallpaperDesiredChanged() {
+              if (root.wallpaperDesired && root.backgroundPlaying) {
+                root.syncVideoPosition(true)
+                backgroundPlayer.play()
+              }
             }
           }
         }
       }
+
     }
   }
 
@@ -920,6 +992,10 @@ Item {
         fadeCoverDuration: root.fadeCoverDuration,
         fadeRevealDelay: root.fadeRevealDelay,
         wallpaperLayerVisible: root.wallpaperLayerVisible,
+        loadedPlayerCount: root.videoPlayers.length,
+        expectedPlayerCount: root.expectedMatchedPlayerCount(),
+        registeredPlayerCount: root.registeredMatchedPlayerCount(),
+        matchedPlayersRegistered: root.allMatchedPlayersRegistered(),
         wallpaperFadeGateDelay: root.wallpaperFadeGateDelay,
         failureWatchdogDuration: root.failureWatchdogDuration,
         adaptiveReadinessTimeoutDuration: root.adaptiveReadinessTimeoutDuration,

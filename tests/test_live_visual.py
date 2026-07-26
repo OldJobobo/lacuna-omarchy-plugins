@@ -44,8 +44,9 @@ def set_portrait_split(enabled: bool) -> None:
     data = read_settings()
     data.setdefault("barPresentation", {})["portraitSplit"] = enabled
     write_settings(data)
-    run(["omarchy", "restart", "shell"], timeout=60)
-    time.sleep(0.5)
+    # Exercise the live Variants model update. Restarting here would only
+    # validate startup state and miss an unsafe same-session remap.
+    time.sleep(0.75)
 
 
 def set_reduce_motion(enabled: bool) -> None:
@@ -96,7 +97,6 @@ def wait_for_frame_layers() -> dict[str, list[str]]:
         current = lacuna_layers()
         ready = bool(current) and all(
             "2:lacuna-bar-frame" in names
-            and "2:lacuna-bar-portrait-companion" in names
             and "3:lacuna-bar-frame-border" in names
             for names in current.values()
         )
@@ -139,14 +139,26 @@ class LiveVisualTests(unittest.TestCase):
         set_frame_mode("off")
         self.assertEqual(wait_for_frame_layers(), off_layers)
 
-    def test_portrait_companion_stays_mapped_across_setting_toggle(self):
+    def test_portrait_companion_exists_only_on_effective_outputs(self):
         set_portrait_split(False)
         disabled_layers = wait_for_frame_layers()
         self.assertTrue(disabled_layers)
-        self.assertTrue(all("2:lacuna-bar-portrait-companion" in names for names in disabled_layers.values()))
+        self.assertTrue(all("2:lacuna-bar-portrait-companion" not in names for names in disabled_layers.values()))
 
+        monitors = json.loads(run(["hyprctl", "-j", "monitors"]))
+        portrait_names = set()
+        for monitor in monitors:
+            width = float(monitor.get("width", 0))
+            height = float(monitor.get("height", 0))
+            if int(monitor.get("transform", 0)) in {1, 3, 5, 7}:
+                width, height = height, width
+            if height > width:
+                portrait_names.add(str(monitor.get("name", "")))
         set_portrait_split(True)
-        self.assertEqual(wait_for_frame_layers(), disabled_layers)
+        time.sleep(0.75)
+        enabled_layers = wait_for_frame_layers()
+        for screen, names in enabled_layers.items():
+            self.assertEqual("2:lacuna-bar-portrait-companion" in names, screen in portrait_names, enabled_layers)
 
     def test_top_bar_rows_are_not_overpainted_by_fullframe_toggle(self):
         with tempfile.TemporaryDirectory() as tmp:

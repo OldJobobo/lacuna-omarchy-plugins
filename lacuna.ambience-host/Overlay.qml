@@ -10,6 +10,8 @@ Item {
   property var shell: null
   property var manifest: null
   property var lacunaSettings: ({})
+  property bool settingsLoaded: false
+  property var productionStacks: []
   readonly property bool hostReady: true
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
@@ -17,7 +19,7 @@ Item {
   readonly property var backgroundEffects: lacunaSettings && typeof lacunaSettings === "object"
     && lacunaSettings.backgroundEffects && typeof lacunaSettings.backgroundEffects === "object"
     ? lacunaSettings.backgroundEffects : ({})
-  readonly property bool effectsEnabled: backgroundEffects.enabled !== false
+  readonly property bool effectsEnabled: settingsLoaded && backgroundEffects.enabled !== false
   readonly property bool foregroundOverlay: backgroundEffects.foregroundOverlay === true
   readonly property var activeEffects: Array.isArray(backgroundEffects.activeEffects)
     ? backgroundEffects.activeEffects
@@ -29,10 +31,29 @@ Item {
     } catch (error) {
       lacunaSettings = {}
     }
+    settingsLoaded = true
   }
 
   function normalizedOrder() {
     return orderProbe.normalizeActiveEffects(activeEffects)
+  }
+
+  function registerProductionStack(stack) {
+    if (productionStacks.indexOf(stack) < 0) productionStacks.push(stack)
+  }
+
+  function unregisterProductionStack(stack) {
+    var index = productionStacks.indexOf(stack)
+    if (index >= 0) productionStacks.splice(index, 1)
+  }
+
+  function loadedEffectCount() {
+    var count = 0
+    for (var i = 0; i < productionStacks.length; i++) {
+      var stack = productionStacks[i]
+      if (stack) count += Number(stack.activeProductionEffectCount || 0)
+    }
+    return count
   }
 
   function zMap() {
@@ -49,7 +70,10 @@ Item {
     printErrors: false
     onLoaded: root.loadSettings(text())
     onFileChanged: reload()
-    onLoadFailed: root.lacunaSettings = {}
+    onLoadFailed: {
+      root.lacunaSettings = {}
+      root.settingsLoaded = true
+    }
   }
 
   AmbienceStack {
@@ -91,6 +115,8 @@ Item {
         targetScreen: bottomWindow.modelData
         activeEffects: root.activeEffects
         paintEnabled: root.effectsEnabled && !root.foregroundOverlay
+        Component.onCompleted: root.registerProductionStack(this)
+        Component.onDestruction: root.unregisterProductionStack(this)
       }
     }
   }
@@ -124,6 +150,8 @@ Item {
         targetScreen: overlayWindow.modelData
         activeEffects: root.activeEffects
         paintEnabled: root.effectsEnabled && root.foregroundOverlay
+        Component.onCompleted: root.registerProductionStack(this)
+        Component.onDestruction: root.unregisterProductionStack(this)
       }
     }
   }
@@ -136,6 +164,7 @@ Item {
         enabled: root.effectsEnabled,
         foregroundOverlay: root.foregroundOverlay,
         activeEffects: root.normalizedOrder(),
+        loadedEffectCount: root.loadedEffectCount(),
         z: root.zMap(),
         bottomRenderable: root.effectsEnabled && !root.foregroundOverlay,
         overlayRenderable: root.effectsEnabled && root.foregroundOverlay,

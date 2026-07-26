@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell.Io
 
 Item {
   id: root
@@ -7,8 +6,9 @@ Item {
   property var bar: null
   property string moduleName: "lacuna.voxtype"
   property var settings: ({})
-  property string dictationState: "idle"
+  property var voxtypeService: null
 
+  readonly property string dictationState: voxtypeService ? String(voxtypeService.dictationState || "idle") : "idle"
   readonly property bool active: dictationState === "recording" || dictationState === "transcribing"
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
@@ -32,8 +32,19 @@ Item {
     return value === true || String(value).toLowerCase() === "true"
   }
 
-  function parseData(raw) {
-    try { return JSON.parse(String(raw || "{}")) } catch (e) { return {} }
+  function resolveService() {
+    if (voxtypeService) return
+    if (bar && bar.shell && typeof bar.shell.ensureService === "function") {
+      var ensured = bar.shell.ensureService("lacuna.voxtype")
+      if (ensured) {
+        voxtypeService = ensured
+        return
+      }
+    }
+    if (bar && bar.shell && typeof bar.shell.serviceFor === "function") {
+      var existing = bar.shell.serviceFor("lacuna.voxtype")
+      if (existing) voxtypeService = existing
+    }
   }
 
   function tooltip() {
@@ -54,16 +65,14 @@ Item {
     animationDisabled: colorProfile.reduceMotion
   }
 
-  Process {
-    command: ["omarchy", "voxtype", "status"]
-    running: true
-    stdout: SplitParser {
-      onRead: function(data) {
-        var parsed = root.parseData(data)
-        root.dictationState = String(parsed.alt || parsed.class || "idle")
-      }
-    }
-    onExited: root.dictationState = "idle"
+  Component.onCompleted: resolveService()
+  onBarChanged: resolveService()
+
+  Timer {
+    interval: 1000
+    running: root.voxtypeService === null
+    repeat: true
+    onTriggered: root.resolveService()
   }
 
   Item {

@@ -40,6 +40,15 @@ class MediaOverlayContractTests(unittest.TestCase):
         self.assertIn("root.finishGiveUpWallpaper()", overlay)
         self.assertIn("visible: true", overlay)
         self.assertIn("readonly property bool renderable: targetMatched && root.wallpaperLayerVisible", overlay)
+        self.assertIn("id: videoContentLoader", overlay)
+        self.assertIn("active: videoWindow.renderable", overlay)
+        self.assertIn("sourceComponent: videoContentComponent", overlay)
+        self.assertIn("loadedPlayerCount: root.videoPlayers.length", overlay)
+        self.assertIn("if (!allMatchedPlayersRegistered()) return", overlay)
+        self.assertIn("if (!allMatchedPlayersReadyFor(activeSource) || !activePlayersConverged(400))", overlay)
+        self.assertIn("property bool localPlayerReady: false", overlay)
+        self.assertIn("readonly property real localCoverOpacity: localPlayerReady ? root.fadeCoverOpacity : 1", overlay)
+        self.assertIn("property var targetScreen: videoWindow.modelData", overlay)
 
     def test_adaptive_fallback_and_drift_policy_are_explicit(self):
         overlay = read_overlay()
@@ -62,6 +71,16 @@ class MediaOverlayContractTests(unittest.TestCase):
 
 @unittest.skipUnless(HAVE_SESSION, "needs a quickshell binary and a Wayland session")
 class MediaOverlayRuntimeTests(unittest.TestCase):
+    def test_matched_player_registration_and_readiness_gate(self):
+        qml = f'''\nimport Quickshell\nimport QtQuick\n\nShellRoot {{\n  id: root\n  property var overlay: null\n  Component.onCompleted: {{\n    var c = Qt.createComponent("{qml_url('lacuna.media-player-video/Overlay.qml')}", Component.PreferSynchronous)\n    overlay = c.createObject(root, {{ manifest: {{ defaults: {{ targetOutput: "ALL" }} }} }})\n    probe.restart()\n  }}\n  Timer {{\n    id: probe\n    interval: 10\n    onTriggered: {{\n      var expected = overlay.expectedMatchedPlayerCount()\n      var before = overlay.allMatchedPlayersRegistered()\n      for (var i = 0; i < Quickshell.screens.length; i++) {{\n        overlay.videoPlayers.push({{\n          targetScreen: Quickshell.screens[i],\n          source: "test-source",\n          lacunaReady: true,\n          position: 0\n        }})\n      }}\n      console.log("BEHAVE " + JSON.stringify({{\n        expected: expected,\n        before: before,\n        registered: overlay.allMatchedPlayersRegistered(),\n        ready: overlay.allMatchedPlayersReadyFor("test-source")\n      }}))\n      Qt.quit()\n    }}\n  }}\n}}\n'''
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        result = parse_behave(output)[-1]
+        self.assertGreater(result["expected"], 0, output[-2000:])
+        self.assertFalse(result["before"], output[-2000:])
+        self.assertTrue(result["registered"], output[-2000:])
+        self.assertTrue(result["ready"], output[-2000:])
+
     def test_optional_v1_service_contract_and_legacy_fallback_coexist(self):
         qml = f"""
 import Quickshell
@@ -153,7 +172,8 @@ ShellRoot {{
         failureReason: mediaService.failureReason,
         duplicateErrorSuppressed: duplicateErrorSuppressed,
         exitFailureSuppressed: exitFailureSuppressed,
-        exitReadinessCleared: exitReadinessCleared
+        exitReadinessCleared: exitReadinessCleared,
+        loadedPlayers: overlay.videoPlayers.length
       }}))
       Qt.quit()
     }}
@@ -175,6 +195,7 @@ ShellRoot {{
         self.assertTrue(final["duplicateErrorSuppressed"])
         self.assertTrue(final["exitFailureSuppressed"])
         self.assertTrue(final["exitReadinessCleared"])
+        self.assertEqual(final["loadedPlayers"], 0)
 
 
 if __name__ == "__main__":

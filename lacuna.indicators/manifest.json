@@ -75,6 +75,8 @@
     "standalone": true,
     "bundle": "standalone",
     "requires": [],
-    "recommends": []
+    "recommends": [
+      "lacuna.voxtype"
+    ]
   }
 }
