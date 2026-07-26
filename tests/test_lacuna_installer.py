@@ -164,6 +164,55 @@ with module.installer_transaction_lock():
         self.assertEqual(result.stdout.count("omarchy plugin rescan"), 0)
         self.assertNotIn("lacuna.compact-pill", result.stdout)
 
+    def test_ambience_profile_stages_host_first_and_every_fallback(self):
+        result = run_lacuna(["install", "--profile", "ambience", "--activate", "--dry-run", "--yes"])
+        expected = [
+            "lacuna.ambience-host",
+            "lacuna.aurora-drift",
+            "lacuna.cinematic-light-overlay",
+            "lacuna.crt-overlay",
+            "lacuna.dust-motes-overlay",
+            "lacuna.film-grain-overlay",
+            "lacuna.god-rays-overlay",
+            "lacuna.rainfall-overlay",
+            "lacuna.vhs-overlay",
+        ]
+        positions = [result.stdout.index(plugin_id) for plugin_id in expected]
+        self.assertEqual(positions, sorted(positions), result.stdout)
+
+    def test_ambience_activation_refreshes_installed_fallback_without_reinstall_flag(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            installed = config_home / "omarchy" / "plugins" / "lacuna.crt-overlay"
+            installed.mkdir(parents=True)
+            (installed / "manifest.json").write_text("{}\n", encoding="utf-8")
+            result = run_lacuna(
+                ["install", "--profile", "ambience", "--activate", "--dry-run", "--yes"],
+                config_home=config_home,
+            )
+        self.assertIn("stage lacuna.crt-overlay ->", result.stdout)
+        self.assertIn("refresh installed ambience fallbacks before host activation", result.stdout)
+
+    def test_ambience_host_ordering_preserves_fallback_inline_settings(self):
+        module = load_installer_module()
+        config = module.default_shell_config()
+        crt = {"id": "lacuna.crt-overlay", "intensity": 0.73, "custom": {"keep": True}}
+        vhs = {"id": "lacuna.vhs-overlay", "noiseAmount": 0.19}
+        config["plugins"] = [
+            {"id": "unrelated.before"},
+            crt,
+            {"id": "unrelated.middle"},
+            vhs,
+            {"id": "lacuna.ambience-host"},
+        ]
+        module.order_ambience_host_before_fallbacks(config)
+        self.assertEqual(
+            [entry["id"] for entry in config["plugins"]],
+            ["unrelated.before", "lacuna.ambience-host", "lacuna.crt-overlay", "unrelated.middle", "lacuna.vhs-overlay"],
+        )
+        self.assertIs(config["plugins"][2], crt)
+        self.assertIs(config["plugins"][4], vhs)
+
     def test_full_profile_can_stage_without_activation_or_layout(self):
         result = run_lacuna(["install", "--profile", "full", "--no-activate", "--keep-layout", "--dry-run", "--yes"])
 
@@ -407,7 +456,7 @@ with module.installer_transaction_lock():
             plugins = module.load_plugins()
 
             with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}), \
-                mock.patch.object(module, "run_command", return_value=9):
+                mock.patch.object(module, "run_command", return_value=9) as run_command:
                 result = module.activate_plugins(
                     ["lacuna.state"],
                     plugins,
@@ -420,6 +469,32 @@ with module.installer_transaction_lock():
 
         self.assertEqual(9, result)
         self.assertEqual(original, restored)
+        self.assertEqual(run_command.call_count, 2)
+
+    def test_failed_ambience_activation_restores_shell_and_never_rewrites_lacuna_settings(self):
+        module = load_installer_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            shell_json = config_home / "omarchy" / "shell.json"
+            settings_json = config_home / "omarchy" / "lacuna" / "settings.json"
+            settings_json.parent.mkdir(parents=True)
+            original_shell = '{"version":1,"bar":{"layout":{"left":[],"center":[],"right":[]}},"plugins":[{"id":"lacuna.crt-overlay","intensity":0.73}]}\n'
+            original_settings = '{"backgroundEffects":{"activeEffects":["crt","trackingLines"]}}\n'
+            shell_json.write_text(original_shell, encoding="utf-8")
+            settings_json.write_text(original_settings, encoding="utf-8")
+            plugins = module.load_plugins()
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}), \
+                mock.patch.object(module, "run_command", return_value=9):
+                result = module.activate_plugins(
+                    ["lacuna.ambience-host", "lacuna.crt-overlay"],
+                    plugins,
+                    {"lacuna.ambience-host", "lacuna.crt-overlay"},
+                    False,
+                    False,
+                )
+            self.assertEqual(result, 9)
+            self.assertEqual(shell_json.read_text(encoding="utf-8"), original_shell)
+            self.assertEqual(settings_json.read_text(encoding="utf-8"), original_settings)
 
     def test_runtime_state_snapshot_preserves_shell_and_lacuna_settings(self):
         module = load_installer_module()
@@ -831,6 +906,32 @@ with module.installer_transaction_lock():
         self.assertIn("lacuna.clock (enabled)", result.stdout)
         self.assertIn("lacuna.state (staged)", result.stdout)
         self.assertIn("installed unknown, repo 0.1.0", result.stdout)
+        self.assertIn("Omarchy config:", result.stdout)
+        self.assertIn("Settings migration: missing", result.stdout)
+        self.assertIn("Sidebar monitor policy: auto", result.stdout)
+        self.assertIn("Last installer operation: missing", result.stdout)
+        self.assertIn("Core health: missing", result.stdout)
+        self.assertIn("Recovery:", result.stdout)
+
+    def test_mutation_records_completed_and_failed_operation_phase(self):
+        module = load_installer_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            args = module.argparse.Namespace(dry_run=False)
+            with mock.patch.dict(module.os.environ, {
+                "XDG_CONFIG_HOME": str(config_home),
+                "LACUNA_OMARCHY_CONFIG_HOME": str(config_home),
+            }):
+                self.assertEqual(module.run_mutation(lambda _args: 0, args), 0)
+                completed = module.json.loads(module.installer_status_path().read_text(encoding="utf-8"))
+                self.assertEqual(module.run_mutation(lambda _args: 7, args), 7)
+                failed = module.json.loads(module.installer_status_path().read_text(encoding="utf-8"))
+
+            self.assertEqual(completed["phase"], "completed")
+            self.assertEqual(completed["exitCode"], 0)
+            self.assertEqual(failed["phase"], "failed")
+            self.assertEqual(failed["exitCode"], 7)
+            self.assertIn("omarchy plugin rescan", failed["recovery"])
 
     def test_update_dry_run_lists_only_changed_installed_plugins(self):
         with tempfile.TemporaryDirectory() as tmp:

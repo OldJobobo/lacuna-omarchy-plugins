@@ -119,6 +119,8 @@
     "standalone": true,
     "bundle": "standalone",
     "requires": [],
-    "recommends": []
+    "recommends": [
+      "lacuna.ambience-host"
+    ]
   }
 }

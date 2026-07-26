@@ -72,7 +72,17 @@ class ReducedMotionAndTypographyContracts(unittest.TestCase):
             "lacuna.rainfall-overlay/Overlay.qml",
             "lacuna.vhs-overlay/Overlay.qml",
         ]
-        for relative in overlays:
+        hosted = [
+            "lacuna.ambience-host/effects/AuroraDriftEffect.qml",
+            "lacuna.ambience-host/effects/CinematicLightEffect.qml",
+            "lacuna.ambience-host/effects/CrtEffect.qml",
+            "lacuna.ambience-host/effects/DustMotesEffect.qml",
+            "lacuna.ambience-host/effects/FilmGrainEffect.qml",
+            "lacuna.ambience-host/effects/GodRaysEffect.qml",
+            "lacuna.ambience-host/effects/RainfallEffect.qml",
+            "lacuna.ambience-host/effects/VhsEffect.qml",
+        ]
+        for relative in overlays + hosted:
             text = read(relative)
             self.assertIn("readonly property bool reducedMotion", text, relative)
             self.assertNotIn("running: root.effectVisible\n", text, relative)

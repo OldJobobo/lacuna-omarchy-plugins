@@ -2045,6 +2045,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('"set-background-animation-opacity-"', settings_window)
         self.assertIn('"Global"', settings_window)
         self.assertIn('"Active Animations"', settings_window)
+        self.assertIn("Front to back; #1 is topmost", settings_window)
         self.assertIn('"Add Animation"', settings_window)
         self.assertIn('"Effect Controls"', settings_window)
         self.assertIn('"Film Grain"', settings_window)
@@ -2115,6 +2116,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('"toggle-cinematic-light-motion-activeShimmer"', settings_window)
         self.assertIn("SettingsSelectRow", settings_window)
         self.assertIn("function setBackgroundEffectsEnabled", window)
+        self.assertIn("function ensureAmbienceHostPlugin", window)
+        self.assertIn("registry.ambienceHostPluginId()", window)
         self.assertIn("function setBackgroundVignetteEnabled", window)
         self.assertIn("function setBackgroundVignetteIntensity", window)
         self.assertIn("function setBackgroundAnimationOpacity", window)
@@ -2163,6 +2166,46 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("lacuna.god-rays-overlay", [entry["id"] for entry in example["plugins"]])
         self.assertIn("lacuna.crt-overlay", [entry["id"] for entry in example["plugins"]])
         self.assertIn("lacuna.background-vignette", [entry["id"] for entry in example["plugins"]])
+        example_ids = [entry["id"] for entry in example["plugins"]]
+        self.assertLess(example_ids.index("lacuna.ambience-host"), example_ids.index("lacuna.vhs-overlay"))
+
+    def test_ambience_host_orders_siblings_and_suppresses_fallback_windows(self):
+        host = read("lacuna.ambience-host/Overlay.qml")
+        stack = read("lacuna.ambience-host/AmbienceStack.qml")
+        self.assertEqual(host.count("visible: true"), 2)
+        self.assertEqual(host.count("mask: Region {}"), 2)
+        self.assertIn('WlrLayershell.namespace: "lacuna-ambience-host-bottom"', host)
+        self.assertIn('WlrLayershell.namespace: "lacuna-ambience-host-overlay"', host)
+        self.assertIn("readonly property bool hostReady: true", host)
+        self.assertIn("paintEnabled: root.effectsEnabled && !root.foregroundOverlay", host)
+        self.assertIn("paintEnabled: root.effectsEnabled && root.foregroundOverlay", host)
+        self.assertIn("function normalizeActiveEffects(source)", stack)
+        self.assertIn("function zForEffect(effectId)", stack)
+        self.assertIn("z: root.zForEffect(\"auroraDrift\")", stack)
+        self.assertIn("z: root.zForEffect(\"trackingLines\")", stack)
+        self.assertIn("trackingBands: 4", stack)
+        self.assertIn("targetScreen: root.targetScreen", stack)
+        dust = read("lacuna.ambience-host/effects/DustMotesEffect.qml")
+        self.assertIn("readonly property real cursorLocalX", dust)
+        self.assertIn("readonly property real cursorLocalY", dust)
+        self.assertNotIn("PanelWindow", stack)
+        self.assertNotIn("WlrLayershell.layer", stack)
+        for plugin_id in [
+            "lacuna.aurora-drift",
+            "lacuna.cinematic-light-overlay",
+            "lacuna.crt-overlay",
+            "lacuna.dust-motes-overlay",
+            "lacuna.film-grain-overlay",
+            "lacuna.god-rays-overlay",
+            "lacuna.rainfall-overlay",
+            "lacuna.vhs-overlay",
+        ]:
+            fallback = read(f"{plugin_id}/Overlay.qml")
+            self.assertIn("readonly property bool hostedByAmbienceHost: ambienceHostEnabled()", fallback, plugin_id)
+            self.assertIn('loaders["lacuna.ambience-host"]', fallback, plugin_id)
+            self.assertIn("loader.item.hostReady === true", fallback, plugin_id)
+            self.assertIn("effectVisible: !hostedByAmbienceHost &&", fallback, plugin_id)
+            self.assertIn("suppressed: root.hostedByAmbienceHost", fallback, plugin_id)
 
     def test_frame_shadow_mode_contract(self):
         # The complete frame/shadow mode spec in one place. If any assertion
@@ -2219,6 +2262,7 @@ class QmlContractTests(unittest.TestCase):
         # is the policy (see docs/architecture/layer-stacking.md); changing a
         # layer or adding a surface must update both deliberately.
         policy = {
+            "lacuna.ambience-host/Overlay.qml": ["WlrLayer.Bottom", "WlrLayer.Overlay"],
             "lacuna.audio/Panel.qml": ["WlrLayer.Overlay"],
             "lacuna.aurora-drift/Overlay.qml": ["root.foregroundOverlay ? WlrLayer.Overlay : WlrLayer.Bottom"],
             "lacuna.background-vignette/Overlay.qml": ["root.ignoreBackgroundAnimationLayer ? WlrLayer.Background : WlrLayer.Bottom"],
@@ -2254,6 +2298,10 @@ class QmlContractTests(unittest.TestCase):
         # stacks them above everything already on screen.
         frame = read("lacuna.bar/LacunaFrameWindow.qml")
         border_window = read("lacuna.bar/LacunaFrameBorderWindow.qml")
+        ambience_host = read("lacuna.ambience-host/Overlay.qml")
+        self.assertEqual(ambience_host.count("visible: true"), 2)
+        self.assertNotIn("visible: root.effectsEnabled", ambience_host)
+        self.assertEqual(ambience_host.count("mask: Region {}"), 2)
         for window in [frame, border_window]:
             self.assertIn("visible: true", window)
             self.assertNotIn("visible: active", window)
@@ -2923,11 +2971,13 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("interactive: root.flyoutInteractiveOnScreen(modelData)", window)
         panel_window = read("lacuna.menu/menu/LacunaPanelWindow.qml")
         self.assertIn("property bool keyboardInputActive: false", panel_window)
+        self.assertIn("property bool shortcutInhibitionActive: false", panel_window)
         self.assertIn("? WlrKeyboardFocus.Exclusive", panel_window)
         self.assertIn("root.dismissActive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None", panel_window)
         self.assertIn("ShortcutInhibitor {", panel_window)
-        self.assertIn("enabled: root.keyboardInputActive", panel_window)
+        self.assertIn("enabled: root.shortcutInhibitionActive", panel_window)
         self.assertIn("keyboardInputActive: root.lacunaEnabled && root.activeFlyoutMediaPlayer && root.flyoutInteractiveOnScreen(modelData)", window)
+        self.assertIn("shortcutInhibitionActive: menuWindow.keyboardInputActive && mediaPlayerContent.searchInputFocused", window)
         self.assertIn("HyprlandFocusGrab {", panel_window)
         self.assertIn("active: root.focusGrabActive", panel_window)
         self.assertIn("if (root.dismissActive) root.focusGrabActive = true", panel_window)
@@ -3263,9 +3313,15 @@ class QmlContractTests(unittest.TestCase):
             "function ensureDefaultSuggestions()",
             "id: defaultSuggestionsTimer",
             "defaultSuggestionsTimer.restart()",
-            "if (!open) searchPasteMenuOpen = false",
+            'readonly property bool searchInputFocused: open && activeTab === "search" && searchInput.activeFocus',
+            "var count = visibleSearchResults.length",
+            "var rows = visibleSearchResults",
+            "function dismissSearchPasteMenu()",
+            "function dismissSearchPasteMenuAt(x, y)",
             "onOpenChanged: {",
-            "onActiveTabChanged: ensureDefaultSuggestions()",
+            "onActiveTabChanged: {",
+            "onVisibleSearchResultsChanged: {",
+            "if (!activeFocus) root.dismissSearchPasteMenu()",
             'text: "Search media or paste YouTube URL"',
             'event.key === Qt.Key_V && (event.modifiers & Qt.MetaModifier) !== 0',
             'acceptedButtons: Qt.RightButton',
@@ -3427,6 +3483,7 @@ class QmlContractTests(unittest.TestCase):
 
         self.assertEqual(
             {
+                "lacuna.ambience-host",
                 "lacuna.compact-pill",
                 "lacuna.bar",
                 "lacuna.menu",
@@ -3440,7 +3497,7 @@ class QmlContractTests(unittest.TestCase):
         for plugin_id, manifest in manifests.items():
             metadata = manifest.get("lacuna", {})
             self.assertIsInstance(metadata.get("standalone"), bool, plugin_id)
-            self.assertIn(metadata.get("bundle"), {"standalone", "core", "theme", "legacy"}, plugin_id)
+            self.assertIn(metadata.get("bundle"), {"standalone", "core", "theme", "ambience", "legacy"}, plugin_id)
             self.assertIsInstance(metadata.get("requires"), list, plugin_id)
             self.assertIsInstance(metadata.get("recommends"), list, plugin_id)
             for dependency in metadata["requires"] + metadata["recommends"]:

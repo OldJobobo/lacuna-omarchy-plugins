@@ -1174,6 +1174,7 @@ Item {
     if (!next.backgroundEffects || typeof next.backgroundEffects !== "object") next.backgroundEffects = lacunaSettings.normalizeBackgroundEffects({})
     next.backgroundEffects.enabled = enabled === true
     lacunaSettings.save(next)
+    if (enabled === true) ensureAmbienceHostPlugin()
   }
 
   function setBackgroundVignetteEnabled(enabled) {
@@ -1206,6 +1207,7 @@ Item {
     var opacity = Number(value)
     next.backgroundEffects.opacity = isNaN(opacity) ? 1 : Math.max(0, Math.min(1, opacity))
     lacunaSettings.save(next)
+    ensureAmbienceHostPlugin()
   }
 
   function desiredChecked(entry, fallback) {
@@ -1234,13 +1236,18 @@ Item {
     next.backgroundEffects.effects.crt = { enabled: true }
     lacunaSettings.save(next)
 
-    var pluginId = registry.backgroundEffectPluginId(normalizedId)
+    ensureBackgroundEffectPlugin(normalizedId)
+  }
+
+  function ensureAmbienceHostPlugin() {
+    var pluginId = registry.ambienceHostPluginId()
     if (pluginId !== "" && !shellPluginEnabled(pluginId)) {
       setShellPluginEnabled(pluginId, true)
     }
   }
 
   function ensureBackgroundEffectPlugin(effectId) {
+    ensureAmbienceHostPlugin()
     var pluginId = registry.backgroundEffectPluginId(effectId)
     if (pluginId !== "" && !shellPluginEnabled(pluginId)) {
       setShellPluginEnabled(pluginId, true)
@@ -1307,6 +1314,7 @@ Item {
     if (!next.backgroundEffects || typeof next.backgroundEffects !== "object") next.backgroundEffects = lacunaSettings.normalizeBackgroundEffects({})
     next.backgroundEffects.foregroundOverlay = enabled === true
     lacunaSettings.save(next)
+    ensureAmbienceHostPlugin()
   }
 
   function setFilmGrainSetting(key, value) {

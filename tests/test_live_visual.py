@@ -74,6 +74,20 @@ def lacuna_layers() -> dict[str, list[str]]:
     return result
 
 
+def ambience_layers() -> dict[str, list[str]]:
+    data = json.loads(run(["hyprctl", "-j", "layers"]))
+    result: dict[str, list[str]] = {}
+    for screen, payload in data.items():
+        names: list[str] = []
+        for level in sorted(payload.get("levels", {}), key=lambda value: int(value)):
+            for item in payload["levels"][level]:
+                namespace = item.get("namespace", "")
+                if namespace in {"lacuna-ambience-host-bottom", "lacuna-ambience-host-overlay"}:
+                    names.append(f"{level}:{namespace}")
+        result[screen] = names
+    return result
+
+
 def wait_for_frame_layers() -> dict[str, list[str]]:
     deadline = time.time() + 8
     last: dict[str, list[str]] = {}
@@ -158,6 +172,51 @@ class LiveVisualTests(unittest.TestCase):
                 edge = pixel_luma(image, 960, 34)
                 deep = pixel_luma(image, 960, 52)
                 self.assertLess(edge, deep + 8)
+
+    def test_ambience_reorder_changes_pixels_without_remapping_host_surfaces(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first_image = root / "crt-front.png"
+            second_image = root / "vhs-front.png"
+            data = read_settings()
+            data["reduceMotion"] = True
+            effects = data.setdefault("backgroundEffects", {})
+            effects["enabled"] = True
+            effects["opacity"] = 1
+            effects["foregroundOverlay"] = False
+            effects["activeEffects"] = ["crt", "trackingLines"]
+            effects["activeEffect"] = "crt"
+            effects.setdefault("effects", {}).setdefault("crt", {})["enabled"] = True
+            effects["effects"].setdefault("trackingLines", {})["enabled"] = True
+            write_settings(data)
+            time.sleep(0.8)
+            layers_before = ambience_layers()
+            self.assertTrue(layers_before)
+            self.assertTrue(all("1:lacuna-ambience-host-bottom" in names for names in layers_before.values()), layers_before)
+            self.assertTrue(all("3:lacuna-ambience-host-overlay" in names for names in layers_before.values()), layers_before)
+            run(["grim", str(first_image)])
+
+            effects["activeEffects"] = ["trackingLines", "crt"]
+            effects["activeEffect"] = "trackingLines"
+            write_settings(data)
+            time.sleep(0.8)
+            self.assertEqual(ambience_layers(), layers_before)
+            run(["grim", str(second_image)])
+
+            comparison = subprocess.run(
+                ["magick", "compare", "-metric", "RMSE", str(first_image), str(second_image), "null:"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            self.assertIn(comparison.returncode, (0, 1), comparison.stderr)
+            normalized = float(comparison.stderr.split("(", 1)[1].split(")", 1)[0])
+            self.assertGreater(normalized, 0.0005, comparison.stderr)
+
+            effects["foregroundOverlay"] = True
+            write_settings(data)
+            time.sleep(0.8)
+            self.assertEqual(ambience_layers(), layers_before)
 
     def test_transition_pipeline_smoke_states(self):
         # This is intentionally opt-in: it exercises the real menu surface,

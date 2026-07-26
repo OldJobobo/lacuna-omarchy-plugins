@@ -12,7 +12,7 @@ ENTRY_POINT_BY_KIND = {
     "panel": "panel",
     "service": "service",
 }
-LACUNA_BUNDLES = {"standalone", "core", "theme", "legacy"}
+LACUNA_BUNDLES = {"standalone", "core", "theme", "ambience", "legacy"}
 SUITE_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
 

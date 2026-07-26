@@ -83,6 +83,8 @@ the modules do not depend on Lacuna-specific host behavior.
 
 These plugins are intentionally not advertised as standalone installs:
 
+- Ordered ambience bundle: `lacuna.ambience-host`; the standalone effect
+  plugins remain fallback/settings surfaces when this host is absent.
 - Core menu/bar bundle: `lacuna.bar`, `lacuna.state`,
   `lacuna.shell-settings`, `lacuna.menu`, `lacuna.menu-button`.
 - Theme helper bundle: `lacuna.theme-preloader` with `lacuna.theme` and
@@ -95,7 +97,7 @@ Every plugin manifest includes:
 
 - `lacuna.standalone`: whether the plugin is user-facing as an a-la-carte
   install.
-- `lacuna.bundle`: one of `standalone`, `core`, `theme`, or `legacy`.
+- `lacuna.bundle`: one of `standalone`, `core`, `theme`, `ambience`, or `legacy`.
 - `lacuna.requires`: companion plugins required for the advertised workflow.
 - `lacuna.recommends`: optional companions that improve the workflow.
 - `lacuna.stability` (optional, default `stable`): see below.

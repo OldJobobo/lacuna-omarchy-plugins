@@ -1,6 +1,5 @@
 import Quickshell
 import Quickshell.Io
-import Quickshell.Wayland
 import QtQuick
 import qs.Commons
 
@@ -10,6 +9,7 @@ Item {
   property string omarchyPath: ""
   property var shell: null
   property var manifest: null
+  property var defaultSettings: ({})
   property bool runtimeEnabled: true
   property real runtimeIntensity: -1
   property int grainTick: 0
@@ -27,9 +27,8 @@ Item {
   readonly property var filmGrainSettings: backgroundEffectSettings("filmGrain")
   readonly property bool configuredEnabled: boolSetting("effectEnabled", true)
   readonly property bool foregroundOverlay: backgroundForegroundOverlayEnabled()
-  readonly property bool hostedByAmbienceHost: ambienceHostEnabled()
   readonly property bool lacunaFilmGrainEnabled: backgroundEffectEnabled("filmGrain", true)
-  readonly property bool effectVisible: !hostedByAmbienceHost && configuredEnabled && lacunaFilmGrainEnabled && runtimeEnabled && effectiveIntensity > 0.001
+  readonly property bool effectVisible: configuredEnabled && lacunaFilmGrainEnabled && runtimeEnabled && effectiveIntensity > 0.001
   readonly property real configuredIntensity: clamp(effectNumberSetting("intensity", "intensity", 0.28), 0, 1)
   readonly property real effectiveIntensity: (runtimeIntensity >= 0 ? clamp(runtimeIntensity, 0, 1) : configuredIntensity) * backgroundAnimationOpacity()
   readonly property real speed: clamp(effectNumberSetting("speed", "speed", 1), 0.2, 5)
@@ -46,16 +45,10 @@ Item {
     return Math.max(minimum, Math.min(maximum, numeric))
   }
 
-
-  function ambienceHostEnabled() {
-    var loaders = shell && shell.panelLoaders ? shell.panelLoaders : null
-    var loader = loaders ? loaders["lacuna.ambience-host"] : null
-    return !!(loader && loader.item && loader.item.hostReady === true)
-  }
-
   function pluginSettings() {
     var merged = {}
-    var defaults = manifest && manifest.defaults ? manifest.defaults : {}
+    var defaults = defaultSettings && typeof defaultSettings === "object"
+      ? defaultSettings : (manifest && manifest.defaults ? manifest.defaults : {})
     for (var key in defaults) merged[key] = defaults[key]
     var config = shell && shell.shellConfig ? shell.shellConfig : null
     var plugins = config && config.plugins && Array.isArray(config.plugins) ? config.plugins : []
@@ -269,100 +262,36 @@ Item {
     }
   }
 
-  Variants {
-    model: Quickshell.screens
+  Item {
+    id: grainWindow
 
-    PanelWindow {
-      id: grainWindow
+    anchors.fill: parent
+    visible: root.effectVisible
 
-      required property var modelData
 
-      screen: modelData
-      visible: root.effectVisible
-      color: "transparent"
-      implicitWidth: 0
-      implicitHeight: 0
-      WlrLayershell.namespace: "lacuna-film-grain-overlay"
-      WlrLayershell.layer: root.foregroundOverlay ? WlrLayer.Overlay : WlrLayer.Bottom
-      WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-      exclusionMode: ExclusionMode.Ignore
-      mask: Region {}
+    Item {
+      anchors.fill: parent
+      enabled: false
+      opacity: root.effectiveIntensity
 
-      anchors {
-        top: true
-        bottom: true
-        left: true
-        right: true
-      }
+      Repeater {
+        model: root.grainCount
 
-      Item {
-        anchors.fill: parent
-        enabled: false
-        opacity: root.effectiveIntensity
+        Rectangle {
+          required property int index
 
-        Repeater {
-          model: root.grainCount
-
-          Rectangle {
-            required property int index
-
-            readonly property real sizeNoise: root.seededNoise(index + 31)
-            x: Math.round(root.seededNoise(index + 3) * Math.max(1, grainWindow.width))
-            y: Math.round(root.seededNoise(index + 7) * Math.max(1, grainWindow.height))
-            width: Math.max(1, Math.round(root.grainSize + sizeNoise * root.grainSize))
-            height: width
-            radius: width > 1 ? width / 2 : 0
-            color: root.grainColor
-            opacity: 0.12 + root.seededNoise(index + 13) * 0.58
-          }
+          readonly property real sizeNoise: root.seededNoise(index + 31)
+          x: Math.round(root.seededNoise(index + 3) * Math.max(1, grainWindow.width))
+          y: Math.round(root.seededNoise(index + 7) * Math.max(1, grainWindow.height))
+          width: Math.max(1, Math.round(root.grainSize + sizeNoise * root.grainSize))
+          height: width
+          radius: width > 1 ? width / 2 : 0
+          color: root.grainColor
+          opacity: 0.12 + root.seededNoise(index + 13) * 0.58
         }
       }
     }
   }
 
-  IpcHandler {
-    target: "lacuna-film-grain-overlay"
 
-    function enable(): string {
-      root.runtimeEnabled = true
-      return "enabled"
-    }
-
-    function disable(): string {
-      root.runtimeEnabled = false
-      return "disabled"
-    }
-
-    function toggle(): string {
-      root.runtimeEnabled = !root.runtimeEnabled
-      return root.runtimeEnabled ? "enabled" : "disabled"
-    }
-
-    function intensity(value: string): string {
-      root.runtimeIntensity = root.clamp(Number(value), 0, 1)
-      return String(root.runtimeIntensity)
-    }
-
-    function resetIntensity(): string {
-      root.runtimeIntensity = -1
-      return "reset"
-    }
-
-    function status(): string {
-      return JSON.stringify({
-        configuredEnabled: root.configuredEnabled,
-        hostedByAmbienceHost: root.hostedByAmbienceHost,
-        suppressed: root.hostedByAmbienceHost,
-        runtimeEnabled: root.runtimeEnabled,
-        visible: root.effectVisible,
-        foregroundOverlay: root.foregroundOverlay,
-        intensity: root.effectiveIntensity,
-        speed: root.speed,
-        grainCount: root.grainCount,
-        grainSize: root.grainSize,
-        accentBlend: root.accentBlend,
-        animationOpacity: root.backgroundAnimationOpacity()
-      })
-    }
-  }
 }

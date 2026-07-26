@@ -34,6 +34,8 @@ toggle time). Hence the rules below.
 4. **Compose within one window when elements must stack against each other**
    (deterministic sibling z-order) instead of using a second layer surface —
    e.g. the video wallpaper's black fade cover lives inside the video window.
+   `lacuna.ambience-host` applies this rule to background effects: index 0 in
+   `activeEffects` is frontmost, and reorder changes sibling `z` only.
 5. **Prefer geometry over stacking against surfaces we do not control.** The
    vendored Omarchy bar maps on its own schedule, so the frame never paints
    the strip the bar occupies (`outerX/outerY/outerRight/outerBottom` in
@@ -48,9 +50,9 @@ toggle time). Hence the rules below.
 | Level | Surfaces | Notes |
 | --- | --- | --- |
 | background | `omarchy-background` (Omarchy), `lacuna-media-player-video`, `lacuna-background-vignette` (ignore-animations mode) | Video wallpaper carries its own fade cover internally. |
-| bottom | Ambience overlays (`aurora-drift`, `cinematic-light`, `crt`, `dust-motes`, `film-grain`, `god-rays`, `rainfall`, `vhs`), `lacuna-desktop-clock`, `lacuna-background-vignette` (default) | Below windows, above wallpaper. |
+| bottom | `lacuna-ambience-host-bottom` (always mapped), fallback ambience overlays (`aurora-drift`, `cinematic-light`, `crt`, `dust-motes`, `film-grain`, `god-rays`, `rainfall`, `vhs`), `lacuna-desktop-clock`, `lacuna-background-vignette` (default) | The host gates content rather than window visibility. Legacy effect windows paint only when the host is absent. |
 | top | `omarchy-bar`, `lacuna-bar-portrait-companion` (always mapped), `lacuna-bar-frame` (always mapped), frame/sidebar reserve windows | Inactive companion instances gate paint, input, and exclusion without remapping. Frame geometry excludes both occupied horizontal strips, so map order is irrelevant. |
-| overlay | `lacuna-bar-frame-border` (always mapped, maps first), `lacuna-menu` sidebar, transient panels (`audio`, `bluetooth`, `network`, `power`), `omarchy-bar-drag-ghost`, non-exclusive Lacuna panels, ambience overlays in `foregroundOverlay` mode | The sidebar is above the persistent Top-level frame surface on every output; its input mask still covers only the sidebar/flyout geometry. Border is 1px and click-through; transient panels map above it because they map later. |
+| overlay | `lacuna-ambience-host-overlay` (always mapped), `lacuna-bar-frame-border` (always mapped, maps first), `lacuna-menu` sidebar, transient panels (`audio`, `bluetooth`, `network`, `power`), `omarchy-bar-drag-ghost`, non-exclusive Lacuna panels, fallback ambience overlays in `foregroundOverlay` mode | Both ambience host levels stay mapped; only the selected level paints. The sidebar is above the persistent Top-level frame surface on every output; its input mask still covers only the sidebar/flyout geometry. |
 
 ## Verifying live
 
@@ -61,7 +63,8 @@ hyprctl layers
 Within `Layer level 2 (top)` the current Quattro list is expected to show
 `omarchy-bar`, one `lacuna-bar-portrait-companion` per valid output, and
 `lacuna-bar-frame`; the open `lacuna-menu` sidebar appears in
-`Layer level 3 (overlay)` above them. The exact bar/frame order is
+`Layer level 3 (overlay)` above them. Both `lacuna-ambience-host-bottom` and `lacuna-ambience-host-overlay` must remain
+listed before and after effect reorder or layer-mode changes. The exact bar/frame order is
 host-controlled; verify that `LacunaFrameWindow.qml` still excludes the bar
 strip. The frame and portrait companion surfaces appear even when their paint
 is inactive — they are intentionally always mapped (rule 2). On a portrait

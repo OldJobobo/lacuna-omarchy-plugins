@@ -188,7 +188,7 @@ Item {
 
     var activeStack = root.registry.activeBackgroundEffects()
     var stackCount = activeStack.length
-    rows.push(section("Active Animations", stackCount === 0 ? "No animations selected." : "Rendered in numbered order. Click an active row to remove it.", "lacuna"))
+    rows.push(section("Active Animations", stackCount === 0 ? "No animations selected." : "Front to back; #1 is topmost. Click an active row to remove it.", "lacuna"))
 
     var options = root.registry.backgroundEffectOptions()
     for (var stackIndex = 0; stackIndex < activeStack.length; stackIndex++) {

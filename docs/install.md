@@ -88,6 +88,16 @@ This explicit step preserves the installer's snapshots, validation, and
 rollback behavior instead of mutating user state from a pacman transaction.
 See `packaging/aur/README.md` for the maintainer publication procedure.
 
+## Diagnostics
+
+```bash
+lacuna-omarchy status
+```
+
+Status reports Omarchy and Quickshell host versions, host/runtime paths, shell
+and settings-schema health, sidebar monitor policy, the last installer failure
+phase and recovery commands, and missing, disabled, or stale core plugins.
+
 ## Update
 
 Update already-installed Lacuna plugins from this checkout:

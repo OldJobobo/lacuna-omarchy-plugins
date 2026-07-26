@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "lacuna.ambience-host",
+  "name": "Lacuna Ambience Host",
+  "version": "0.1.0",
+  "author": "Lacuna",
+  "description": "Persistent ordered compositor for Lacuna background effects.",
+  "kinds": [
+    "overlay"
+  ],
+  "activation": "persistent",
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "Overlay.qml"
+  },
+  "defaults": {},
+  "schema": [],
+  "lacuna": {
+    "standalone": false,
+    "bundle": "ambience",
+    "requires": [],
+    "recommends": []
+  }
+}

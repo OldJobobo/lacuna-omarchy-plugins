@@ -20,8 +20,11 @@ def manifest(plugin_id: str) -> dict:
 
 
 OVERLAY_PLUGINS = [
+    "lacuna.ambience-host",
     "lacuna.aurora-drift",
     "lacuna.crt-overlay",
+    "lacuna.dust-motes-overlay",
+    "lacuna.film-grain-overlay",
     "lacuna.vhs-overlay",
     "lacuna.rainfall-overlay",
     "lacuna.cinematic-light-overlay",
@@ -45,8 +48,14 @@ class PluginKindContractTests(unittest.TestCase):
             qml = read(f"{plugin_id}/Overlay.qml")
             self.assertIn("settings", qml, plugin_id)
             # The always-on vignette has no enable toggle; the animated effects do.
-            if plugin_id != "lacuna.background-vignette":
+            if plugin_id not in ("lacuna.background-vignette", "lacuna.ambience-host"):
                 self.assertIn("effectEnabled", qml, plugin_id)
+
+    def test_ambience_host_is_bundle_renderer_not_a_standalone_surface(self):
+        data = manifest("lacuna.ambience-host")
+        self.assertFalse(data["lacuna"]["standalone"])
+        self.assertEqual(data["lacuna"]["bundle"], "ambience")
+        self.assertEqual(data["entryPoints"]["overlay"], "Overlay.qml")
 
     def test_desktop_clock_overlay_contract(self):
         data = manifest("lacuna.desktop-clock")

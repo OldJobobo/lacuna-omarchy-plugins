@@ -358,6 +358,10 @@ Item {
     return "Edge darkening opacity " + backgroundVignetteIntensityName()
   }
 
+  function ambienceHostPluginId() {
+    return "lacuna.ambience-host"
+  }
+
   function backgroundEffectPluginId(effectId) {
     if (effectId === "trackingLines") return "lacuna.vhs-overlay"
     if (effectId === "crt") return "lacuna.crt-overlay"

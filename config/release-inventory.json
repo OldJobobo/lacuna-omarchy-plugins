@@ -32,6 +32,33 @@
   },
   "plugins": [
     {
+      "id": "lacuna.ambience-host",
+      "kinds": [
+        "overlay"
+      ],
+      "stability": "stable",
+      "bundle": "ambience",
+      "standalone": false,
+      "requires": [],
+      "recommends": [],
+      "entryPoints": {
+        "overlay": "Overlay.qml"
+      },
+      "files": [
+        "AmbienceStack.qml",
+        "Overlay.qml",
+        "effects/AuroraDriftEffect.qml",
+        "effects/CinematicLightEffect.qml",
+        "effects/CrtEffect.qml",
+        "effects/DustMotesEffect.qml",
+        "effects/FilmGrainEffect.qml",
+        "effects/GodRaysEffect.qml",
+        "effects/RainfallEffect.qml",
+        "effects/VhsEffect.qml",
+        "manifest.json"
+      ]
+    },
+    {
       "id": "lacuna.audio",
       "kinds": [
         "service",
@@ -68,7 +95,9 @@
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
-      "recommends": [],
+      "recommends": [
+        "lacuna.ambience-host"
+      ],
       "entryPoints": {
         "overlay": "Overlay.qml"
       },
@@ -111,6 +140,7 @@
       ],
       "recommends": [
         "lacuna.menu-button",
+        "lacuna.ambience-host",
         "lacuna.background-vignette",
         "lacuna.cinematic-light-overlay",
         "lacuna.crt-overlay",
@@ -217,7 +247,9 @@
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
-      "recommends": [],
+      "recommends": [
+        "lacuna.ambience-host"
+      ],
       "entryPoints": {
         "overlay": "Overlay.qml"
       },
@@ -343,7 +375,9 @@
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
-      "recommends": [],
+      "recommends": [
+        "lacuna.ambience-host"
+      ],
       "entryPoints": {
         "overlay": "Overlay.qml"
       },
@@ -381,7 +415,9 @@
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
-      "recommends": [],
+      "recommends": [
+        "lacuna.ambience-host"
+      ],
       "entryPoints": {
         "overlay": "Overlay.qml"
       },
@@ -399,7 +435,9 @@
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
-      "recommends": [],
+      "recommends": [
+        "lacuna.ambience-host"
+      ],
       "entryPoints": {
         "overlay": "Overlay.qml"
       },
@@ -417,7 +455,9 @@
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
-      "recommends": [],
+      "recommends": [
+        "lacuna.ambience-host"
+      ],
       "entryPoints": {
         "overlay": "Overlay.qml"
       },
@@ -534,6 +574,7 @@
       ],
       "recommends": [
         "lacuna.menu-button",
+        "lacuna.ambience-host",
         "lacuna.background-vignette",
         "lacuna.cinematic-light-overlay",
         "lacuna.crt-overlay",
@@ -778,7 +819,9 @@
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
-      "recommends": [],
+      "recommends": [
+        "lacuna.ambience-host"
+      ],
       "entryPoints": {
         "overlay": "Overlay.qml"
       },
@@ -1102,7 +1145,9 @@
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
-      "recommends": [],
+      "recommends": [
+        "lacuna.ambience-host"
+      ],
       "entryPoints": {
         "overlay": "Overlay.qml"
       },

@@ -141,13 +141,17 @@ PROFILE_IDS = {
         "lacuna.bar-size-pill",
     ],
     "ambience": [
+        "lacuna.ambience-host",
         "lacuna.aurora-drift",
-        "lacuna.background-vignette",
         "lacuna.cinematic-light-overlay",
         "lacuna.crt-overlay",
-        "lacuna.desktop-clock",
+        "lacuna.dust-motes-overlay",
+        "lacuna.film-grain-overlay",
+        "lacuna.god-rays-overlay",
         "lacuna.rainfall-overlay",
         "lacuna.vhs-overlay",
+        "lacuna.background-vignette",
+        "lacuna.desktop-clock",
     ],
     "usage": [
         "lacuna.codex-usage",
@@ -757,6 +761,34 @@ def enable_shell_entry(config: dict, plugin: Plugin) -> None:
         config["plugins"].append({"id": plugin.id})
 
 
+AMBIENCE_HOST_ID = "lacuna.ambience-host"
+AMBIENCE_FALLBACK_IDS = {
+    "lacuna.aurora-drift",
+    "lacuna.cinematic-light-overlay",
+    "lacuna.crt-overlay",
+    "lacuna.dust-motes-overlay",
+    "lacuna.film-grain-overlay",
+    "lacuna.god-rays-overlay",
+    "lacuna.rainfall-overlay",
+    "lacuna.vhs-overlay",
+}
+
+
+def order_ambience_host_before_fallbacks(config: dict) -> None:
+    entries = config["plugins"]
+    host_entries = [entry for entry in entries if entry_id(entry) == AMBIENCE_HOST_ID]
+    if not host_entries:
+        return
+    host_entry = host_entries[0]
+    remaining = [entry for entry in entries if entry_id(entry) != AMBIENCE_HOST_ID]
+    first_fallback = next(
+        (index for index, entry in enumerate(remaining) if entry_id(entry) in AMBIENCE_FALLBACK_IDS),
+        len(remaining),
+    )
+    remaining.insert(first_fallback, host_entry)
+    config["plugins"] = remaining
+
+
 def layout_template_entries() -> list[tuple[str, int, dict]]:
     entries: list[tuple[str, int, dict]] = []
     for section in ("left", "center", "right"):
@@ -864,6 +896,8 @@ def activate_plugins(
         config = ensure_shell_config_shape(read_shell_config())
         for plugin_id in ids:
             enable_shell_entry(config, plugins[plugin_id])
+        if AMBIENCE_HOST_ID in selected:
+            order_ambience_host_before_fallbacks(config)
         if "lacuna.bar" in selected or config["bar"].get("id") == "lacuna.bar":
             available = selected | set(installed_lacuna_plugins(plugins))
             apply_lacuna_bar_layout_to_config(config, available)
@@ -876,6 +910,7 @@ def activate_plugins(
             return 0
         print("  activation reload failed; restoring the previous shell.json", flush=True)
         restore_path_state(shell_path, shell_state)
+        reload_after_rollback(selected)
         return code
     except (OSError, ValueError, SystemExit) as error:
         restore_path_state(shell_path, shell_state)
@@ -1268,6 +1303,13 @@ def install(args: argparse.Namespace) -> int:
     elif activate_choice is None:
         activate_choice = False
 
+    fallback_refresh_ids = (
+        ordered(installed & AMBIENCE_FALLBACK_IDS, plugins)
+        if activate_choice is True and AMBIENCE_HOST_ID in selected
+        else []
+    )
+    stage_ids = list(dict.fromkeys([*install_ids, *fallback_refresh_ids]))
+
     if preflight_install_selection(ids, selected, installed, plugins, bool(activate_choice)) != 0:
         return 1
 
@@ -1280,10 +1322,12 @@ def install(args: argparse.Namespace) -> int:
                 print(f"  - {plugin_id}")
     if source_state is False:
         print(f"\nSource '{args.source}' is not configured yet; the installer will offer to add it before installing.")
-    commands = stage_commands(install_ids, rescan=not activate_choice)
+    commands = stage_commands(stage_ids, rescan=not activate_choice)
     print("\nCommands")
     if commands:
         print_stage_commands(commands)
+        if fallback_refresh_ids and not args.reinstall:
+            print("  refresh installed ambience fallbacks before host activation")
     else:
         print("  No plugin copy commands needed.")
 
@@ -1315,11 +1359,11 @@ def install(args: argparse.Namespace) -> int:
 
     code = 0
     transaction: list[tuple[Path, Path | None]] = []
-    if install_ids:
+    if stage_ids:
         code = stage_plugins(
-            install_ids,
+            stage_ids,
             args.dry_run,
-            args.reinstall,
+            args.reinstall or bool(fallback_refresh_ids),
             rescan=not activate_choice,
             changes=transaction,
         )
@@ -1450,17 +1494,113 @@ def update(args: argparse.Namespace) -> int:
     return 0
 
 
+def package_version(*names: str) -> str:
+    for name in names:
+        try:
+            result = subprocess.run(
+                ["pacman", "-Q", name],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        except OSError:
+            return "not detected"
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    return "not detected"
+
+
+def installer_status_path() -> Path:
+    return lacuna_state_dir() / "installer-status.json"
+
+
+def write_installer_status(operation: str, phase: str, exit_code: int | None = None) -> None:
+    path = installer_status_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "operation": operation,
+        "phase": phase,
+        "exitCode": exit_code,
+        "updatedAt": datetime.now(timezone.utc).isoformat(),
+        "recovery": "lacuna-omarchy status; omarchy plugin rescan; omarchy restart shell",
+    }
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.tmp.",
+            delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
+            stream.write(json.dumps(payload, indent=2) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        temporary = None
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def read_optional_json(path: Path) -> tuple[dict | None, str]:
+    if not path.exists():
+        return None, "missing"
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None, "invalid"
+    return (value, "healthy") if isinstance(value, dict) else (None, "invalid")
+
+
 def status(_args: argparse.Namespace) -> int:
     plugins = load_plugins()
     installed = set(installed_lacuna_plugins(plugins))
+    shell_health = "healthy"
     try:
         shell_config = ensure_shell_config_shape(read_shell_config())
         enabled = {plugin_id for plugin_id in plugins if has_shell_entry(shell_config, plugin_id)}
     except SystemExit:
+        shell_config = default_shell_config()
         enabled = set()
+        shell_health = "invalid"
+
+    settings, settings_health = read_optional_json(lacuna_state_dir() / "settings.json")
+    operation, operation_health = read_optional_json(installer_status_path())
+    sidebar = settings.get("sidebar", {}) if settings else {}
+    policy = sidebar.get("monitorPolicy", "auto") if isinstance(sidebar, dict) else "auto"
+    names = sidebar.get("monitorNames", []) if isinstance(sidebar, dict) else []
+    if not isinstance(names, list):
+        names = []
+
+    core = dependency_closure({"lacuna.bar"}, plugins)
+    missing_core = ordered(core - installed, plugins)
+    disabled_core = ordered((core & installed) - enabled, plugins)
+    stale_core = [plugin_id for plugin_id in ordered(core & installed, plugins)
+                  if installed_plugin_version(plugin_id) != repo_plugin_version(plugin_id)]
 
     print("Lacuna status")
-    print(f"  Source configured: {source_exists(DEFAULT_SOURCE)}")
+    print(f"  Omarchy host: {package_version('omarchy-dev', 'omarchy')}")
+    print(f"  Quickshell host: {package_version('quickshell-git', 'quickshell')}")
+    print(f"  Omarchy config: {omarchy_config_home() / 'omarchy'}")
+    print(f"  Lacuna state: {lacuna_state_dir()}")
+    print(f"  Shell config: {shell_health} ({shell_config_path()})")
+    schema = settings.get("version", "unknown") if settings else "unknown"
+    print(f"  Settings migration: {settings_health} (schema {schema}, expected 1)")
+    print(f"  Sidebar monitor policy: {policy} ({', '.join(map(str, names)) if names else 'no pinned outputs'})")
+    if operation_health == "healthy" and operation:
+        print(f"  Last installer operation: {operation.get('operation', 'unknown')} / {operation.get('phase', 'unknown')} / exit {operation.get('exitCode')}")
+        print(f"  Recovery: {operation.get('recovery', 'omarchy plugin rescan; omarchy restart shell')}")
+    else:
+        print(f"  Last installer operation: {operation_health}")
+        print("  Recovery: omarchy plugin rescan; omarchy restart shell")
+    print(f"  Core health: missing {len(missing_core)}, disabled {len(disabled_core)}, stale {len(stale_core)}")
+    if missing_core: print(f"    missing: {', '.join(missing_core)}")
+    if disabled_core: print(f"    disabled: {', '.join(disabled_core)}")
+    if stale_core: print(f"    stale: {', '.join(stale_core)}")
+    source_state = source_exists(DEFAULT_SOURCE)
+    print(f"  Source configured: {'unknown' if source_state is None else source_state}")
     print(f"  Installed plugins: {len(installed)}")
     for plugin_id in ordered(installed, plugins):
         state = "enabled" if plugin_id in enabled else "staged"
@@ -1667,8 +1807,16 @@ def installer_transaction_lock():
 def run_mutation(operation, args: argparse.Namespace) -> int:
     if args.dry_run:
         return operation(args)
+    operation_name = str(getattr(operation, "__name__", "mutation"))
     with installer_transaction_lock():
-        return operation(args)
+        write_installer_status(operation_name, "running")
+        try:
+            code = operation(args)
+        except BaseException:
+            write_installer_status(operation_name, "exception", 1)
+            raise
+        write_installer_status(operation_name, "completed" if code == 0 else "failed", code)
+        return code
 
 
 def dispatch(args: argparse.Namespace) -> int:

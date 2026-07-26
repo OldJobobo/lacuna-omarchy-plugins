@@ -24,6 +24,7 @@
     ],
     "recommends": [
       "lacuna.menu-button",
+      "lacuna.ambience-host",
       "lacuna.background-vignette",
       "lacuna.cinematic-light-overlay",
       "lacuna.crt-overlay",

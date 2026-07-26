@@ -32,8 +32,9 @@ Item {
   readonly property var dustMotesSettings: backgroundEffectSettings("dustMotes")
   readonly property bool configuredEnabled: boolSetting("effectEnabled", true)
   readonly property bool foregroundOverlay: backgroundForegroundOverlayEnabled()
+  readonly property bool hostedByAmbienceHost: ambienceHostEnabled()
   readonly property bool lacunaDustMotesEnabled: backgroundEffectEnabled("dustMotes", true)
-  readonly property bool effectVisible: configuredEnabled && lacunaDustMotesEnabled && runtimeEnabled && effectiveIntensity > 0.001
+  readonly property bool effectVisible: !hostedByAmbienceHost && configuredEnabled && lacunaDustMotesEnabled && runtimeEnabled && effectiveIntensity > 0.001
   readonly property real configuredIntensity: clamp(effectNumberSetting("intensity", "intensity", 0.5), 0, 1)
   readonly property real effectiveIntensity: (runtimeIntensity >= 0 ? clamp(runtimeIntensity, 0, 1) : configuredIntensity) * backgroundAnimationOpacity()
   readonly property real speed: clamp(effectNumberSetting("speed", "speed", 0.7), 0.15, 4)
@@ -53,6 +54,13 @@ Item {
     var numeric = Number(value)
     if (isNaN(numeric)) return minimum
     return Math.max(minimum, Math.min(maximum, numeric))
+  }
+
+
+  function ambienceHostEnabled() {
+    var loaders = shell && shell.panelLoaders ? shell.panelLoaders : null
+    var loader = loaders ? loaders["lacuna.ambience-host"] : null
+    return !!(loader && loader.item && loader.item.hostReady === true)
   }
 
   function pluginSettings() {
@@ -706,6 +714,8 @@ Item {
     function status(): string {
       return JSON.stringify({
         configuredEnabled: root.configuredEnabled,
+        hostedByAmbienceHost: root.hostedByAmbienceHost,
+        suppressed: root.hostedByAmbienceHost,
         runtimeEnabled: root.runtimeEnabled,
         visible: root.effectVisible,
         foregroundOverlay: root.foregroundOverlay,
