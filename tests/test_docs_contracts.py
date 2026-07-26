@@ -181,7 +181,7 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("Status: in progress; beta/RC release-readiness track", p2)
         self.assertIn("P2 runs alongside P1", p2)
         self.assertIn("Current development target accepted", p2)
-        self.assertIn("Accepted Omarchy `4.0.0.r1193.g0526ebe-1`", p2)
+        self.assertIn("Accepted Omarchy `4.0.0.r1333.ga466dcc-1`", p2)
         self.assertIn("0.1.0-beta.N -> 0.1.0-rc.N -> 0.1.0", release)
 
     def test_quattro_compatibility_docs_match_reviewed_baseline(self):
@@ -199,6 +199,9 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("r1054 to r1180 review", ledger)
         self.assertIn("`Util.execDetached()`", ledger)
         self.assertIn("r1180 to r1193 review", ledger)
+        self.assertIn("r1193 to r1333 review", ledger)
+        self.assertIn("`moduleWidgets(pluginId)`", ledger)
+        self.assertIn("`AppLibrary`", ledger)
 
     def test_distribution_scaffolding_exists(self):
         for name in [

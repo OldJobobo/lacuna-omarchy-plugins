@@ -3981,6 +3981,9 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn(snippet, adapter)
             self.assertIn(snippet, implementation)
         self.assertIn("function findPanelWidget(pluginId)", implementation)
+        self.assertIn("function moduleWidgets(pluginId)", implementation)
+        self.assertIn("function moduleWidgets(pluginId) { return root.moduleWidgets(pluginId) }", implementation)
+        self.assertIn("items.push(slot.activeItem)", implementation)
         self.assertNotIn('"omarchy-bar-text-color"', implementation)
         self.assertNotIn('"omarchy-shell-bar-text-color"', implementation)
 

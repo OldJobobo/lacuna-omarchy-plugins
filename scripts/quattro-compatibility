@@ -18,6 +18,7 @@ REVIEW_FILE = ROOT / "config/quattro-compatibility.json"
 BAR_FILES = {
     "Bar.qml": OMARCHY_ROOT / "shell/plugins/bar/Bar.qml",
     "BarModel.js": OMARCHY_ROOT / "shell/plugins/bar/BarModel.js",
+    "Ui/BarWidget.qml": OMARCHY_ROOT / "shell/Ui/BarWidget.qml",
     "shell.qml": OMARCHY_ROOT / "shell/shell.qml",
 }
 CORE_PLUGINS = ["lacuna.bar", "lacuna.state", "lacuna.shell-settings", "lacuna.menu"]
@@ -139,6 +140,7 @@ def report(repo_only: bool) -> dict:
         "quickshellVersion": quickshell_version,
         "barSourceRevision": omarchy_version if omarchy_version != "unknown" else "unknown",
         "reviewedOmarchyVersion": review.get("reviewedOmarchyVersion", "unknown"),
+        "reviewedOmarchyCommit": review.get("reviewedOmarchyCommit", "unknown"),
         "upstreamBarFiles": upstream_files,
         "upstreamReviewRequired": changed,
         "vendoredParity": parity,

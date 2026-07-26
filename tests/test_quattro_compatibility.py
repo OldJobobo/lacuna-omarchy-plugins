@@ -48,6 +48,8 @@ class QuattroCompatibilityTests(unittest.TestCase):
         self.assertIn(report["status"], {"compatible", "unknown", "review-required"})
         self.assertIn("upstreamBarFiles", report)
         self.assertIn("shell.qml", report["upstreamBarFiles"])
+        self.assertIn("Ui/BarWidget.qml", report["upstreamBarFiles"])
+        self.assertRegex(report["reviewedOmarchyCommit"], r"^[0-9a-f]{40}$")
         self.assertIn("upstreamReviewRequired", report)
         self.assertIn("lacuna.bar", report["corePluginValidation"])
 

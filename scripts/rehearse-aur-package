@@ -84,6 +84,10 @@ def main() -> int:
                 "Referenced library 'python3'",
                 "Dependency bash detected and implicitly satisfied",
                 "Dependency qt6-declarative detected and implicitly satisfied",
+                # Omarchy currently provides quickshell-git as its shell runtime;
+                # namcap names the concrete provider rather than the declared
+                # host dependency that owns and satisfies it.
+                "Dependency quickshell-git detected and implicitly satisfied",
                 "Dependency quickshell detected and implicitly satisfied",
                 "Dependency included, but may not be needed ('omarchy')",
             )

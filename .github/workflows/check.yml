@@ -35,8 +35,12 @@ jobs:
       - uses: actions/checkout@v7
         with:
           repository: basecamp/omarchy
-          ref: 0526ebefccf6e58fb2cc9419070f1b5aff4b2df2
+          ref: a466dcc04f937a41c820aaa990a31f36ecaed543
           path: .ci/omarchy
+      - name: Trust container-mounted checkouts
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config --global --add safe.directory "$OMARCHY_PATH"
       - name: Configure Qt tools
         run: echo "/usr/lib/qt6/bin" >> "$GITHUB_PATH"
       - name: Verify required runtimes

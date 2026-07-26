@@ -195,6 +195,20 @@ Item {
     debugModuleSlots = next
   }
 
+  // Match Omarchy's multi-monitor bar contract: return every live instance of
+  // a widget id so BarWidget.broadcast() refreshes all output-local copies.
+  function moduleWidgets(pluginId) {
+    var id = String(pluginId || "")
+    var items = []
+    if (!id) return items
+    for (var i = 0; i < debugModuleSlots.length; i++) {
+      var slot = debugModuleSlots[i]
+      if (!slot || slot.moduleName !== id || !slot.activeItem) continue
+      items.push(slot.activeItem)
+    }
+    return items
+  }
+
   function findPanelWidget(pluginId) {
     var id = String(pluginId || "")
     if (!id) return null
@@ -943,6 +957,7 @@ Item {
     function showTooltip(target, text) { root.showTooltip(target, text) }
     function hideTooltip(target) { root.hideTooltip(target) }
     function run(command) { root.run(command) }
+    function moduleWidgets(pluginId) { return root.moduleWidgets(pluginId) }
     function switchPanelFrom(owner, direction) { return root.switchPanelFrom(owner, direction) }
     function toggleMenu(payloadJson) { return root.toggleMenu(payloadJson) }
     function openConfigPanel() { return root.openConfigPanel() }

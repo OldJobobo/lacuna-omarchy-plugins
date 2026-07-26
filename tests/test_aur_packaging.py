@@ -58,12 +58,22 @@ class AurPackagingTests(unittest.TestCase):
         self.assertIn("scripts/check-aur-package", check_script)
         self.assertIn("scripts/rehearse-aur-package", check_workflow)
         self.assertIn("namcap", check_workflow)
+        for workflow in (check_workflow, release_workflow):
+            self.assertIn('safe.directory "$GITHUB_WORKSPACE"', workflow)
+            self.assertIn('safe.directory "$OMARCHY_PATH"', workflow)
         self.assertIn("scripts/build-release-archive", release_workflow)
         self.assertIn("prerelease:", release_workflow)
         compatibility = json.loads((ROOT / "config/quattro-compatibility.json").read_text(encoding="utf-8"))
-        revision = compatibility["reviewedOmarchyVersion"].rsplit(".g", 1)[-1].split("-", 1)[0]
+        revision = compatibility["reviewedOmarchyCommit"]
+        self.assertRegex(revision, r"^[0-9a-f]{40}$")
         self.assertIn(f"ref: {revision}", check_workflow)
         self.assertIn(f"ref: {revision}", release_workflow)
+
+    def test_package_rehearsal_reviews_host_provided_quickshell_warning(self):
+        rehearsal = (ROOT / "scripts" / "rehearse-aur-package").read_text(encoding="utf-8")
+        self.assertIn("Dependency quickshell-git detected and implicitly satisfied", rehearsal)
+        self.assertIn("Referenced QML module 'qs.Commons'", rehearsal)
+        self.assertIn("Referenced QML module 'qs.Ui'", rehearsal)
 
 
 if __name__ == "__main__":

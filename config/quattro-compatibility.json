@@ -1,8 +1,10 @@
 {
-  "reviewedOmarchyVersion": "4.0.0.r1193.g0526ebe-1",
+  "reviewedOmarchyVersion": "4.0.0.r1333.ga466dcc-1",
+  "reviewedOmarchyCommit": "a466dcc04f937a41c820aaa990a31f36ecaed543",
   "upstreamFiles": {
-    "Bar.qml": "bb0150acd5caf88c7f72c1db83cb2cd5676260fa246e9b11b8db5b23e047e860",
+    "Bar.qml": "5d5f9b5e6a09f5d97dec04b85349c8c34607698b3b5c55aa879aab92630731b6",
     "BarModel.js": "729f86bc475ad3b6383bfff4b44a64132da2a5cd36e5470ca4d6bec9ee3712c0",
-    "shell.qml": "ada999ec2a0f0e6f5548da1e962ff9bbb312da32def818187c3c799568758888"
+    "Ui/BarWidget.qml": "8be00e2553a486b3dbfcb4f99de976035f323c4061b993dbc1842c75ff8b9022",
+    "shell.qml": "ff1044dc19bec2181396d9da8ad0d4d3436ab929508ba31765d931281ae734cd"
   }
 }

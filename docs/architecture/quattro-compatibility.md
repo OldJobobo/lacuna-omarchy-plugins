@@ -1,6 +1,6 @@
 # Quattro Compatibility Ledger
 
-Status: reference (updated 2026-07-21)
+Status: reference (updated 2026-07-25)
 
 This is the compatibility record for the Lacuna core bundle on Omarchy
 Quattro. It is intentionally a ledger, not a promise that every future
@@ -10,12 +10,13 @@ Omarchy development build is supported.
 
 | Component | Observed value |
 | --- | --- |
-| Omarchy package | `omarchy-dev 4.0.0.r1193.g0526ebe-1` |
-| Quickshell package | `quickshell 0.3.0-2` |
+| Omarchy package | `omarchy-dev 4.0.0.r1333.ga466dcc-1` |
+| Quickshell package | `quickshell-git 0.3.0.r18.g10b439f-3` |
 | Omarchy path | `/usr/share/omarchy` |
 | Upstream bar source | `/usr/share/omarchy/shell/plugins/bar/` |
-| Bar source revision | package revision `0526ebe` (encoded in the Omarchy package version) |
-| Target date | 2026-07-21 |
+| Bar source revision | package revision `a466dcc` (encoded in the Omarchy package version) |
+| Reviewed commit | `a466dcc04f937a41c820aaa990a31f36ecaed543` |
+| Target date | 2026-07-25 |
 
 The current upstream bar source is package-managed rather than a Git checkout,
 so the package version and source hashes are the authoritative revision record
@@ -23,9 +24,10 @@ on this machine:
 
 | File | SHA-256 |
 | --- | --- |
-| `shell/plugins/bar/Bar.qml` | `bb0150acd5caf88c7f72c1db83cb2cd5676260fa246e9b11b8db5b23e047e860` |
+| `shell/plugins/bar/Bar.qml` | `5d5f9b5e6a09f5d97dec04b85349c8c34607698b3b5c55aa879aab92630731b6` |
 | `shell/plugins/bar/BarModel.js` | `729f86bc475ad3b6383bfff4b44a64132da2a5cd36e5470ca4d6bec9ee3712c0` |
-| `shell/shell.qml` | `ada999ec2a0f0e6f5548da1e962ff9bbb312da32def818187c3c799568758888` |
+| `shell/Ui/BarWidget.qml` | `8be00e2553a486b3dbfcb4f99de976035f323c4061b993dbc1842c75ff8b9022` |
+| `shell/shell.qml` | `ff1044dc19bec2181396d9da8ad0d4d3436ab929508ba31765d931281ae734cd` |
 
 `lacuna.bar/BarModel.js` matches the upstream `BarModel.js`. The copied
 `lacuna.bar/OmarchyBar.qml` is intentionally Lacuna-owned and diverges from
@@ -78,6 +80,22 @@ changes affect OSD feedback, service startup polling, display text sizing, and
 theme layering; none changes Lacuna's bar host, plugin discovery, injection,
 or summon contracts. The r1193 package is therefore accepted with the same
 reviewed hashes.
+
+### r1193 to r1333 review
+
+`BarModel.js` remains byte-identical. Upstream `Bar.qml` adds
+`moduleWidgets(pluginId)`, which returns every per-monitor instance of a bar
+widget so `Ui/BarWidget.qml` can broadcast refresh operations across outputs.
+Lacuna now exposes the equivalent lookup from its custom host and each
+surface-local injected bar context. Existing injection, layout normalization,
+slot measurement, dragging, geometry, and summon/hide/toggle contracts are
+unchanged.
+
+Upstream `shell.qml` adds the shared `AppLibrary` service used by the stock
+menu's QML-native Apps provider; the remaining tracked delta is comment-only.
+Lacuna keeps its own application catalog and does not consume this additive
+service, so no menu port is required. Core plugin validation, vendored parity,
+and the live P0 smoke pass on Omarchy r1333 with Quickshell git r18.
 
 ## Compatibility check
 
