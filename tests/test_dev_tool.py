@@ -100,6 +100,125 @@ class DevToolTests(unittest.TestCase):
             [["omarchy", "plugin", "rescan"], ["omarchy", "restart", "shell"]],
         )
 
+    def test_cleanup_backups_migrates_exact_legacy_names_and_prunes_per_plugin(self):
+        module = load_dev_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            plugins = config_home / "omarchy" / "plugins"
+            plugins.mkdir(parents=True)
+            for index in range(4):
+                backup = plugins / f".lacuna.clock.bak.2026010100000{index}"
+                backup.mkdir()
+                os.utime(backup, (index, index))
+            unrelated = plugins / ".lacuna.clock.manualbak.20260101000009"
+            unrelated.mkdir()
+
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}):
+                migrated, removed = module.cleanup_plugin_backups(keep=2)
+                archive = module.plugin_backup_dir()
+
+            retained = sorted(path.name for path in archive.iterdir())
+            registry_names = sorted(path.name for path in plugins.iterdir())
+
+        self.assertEqual((migrated, removed), (2, 2))
+        self.assertEqual(retained, [".lacuna.clock.bak.20260101000002", ".lacuna.clock.bak.20260101000003"])
+        self.assertEqual(registry_names, [".lacuna.clock.manualbak.20260101000009"])
+
+    def test_cleanup_backups_dry_run_is_immutable(self):
+        module = load_dev_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            plugins = config_home / "omarchy" / "plugins"
+            legacy = plugins / ".lacuna.menu.bak.20260101000000"
+            legacy.mkdir(parents=True)
+
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}):
+                migrated, removed = module.cleanup_plugin_backups(keep=1, dry_run=True)
+                archive = module.plugin_backup_dir()
+
+            self.assertTrue(legacy.is_dir())
+            self.assertFalse(archive.exists())
+
+        self.assertEqual((migrated, removed), (1, 0))
+
+    def test_cleanup_backups_handles_broken_symlinks(self):
+        module = load_dev_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            plugins = config_home / "omarchy" / "plugins"
+            plugins.mkdir(parents=True)
+            legacy = plugins / ".lacuna.menu.bak.20260101000000"
+            legacy.symlink_to("missing-target")
+
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}):
+                migrated, removed = module.cleanup_plugin_backups(keep=1)
+                archived = module.plugin_backup_dir() / legacy.name
+
+            self.assertEqual((migrated, removed), (1, 0))
+            self.assertTrue(archived.is_symlink())
+            self.assertFalse(legacy.is_symlink())
+
+    def test_cleanup_backups_retains_unique_names_and_prefers_archive_copy(self):
+        module = load_dev_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            plugins = config_home / "omarchy" / "plugins"
+            archive = config_home / "omarchy" / "lacuna" / "backups" / "plugins"
+            plugins.mkdir(parents=True)
+            archive.mkdir(parents=True)
+            duplicate_name = ".lacuna.clock.bak.20260101000001"
+            (plugins / duplicate_name).mkdir()
+            (archive / duplicate_name).mkdir()
+            newer = plugins / ".lacuna.clock.bak.20260101000002"
+            newer.write_text("newer", encoding="utf-8")
+            other = plugins / ".lacuna.menu.bak.20260101000003-2"
+            other.symlink_to("missing")
+
+            # Payload mtimes deliberately oppose filename chronology.
+            os.utime(newer, (1, 1))
+            os.utime(archive / duplicate_name, (999, 999))
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}):
+                migrated, removed = module.cleanup_plugin_backups(keep=2)
+
+            self.assertEqual((migrated, removed), (2, 1))
+            self.assertTrue((archive / duplicate_name).is_dir())
+            self.assertFalse((plugins / duplicate_name).exists())
+            self.assertEqual((archive / newer.name).read_text(encoding="utf-8"), "newer")
+            self.assertTrue((archive / other.name).is_symlink())
+
+    def test_operation_lock_rejects_concurrent_nonblocking_mutation(self):
+        module = load_dev_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}):
+                with module.operation_lock():
+                    with self.assertRaisesRegex(RuntimeError, "Another Lacuna dev operation"):
+                        with module.operation_lock(blocking=False):
+                            pass
+
+    def test_backup_target_uses_lacuna_runtime_archive(self):
+        module = load_dev_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            target = config_home / "omarchy" / "plugins" / "lacuna.clock"
+            target.mkdir(parents=True)
+            (target / "manifest.json").write_text("{}", encoding="utf-8")
+
+            with mock.patch.dict(module.os.environ, {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}):
+                backup = module.backup_target(target)
+                archive = module.plugin_backup_dir()
+
+            self.assertIsNotNone(backup)
+            self.assertEqual(backup.parent, archive)
+            self.assertFalse(target.exists())
+            self.assertTrue((backup / "manifest.json").is_file())
+
     def test_failed_rescan_restores_previous_deployed_copy(self):
         module = load_dev_module()
 
@@ -108,6 +227,15 @@ class DevToolTests(unittest.TestCase):
             installed = config_home / "omarchy" / "plugins" / "lacuna.clock"
             installed.mkdir(parents=True)
             (installed / "manifest.json").write_text('{"id":"lacuna.clock","old":true}\n', encoding="utf-8")
+            # Reproduce the former retention bug: the installed directory has
+            # an old mtime while pre-existing backups look newer by mtime.
+            os.utime(installed, (1, 1))
+            archive = config_home / "omarchy" / "lacuna" / "backups" / "plugins"
+            archive.mkdir(parents=True)
+            for index in (1, 2):
+                backup = archive / f".lacuna.clock.bak.2025010100000{index}"
+                backup.mkdir()
+                os.utime(backup, (100 + index, 100 + index))
             args = argparse.Namespace(
                 plugins=["lacuna.clock"],
                 all=False,

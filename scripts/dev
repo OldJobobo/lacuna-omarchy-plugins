@@ -5,10 +5,13 @@ from __future__ import annotations
 
 import argparse
 import filecmp
+import fcntl
 import os
+import re
 import shutil
 import subprocess
 import sys
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -16,6 +19,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BACKUPS_TO_KEEP = 2
 RUNTIME_BACKUPS_TO_KEEP = 8
+PLUGIN_BACKUP_RE = re.compile(
+    r"^\.(?P<plugin_id>lacuna\.[A-Za-z0-9][A-Za-z0-9._-]*)"
+    r"\.bak\.(?P<timestamp>\d{14})(?:-(?P<suffix>\d+))?$"
+)
 
 
 def config_home() -> Path:
@@ -30,6 +37,32 @@ def omarchy_config_home() -> Path:
 
 def plugins_dir() -> Path:
     return omarchy_config_home() / "omarchy" / "plugins"
+
+
+def plugin_backup_dir() -> Path:
+    """Rollback copies kept outside the live plugin registry."""
+    return config_home() / "omarchy" / "lacuna" / "backups" / "plugins"
+
+
+def operation_lock_path() -> Path:
+    return config_home() / "omarchy" / "lacuna" / "dev.lock"
+
+
+@contextmanager
+def operation_lock(blocking: bool = True):
+    """Serialize deploy and backup cleanup mutations across processes."""
+    path = operation_lock_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a+") as handle:
+        flags = fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB)
+        try:
+            fcntl.flock(handle.fileno(), flags)
+        except BlockingIOError as error:
+            raise RuntimeError(f"Another Lacuna dev operation holds {path}") from error
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def preserve_runtime_state() -> list[Path]:
@@ -76,28 +109,103 @@ def remove_path(path: Path) -> None:
         shutil.rmtree(path)
 
 
+def backup_match(path: Path) -> re.Match[str] | None:
+    return PLUGIN_BACKUP_RE.fullmatch(path.name)
+
+
+def backup_plugin_id(path: Path) -> str | None:
+    match = backup_match(path)
+    return match.group("plugin_id") if match else None
+
+
+def backup_name_key(name: str) -> tuple[str, int]:
+    match = PLUGIN_BACKUP_RE.fullmatch(name)
+    if not match:
+        return ("", -1)
+    return (match.group("timestamp"), int(match.group("suffix") or 0))
+
+
+def plugin_backups(plugin_id: str, include_legacy: bool = False) -> list[Path]:
+    roots = [plugin_backup_dir()]
+    if include_legacy:
+        roots.append(plugins_dir())
+    result: list[Path] = []
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for path in root.iterdir():
+            if backup_plugin_id(path) == plugin_id:
+                result.append(path)
+    return result
+
+
 def prune_backups(plugin_id: str, keep: int = BACKUPS_TO_KEEP) -> None:
-    backups = sorted(
-        plugins_dir().glob(f".{plugin_id}.bak.*"),
-        key=lambda path: (path.stat().st_mtime, path.name),
-        reverse=True,
-    )
+    backups = sorted(plugin_backups(plugin_id), key=lambda path: backup_name_key(path.name), reverse=True)
     for backup in backups[max(0, keep):]:
         remove_path(backup)
+
+
+def cleanup_plugin_backups(keep: int = BACKUPS_TO_KEEP, dry_run: bool = False) -> tuple[int, int]:
+    """Migrate exact legacy deploy backups out of the registry and prune globally."""
+    keep = max(0, keep)
+    grouped: dict[str, dict[str, list[Path]]] = {}
+    for root in (plugin_backup_dir(), plugins_dir()):
+        if not root.is_dir():
+            continue
+        for path in root.iterdir():
+            plugin_id = backup_plugin_id(path)
+            if plugin_id:
+                grouped.setdefault(plugin_id, {}).setdefault(path.name, []).append(path)
+
+    removals: list[tuple[Path, bool]] = []
+    migrations: list[tuple[Path, Path]] = []
+    for _plugin_id, by_name in sorted(grouped.items()):
+        retained_names = set(sorted(by_name, key=backup_name_key, reverse=True)[:keep])
+        for name, paths in sorted(by_name.items(), key=lambda item: backup_name_key(item[0]), reverse=True):
+            archive_paths = [path for path in paths if path.parent == plugin_backup_dir()]
+            legacy_paths = [path for path in paths if path.parent == plugins_dir()]
+            if name not in retained_names:
+                removals.extend((path, False) for path in paths)
+                continue
+
+            # One unique backup name consumes one retention slot. Prefer an
+            # already archived copy and remove every legacy duplicate.
+            if archive_paths:
+                removals.extend((path, True) for path in archive_paths[1:] + legacy_paths)
+                continue
+
+            source = legacy_paths[0]
+            migrations.append((source, plugin_backup_dir() / name))
+            removals.extend((path, True) for path in legacy_paths[1:])
+
+    for path, duplicate in removals:
+        label = "duplicate " if duplicate else ""
+        print(f"  remove {label}backup: {path}")
+        if not dry_run:
+            remove_path(path)
+
+    for source, destination in migrations:
+        print(f"  migrate backup: {source} -> {destination}")
+        if not dry_run:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(source), str(destination))
+    return len(migrations), len(removals)
 
 
 def backup_target(target: Path) -> Path | None:
     if not target.exists() and not target.is_symlink():
         return None
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
-    base = target.parent / f".{target.name}.bak.{timestamp}"
+    plugin_backup_dir().mkdir(parents=True, exist_ok=True)
+    base = plugin_backup_dir() / f".{target.name}.bak.{timestamp}"
     backup = base
     suffix = 1
-    while backup.exists():
-        backup = target.parent / f"{base.name}-{suffix}"
+    while backup.exists() or backup.is_symlink():
+        backup = plugin_backup_dir() / f"{base.name}-{suffix}"
         suffix += 1
+    # This rollback copy is transaction-owned until deploy verification
+    # succeeds. Retention runs only after the transaction commits.
     shutil.move(str(target), str(backup))
-    prune_backups(target.name)
     return backup
 
 
@@ -190,7 +298,7 @@ def deploy_plugin(
             changes.append((target, backup))
     except Exception as error:
         remove_path(stage)
-        if backup and backup.exists() and not target.exists():
+        if backup and (backup.exists() or backup.is_symlink()) and not target.exists():
             shutil.move(str(backup), str(target))
         print(f"Failed to deploy {plugin_id}: {error}", file=sys.stderr)
         return 1
@@ -231,7 +339,7 @@ def verify_plugins(plugin_ids: list[str], dry_run: bool) -> int:
     return 1 if failed else 0
 
 
-def deploy(args: argparse.Namespace) -> int:
+def _deploy(args: argparse.Namespace) -> int:
     plugin_ids = plugin_ids_from_args(args)
     if args.only_changed:
         deploy_ids = [plugin_id for plugin_id in plugin_ids if source_differs_from_install(plugin_id)]
@@ -268,7 +376,6 @@ def deploy(args: argparse.Namespace) -> int:
     preserve_runtime_state()
     changes: list[tuple[Path, Path | None]] = []
     for plugin_id in deploy_ids:
-        prune_backups(plugin_id)
         code = deploy_plugin(plugin_id, args.dry_run, changes)
         if code != 0:
             rollback_deployments(changes)
@@ -293,7 +400,31 @@ def deploy(args: argparse.Namespace) -> int:
         print("  installed-copy verification failed; restoring the previous deployed copies", flush=True)
         rollback_deployments(changes)
         recover_deployment()
-    return code
+        return code
+    cleanup_plugin_backups()
+    return 0
+
+
+def deploy(args: argparse.Namespace) -> int:
+    if args.dry_run:
+        return _deploy(args)
+    with operation_lock():
+        return _deploy(args)
+
+
+def _cleanup_backups(args: argparse.Namespace) -> int:
+    print(f"Plugin backup cleanup (keep {max(0, args.keep)} per plugin)")
+    migrated, removed = cleanup_plugin_backups(keep=args.keep, dry_run=args.dry_run)
+    action = "Would migrate/remove" if args.dry_run else "Migrated/removed"
+    print(f"  {action}: {migrated}/{removed}")
+    return 0
+
+
+def cleanup_backups(args: argparse.Namespace) -> int:
+    if args.dry_run:
+        return _cleanup_backups(args)
+    with operation_lock():
+        return _cleanup_backups(args)
 
 
 def parser() -> argparse.ArgumentParser:
@@ -309,6 +440,10 @@ def parser() -> argparse.ArgumentParser:
     restart.add_argument("--restart-shell", action="store_true", default=True, help="Restart Omarchy shell after rescan (default).")
     restart.add_argument("--no-restart-shell", dest="restart_shell", action="store_false", help="Only rescan plugins; do not restart shell.")
 
+    cleanup_parser = subparsers.add_parser("cleanup-backups", help="Move legacy deploy backups out of the plugin registry and prune old copies.")
+    cleanup_parser.add_argument("--keep", type=int, default=BACKUPS_TO_KEEP, help="Rollback copies to retain per plugin (default: 2).")
+    cleanup_parser.add_argument("--dry-run", action="store_true", help="Print migrations/removals without changing files.")
+
     return base
 
 
@@ -316,6 +451,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     if args.command == "deploy":
         return deploy(args)
+    if args.command == "cleanup-backups":
+        return cleanup_backups(args)
     parser().print_help()
     return 0
 
