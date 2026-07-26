@@ -39,6 +39,7 @@ PanelWindow {
   property real flyoutMaskHeight: 0
   property bool flyoutInteractive: false
   property bool keyboardInputActive: false
+  property bool shortcutInhibitionActive: false
   property bool dismissActive: false
   property bool focusGrabActive: false
   property bool anchorRight: false
@@ -87,11 +88,11 @@ PanelWindow {
     : root.dismissActive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
   // The system's Super+V binding normally consumes the key before it reaches
-  // layer-shell surfaces. Inhibit compositor shortcuts while explicit keyboard
-  // input is active so the focused search field can handle it directly.
+  // layer-shell surfaces. Inhibit compositor shortcuts only while the media
+  // Search input itself owns focus; Queue and Favorites keep shortcuts active.
   ShortcutInhibitor {
     window: root
-    enabled: root.keyboardInputActive
+    enabled: root.shortcutInhibitionActive
   }
 
   margins {

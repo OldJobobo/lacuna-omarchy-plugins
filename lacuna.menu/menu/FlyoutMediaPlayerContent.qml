@@ -30,6 +30,7 @@ Column {
   property string pendingClearKind: ""
   property string feedbackText: ""
   property bool searchPasteMenuOpen: false
+  readonly property bool searchInputFocused: open && activeTab === "search" && searchInput.activeFocus
   readonly property int resultRowHeight: compact ? 46 : 54
   readonly property int resultPageSize: Math.max(8, Math.ceil(resultScroll.height / (resultRowHeight + resultScroll.spacing)))
   readonly property int initialResultWindow: resultPageSize * 2
@@ -96,7 +97,7 @@ Column {
   }
 
   function moveResultSelection(delta) {
-    var count = service && service.results ? service.results.length : 0
+    var count = visibleSearchResults.length
     if (count < 1) {
       selectedResultIndex = -1
       return
@@ -105,11 +106,12 @@ Column {
   }
 
   function activateSelectedResult(addToQueue) {
-    if (!service || selectedResultIndex < 0 || !service.results || selectedResultIndex >= service.results.length) {
+    var rows = visibleSearchResults
+    if (!service || selectedResultIndex < 0 || selectedResultIndex >= rows.length) {
       search()
       return
     }
-    var track = service.results[selectedResultIndex]
+    var track = rows[selectedResultIndex]
     if (addToQueue) {
       service.addToQueue(track)
       showFeedback("Added to queue")
@@ -175,9 +177,23 @@ Column {
   }
 
   function setProviderFilter(value) {
+    selectedResultIndex = -1
     fallbackProviderFilter = value
     if (service && typeof service.setProviderFilter === "function")
       service.setProviderFilter(value)
+  }
+
+  function dismissSearchPasteMenu() {
+    searchPasteMenuOpen = false
+  }
+
+  function dismissSearchPasteMenuAt(x, y) {
+    if (!searchPasteMenuOpen) return false
+    var point = searchPasteMenu.mapFromItem(root, x, y)
+    var inside = point.x >= 0 && point.y >= 0
+      && point.x <= searchPasteMenu.width && point.y <= searchPasteMenu.height
+    if (!inside) dismissSearchPasteMenu()
+    return !inside
   }
 
   function setPresentationMode(value) {
@@ -305,11 +321,26 @@ Column {
   anchors.margins: compact ? 10 : 12
   spacing: compact ? 8 : 10
   onOpenChanged: {
-    if (!open) searchPasteMenuOpen = false
+    if (!open) dismissSearchPasteMenu()
     ensureDefaultSuggestions()
   }
-  onActiveTabChanged: ensureDefaultSuggestions()
+  onActiveTabChanged: {
+    dismissSearchPasteMenu()
+    selectedResultIndex = -1
+    ensureDefaultSuggestions()
+  }
+  onVisibleSearchResultsChanged: {
+    if (selectedResultIndex >= visibleSearchResults.length) selectedResultIndex = -1
+  }
   onServiceChanged: ensureDefaultSuggestions()
+
+  TapHandler {
+    acceptedButtons: Qt.LeftButton
+    gesturePolicy: TapHandler.WithinBounds
+    onTapped: function(eventPoint) {
+      root.dismissSearchPasteMenuAt(eventPoint.position.x, eventPoint.position.y)
+    }
+  }
 
   Timer {
     id: searchDebounce
@@ -608,9 +639,12 @@ Column {
             Accessible.name: "Search media"
             Accessible.description: "Search configured providers or paste a YouTube URL"
             onTextChanged: {
-              root.searchPasteMenuOpen = false
+              root.dismissSearchPasteMenu()
               root.query = text
               root.scheduleSearch()
+            }
+            onActiveFocusChanged: {
+              if (!activeFocus) root.dismissSearchPasteMenu()
             }
             Keys.onDownPressed: function(event) {
               root.moveResultSelection(1)
@@ -680,10 +714,10 @@ Column {
               hoverOpacity: root.designTokens.hoverOpacity
               pressOpacity: root.designTokens.activeOpacity
               onTriggered: {
-                root.searchPasteMenuOpen = false
+                root.dismissSearchPasteMenu()
                 searchInput.forceActiveFocus()
                 searchInput.paste()
-                Qt.callLater(function() { root.searchPasteMenuOpen = false })
+                Qt.callLater(function() { root.dismissSearchPasteMenu() })
               }
             }
           }

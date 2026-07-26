@@ -47,6 +47,8 @@ ShellRoot {{
     property string errorText: ""
     property int defaultSuggestionCalls: 0
     property int draftCalls: 0
+    property string playedTitle: ""
+    property string queuedTitle: ""
 
     function statusText() {{ return "Playing" }}
     function isYoutubeUrl(value) {{ return false }}
@@ -56,6 +58,8 @@ ShellRoot {{
     function setVisibleLimit(value) {{}}
     function setProviderFilter(value) {{ providerFilter = value }}
     function setPresentationMode(value) {{ presentationMode = value }}
+    function playNow(track) {{ playedTitle = track.title }}
+    function addToQueue(track) {{ queuedTitle = track.title }}
   }}
 
   Component.onCompleted: {{
@@ -83,11 +87,33 @@ ShellRoot {{
       var initial = root.flyout.visibleSearchResults.length
       root.flyout.setProviderFilter("youtube")
       var filtered = root.flyout.visibleSearchResults.length
+      root.flyout.setProviderFilter("jellyfin")
+      var resetIndex = root.flyout.selectedResultIndex
+      root.flyout.moveResultSelection(1)
+      root.flyout.activateSelectedResult(false)
+      root.flyout.selectedResultIndex = 0
+      root.flyout.activateSelectedResult(true)
+      root.flyout.searchPasteMenuOpen = true
+      root.flyout.activeTab = "queue"
+      var dismissedOnTab = !root.flyout.searchPasteMenuOpen
+      root.flyout.activeTab = "search"
+      root.flyout.searchPasteMenuOpen = true
+      root.flyout.dismissSearchPasteMenuAt(root.flyout.width, root.flyout.height)
+      var dismissedOutside = !root.flyout.searchPasteMenuOpen
+      root.flyout.forceSearchFocus()
+      root.flyout.activeTab = "favorites"
+      var focusedOnFavorites = root.flyout.searchInputFocused
       root.flyout.setPresentationMode("background")
       console.log("BEHAVE " + JSON.stringify({{
         initial: initial,
         filtered: filtered,
         providerFilter: service.providerFilter,
+        resetIndex: resetIndex,
+        playedTitle: service.playedTitle,
+        queuedTitle: service.queuedTitle,
+        dismissedOnTab: dismissedOnTab,
+        dismissedOutside: dismissedOutside,
+        focusedOnFavorites: focusedOnFavorites,
         presentationMode: service.presentationMode,
         jellyfinLoading: root.flyout.providerStatus("jellyfin").loading
       }}))
@@ -101,7 +127,13 @@ ShellRoot {{
         row = parse_behave(output)[0]
         self.assertEqual(row["initial"], 2, output[-2000:])
         self.assertEqual(row["filtered"], 1, output[-2000:])
-        self.assertEqual(row["providerFilter"], "youtube", output[-2000:])
+        self.assertEqual(row["providerFilter"], "jellyfin", output[-2000:])
+        self.assertEqual(row["resetIndex"], -1, output[-2000:])
+        self.assertEqual(row["playedTitle"], "Jellyfin result", output[-2000:])
+        self.assertEqual(row["queuedTitle"], "Jellyfin result", output[-2000:])
+        self.assertTrue(row["dismissedOnTab"], output[-2000:])
+        self.assertTrue(row["dismissedOutside"], output[-2000:])
+        self.assertFalse(row["focusedOnFavorites"], output[-2000:])
         self.assertEqual(row["presentationMode"], "background", output[-2000:])
         self.assertTrue(row["jellyfinLoading"], output[-2000:])
 
