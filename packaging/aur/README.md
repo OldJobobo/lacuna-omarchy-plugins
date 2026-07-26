@@ -1,9 +1,9 @@
 # AUR packaging
 
-This directory is the unpublished scaffold for the eventual stable
-`lacuna-omarchy-plugins` AUR package. Beta and RC artifacts are published as
-GitHub prereleases only; the stable AUR package is submitted after the verified
-`0.1.0` release.
+This directory contains the publication scaffold for the
+`lacuna-omarchy-plugins` AUR package. Approved beta, RC, and stable versions are
+published to the same package after the matching immutable GitHub release and
+full package lifecycle gate pass.
 
 The package installs an immutable payload under
 `/usr/share/lacuna-omarchy-plugins` and exposes `/usr/bin/lacuna-omarchy`.
@@ -27,7 +27,8 @@ lacuna-omarchy update --yes
   may satisfy the host requirement through `provides=('omarchy')`.
 - mpv, yt-dlp, and ImageMagick remain optional feature dependencies.
 - SemVer prereleases map to Arch versions by removing the hyphen, for example
-  `0.1.0-rc.1` → `0.1.0rc.1`; tests enforce beta/RC/stable ordering.
+  `0.1.0-beta.1` → `0.1.0beta.1` and `0.1.0-rc.1` → `0.1.0rc.1`; tests enforce
+  beta/RC/stable ordering so AUR upgrades follow the release line.
 - The final recipe consumes the versioned GitHub release archive with a real
   SHA-256. `_source_sha256=SKIP` marks this checked-in recipe as an unpublished
   scaffold and is rejected by `--publish-check`.
@@ -59,11 +60,12 @@ error or new warning class requires review; Qt Multimedia is declared directly.
    bump only after the release gate is approved.
 2. Regenerate and review `config/release-inventory.json`.
 3. Run the complete repository, archive, package, compatibility, and live gates.
-4. Tag and publish the approved GitHub release.
-5. Set `_source_sha256` to the released archive checksum, regenerate `.SRCINFO`,
-   and run `scripts/check-aur-package --publish-check`.
-6. Follow [SUBMISSION.md](SUBMISSION.md) for clean-chroot validation and the
-   dedicated AUR repository workflow.
+4. Tag and publish the approved GitHub release, marking beta and RC versions as
+   GitHub prereleases.
+5. Set `_source_sha256` to that released archive's checksum, regenerate
+   `.SRCINFO`, and run `scripts/check-aur-package --publish-check`.
+6. Publish the matching beta, RC, or stable version through the dedicated AUR
+   repository by following [SUBMISSION.md](SUBMISSION.md).
 
 For packaging-only revisions, increment `pkgrel`, regenerate `.SRCINFO`, and
 repeat package validation. Never publish while the checksum is `SKIP`, the

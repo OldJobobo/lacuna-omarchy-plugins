@@ -227,6 +227,9 @@ back, and understood without relying on private project knowledge.
 - Archive is built from committed files and its inventory is verified.
 - Clean install, restart, failed update rollback, uninstall, and stock-bar
   recovery are recorded.
+- The immutable GitHub prerelease is published first; its real archive checksum,
+  clean-chroot package, and installed lifecycle evidence then authorize
+  `0.1.0beta.1-1` publication to the shared AUR package.
 
 ### Release candidate
 
@@ -234,10 +237,12 @@ back, and understood without relying on private project knowledge.
   scope.
 - Diagnostics and every recovery action are release-ready.
 - `0.1.0-rc.1` archive passes the complete rehearsal without manual repair.
+- Its matching AUR update passes the same checksum, clean-chroot, and installed
+  lifecycle gates used for beta.
 - Only blocker fixes may enter subsequent RC builds.
 
 ### Stable
 
 - Promote the verified RC lineage to `0.1.0` without adding features.
 - Re-run version parity, archive inventory, checksum, clean install, and smoke
-  checks before tagging.
+  checks before tagging and publishing the stable AUR update.

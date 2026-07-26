@@ -1,14 +1,14 @@
 # AUR Submission Runbook
 
-This runbook is for the first stable `lacuna-omarchy-plugins` publication.
-Beta and RC artifacts remain GitHub prereleases and are not pushed to the
-stable AUR package name.
+This runbook covers beta, RC, and stable publication through the single
+`lacuna-omarchy-plugins` AUR package. A release reaches AUR only after its
+matching immutable GitHub release and full package lifecycle evidence exist.
 
 ## Preconditions
 
 Stop unless all of these are true:
 
-- the exact stable tag and GitHub release archive exist;
+- the exact approved beta, RC, or stable tag and GitHub release archive exist;
 - `_source_sha256` is the real archive checksum, never `SKIP`;
 - `scripts/check-aur-package --publish-check` passes from a clean tree;
 - `scripts/rehearse-aur-package`, `./scripts/check.sh`, Quattro compatibility,
@@ -55,8 +55,9 @@ inventory, Omarchy/Quickshell versions, and live smoke results.
 
 ## Publish
 
-Commit with an AUR-style subject such as `Initial import: 0.1.0-1`, then push
-normally. Never force-push the AUR repository.
+For the first beta, commit with an AUR-style subject such as
+`Initial import: 0.1.0beta.1-1`. Use version-update subjects for later beta, RC,
+and stable promotions, then push normally. Never force-push the AUR repository.
 
 After publication, verify the rendered AUR metadata, clone/build as a new user,
 and install once through the documented package path.

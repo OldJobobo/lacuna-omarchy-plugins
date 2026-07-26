@@ -62,11 +62,13 @@ Stage a full install without enabling it:
 
 ## Arch Linux And AUR Packages
 
-The repository maintains an AUR publication scaffold in `packaging/aur/`.
-Beta and RC builds remain GitHub prereleases; the stable AUR package will be
-submitted after the verified `0.1.0` release. Once published, install it with an
-AUR helper or build its `PKGBUILD` in a clean Arch environment. The package
-requires an `omarchy` provider, Python, and Qt Multimedia, places
+The repository maintains the `lacuna-omarchy-plugins` AUR recipe in
+`packaging/aur/`. Approved beta, RC, and stable releases are published to the
+same AUR package after their immutable GitHub release exists and the package
+lifecycle gate passes. Upstream `0.1.0-beta.1` maps to Arch
+`0.1.0beta.1`, which correctly upgrades through RC versions to stable `0.1.0`.
+Install it with an AUR helper or build its `PKGBUILD` in a clean Arch
+environment. The package requires an `omarchy` provider, Python, and Qt Multimedia, places
 the versioned payload under `/usr/share/lacuna-omarchy-plugins` and provides
 the `lacuna-omarchy` command; package installation itself never edits a user's
 Omarchy configuration.

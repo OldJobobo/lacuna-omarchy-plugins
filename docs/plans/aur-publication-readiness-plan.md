@@ -1,25 +1,26 @@
 # AUR Publication Readiness Plan
 
-Status: readiness tooling implemented and validated 2026-07-21; publication intentionally blocked
+Status: readiness tooling implemented and validated 2026-07-21; first beta publication pending release gate
 
 ## Goal
 
-Make Lacuna reproducibly buildable, inspectable, and rehearseable as an Arch
+Make Lacuna reproducibly buildable, inspectable, and publishable as an Arch
 package without creating a Git tag, GitHub release, AUR repository, or AUR
-submission before the release candidate is approved.
+submission before the corresponding beta, RC, or stable candidate is approved.
 
 ## Policy
 
-- Publish beta and RC artifacts on GitHub only. Submit the stable
-  `lacuna-omarchy-plugins` package to AUR after the verified `0.1.0` release.
+- Publish each approved beta, RC, and stable artifact through both GitHub and
+  the single `lacuna-omarchy-plugins` AUR package. AUR publication follows the
+  immutable GitHub release and full package lifecycle gate.
 - Convert supported SemVer versions by removing the prerelease hyphen:
   `0.1.0-beta.1` → `0.1.0beta.1`. Arch `vercmp` must prove
   `beta < rc < stable`.
 - Require `omarchy`, `python`, and `qt6-multimedia`; `omarchy-dev` satisfies
   the host requirement through `provides=('omarchy')`.
-- The eventual AUR recipe consumes the immutable, deterministic GitHub release
-  archive and a real SHA-256. `SKIP` is allowed only in the unpublished
-  scaffold and must fail the publish gate.
+- Every published AUR recipe consumes its matching immutable, deterministic
+  GitHub release archive and a real SHA-256. `SKIP` is allowed only before
+  publication preparation and must fail the publish gate.
 - Package transactions install an immutable payload under
   `/usr/share/lacuna-omarchy-plugins`; they never edit user configuration.
   Activation and payload refresh remain explicit `lacuna-omarchy` operations.
@@ -44,7 +45,8 @@ submission before the release candidate is approved.
    reverse dependencies unless the user explicitly requests a cascade.
 7. **CI and release gates** — align the Omarchy source pin with the compatibility
    ledger, run package rehearsal in Arch CI, use the deterministic archive
-   builder, and classify beta/RC GitHub releases as prereleases.
+   builder, classify beta/RC GitHub releases as prereleases, and publish each
+   approved release line to AUR only after the GitHub artifact exists.
 8. **Maintainer handoff** — document clean-chroot validation, AUR repository
    creation, evidence capture, publication, rollback, and stop conditions.
 

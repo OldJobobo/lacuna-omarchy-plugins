@@ -172,7 +172,8 @@ appear or a runtime action fails.
 
 Lacuna is preparing for its first public beta. Repository checks, live
 multi-monitor validation, rollback behavior, and release packaging are actively
-maintained; stable AUR publication remains planned for `0.1.0`.
+maintained. Approved beta, RC, and stable releases are published through GitHub
+and the `lacuna-omarchy-plugins` AUR package.
 
 Follow the [roadmap](docs/roadmap.md) for current priorities. Historical design
 and implementation records live in the [planning ledger](docs/plans/README.md).
