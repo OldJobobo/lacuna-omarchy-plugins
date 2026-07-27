@@ -75,12 +75,11 @@ profile decision.
 ### 2. Resolve The Focus-Policy Contradiction
 
 The P1 plan defines the persistent sidebar as pointer-first and prohibits
-general keyboard navigation. The current implementation still includes
-focus-on-open, directional navigation, and keyboard activation in shared
-controls.
+general keyboard navigation. Phase 5 reconciled the implementation: passive
+sidebar focus-on-open, directional traversal, and shared-control keyboard
+activation were removed while semantic accessibility metadata was retained.
 
-Choose one contract and make code, tests, and documentation agree. The roadmap's
-current direction is appropriate:
+The resulting contract follows the roadmap's direction:
 
 - The passive sidebar never steals application focus.
 - Flyouts take bounded focus only for dismissal and direct text entry.
@@ -342,7 +341,7 @@ ecosystem.
 
 1. Curated omakase inventory and safe reset.
 2. Screenshot and privacy replacement.
-3. Focus-policy reconciliation and live focus-restoration tests.
+3. ~~Focus-policy reconciliation and live focus-restoration tests.~~ Completed in reliability Phase 5.
 4. Credential and settings-permission fixes.
 5. Confirmed settings persistence with visible failures.
 6. SemVer prerelease support and dependency-safe uninstall.

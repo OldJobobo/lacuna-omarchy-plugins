@@ -29,9 +29,11 @@ For maintainers:
 3. [Architecture Overview](./architecture/overview.md)
 4. [Plugin Contracts](./architecture/plugin-contracts.md)
 5. [Services And State](./architecture/services-and-state.md)
-6. [Quattro Compatibility Ledger](./architecture/quattro-compatibility.md)
-7. [Testing](./development/testing.md)
-8. [Release Workflow](./development/release.md)
+6. [Focus And Input Contract](./architecture/focus-and-input.md)
+7. [Performance Ownership And Measurement](./architecture/performance.md)
+8. [Quattro Compatibility Ledger](./architecture/quattro-compatibility.md)
+9. [Testing](./development/testing.md)
+10. [Release Workflow](./development/release.md)
 
 For design work:
 

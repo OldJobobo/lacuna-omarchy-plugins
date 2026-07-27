@@ -1,0 +1,19 @@
+{
+  "cycles": 100,
+  "beforeDescendants": 4,
+  "afterDescendants": 4,
+  "growth": 0,
+  "zombies": [],
+  "beforeCommands": [
+    "voxtype status --follow --extended --format json",
+    "/usr/bin/python3 /home/oldjobobo/.config/omarchy/plugins/lacuna.media-player/scripts/media-player-worker",
+    "wl-paste --type text --watch /usr/share/omarchy/shell/plugins/clipboard/capture.sh text",
+    "wl-paste --type image/png --watch /usr/share/omarchy/shell/plugins/clipboard/capture.sh image/png"
+  ],
+  "afterCommands": [
+    "voxtype status --follow --extended --format json",
+    "/usr/bin/python3 /home/oldjobobo/.config/omarchy/plugins/lacuna.media-player/scripts/media-player-worker",
+    "wl-paste --type text --watch /usr/share/omarchy/shell/plugins/clipboard/capture.sh text",
+    "wl-paste --type image/png --watch /usr/share/omarchy/shell/plugins/clipboard/capture.sh image/png"
+  ]
+}

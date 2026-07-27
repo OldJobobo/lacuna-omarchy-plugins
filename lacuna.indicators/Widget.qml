@@ -9,11 +9,13 @@ Item {
   property var settings: ({})
   property bool nightlight: false
   property bool stayAwake: false
-  property bool recording: false
+  property bool fallbackRecording: false
   property int reminderCount: 0
   property string reminderTooltip: "Reminders"
   property var voxtypeService: null
+  property var recordingService: null
 
+  readonly property bool recording: recordingService ? recordingService.recording : fallbackRecording
   readonly property string dictationState: voxtypeService ? String(voxtypeService.dictationState || "idle") : "idle"
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
@@ -76,10 +78,25 @@ Item {
     }
   }
 
+  function resolveRecordingService() {
+    if (recordingService) return
+    if (bar && bar.shell && typeof bar.shell.ensureService === "function") {
+      var ensured = bar.shell.ensureService("lacuna.screen-recording")
+      if (ensured) {
+        recordingService = ensured
+        return
+      }
+    }
+    if (bar && bar.shell && typeof bar.shell.serviceFor === "function") {
+      var existing = bar.shell.serviceFor("lacuna.screen-recording")
+      if (existing) recordingService = existing
+    }
+  }
+
   function refresh() {
     if (!nightlightProc.running) nightlightProc.running = true
     if (!idleProc.running) idleProc.running = true
-    if (!recordingProc.running) recordingProc.running = true
+    if (!recordingService && !recordingProc.running) recordingProc.running = true
     if (!reminderProc.running) reminderProc.running = true
   }
 
@@ -185,10 +202,14 @@ Item {
       else bar.run("omarchy toggle idle")
       refreshDelay.restart()
     } else if (id === "ScreenRecording") {
-      if (button === Qt.MiddleButton) root.refresh()
+      if (button === Qt.MiddleButton) {
+        if (recordingService && typeof recordingService.refresh === "function") recordingService.refresh()
+        else root.refresh()
+      }
+      else if (recordingService && typeof recordingService.toggleRecording === "function") recordingService.toggleRecording()
       else if (recording) bar.run("omarchy capture screenrecording --stop-recording")
       else bar.run("omarchy capture screenrecording")
-      refreshDelay.restart()
+      if (!recordingService) refreshDelay.restart()
     } else if (id === "Dictation") {
       if (button === Qt.RightButton) bar.run("omarchy voxtype config")
       else bar.run("omarchy voxtype model")
@@ -209,15 +230,22 @@ Item {
 
   Component.onCompleted: {
     resolveVoxtypeService()
+    resolveRecordingService()
     refresh()
   }
-  onBarChanged: resolveVoxtypeService()
+  onBarChanged: {
+    resolveVoxtypeService()
+    resolveRecordingService()
+  }
 
   Timer {
     interval: 1000
-    running: root.voxtypeService === null
+    running: root.voxtypeService === null || root.recordingService === null
     repeat: true
-    onTriggered: root.resolveVoxtypeService()
+    onTriggered: {
+      root.resolveVoxtypeService()
+      root.resolveRecordingService()
+    }
   }
 
   Timer {
@@ -261,7 +289,7 @@ Item {
   Process {
     id: recordingProc
     command: ["pgrep", "--quiet", "-f", "^gpu-screen-recorder"]
-    onExited: function(exitCode) { root.recording = exitCode === 0 }
+    onExited: function(exitCode) { root.fallbackRecording = exitCode === 0 }
   }
 
   Process {

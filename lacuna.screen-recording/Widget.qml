@@ -8,13 +8,13 @@ Item {
   property string moduleName: "lacuna.screen-recording"
   property var settings: ({})
   property var recordingService: null
-  property bool polledRecording: false
+  property bool fallbackRecording: false
   property bool headsUp: false
 
   readonly property bool vertical: bar ? bar.vertical : false
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
-  readonly property bool recording: polledRecording || (recordingService ? recordingService.recording : false)
+  readonly property bool recording: recordingService ? recordingService.recording : fallbackRecording
   readonly property color moduleColor: colorProfile.statusColor(recording ? "active" : "normal", "recording")
   readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property bool showInactive: boolSetting("showInactive", false)
@@ -42,17 +42,28 @@ Item {
       var ensured = bar.shell.ensureService("lacuna.screen-recording")
       if (ensured) {
         recordingService = ensured
+        configureService()
         return
       }
     }
     if (bar && bar.shell && typeof bar.shell.serviceFor === "function") {
       var existing = bar.shell.serviceFor("lacuna.screen-recording")
-      if (existing) recordingService = existing
+      if (existing) {
+        recordingService = existing
+        configureService()
+      }
     }
   }
 
+  function configureService() {
+    if (recordingService && typeof recordingService.setIntervalMs === "function") recordingService.setIntervalMs(intervalMs)
+  }
+
   function refresh() {
-    if (recordingService && typeof recordingService.refresh === "function") recordingService.refresh()
+    if (recordingService && typeof recordingService.refresh === "function") {
+      recordingService.refresh()
+      return
+    }
     if (!statusProc.running) statusProc.running = true
   }
 
@@ -64,7 +75,6 @@ Item {
   function toggleRecording() {
     if (recordingService && typeof recordingService.toggleRecording === "function") {
       recordingService.toggleRecording()
-      refreshDelay.restart()
     }
   }
 
@@ -105,14 +115,8 @@ Item {
 
   Timer {
     interval: root.intervalMs
-    running: true
+    running: root.recordingService === null
     repeat: true
-    onTriggered: root.refresh()
-  }
-
-  Timer {
-    id: refreshDelay
-    interval: 350
     onTriggered: root.refresh()
   }
 
@@ -125,7 +129,7 @@ Item {
   Process {
     id: statusProc
     command: ["pgrep", "--quiet", "-f", "^gpu-screen-recorder"]
-    onExited: function(exitCode) { root.polledRecording = exitCode === 0 }
+    onExited: function(exitCode) { root.fallbackRecording = exitCode === 0 }
   }
 
   Item {

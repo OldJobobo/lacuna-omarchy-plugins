@@ -1,7 +1,5 @@
 import QtQuick
 import QtQuick.Effects
-import Quickshell
-import Quickshell.Io
 
 Item {
   id: root
@@ -10,16 +8,8 @@ Item {
   property string moduleName: "lacuna.system-stats"
   property var settings: ({})
   property var manifest: null
-  property int cpuPercent: 0
-  property int memoryPercent: 0
-  property string diskText: "--"
-  property int diskPercent: 0
-  property var snapshot: ({})
-  property real previousCpuTotal: 0
-  property real previousCpuIdle: 0
-  property var cpuHistory: []
-  property var memoryHistory: []
-  property var diskHistory: []
+  property var statsService: null
+  property bool subscribed: false
   property bool flyoutOpen: false
   property string flyoutMode: "cpu"
   readonly property bool opened: flyoutOpen
@@ -33,6 +23,14 @@ Item {
   readonly property bool compact: !vertical && barSize <= 26
   readonly property int buttonSpacing: compact ? 0 : 2
   readonly property bool showLabels: setting("showLabels", compact ? false : true) === true
+  readonly property int cpuPercent: statsService ? statsService.cpuPercent : 0
+  readonly property int memoryPercent: statsService ? statsService.memoryPercent : 0
+  readonly property string diskText: statsService ? statsService.diskText : "--"
+  readonly property int diskPercent: statsService ? statsService.diskPercent : 0
+  readonly property var snapshot: statsService ? statsService.snapshot : ({})
+  readonly property var cpuHistory: statsService ? statsService.cpuHistory : []
+  readonly property var memoryHistory: statsService ? statsService.memoryHistory : []
+  readonly property var diskHistory: statsService ? statsService.diskHistory : []
   readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
   readonly property int topbarTextSize: barSize <= 26 ? 12 : 13
   readonly property int contentSpacing: 5
@@ -48,21 +46,28 @@ Item {
     return value === undefined || value === null ? fallback : value
   }
 
+  function resolveService() {
+    if (statsService || !bar || !bar.shell) return
+    if (typeof bar.shell.ensureService === "function") statsService = bar.shell.ensureService("lacuna.system-stats")
+    if (!statsService && typeof bar.shell.serviceFor === "function") statsService = bar.shell.serviceFor("lacuna.system-stats")
+    syncSubscription()
+  }
+
+  function syncSubscription() {
+    if (!statsService) return
+    var shouldSubscribe = root.visible
+    if (shouldSubscribe && !subscribed) {
+      statsService.subscribe(root)
+      subscribed = true
+    } else if (!shouldSubscribe && subscribed) {
+      statsService.unsubscribe(root)
+      subscribed = false
+    }
+  }
+
   function refresh() {
-    cpuFile.reload()
-    memFile.reload()
-    if (!diskProc.running) diskProc.running = true
-    if (!snapshotProc.running) snapshotProc.running = true
-  }
-
-  function localPath(url) {
-    var value = String(url || "")
-    return value.indexOf("file://") === 0 ? decodeURIComponent(value.slice(7)) : value
-  }
-
-  function parseSnapshot(raw) {
-    try { snapshot = JSON.parse(String(raw || "{}")) }
-    catch (error) { snapshot = ({}) }
+    resolveService()
+    if (statsService) statsService.refresh()
   }
 
   function openMetric(metric) {
@@ -93,93 +98,16 @@ Item {
     font.weight: Font.DemiBold
   }
 
-  function parseCpu(raw) {
-    var firstLine = String(raw || "").split("\n")[0]
-    var fields = firstLine.trim().split(/\s+/)
-    if (fields.length < 8 || fields[0] !== "cpu") return
-    var idle = Number(fields[4] || 0) + Number(fields[5] || 0)
-    var total = 0
-    for (var i = 1; i < fields.length; i++) total += Number(fields[i] || 0)
-    if (previousCpuTotal > 0) {
-      var totalDelta = total - previousCpuTotal
-      var idleDelta = idle - previousCpuIdle
-      if (totalDelta > 0) {
-        cpuPercent = Math.max(0, Math.min(100, Math.round((1 - idleDelta / totalDelta) * 100)))
-        cpuHistory = cpuHistory.concat([cpuPercent]).slice(-historyLimit)
-      }
-    }
-    previousCpuTotal = total
-    previousCpuIdle = idle
-  }
-
-  function parseMemory(raw) {
-    var lines = String(raw || "").split("\n")
-    var total = 0
-    var available = 0
-    for (var i = 0; i < lines.length; i++) {
-      var parts = lines[i].trim().split(/\s+/)
-      if (parts[0] === "MemTotal:") total = Number(parts[1] || 0)
-      else if (parts[0] === "MemAvailable:") available = Number(parts[1] || 0)
-    }
-    if (total > 0) {
-      memoryPercent = Math.max(0, Math.min(100, Math.round((1 - available / total) * 100)))
-      memoryHistory = memoryHistory.concat([memoryPercent]).slice(-historyLimit)
-    }
-  }
-
-  function parseDisk(raw) {
-    var lines = String(raw || "").trim().split(/\n/)
-    if (lines.length < 2) {
-      diskText = "??"
-      return
-    }
-    var fields = lines[1].trim().split(/\s+/)
-    diskText = fields.length >= 5 ? fields[4] : "??"
-    diskPercent = Math.max(0, Math.min(100, Number(diskText.replace("%", "")) || 0))
-    diskHistory = diskHistory.concat([diskPercent]).slice(-historyLimit)
-  }
-
   Component.onCompleted: refresh()
+  Component.onDestruction: if (subscribed && statsService) statsService.unsubscribe(root)
+  onBarChanged: resolveService()
+  onVisibleChanged: syncSubscription()
 
   Timer {
-    interval: root.intervalMs
-    running: true
+    interval: 500
+    running: root.statsService === null
     repeat: true
-    onTriggered: root.refresh()
-  }
-
-  FileView {
-    id: cpuFile
-    path: "/proc/stat"
-    watchChanges: false
-    printErrors: false
-    onLoaded: root.parseCpu(text())
-  }
-
-  FileView {
-    id: memFile
-    path: "/proc/meminfo"
-    watchChanges: false
-    printErrors: false
-    onLoaded: root.parseMemory(text())
-  }
-
-  Process {
-    id: diskProc
-    command: ["df", "-P", "/"]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: root.parseDisk(text)
-    }
-  }
-
-  Process {
-    id: snapshotProc
-    command: ["python3", root.localPath(Qt.resolvedUrl("scripts/system-stats-snapshot.py"))]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: root.parseSnapshot(text)
-    }
+    onTriggered: root.resolveService()
   }
 
   Row {

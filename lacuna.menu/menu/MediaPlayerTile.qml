@@ -38,10 +38,11 @@ Item {
   property bool previewLoadingAccepted: false
   property var activePreviewHandoffToken: null
   readonly property var previewPlayer: previewPlayerLoader.item
+  readonly property bool previewPlayerLoaded: previewPlayerLoader.item !== null
   property real videoReveal: hasTrack ? 1 : 0
   property real layoutReveal: hasTrack ? 1 : 0
 
-  activeFocusOnTab: true
+  activeFocusOnTab: false
   Accessible.role: Accessible.Button
   Accessible.name: hasTrack ? "Open media player for " + title : "Open media player"
   Keys.onPressed: function(event) {
@@ -221,7 +222,7 @@ Item {
   function recreatePreviewPlayer() {
     previewPlayerLoader.active = false
     previewPlayerLoader.generation = previewSourceRevision
-    previewPlayerLoader.active = true
+    previewPlayerLoader.active = assignedPreviewSource !== ""
   }
 
   function reportInlineLoading() {
@@ -645,7 +646,7 @@ Item {
       Loader {
         id: previewPlayerLoader
         property int generation: 0
-        active: true
+        active: false
         sourceComponent: previewPlayerComponent
         onLoaded: root.finishPreviewPlayerLoad()
       }
@@ -978,7 +979,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width - volumeValue.width - parent.spacing
         height: parent.height
-        activeFocusOnTab: root.volumeOpen
+        activeFocusOnTab: false
         Accessible.role: Accessible.Slider
         Accessible.name: "Volume"
         Accessible.description: String(root.streamVolume) + " percent"

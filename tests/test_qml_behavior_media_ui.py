@@ -337,5 +337,88 @@ ShellRoot {{
         self.assertEqual(row["visibleCount"], 1, output[-2000:])
 
 
+    def test_stopped_media_tile_has_no_qt_multimedia_player(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var tile: null
+
+  QtObject {{
+    id: service
+    property bool available: true
+    property bool hasTrack: true
+    property bool playing: true
+    property bool paused: false
+    property bool backgroundVideoEnabled: false
+    property string presentationState: "idle"
+    property string displayTitle: ""
+    property string thumbnail: ""
+    property string previewStreamUrl: "file:///tmp/lacuna-phase6-missing.mp4"
+    property string adaptivePreviewStreamUrl: ""
+    property string progressivePreviewStreamUrl: "file:///tmp/lacuna-phase6-missing.mp4"
+    property real playbackPosition: 0
+    property real playbackDuration: 0
+    property int playbackSessionRevision: 0
+    property int presentationRevision: 0
+    property int videoResolveRevision: 0
+    property string pendingHandoffSurface: ""
+    property int favoritesRevision: 0
+    property bool currentFavorite: false
+    property string repeatMode: "none"
+    property int volume: 70
+    property var currentTrack: null
+    property var lacunaSettings: ({{ reduceMotion: true }})
+    function statusText() {{ return "Stopped" }}
+  }}
+
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.menu/menu/MediaPlayerTile.qml')}")
+    if (component.status === Component.Error) {{
+      console.log("BEHAVE_ERR " + component.errorString())
+      Qt.quit()
+      return
+    }}
+    tile = component.createObject(root, {{ service: service, width: 420 }})
+    probe.restart()
+  }}
+
+  Timer {{
+    id: probe
+    property bool wasLoaded: false
+    interval: 150
+    onTriggered: {{
+      wasLoaded = root.tile.previewPlayerLoaded
+      service.playing = false
+      settle.restart()
+    }}
+  }}
+
+  Timer {{
+    id: settle
+    interval: 100
+    onTriggered: {{
+      console.log("BEHAVE " + JSON.stringify({{
+        wasLoaded: probe.wasLoaded,
+        loaded: root.tile.previewPlayerLoaded,
+        playerNull: root.tile.previewPlayer === null,
+        desiredSource: root.tile.desiredPreviewSource
+      }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        row = parse_behave(output)[-1]
+        self.assertTrue(row["wasLoaded"])
+        self.assertFalse(row["loaded"])
+        self.assertTrue(row["playerNull"])
+        self.assertEqual("", row["desiredSource"])
+
+
 if __name__ == "__main__":
     unittest.main()

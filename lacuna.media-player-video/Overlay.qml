@@ -909,6 +909,7 @@ Item {
   }
 
   property var videoPlayers: []
+  readonly property int loadedPlayerCount: videoPlayers.length
 
   Variants {
     model: Quickshell.screens

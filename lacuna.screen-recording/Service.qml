@@ -10,12 +10,18 @@ Item {
   property var manifest: null
   property var settings: ({})
   property bool recording: false
+  property int intervalMs: 1500
 
   readonly property string icon: "󰻂"
   readonly property string statusText: recording ? "Recording" : "Idle"
 
   function refresh() {
     if (!statusProc.running) statusProc.running = true
+  }
+
+  function setIntervalMs(value) {
+    var next = Math.max(500, Math.round(Number(value) || 1500))
+    intervalMs = next
   }
 
   function startRecording() {
@@ -47,7 +53,7 @@ Item {
   Component.onCompleted: refresh()
 
   Timer {
-    interval: 1500
+    interval: root.intervalMs
     running: true
     repeat: true
     onTriggered: root.refresh()

@@ -728,6 +728,27 @@ class QmlContractTests(unittest.TestCase):
             qml = read(path)
             self.assertIn("Interactive terminal sessions intentionally use a login shell", qml, path)
 
+    def test_canonical_settings_persistence_is_confirmed_latest_write_wins(self):
+        for path in ("lacuna.state/Service.qml", "lacuna.menu/services/LacunaSettings.qml"):
+            qml = read(path)
+            self.assertIn('property string persistenceState: "idle"', qml, path)
+            self.assertIn("property int requestedSaveRevision: 0", qml, path)
+            self.assertIn("property int confirmedSaveRevision: 0", qml, path)
+            self.assertIn("function handleSaveSucceeded()", qml, path)
+            self.assertIn("function handleSaveFailed(error)", qml, path)
+            self.assertIn("function retryPersistence()", qml, path)
+            self.assertIn("onSaved: root.handleSaveSucceeded()", qml, path)
+            self.assertIn("onSaveFailed: function(error) { root.handleSaveFailed(error) }", qml, path)
+            self.assertIn('onLoadFailed: if (!root.hasLoaded) root.applyLoadedText("{}")', qml, path)
+            self.assertNotIn("writeInFlight = false\n\n    if (queuedSavePayload", qml, path)
+
+        window = read("lacuna.menu/menu/MenuWindow.qml")
+        settings = read("lacuna.menu/settings/SettingsWindow.qml")
+        self.assertIn('entry.action === "retry-settings-save"', window)
+        self.assertIn("lacunaSettings.retryPersistence()", window)
+        self.assertIn('"Settings Persistence"', settings)
+        self.assertIn('"retry-settings-save"', settings)
+
     def test_settings_persistence_preserves_observed_nightlight_temperatures(self):
         qml = read("lacuna.settings-persistence/Service.qml")
 
@@ -908,10 +929,11 @@ class QmlContractTests(unittest.TestCase):
                 self.assertIn("mouseArea.containsMouse", qml, plugin)
 
         system_stats = read("lacuna.system-stats/Widget.qml")
+        system_stats_service = read("lacuna.system-stats/Service.qml")
         self.assertIn("readonly property bool tooltipHovered", system_stats)
         self.assertIn("parent.bar.showTooltip(parent, parent.tooltip)", system_stats)
-        self.assertIn('path: "/proc/stat"', system_stats)
-        self.assertIn('path: "/proc/meminfo"', system_stats)
+        self.assertIn('path: "/proc/stat"', system_stats_service)
+        self.assertIn('path: "/proc/meminfo"', system_stats_service)
         self.assertNotIn('"head -n1 /proc/stat"', system_stats)
         self.assertNotIn('"head -n3 /proc/meminfo"', system_stats)
 
@@ -1745,7 +1767,7 @@ class QmlContractTests(unittest.TestCase):
         menu_section = read("lacuna.menu/menu/MenuSection.qml")
         menu_item = read("lacuna.menu/modules/LacunaMenuItem.qml")
         self.assertIn("tokens.trackingTitleCompact : tokens.trackingTitle", menu_header)
-        self.assertIn("tokens.trackingSection", menu_section)
+        self.assertIn("typeTokens.trackingSection", menu_section)
         self.assertIn("tokens.trackingMenuItemCompact : tokens.trackingMenuItem", menu_item)
 
     def test_background_animations_use_single_selected_effect_contract(self):
@@ -2899,6 +2921,13 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("omarchy toggle nightlight --status", qml)
         self.assertIn("hyprctl hyprsunset temperature", qml)
         self.assertIn('target: "lacuna-settings-persistence"', qml)
+        self.assertIn("function enqueueStateSave(payload, revision)", qml)
+        self.assertIn("function retryPersistence()", qml)
+        self.assertIn("queuedSavePayload = payload", qml)
+        self.assertIn("umask 077", qml)
+        self.assertIn('stateDir + "/.settings-persistence.json.tmp.XXXXXX"', qml)
+        self.assertNotIn("tmp=$(mktemp);", qml)
+        self.assertIn("Retry Save", panel)
         self.assertIn("Idle Inhibit", panel)
         self.assertIn("Nightlight", panel)
         self.assertIn("setManagedToggles", panel)
@@ -2927,7 +2956,9 @@ class QmlContractTests(unittest.TestCase):
             "lacuna.menu/services/OmarchyShellSettingsService.qml",
         ]:
             service = read(path)
-            self.assertIn("function onQueueDrained() { root.scheduleRefresh() }", service, path)
+            self.assertIn("function onQueueDrained() {", service, path)
+            self.assertIn("root.scheduleRefresh(domains)", service, path)
+            self.assertIn("property string actionRefreshDomains", service, path)
 
     def test_shell_settings_service_uses_omarchy_4_toggle_contracts(self):
         for path in [
@@ -2945,6 +2976,25 @@ class QmlContractTests(unittest.TestCase):
             self.assertNotIn("omarchy toggle idle\")", qml, path)
             self.assertNotIn("omarchy toggle notification silencing", qml, path)
             self.assertNotIn("omarchy toggle nightlight\")", qml, path)
+
+    def test_standalone_shell_settings_window_is_bounded_and_always_dismissible(self):
+        panel = read("lacuna.shell-settings/Panel.qml")
+
+        self.assertIn("Window {", panel)
+        self.assertNotIn("FloatingWindow {", panel)
+        self.assertIn("width: 500", panel)
+        self.assertIn("height: 620", panel)
+        self.assertIn("minimumWidth: 430", panel)
+        self.assertIn("minimumHeight: 460", panel)
+        self.assertNotIn("Style.space(500)", panel)
+        self.assertNotIn("Style.space(620)", panel)
+        self.assertIn('sequence: "Escape"', panel)
+        self.assertIn("context: Qt.WindowShortcut", panel)
+        self.assertIn("onActivated: root.close()", panel)
+        self.assertIn("function activateSettingsWindow()", panel)
+        self.assertIn("window.requestActivate()", panel)
+        self.assertIn("settingsPanel.forceActiveFocus()", panel)
+        self.assertIn("if (visible) Qt.callLater(root.activateSettingsWindow)", panel)
 
     def test_menu_debug_commands_match_omarchy_4_routes(self):
         for path in [
@@ -2990,6 +3040,7 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn("property bool loadTimedOut: false", qml, path)
             self.assertIn("id: terminationGrace", qml, path)
             self.assertIn('var currentDnd = root.toggleValue("notificationSilencing", null)', qml, path)
+            self.assertIn("function mergeCollectedState(nextState)", qml, path)
             self.assertIn("nextState.toggles.notificationSilencing = currentDnd", qml, path)
             self.assertIn("property bool stale: false", qml, path)
             self.assertIn("loadFailureStreak <= maxAutoRetries", qml, path)
@@ -3044,13 +3095,17 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("root.dismissActive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None", panel_window)
         self.assertIn("ShortcutInhibitor {", panel_window)
         self.assertIn("enabled: root.shortcutInhibitionActive", panel_window)
-        self.assertIn("keyboardInputActive: root.lacunaEnabled && root.activeFlyoutMediaPlayer && root.flyoutInteractiveOnScreen(modelData)", window)
+        self.assertIn("root.activeFlyoutMediaPlayer || root.activeFlyoutAppPicker", window)
+        self.assertIn("menuContent.quickLaunchRenameOpen", window)
         self.assertIn("shortcutInhibitionActive: menuWindow.keyboardInputActive && mediaPlayerContent.searchInputFocused", window)
         self.assertIn("HyprlandFocusGrab {", panel_window)
         self.assertIn("active: root.focusGrabActive", panel_window)
-        self.assertIn("if (root.dismissActive) root.focusGrabActive = true", panel_window)
+        self.assertIn("root.focusSessionRevision += 1", panel_window)
+        self.assertIn('sequence: "Backspace"', panel_window)
+        self.assertIn("!root.textEditingActive", panel_window)
         self.assertIn("dismissActive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)", window)
-        self.assertIn("onDismissRequested: root.closeFlyouts()", window)
+        self.assertIn("onDismissRequested: function(reason) { root.closeFlyouts(reason) }", window)
+        self.assertIn("onFocusGrabCleared: function(reason) { root.closeFlyouts(reason) }", window)
         self.assertIn('mode: root.lacunaEnabled && !root.barOwnsLacunaFrame ? root.frameMode : "off"', window)
         self.assertIn('shadowEnabled: root.lacunaEnabled && !root.barOwnsLacunaFrame && root.frameShadow && root.frameMode !== "off"', window)
         self.assertIn("readonly property bool frameReserveActive: !barOwnsLacunaFrame && lacunaEnabled", window)
@@ -3077,7 +3132,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('if (flyout === "settings")', window)
         self.assertIn('if (flyout === "shellSettings")', window)
         self.assertIn('if (flyout === "appPicker")', window)
-        self.assertIn("if (flyoutFocusClearHold.running) return", window)
+        self.assertIn('if (flyoutFocusClearHold.running && nextReason === "click-away") return', window)
         self.assertIn("id: flyoutFocusClearHold", window)
         self.assertNotIn("Date.now()", window)
         self.assertIn("property int railReferenceBarHeight: Math.max(1, root.topBar && root.barHeight > 0 ? root.barHeight : configBarHeight())", window)

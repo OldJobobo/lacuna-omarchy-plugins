@@ -271,31 +271,52 @@ def hypr_state(toggles_dir):
   }
 
 
-def main():
-  if not acquire_single_flight_lock():
-    return 75
+ALL_DOMAINS = {
+  "defaults", "available", "font", "fonts", "monitor",
+  "powerProfile", "powerAvailable", "hypr", "toggles",
+}
 
-  signal.signal(signal.SIGTERM, handle_termination)
-  signal.signal(signal.SIGINT, handle_termination)
 
+def requested_domains(argv):
+  if not argv:
+    return set(ALL_DOMAINS)
+  if len(argv) != 2 or argv[0] != "--domains":
+    raise ValueError("usage: omarchy-shell-settings-state.py [--domains name,name]")
+  domains = {item.strip() for item in argv[1].split(",") if item.strip()}
+  unknown = domains - ALL_DOMAINS
+  if not domains or unknown:
+    raise ValueError("unknown settings domain: " + ",".join(sorted(unknown)))
+  return domains
+
+
+def collect_state(domains):
   home = os.environ.get("HOME", "")
   toggles_dir = os.path.join(home, ".local", "state", "omarchy", "toggles")
-  idle = idle_status()
+  result = {}
 
-  result = {
-    "defaults": {
+  if "defaults" in domains:
+    result["defaults"] = {
       "terminal": run(["omarchy", "default", "terminal"]),
       "browser": run(["omarchy", "default", "browser"]),
       "editor": run(["omarchy", "default", "editor"]),
-    },
-    "available": command_matrix(),
-    "font": run(["omarchy", "font", "current"]),
-    "fonts": [line.strip() for line in run(["omarchy", "font", "list"], timeout=4).splitlines() if line.strip()],
-    "monitor": focused_monitor(),
-    "powerProfile": run(["powerprofilesctl", "get"]) if available("powerprofilesctl") else "",
-    "powerAvailable": available("powerprofilesctl"),
-    "hypr": hypr_state(toggles_dir),
-    "toggles": {
+    }
+  if "available" in domains:
+    result["available"] = command_matrix()
+  if "font" in domains:
+    result["font"] = run(["omarchy", "font", "current"])
+  if "fonts" in domains:
+    result["fonts"] = [line.strip() for line in run(["omarchy", "font", "list"], timeout=4).splitlines() if line.strip()]
+  if "monitor" in domains:
+    result["monitor"] = focused_monitor()
+  if "powerProfile" in domains:
+    result["powerProfile"] = run(["powerprofilesctl", "get"]) if available("powerprofilesctl") else ""
+  if "powerAvailable" in domains:
+    result["powerAvailable"] = available("powerprofilesctl")
+  if "hypr" in domains:
+    result["hypr"] = hypr_state(toggles_dir)
+  if "toggles" in domains:
+    idle = idle_status()
+    result["toggles"] = {
       "barVisible": not os.path.exists(os.path.join(toggles_dir, "bar-off")),
       "screensaverEnabled": not os.path.exists(os.path.join(toggles_dir, "screensaver-off")),
       "suspendEnabled": not os.path.exists(os.path.join(toggles_dir, "suspend-off")),
@@ -306,10 +327,24 @@ def main():
       # action, so an unavailable host remains an unknown value here.
       "notificationSilencing": None,
       "nightlight": nightlight_on(),
-    },
-  }
+    }
+  return result
 
-  print(json.dumps(result))
+
+def main(argv=None):
+  try:
+    domains = requested_domains(list(sys.argv[1:] if argv is None else argv))
+  except ValueError as error:
+    print(str(error), file=sys.stderr)
+    return 2
+
+  if not acquire_single_flight_lock():
+    return 75
+
+  signal.signal(signal.SIGTERM, handle_termination)
+  signal.signal(signal.SIGINT, handle_termination)
+
+  print(json.dumps(collect_state(domains)))
   return 0
 
 

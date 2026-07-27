@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""Collect a reproducible Lacuna shell performance sample set.
+
+Release defaults implement the Phase 6 protocol: a 60-second warmup followed by
+five 120-second samples.  --quick exists only for tool/CI validation and is
+marked non-promotable in the output.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import statistics
+import subprocess
+import time
+
+
+def percentile(values: list[float], fraction: float) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    index = max(0, min(len(ordered) - 1, int((len(ordered) * fraction) + 0.999999) - 1))
+    return ordered[index]
+
+
+def summary(values: list[float]) -> dict[str, object]:
+    return {
+        "raw": values,
+        "median": statistics.median(values) if values else None,
+        "p95": percentile(values, 0.95),
+    }
+
+
+def read_json_command(command: list[str], fallback):
+    try:
+        result = subprocess.run(command, text=True, capture_output=True, timeout=5, check=False)
+        return json.loads(result.stdout) if result.returncode == 0 and result.stdout.strip() else fallback
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        return fallback
+
+
+def find_shell_pid(explicit: int | None) -> int:
+    if explicit:
+        return explicit
+    for entry in Path("/proc").iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            raw = (entry / "cmdline").read_bytes().replace(b"\0", b" ").decode(errors="replace")
+        except OSError:
+            continue
+        if ("quickshell" in raw or raw.startswith("qs ")) and "/shell" in raw and "omarchy" in raw:
+            return int(entry.name)
+    raise SystemExit("Unable to locate the Omarchy Quickshell process; pass --pid")
+
+
+def proc_stat(pid: int) -> tuple[int, int]:
+    fields = Path(f"/proc/{pid}/stat").read_text().split()
+    return int(fields[13]) + int(fields[14]), int(fields[19])
+
+
+def proc_status(pid: int) -> tuple[int, int]:
+    rss_kib = 0
+    wakeups = 0
+    for line in Path(f"/proc/{pid}/status").read_text().splitlines():
+        if line.startswith("VmRSS:"):
+            rss_kib = int(line.split()[1])
+        elif line.startswith("voluntary_ctxt_switches:") or line.startswith("nonvoluntary_ctxt_switches:"):
+            wakeups += int(line.split()[1])
+    return rss_kib, wakeups
+
+
+def descendants(pid: int) -> dict[int, str]:
+    parent_map: dict[int, tuple[int, str]] = {}
+    for entry in Path("/proc").iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            fields = (entry / "stat").read_text().split()
+            child = int(entry.name)
+            parent = int(fields[3])
+            command = (entry / "cmdline").read_bytes().replace(b"\0", b" ").decode(errors="replace").strip()
+            parent_map[child] = (parent, command)
+        except (OSError, ValueError, IndexError):
+            continue
+    found: dict[int, str] = {}
+    frontier = {pid}
+    while frontier:
+        next_frontier = set()
+        for child, (parent, command) in parent_map.items():
+            if parent in frontier and child not in found:
+                found[child] = command
+                next_frontier.add(child)
+        frontier = next_frontier
+    return found
+
+
+def sample(pid: int, duration: float, poll_interval: float) -> dict[str, object]:
+    ticks = os.sysconf("SC_CLK_TCK")
+    cpu_start, _ = proc_stat(pid)
+    _rss_start, wake_start = proc_status(pid)
+    started_at = time.monotonic()
+    rss_samples: list[int] = []
+    seen = set(descendants(pid))
+    launches: dict[int, str] = {}
+    while time.monotonic() - started_at < duration:
+        rss, _wake = proc_status(pid)
+        rss_samples.append(rss)
+        current = descendants(pid)
+        for child, command in current.items():
+            if child not in seen:
+                launches[child] = command
+        seen.update(current)
+        time.sleep(min(poll_interval, max(0.001, duration - (time.monotonic() - started_at))))
+    elapsed = max(0.001, time.monotonic() - started_at)
+    cpu_end, _ = proc_stat(pid)
+    rss_end, wake_end = proc_status(pid)
+    current = descendants(pid)
+    zombies = 0
+    for child in current:
+        try:
+            if "State:\tZ" in Path(f"/proc/{child}/status").read_text():
+                zombies += 1
+        except OSError:
+            pass
+    return {
+        "durationSeconds": elapsed,
+        "cpuPercent": ((cpu_end - cpu_start) / ticks) / elapsed * 100.0,
+        "rssKiB": statistics.mean(rss_samples) if rss_samples else rss_end,
+        "childLaunches": len(launches),
+        "childLaunchCommands": list(launches.values()),
+        "wakeups": max(0, wake_end - wake_start),
+        "endingDescendants": len(current),
+        "zombies": zombies,
+    }
+
+
+def file_fingerprint(path: Path) -> dict[str, object]:
+    try:
+        data = path.read_bytes()
+        return {"path": str(path), "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+    except OSError:
+        return {"path": str(path), "missing": True}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--scenario", default="lacuna-core-menu-closed")
+    parser.add_argument("--pid", type=int)
+    parser.add_argument("--warmup", type=float, default=60)
+    parser.add_argument("--samples", type=int, default=5)
+    parser.add_argument("--duration", type=float, default=120)
+    parser.add_argument("--poll-interval", type=float, default=0.02)
+    parser.add_argument("--quick", action="store_true")
+    args = parser.parse_args()
+    if args.quick:
+        args.warmup, args.samples, args.duration, args.poll_interval = 0.1, 2, 0.5, 0.02
+
+    pid = find_shell_pid(args.pid)
+    monitors = read_json_command(["hyprctl", "-j", "monitors"], [])
+    shell_config = Path.home() / ".config/omarchy/shell.json"
+    lacuna_settings = Path.home() / ".config/omarchy/lacuna/settings.json"
+    metadata = {
+        "scenario": args.scenario,
+        "capturedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "promotable": not args.quick and args.warmup >= 60 and args.samples >= 5 and args.duration >= 120,
+        "protocol": {"warmupSeconds": args.warmup, "samples": args.samples, "sampleSeconds": args.duration},
+        "environment": {
+            "kernel": platform.release(),
+            "python": platform.python_version(),
+            "pid": pid,
+            "omarchyVersion": subprocess.run(["omarchy", "version"], text=True, capture_output=True).stdout.strip(),
+            "quickshellVersion": subprocess.run(["quickshell", "--version"], text=True, capture_output=True).stdout.strip(),
+            "monitors": monitors,
+            "outputCount": len(monitors),
+            "settings": [file_fingerprint(shell_config), file_fingerprint(lacuna_settings)],
+        },
+        "thresholds": {
+            "processGrowthAfter100Cycles": 0,
+            "zombies": 0,
+            "stoppedDecoderProcesses": 0,
+            "stoppedQtMultimediaPlayers": 0,
+            "systemStatsLaunchReductionPercent": 50,
+            "settingsPersistenceLaunchesPerMinuteMax": 4,
+            "shellSettingsFullRefreshAvoidedForCommonActions": True,
+            "screenRecordingSettledPollingOwners": 1,
+            "broadMetricRegressionPercentMax": 5,
+        },
+    }
+
+    if args.warmup > 0:
+        sample(pid, args.warmup, args.poll_interval)
+    rows = [sample(pid, args.duration, args.poll_interval) for _ in range(args.samples)]
+    metrics = {}
+    for key in ("cpuPercent", "rssKiB", "childLaunches", "wakeups", "endingDescendants", "zombies"):
+        metrics[key] = summary([float(row[key]) for row in rows])
+    # Frame timing requires a compositor/Qt profiler unavailable through stable
+    # shell IPC. Keep the field explicit rather than substituting a false proxy.
+    metrics["frameTimingMs"] = {"supported": False, "raw": [], "median": None, "p95": None}
+    metrics["startupMs"] = {"supported": False, "raw": [], "median": None, "p95": None}
+    metrics["interaction100Cycles"] = {"supported": False, "raw": [], "median": None, "p95": None}
+    metrics["perOutputScaling"] = {
+        "supported": True,
+        "outputCount": len(monitors),
+        "scales": {str(row.get("name", "")): row.get("scale") for row in monitors},
+    }
+    payload = {"schemaVersion": 1, **metadata, "samples": rows, "metrics": metrics}
+    output = Path(args.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    print(output)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -15,10 +15,19 @@ Item {
   property var shellConfig: ({})
   property bool loading: false
   property bool refreshPending: false
+  property string pendingRefreshDomains: ""
+  property string scheduledRefreshDomains: ""
+  property string activeRefreshDomains: ""
+  property bool actionRefreshPending: false
+  property string actionRefreshDomains: ""
   property bool loadTimedOut: false
   property string errorText: ""
   property bool stale: false
   property int loadFailureStreak: 0
+  property int fullRefreshCount: 0
+  property int scopedRefreshCount: 0
+  property double refreshStartedAt: 0
+  property double lastRefreshDurationMs: 0
   readonly property int loadTimeoutMs: 30000
   readonly property int terminationGraceMs: 1500
   readonly property int maxAutoRetries: 2
@@ -209,22 +218,52 @@ Item {
     state = next
   }
 
-  function refresh() {
+  function normalizeDomains(domains) {
+    if (domains === undefined || domains === null || domains === "") return ""
+    var source = Array.isArray(domains) ? domains : String(domains).split(",")
+    var unique = []
+    for (var i = 0; i < source.length; i++) {
+      var value = String(source[i] || "").trim()
+      if (value !== "" && unique.indexOf(value) < 0) unique.push(value)
+    }
+    unique.sort()
+    return unique.join(",")
+  }
+
+  function mergeDomains(current, incoming) {
+    var left = normalizeDomains(current)
+    var right = normalizeDomains(incoming)
+    if (left === "" || right === "") return ""
+    return normalizeDomains(left.split(",").concat(right.split(",")))
+  }
+
+  function refresh(domains) {
     if (lacunaPath === "") return
+    var scope = normalizeDomains(domains)
     if (loading) {
+      if (!refreshPending) pendingRefreshDomains = scope
+      else pendingRefreshDomains = mergeDomains(pendingRefreshDomains, scope)
       refreshPending = true
       return
     }
     loading = true
+    activeRefreshDomains = scope
+    refreshStartedAt = Date.now()
+    if (scope === "") fullRefreshCount += 1
+    else scopedRefreshCount += 1
     loadTimedOut = false
     errorText = ""
     loadProc.output = ""
     loadProc.command = ["python3", lacunaPath + "/scripts/omarchy-shell-settings-state.py"]
+    if (scope !== "") loadProc.command = loadProc.command.concat(["--domains", scope])
     loadProc.running = true
     loadWatchdog.restart()
   }
 
-  function scheduleRefresh() {
+  function scheduleRefresh(domains) {
+    var scope = normalizeDomains(domains)
+    if (refreshTimer.running) scheduledRefreshDomains = mergeDomains(scheduledRefreshDomains, scope)
+    else scheduledRefreshDomains = scope
     refreshTimer.restart()
   }
 
@@ -240,16 +279,21 @@ Item {
     loadWatchdog.stop()
     terminationGrace.stop()
     if (success) {
+      lastRefreshDurationMs = refreshStartedAt > 0 ? Date.now() - refreshStartedAt : 0
       stale = false
       loadFailureStreak = 0
       errorText = ""
       if (refreshPending) {
+        var nextDomains = pendingRefreshDomains
         refreshPending = false
-        refreshTimer.restart()
+        pendingRefreshDomains = ""
+        scheduleRefresh(nextDomains)
       }
       return
     }
+    if (refreshPending) activeRefreshDomains = mergeDomains(activeRefreshDomains, pendingRefreshDomains)
     refreshPending = false
+    pendingRefreshDomains = ""
     if (message) errorText = message
     else if (errorText === "") errorText = "Unable to read Omarchy settings state"
     stale = true
@@ -267,33 +311,43 @@ Item {
     terminationGrace.restart()
   }
 
-  function run(command) {
+  function run(command, domains) {
     if (commandRunner && typeof commandRunner.run === "function") commandRunner.run(command)
-    scheduleRefresh()
+    if (domains === false) return
+    var scope = normalizeDomains(domains)
+    if (!actionRefreshPending) actionRefreshDomains = scope
+    else actionRefreshDomains = mergeDomains(actionRefreshDomains, scope)
+    actionRefreshPending = true
   }
 
   Connections {
     target: root.commandRunner
     ignoreUnknownSignals: true
-    function onQueueDrained() { root.scheduleRefresh() }
+    function onQueueDrained() {
+      if (!root.actionRefreshPending) return
+      var domains = root.actionRefreshDomains
+      root.actionRefreshPending = false
+      root.actionRefreshDomains = ""
+      root.scheduleRefresh(domains)
+    }
   }
 
   function setDefault(kind, value) {
     var target = String(kind || "")
     if (target !== "terminal" && target !== "browser" && target !== "editor") return
-    run("omarchy default " + target + " " + quote(value))
+    run("omarchy default " + target + " " + quote(value), ["defaults"])
   }
 
   function setFont(value) {
-    run("omarchy font set " + quote(value))
+    run("omarchy font set " + quote(value), ["font"])
   }
 
   function setPowerProfile(value) {
-    run("powerprofilesctl set " + quote(value))
+    run("powerprofilesctl set " + quote(value), ["powerProfile", "powerAvailable"])
   }
 
   function setMonitorScale(value) {
-    run("omarchy hyprland monitor scaling " + quote(value))
+    run("omarchy hyprland monitor scaling " + quote(value), ["monitor"])
   }
 
   function refreshIndicatorsCommand() {
@@ -304,7 +358,7 @@ Item {
     var temp = enabled === true ? "4000" : "6500"
     run("if ! pgrep -x hyprsunset >/dev/null; then setsid uwsm-app -- hyprsunset >/dev/null 2>&1 & sleep 1; fi"
       + "; hyprctl hyprsunset temperature " + temp + " >/dev/null 2>&1"
-      + "; " + refreshIndicatorsCommand())
+      + "; " + refreshIndicatorsCommand(), ["toggles"])
   }
 
   function omarchyPathPrefix() {
@@ -312,7 +366,7 @@ Item {
   }
 
   function setHyprFlag(flag, enabled) {
-    run(omarchyPathPrefix() + " omarchy hyprland toggle " + quote(flag) + " " + (enabled ? "on" : "off"))
+    run(omarchyPathPrefix() + " omarchy hyprland toggle " + quote(flag) + " " + (enabled ? "on" : "off"), ["hypr"])
   }
 
   function setWindowGapsEnabled(enabled) {
@@ -325,7 +379,7 @@ Item {
     if (want) {
       run("mkdir -p " + quote(dir)
         + "; rm -f " + quote(stockFile) + " " + quote(oldLacunaFile) + " " + quote(lacunaFile)
-        + "; hyprctl reload >/dev/null")
+        + "; hyprctl reload >/dev/null", ["hypr"])
       return
     }
 
@@ -340,7 +394,7 @@ Item {
       + "; rm -f " + quote(stockFile) + " " + quote(oldLacunaFile)
       + "; printf %s " + quote(body) + " > " + quote(lacunaFile)
       + "; hyprctl reload >/dev/null"
-      + "; hyprctl eval " + quote("hl.config({ general = { gaps_out = 0, gaps_in = 0 } })") + " >/dev/null")
+      + "; hyprctl eval " + quote("hl.config({ general = { gaps_out = 0, gaps_in = 0 } })") + " >/dev/null", ["hypr"])
   }
 
   function setSingleWindowAspect(enabled) {
@@ -362,7 +416,7 @@ Item {
       + "; rm -f " + quote(stockFile)
       + "; printf %s " + quote(body) + " > " + quote(lacunaFile)
       + "; hyprctl reload >/dev/null"
-      + "; hyprctl eval " + quote(liveConfig) + " >/dev/null")
+      + "; hyprctl eval " + quote(liveConfig) + " >/dev/null", ["hypr"])
   }
 
   function setRoundedWindows(enabled) {
@@ -381,7 +435,7 @@ Item {
     run("mkdir -p " + quote(dir)
       + "; printf %s " + quote(body) + " > " + quote(file)
       + "; hyprctl reload >/dev/null"
-      + "; hyprctl eval " + quote(liveConfig) + " >/dev/null")
+      + "; hyprctl eval " + quote(liveConfig) + " >/dev/null", ["hypr"])
   }
 
   function setToggle(name, desired) {
@@ -389,7 +443,7 @@ Item {
     var want = desired === true
     if (key === "barVisible") {
       setOptimisticToggle("barVisible", want)
-      run("omarchy toggle bar " + (want ? "on" : "off"))
+      run("omarchy toggle bar " + (want ? "on" : "off"), ["toggles"])
       return
     }
     if (key === "windowGapsEnabled") {
@@ -410,18 +464,18 @@ Item {
 
     if (key === "screensaverEnabled") {
       setOptimisticToggle("screensaverEnabled", want)
-      run("omarchy toggle screensaver")
+      run("omarchy toggle screensaver", ["toggles"])
     } else if (key === "suspendEnabled") {
       setOptimisticToggle("suspendEnabled", want)
-      run("omarchy toggle suspend")
+      run("omarchy toggle suspend", ["toggles"])
     } else if (key === "idleEnabled") {
       setOptimisticToggle("idleEnabled", want)
-      run("omarchy toggle idle " + (want ? "allow-idle" : "stay-awake"))
+      run("omarchy toggle idle " + (want ? "allow-idle" : "stay-awake"), ["toggles"])
     } else if (key === "notificationSilencing") {
       setOptimisticToggle("notificationSilencing", want)
       run("current=$(omarchy-shell notifications isDnd 2>/dev/null || true)"
         + "; if [ \"$current\" != " + quote(want ? "on" : "off") + " ]; then omarchy-shell notifications toggleDnd >/dev/null; fi"
-        + "; " + refreshIndicatorsCommand())
+        + "; " + refreshIndicatorsCommand(), false)
     } else if (key === "nightlight") {
       setOptimisticToggle("nightlight", want)
       setNightlight(want)
@@ -431,10 +485,9 @@ Item {
   function mutateShellConfig(mutator) {
     if (shell && typeof shell.mutateShellConfig === "function") {
       shell.mutateShellConfig(mutator)
-      scheduleRefresh()
       return true
     }
-    run("notify-send 'Lacuna' 'Omarchy shell settings require the live shell config mutator'")
+    run("notify-send 'Lacuna' 'Omarchy shell settings require the live shell config mutator'", false)
     return false
   }
 
@@ -453,11 +506,19 @@ Item {
     if (pluginRegistry && typeof pluginRegistry.setEnabled === "function") {
       pluginRegistry.setEnabled(id, enabled === true)
       pluginStateChanged()
-      scheduleRefresh()
       return
     }
 
-    run("notify-send 'Lacuna' 'Plugin toggles require the Omarchy shell plugin registry'")
+    run("notify-send 'Lacuna' 'Plugin toggles require the Omarchy shell plugin registry'", false)
+  }
+
+  function mergeCollectedState(nextState) {
+    var merged = copyState()
+    var currentDnd = root.toggleValue("notificationSilencing", null)
+    if (nextState.toggles && (nextState.toggles.notificationSilencing === null || nextState.toggles.notificationSilencing === undefined))
+      nextState.toggles.notificationSilencing = currentDnd
+    for (var key in nextState) merged[key] = nextState[key]
+    state = merged
   }
 
   Component.onCompleted: refresh()
@@ -466,6 +527,18 @@ Item {
     id: refreshTimer
     interval: 1200
     repeat: false
+    onTriggered: {
+      var domains = root.scheduledRefreshDomains
+      root.scheduledRefreshDomains = ""
+      root.refresh(domains)
+    }
+  }
+
+  Timer {
+    id: reconciliationTimer
+    interval: 60000
+    repeat: true
+    running: true
     onTriggered: root.refresh()
   }
 
@@ -480,7 +553,7 @@ Item {
     id: retryTimer
     interval: 2000
     repeat: false
-    onTriggered: root.refresh()
+    onTriggered: root.refresh(root.activeRefreshDomains)
   }
 
   Timer {
@@ -517,10 +590,7 @@ Item {
       }
       try {
         var nextState = JSON.parse(loadProc.output || "{}")
-        var currentDnd = root.toggleValue("notificationSilencing", null)
-        if (nextState.toggles && (nextState.toggles.notificationSilencing === null || nextState.toggles.notificationSilencing === undefined))
-          nextState.toggles.notificationSilencing = currentDnd
-        root.state = nextState
+        root.mergeCollectedState(nextState)
         root.resolveLoad(true, "")
       } catch (error) {
         root.resolveLoad(false, "Unable to parse Omarchy settings state")

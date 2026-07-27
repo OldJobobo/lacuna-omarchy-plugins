@@ -992,6 +992,7 @@
     {
       "id": "lacuna.system-stats",
       "kinds": [
+        "service",
         "bar-widget"
       ],
       "stability": "stable",
@@ -1000,6 +1001,7 @@
       "requires": [],
       "recommends": [],
       "entryPoints": {
+        "service": "Service.qml",
         "barWidget": "Widget.qml"
       },
       "files": [

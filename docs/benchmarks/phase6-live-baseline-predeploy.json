@@ -1,0 +1,485 @@
+{
+  "schemaVersion": 1,
+  "scenario": "phase6-live-baseline-predeploy",
+  "capturedAt": "2026-07-27T16:09:05Z",
+  "promotable": false,
+  "protocol": {
+    "warmupSeconds": 0.1,
+    "samples": 2,
+    "sampleSeconds": 0.5
+  },
+  "environment": {
+    "kernel": "7.1.5-arch1-1",
+    "python": "3.14.6",
+    "pid": 397206,
+    "omarchyVersion": "4.0.0.r1387.gd3fdaca-1",
+    "quickshellVersion": "Quickshell 0.3.0 (revision 10b439fc6e3fd65c15fe1c486271b31da05ed023, distributed by AUR (package: quickshell-git))",
+    "monitors": [
+      {
+        "id": 0,
+        "name": "DP-1",
+        "description": "Microstep G274QPF E2 CC2HS85708654",
+        "make": "Microstep",
+        "model": "G274QPF E2",
+        "serial": "CC2HS85708654",
+        "width": 2560,
+        "height": 1440,
+        "physicalWidth": 600,
+        "physicalHeight": 330,
+        "refreshRate": 60.0,
+        "x": 0,
+        "y": 0,
+        "activeWorkspace": {
+          "id": 1,
+          "name": "1"
+        },
+        "specialWorkspace": {
+          "id": 0,
+          "name": ""
+        },
+        "reserved": [
+          32,
+          32,
+          24,
+          24
+        ],
+        "scale": 1.0,
+        "transform": 0,
+        "focused": false,
+        "dpmsStatus": true,
+        "vrr": false,
+        "solitary": "0",
+        "solitaryBlockedBy": [
+          "WINDOWED",
+          "CANDIDATE"
+        ],
+        "activelyTearing": false,
+        "tearingBlockedBy": [
+          "NOT_TORN",
+          "USER",
+          "CANDIDATE",
+          "HW_CURSOR"
+        ],
+        "directScanoutTo": "0",
+        "directScanoutBlockedBy": [
+          "USER",
+          "CANDIDATE"
+        ],
+        "disabled": false,
+        "currentFormat": "XRGB8888",
+        "mirrorOf": "none",
+        "availableModes": [
+          "2560x1440@60.00Hz",
+          "2560x1440@180.00Hz",
+          "2560x1440@165.00Hz",
+          "2560x1440@144.00Hz",
+          "2560x1440@120.00Hz",
+          "1920x1080@144.00Hz",
+          "1920x1080@119.97Hz",
+          "1920x1080@120.00Hz",
+          "1920x1080@119.88Hz",
+          "1920x1080@60.00Hz",
+          "1920x1080@60.00Hz",
+          "1920x1080@59.94Hz",
+          "1920x1080@50.00Hz",
+          "1920x1080@24.00Hz",
+          "1920x1080@23.98Hz",
+          "1280x1440@60.00Hz",
+          "1680x1050@119.95Hz",
+          "1680x1050@59.95Hz",
+          "1600x900@60.00Hz",
+          "1280x1024@75.03Hz",
+          "1280x1024@60.02Hz",
+          "1440x900@59.89Hz",
+          "1152x864@75.00Hz",
+          "1280x720@60.00Hz",
+          "1280x720@59.94Hz",
+          "1280x720@50.00Hz",
+          "1024x768@75.03Hz",
+          "1024x768@70.07Hz",
+          "1024x768@60.00Hz",
+          "800x600@75.00Hz",
+          "800x600@72.19Hz",
+          "800x600@60.32Hz",
+          "800x600@56.25Hz",
+          "720x576@50.00Hz",
+          "720x576@50.00Hz",
+          "720x480@60.00Hz",
+          "720x480@59.94Hz",
+          "640x480@75.00Hz",
+          "640x480@72.81Hz",
+          "640x480@66.67Hz",
+          "640x480@60.00Hz",
+          "640x480@59.94Hz",
+          "640x480@59.94Hz",
+          "720x400@70.08Hz"
+        ],
+        "colorManagementPreset": "srgb",
+        "sdrBrightness": 1.0,
+        "sdrSaturation": 1.0,
+        "sdrMinLuminance": 0.2,
+        "sdrMaxLuminance": 80,
+        "hardwareCursorsInUse": true
+      },
+      {
+        "id": 1,
+        "name": "DP-2",
+        "description": "Dell Inc. DELL U2312HM 2GFKN365EE5L",
+        "make": "Dell Inc.",
+        "model": "DELL U2312HM",
+        "serial": "2GFKN365EE5L",
+        "width": 1920,
+        "height": 1080,
+        "physicalWidth": 510,
+        "physicalHeight": 290,
+        "refreshRate": 60.0,
+        "x": 640,
+        "y": -1080,
+        "activeWorkspace": {
+          "id": 8,
+          "name": "8"
+        },
+        "specialWorkspace": {
+          "id": 0,
+          "name": ""
+        },
+        "reserved": [
+          24,
+          32,
+          24,
+          24
+        ],
+        "scale": 1.0,
+        "transform": 0,
+        "focused": false,
+        "dpmsStatus": true,
+        "vrr": false,
+        "solitary": "0",
+        "solitaryBlockedBy": [
+          "WINDOWED",
+          "CANDIDATE"
+        ],
+        "activelyTearing": false,
+        "tearingBlockedBy": [
+          "NOT_TORN",
+          "USER",
+          "CANDIDATE",
+          "HW_CURSOR"
+        ],
+        "directScanoutTo": "0",
+        "directScanoutBlockedBy": [
+          "USER",
+          "CANDIDATE"
+        ],
+        "disabled": false,
+        "currentFormat": "XRGB8888",
+        "mirrorOf": "none",
+        "availableModes": [
+          "1920x1080@60.00Hz",
+          "1280x1024@75.03Hz",
+          "1280x1024@60.02Hz",
+          "1152x864@75.00Hz",
+          "1024x768@75.03Hz",
+          "1024x768@60.00Hz",
+          "800x600@75.00Hz",
+          "800x600@60.32Hz",
+          "640x480@75.00Hz",
+          "640x480@59.94Hz",
+          "720x400@70.08Hz"
+        ],
+        "colorManagementPreset": "srgb",
+        "sdrBrightness": 1.0,
+        "sdrSaturation": 1.0,
+        "sdrMinLuminance": 0.2,
+        "sdrMaxLuminance": 80,
+        "hardwareCursorsInUse": true
+      },
+      {
+        "id": 2,
+        "name": "DP-3",
+        "description": "Microstep G274QPF E2 CC2HS85710300",
+        "make": "Microstep",
+        "model": "G274QPF E2",
+        "serial": "CC2HS85710300",
+        "width": 2560,
+        "height": 1440,
+        "physicalWidth": 600,
+        "physicalHeight": 330,
+        "refreshRate": 60.0,
+        "x": 2560,
+        "y": -798,
+        "activeWorkspace": {
+          "id": 6,
+          "name": "6"
+        },
+        "specialWorkspace": {
+          "id": 0,
+          "name": ""
+        },
+        "reserved": [
+          24,
+          32,
+          24,
+          32
+        ],
+        "scale": 1.0,
+        "transform": 1,
+        "focused": true,
+        "dpmsStatus": true,
+        "vrr": false,
+        "solitary": "0",
+        "solitaryBlockedBy": [
+          "WINDOWED",
+          "CANDIDATE"
+        ],
+        "activelyTearing": false,
+        "tearingBlockedBy": [
+          "NOT_TORN",
+          "USER",
+          "CANDIDATE",
+          "HW_CURSOR"
+        ],
+        "directScanoutTo": "0",
+        "directScanoutBlockedBy": [
+          "USER",
+          "CANDIDATE"
+        ],
+        "disabled": false,
+        "currentFormat": "XRGB8888",
+        "mirrorOf": "none",
+        "availableModes": [
+          "2560x1440@60.00Hz",
+          "2560x1440@180.00Hz",
+          "2560x1440@165.00Hz",
+          "2560x1440@144.00Hz",
+          "2560x1440@120.00Hz",
+          "1920x1080@144.00Hz",
+          "1920x1080@119.97Hz",
+          "1920x1080@120.00Hz",
+          "1920x1080@119.88Hz",
+          "1920x1080@60.00Hz",
+          "1920x1080@60.00Hz",
+          "1920x1080@59.94Hz",
+          "1920x1080@50.00Hz",
+          "1920x1080@24.00Hz",
+          "1920x1080@23.98Hz",
+          "1280x1440@60.00Hz",
+          "1680x1050@119.95Hz",
+          "1680x1050@59.95Hz",
+          "1600x900@60.00Hz",
+          "1280x1024@75.03Hz",
+          "1280x1024@60.02Hz",
+          "1440x900@59.89Hz",
+          "1152x864@75.00Hz",
+          "1280x720@60.00Hz",
+          "1280x720@59.94Hz",
+          "1280x720@50.00Hz",
+          "1024x768@75.03Hz",
+          "1024x768@70.07Hz",
+          "1024x768@60.00Hz",
+          "800x600@75.00Hz",
+          "800x600@72.19Hz",
+          "800x600@60.32Hz",
+          "800x600@56.25Hz",
+          "720x576@50.00Hz",
+          "720x576@50.00Hz",
+          "720x480@60.00Hz",
+          "720x480@59.94Hz",
+          "640x480@75.00Hz",
+          "640x480@72.81Hz",
+          "640x480@66.67Hz",
+          "640x480@60.00Hz",
+          "640x480@59.94Hz",
+          "640x480@59.94Hz",
+          "720x400@70.08Hz"
+        ],
+        "colorManagementPreset": "srgb",
+        "sdrBrightness": 1.0,
+        "sdrSaturation": 1.0,
+        "sdrMinLuminance": 0.2,
+        "sdrMaxLuminance": 80,
+        "hardwareCursorsInUse": true
+      }
+    ],
+    "outputCount": 3,
+    "settings": [
+      {
+        "path": "/home/oldjobobo/.config/omarchy/shell.json",
+        "bytes": 3139,
+        "sha256": "87e891c2bc368920ad6ae4a2d8ccc386dba009501d9305d30c96d30111b010a4"
+      },
+      {
+        "path": "/home/oldjobobo/.config/omarchy/lacuna/settings.json",
+        "bytes": 6951,
+        "sha256": "da656c0085acb2d5974cd159075a0b64f2bebc120013908a1e0f9f38b4203cf0"
+      }
+    ]
+  },
+  "thresholds": {
+    "processGrowthAfter100Cycles": 0,
+    "zombies": 0,
+    "stoppedDecoderProcesses": 0,
+    "stoppedQtMultimediaPlayers": 0,
+    "systemStatsLaunchReductionPercent": 50,
+    "settingsPersistenceLaunchesPerMinuteMax": 4,
+    "shellSettingsFullRefreshAvoidedForCommonActions": true,
+    "screenRecordingSettledPollingOwners": 1,
+    "broadMetricRegressionPercentMax": 5
+  },
+  "samples": [
+    {
+      "durationSeconds": 0.5037717410014011,
+      "cpuPercent": 105.20637758411422,
+      "rssKiB": 1400637.6,
+      "childLaunches": 56,
+      "childLaunchCommands": [
+        "",
+        "/usr/bin/python3 /home/oldjobobo/.config/omarchy/plugins/lacuna.system-stats/scripts/system-stats-snapshot.py",
+        "/usr/bin/python3 /home/oldjobobo/.config/omarchy/plugins/lacuna.temperature/scripts/thermal-snapshot.py",
+        "",
+        "/usr/bin/python3 /home/oldjobobo/.config/omarchy/plugins/lacuna.bar-size-pill/scripts/bar-size-state get",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-toggle-nightlight --status",
+        "/usr/bin/bash -c omarchy-shell idle status 2>/dev/null",
+        "/usr/bin/pgrep --quiet -f ^gpu-screen-recorder",
+        "/usr/bin/pgrep --quiet -f ^gpu-screen-recorder",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-toggle-nightlight --status",
+        "/usr/bin/bash -c omarchy-shell idle status 2>/dev/null",
+        "/usr/bin/pgrep --quiet -f ^gpu-screen-recorder",
+        "",
+        "/usr/bin/python3 /home/oldjobobo/.config/omarchy/plugins/lacuna.system-stats/scripts/system-stats-snapshot.py",
+        "/home/oldjobobo/.local/share/mise/shims/python3 /home/oldjobobo/.config/omarchy/plugins/lacuna.temperature/scripts/thermal-snapshot.py",
+        "/usr/bin/python3 /home/oldjobobo/.config/omarchy/plugins/lacuna.bar-size-pill/scripts/bar-size-state get",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-toggle-nightlight --status",
+        "/usr/bin/bash -c omarchy-shell idle status 2>/dev/null",
+        "/usr/bin/pgrep --quiet -f ^gpu-screen-recorder",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-toggle-nightlight --status",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-shell idle status",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-shell idle status",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-shell idle status",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-shell idle status",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-shell idle status",
+        "timeout --kill-after=1s 2s qs ipc -n -p /usr/share/omarchy/shell call -- idle status",
+        "timeout --kill-after=1s 2s qs ipc -n -p /usr/share/omarchy/shell call -- idle status",
+        "qs ipc -n -p /usr/share/omarchy/shell call -- idle status",
+        "qs ipc -n -p /usr/share/omarchy/shell call -- idle status",
+        "/usr/bin/bash -c omarchy-shell idle status 2>/dev/null",
+        "",
+        "",
+        "/usr/bin/python3 /home/oldjobobo/.config/omarchy/plugins/lacuna.system-stats/scripts/system-stats-snapshot.py",
+        "/usr/bin/python3 /home/oldjobobo/.config/omarchy/plugins/lacuna.temperature/scripts/thermal-snapshot.py",
+        "/usr/bin/python3 /home/oldjobobo/.config/omarchy/plugins/lacuna.bar-size-pill/scripts/bar-size-state get",
+        "",
+        "/usr/bin/bash -c omarchy-shell idle status 2>/dev/null",
+        "",
+        "",
+        "/usr/bin/bash -c omarchy-shell idle status 2>/dev/null",
+        "",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-shell idle status",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-shell idle status",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-shell idle status",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-shell idle status",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-shell idle status",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-shell idle status",
+        "/bin/bash /usr/share/omarchy/bin/omarchy-shell idle status",
+        "timeout --kill-after=1s 2s qs ipc -n -p /usr/share/omarchy/shell call -- idle status",
+        "timeout --kill-after=1s 2s qs ipc -n -p /usr/share/omarchy/shell call -- idle status",
+        "timeout --kill-after=1s 2s qs ipc -n -p /usr/share/omarchy/shell call -- idle status",
+        "timeout --kill-after=1s 2s qs ipc -n -p /usr/share/omarchy/shell call -- idle status",
+        "qs ipc -n -p /usr/share/omarchy/shell call -- idle status",
+        "qs ipc -n -p /usr/share/omarchy/shell call -- idle status",
+        "qs ipc -n -p /usr/share/omarchy/shell call -- idle status",
+        "qs ipc -n -p /usr/share/omarchy/shell call -- idle status"
+      ],
+      "wakeups": 166,
+      "endingDescendants": 4,
+      "zombies": 0
+    },
+    {
+      "durationSeconds": 0.515880279999692,
+      "cpuPercent": 85.29110668860277,
+      "rssKiB": 1398246.1818181819,
+      "childLaunches": 0,
+      "childLaunchCommands": [],
+      "wakeups": 409,
+      "endingDescendants": 4,
+      "zombies": 0
+    }
+  ],
+  "metrics": {
+    "cpuPercent": {
+      "raw": [
+        105.20637758411422,
+        85.29110668860277
+      ],
+      "median": 95.24874213635849,
+      "p95": 105.20637758411422
+    },
+    "rssKiB": {
+      "raw": [
+        1400637.6,
+        1398246.1818181819
+      ],
+      "median": 1399441.890909091,
+      "p95": 1400637.6
+    },
+    "childLaunches": {
+      "raw": [
+        56.0,
+        0.0
+      ],
+      "median": 28.0,
+      "p95": 56.0
+    },
+    "wakeups": {
+      "raw": [
+        166.0,
+        409.0
+      ],
+      "median": 287.5,
+      "p95": 409.0
+    },
+    "endingDescendants": {
+      "raw": [
+        4.0,
+        4.0
+      ],
+      "median": 4.0,
+      "p95": 4.0
+    },
+    "zombies": {
+      "raw": [
+        0.0,
+        0.0
+      ],
+      "median": 0.0,
+      "p95": 0.0
+    },
+    "frameTimingMs": {
+      "supported": false,
+      "raw": [],
+      "median": null,
+      "p95": null
+    },
+    "startupMs": {
+      "supported": false,
+      "raw": [],
+      "median": null,
+      "p95": null
+    },
+    "interaction100Cycles": {
+      "supported": false,
+      "raw": [],
+      "median": null,
+      "p95": null
+    },
+    "perOutputScaling": {
+      "supported": true,
+      "outputCount": 3,
+      "scales": {
+        "DP-1": 1.0,
+        "DP-2": 1.0,
+        "DP-3": 1.0
+      }
+    }
+  }
+}
