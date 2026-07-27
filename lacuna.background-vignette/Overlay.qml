@@ -85,11 +85,20 @@ Item {
     }
   }
 
+  // FileView can observe the transient empty/partial state while another
+  // service rewrites settings.json. Keep the last known-good snapshot so an
+  // unrelated setting save cannot unmap and remap the vignette surface.
   function loadLacunaSettings(raw) {
+    var text = String(raw || "").trim()
+    if (text.length === 0) return false
+
     try {
-      lacunaSettings = JSON.parse(raw || "{}")
+      var parsed = JSON.parse(text)
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false
+      lacunaSettings = parsed
+      return true
     } catch (error) {
-      lacunaSettings = {}
+      return false
     }
   }
 
@@ -101,7 +110,6 @@ Item {
     printErrors: false
     onLoaded: root.loadLacunaSettings(text())
     onFileChanged: reload()
-    onLoadFailed: root.lacunaSettings = {}
   }
 
   Variants {
