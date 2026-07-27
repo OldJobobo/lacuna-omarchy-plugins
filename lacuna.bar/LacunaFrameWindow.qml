@@ -236,16 +236,35 @@ PanelWindow {
       }
     }
 
-    Shape {
-      id: frameSource
+    // The frame surface can stack above the host-owned bar. Constrain paint
+    // to the content-side rectangle at the scene-graph level so Shape
+    // antialiasing cannot leak a transient row into the bar while radius or
+    // molding geometry is rebuilt.
+    Item {
+      id: framePaintClip
 
-      anchors.fill: parent
-      asynchronous: false
-      antialiasing: true
-      preferredRendererType: Shape.CurveRenderer
+      x: root.outerX
+      y: root.outerY
+      width: Math.max(0, root.outerRight - root.outerX)
+      height: Math.max(0, root.outerBottom - root.outerY)
+      clip: true
       z: 1
 
-      ShapePath {
+      Item {
+        x: -root.outerX
+        y: -root.outerY
+        width: root.width
+        height: root.height
+
+        Shape {
+          id: frameSource
+
+          anchors.fill: parent
+          asynchronous: false
+          antialiasing: true
+          preferredRendererType: Shape.CurveRenderer
+
+          ShapePath {
         strokeWidth: -1
         fillColor: root.effectiveFrameColor
         fillRule: ShapePath.OddEvenFill
@@ -344,6 +363,8 @@ PanelWindow {
           radiusX: root.isRenderable ? root.holeRadius : 0
           radiusY: root.isRenderable ? root.holeRadius : 0
           direction: PathArc.Clockwise
+            }
+          }
         }
       }
     }
