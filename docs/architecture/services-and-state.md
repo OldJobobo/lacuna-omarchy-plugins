@@ -101,9 +101,50 @@ feature: black masks in the physical outer screen corners that make the outer
 shell silhouette appear rounded, similar to Noctalia. Those masks are not part
 of schema v2 and are not implemented by `frame.moldingPieces`.
 
+### Persistence confirmation
+
+Canonical settings writes are serialized by revision. `requestedSaveRevision`
+advances for every normalized user intent, `confirmedSaveRevision` advances
+only from `FileView.saved`, and a write in progress retains only the newest
+queued payload. The public persistence states are `idle`, `saving`, `saved`,
+`failed`, and `retrying`. A failed newest payload remains available through
+`retryPersistence()` and the `lacuna-settings-state retry` IPC method; the
+Settings UI exposes the same retry when needed. Optimistic in-memory state may
+update controls immediately, but the UI does not call it durable until the
+confirmed revision catches the requested revision.
+
+Unknown recursively JSON-safe fields are preserved in every normalized domain.
+The supported ownership inventory is:
+
+| Domain | Owner | UI/reset | Migration | Restart |
+| --- | --- | --- | --- | --- |
+| top-level presentation and layouts | `lacuna.state` | Lacuna Settings; defaults from `defaultData()` | schema normalization | live |
+| `designStyles.*.bar` | `lacuna.state` | style/bar controls | string entries become `{id}` | live |
+| `preferredApps`, custom launch data | `lacuna.state` | Preferred Apps/launcher controls | invalid IDs fall back safely | live |
+| `mediaProviders`, `mediaPlayer` | `lacuna.state` | Media Player | YouTube Music alias folds into YouTube | live |
+| `sidebar` | `lacuna.state` + `SidebarState` | Layout | schema-v1 corner alias | live |
+| `frame`, `barPresentation` | `lacuna.state` | Appearance/Layout | schema-v2 molding aliases | live |
+| `backgroundEffects`, `backgroundVignette` | `lacuna.state` | Animations | legacy effect/vignette aliases normalize | live |
+| managed idle/nightlight snapshot | `lacuna.settings-persistence` | persistence panel | v2 state payload | restored at service start |
+
+Canonical and vendored normalizer parity plus the future-field behavior matrix
+mechanically validate these owned domains, including bounded numeric settings
+and migration aliases. Widget-local options remain in manifest schemas and are
+not part of `settings.json`.
+
 When adding a settings key, update the canonical service first, run
 `scripts/sync-vendored`, and extend the normalization contract tests before
 changing the UI.
+
+## Managed idle/nightlight state
+
+`lacuna.settings-persistence` writes
+`$XDG_STATE_HOME/omarchy/lacuna/settings-persistence.json`. Saves are
+latest-write-wins and use a restrictive `umask` plus a temporary file created
+inside the destination directory before atomic rename. Its IPC status exposes
+requested, queued, confirmed, failed, and retryable state. Apply failures and
+persistence failures remain distinct; successful retry clears only the matching
+persistence error.
 
 ## Persistent Services
 

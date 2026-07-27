@@ -107,6 +107,16 @@ Item {
           }
 
           Button {
+            visible: root.service && root.service.persistenceState === "failed"
+            text: "Retry Save"
+            foreground: Color.foreground
+            focusable: true
+            bordered: true
+            onClicked: if (root.service && typeof root.service.retryPersistence === "function")
+              root.service.retryPersistence()
+          }
+
+          Button {
             text: "Restore Now"
             foreground: Color.foreground
             focusable: true

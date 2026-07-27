@@ -31,6 +31,17 @@ Item {
   property string lastStatus: "starting"
   property string lastError: ""
   property string lastUpdatedAt: ""
+  property string persistenceState: "idle"
+  property string persistenceError: ""
+  property int requestedSaveRevision: 0
+  property int inFlightSaveRevision: 0
+  property int confirmedSaveRevision: 0
+  property int queuedSaveRevision: 0
+  property int retrySaveRevision: 0
+  property string inFlightSavePayload: ""
+  property string queuedSavePayload: ""
+  property string retrySavePayload: ""
+  property bool stateSaveFailureActive: false
   readonly property string stateDir: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/omarchy/lacuna"
   readonly property string stateFile: stateDir + "/settings-persistence.json"
 
@@ -239,8 +250,8 @@ Item {
     saveTimer.restart()
   }
 
-  function saveState() {
-    var json = JSON.stringify({
+  function statePayload() {
+    return JSON.stringify({
       version: 2,
       manageIdle: manageIdle === true,
       manageNightlight: manageNightlight === true,
@@ -249,10 +260,77 @@ Item {
       nightlightTemperature: currentNightlightTemperature || null,
       updatedAt: lastUpdatedAt || timestamp()
     }, null, 2) + "\n"
+  }
 
-    saveProc.command = ["bash", "-c", "mkdir -p " + quote(stateDir)
-      + "; tmp=$(mktemp); printf %s " + quote(json) + " > \"$tmp\"; mv \"$tmp\" " + quote(stateFile)]
+  function saveState() {
+    requestedSaveRevision += 1
+    enqueueStateSave(statePayload(), requestedSaveRevision)
+  }
+
+  function enqueueStateSave(payload, revision) {
+    if (saveProc.running) {
+      // Latest-write-wins while the current destination-local rename settles.
+      queuedSavePayload = payload
+      queuedSaveRevision = revision
+      persistenceState = "saving"
+      return
+    }
+    beginStateSave(payload, revision, false)
+  }
+
+  function beginStateSave(payload, revision, retrying) {
+    inFlightSavePayload = payload
+    inFlightSaveRevision = revision
+    persistenceState = retrying ? "retrying" : "saving"
+    persistenceError = ""
+    saveProc.command = ["bash", "-c",
+      "set -e; mkdir -p " + quote(stateDir)
+      + "; umask 077; tmp=$(mktemp " + quote(stateDir + "/.settings-persistence.json.tmp.XXXXXX") + ")"
+      + "; trap 'rm -f -- \"$tmp\"' EXIT; printf %s " + quote(payload) + " > \"$tmp\""
+      + "; chmod 600 \"$tmp\"; mv -f -- \"$tmp\" " + quote(stateFile) + "; trap - EXIT"]
     saveProc.running = true
+  }
+
+  function handleStateSaveFinished(exitCode) {
+    var failedPayload = inFlightSavePayload
+    var failedRevision = inFlightSaveRevision
+    inFlightSavePayload = ""
+    inFlightSaveRevision = 0
+
+    if (exitCode === 0) {
+      confirmedSaveRevision = Math.max(confirmedSaveRevision, failedRevision)
+      retrySavePayload = ""
+      retrySaveRevision = 0
+      persistenceState = "saved"
+      persistenceError = ""
+      if (stateSaveFailureActive) {
+        if (lastError === "state save failed") lastError = ""
+        if (lastStatus === "failed") lastStatus = "saved"
+        stateSaveFailureActive = false
+      }
+    } else {
+      retrySavePayload = failedPayload
+      retrySaveRevision = failedRevision
+      persistenceState = "failed"
+      persistenceError = "Could not save managed settings"
+      stateSaveFailureActive = true
+      lastError = "state save failed"
+      lastStatus = "failed"
+    }
+
+    if (queuedSavePayload !== "") {
+      var nextPayload = queuedSavePayload
+      var nextRevision = queuedSaveRevision
+      queuedSavePayload = ""
+      queuedSaveRevision = 0
+      beginStateSave(nextPayload, nextRevision, false)
+    }
+  }
+
+  function retryPersistence() {
+    if (saveProc.running || retrySavePayload === "") return false
+    beginStateSave(retrySavePayload, retrySaveRevision || requestedSaveRevision, true)
+    return true
   }
 
   Component.onCompleted: stateFileView.reload()
@@ -352,12 +430,7 @@ Item {
   Process {
     id: saveProc
 
-    onExited: function(exitCode) {
-      if (exitCode !== 0) {
-        root.lastError = "state save failed"
-        root.lastStatus = "failed"
-      }
-    }
+    onExited: function(exitCode) { root.handleStateSaveFinished(exitCode) }
   }
 
   IpcHandler {
@@ -378,12 +451,22 @@ Item {
         stateFile: root.stateFile,
         status: root.lastStatus,
         error: root.lastError,
-        updatedAt: root.lastUpdatedAt
+        updatedAt: root.lastUpdatedAt,
+        persistenceState: root.persistenceState,
+        persistenceError: root.persistenceError,
+        requestedRevision: root.requestedSaveRevision,
+        confirmedRevision: root.confirmedSaveRevision,
+        queuedRevision: root.queuedSaveRevision,
+        retryAvailable: root.retrySavePayload !== ""
       })
     }
 
     function setManaged(idle: string, nightlight: string): string {
       return root.setManagedToggles(idle, nightlight) ? status() : "select-at-least-one-toggle"
+    }
+
+    function retry(): string {
+      return root.retryPersistence() ? "retry-requested" : "retry-unavailable"
     }
 
     function restore(): string {

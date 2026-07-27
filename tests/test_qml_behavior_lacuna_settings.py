@@ -203,6 +203,192 @@ ShellRoot {{
             row["split"],
         )
 
+    def test_confirmed_persistence_converges_to_latest_rapid_save(self):
+        for service_path in (
+            "lacuna.state/Service.qml",
+            "lacuna.menu/services/LacunaSettings.qml",
+        ):
+            with self.subTest(service_path=service_path), tempfile.TemporaryDirectory() as cfg:
+                qml = f'''
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var service: null
+  property bool issued: false
+  property bool noopIssued: false
+
+  function issueSaves() {{
+    if (issued || !service || !service.hasLoaded) return
+    issued = true
+    var first = service.normalize(service.data)
+    first.designStyle = "omarchy"
+    service.save(first)
+    var second = service.normalize(service.data)
+    second.designStyle = "material"
+    service.save(second)
+    var latest = service.normalize(service.data)
+    latest.designStyle = "lacuna"
+    latest.futureRapidSave = {{ winner: 3 }}
+    service.save(latest)
+    settle.start()
+  }}
+
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url(service_path)}", Component.PreferSynchronous)
+    if (component.status !== Component.Ready) {{
+      console.log("BEHAVE_ERR " + component.errorString())
+      Qt.quit()
+      return
+    }}
+    service = component.createObject(root)
+    Qt.callLater(root.issueSaves)
+  }}
+
+  Connections {{
+    target: root.service
+    function onLoaded() {{ Qt.callLater(root.issueSaves) }}
+  }}
+
+  Timer {{
+    id: settle
+    interval: 20
+    repeat: true
+    property int attempts: 0
+    onTriggered: {{
+      attempts += 1
+      if (service.persistenceState === "saved"
+          && service.confirmedSaveRevision === service.requestedSaveRevision
+          && service.requestedSaveRevision >= 3
+          && !noopIssued) {{
+        noopIssued = true
+        service.save(service.data)
+      }} else if (noopIssued
+          && service.persistenceState === "saved"
+          && service.confirmedSaveRevision === service.requestedSaveRevision
+          && service.requestedSaveRevision >= 4) {{
+        console.log("BEHAVE " + JSON.stringify({{
+          state: service.persistenceState,
+          requested: service.requestedSaveRevision,
+          confirmed: service.confirmedSaveRevision,
+          queued: service.queuedSaveRevision,
+          winner: service.data.futureRapidSave.winner
+        }}))
+        Qt.quit()
+      }} else if (attempts > 250) {{
+        console.log("BEHAVE_ERR persistence timeout " + service.persistenceState
+          + " requested=" + service.requestedSaveRevision
+          + " confirmed=" + service.confirmedSaveRevision)
+        Qt.quit()
+      }}
+    }}
+  }}
+}}
+'''
+                output = run_quickshell(qml, config_home=Path(cfg), timeout=10)
+                require_no_qml_errors(output)
+                row = parse_behave(output)[-1]
+                self.assertEqual("saved", row["state"], output[-2000:])
+                self.assertEqual(row["requested"], row["confirmed"])
+                self.assertEqual(0, row["queued"])
+                self.assertEqual(3, row["winner"])
+                persisted = Path(cfg, "omarchy/lacuna/settings.json").read_text(encoding="utf-8")
+                self.assertIn('"winner": 3', persisted)
+
+    def test_failed_save_is_visible_and_retryable(self):
+        with tempfile.TemporaryDirectory() as cfg:
+            settings_dir = Path(cfg, "omarchy/lacuna")
+            settings_dir.mkdir(parents=True)
+            settings_dir.chmod(0o500)
+            qml = f'''
+import Quickshell
+import Quickshell.Io
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var service: null
+  property bool issued: false
+  property bool observedFailure: false
+
+  function issueSave() {{
+    if (issued || !service || !service.hasLoaded) return
+    issued = true
+    var next = service.normalize(service.data)
+    next.futureRetry = {{ persisted: true }}
+    service.save(next)
+    watch.start()
+  }}
+
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.state/Service.qml')}", Component.PreferSynchronous)
+    if (component.status !== Component.Ready) {{
+      console.log("BEHAVE_ERR " + component.errorString())
+      Qt.quit()
+      return
+    }}
+    service = component.createObject(root)
+    Qt.callLater(root.issueSave)
+  }}
+
+  Connections {{
+    target: root.service
+    function onLoaded() {{ Qt.callLater(root.issueSave) }}
+  }}
+
+  Process {{
+    id: unlock
+    command: ["chmod", "700", "{settings_dir.as_posix()}"]
+    onExited: function(exitCode) {{
+      if (exitCode !== 0) {{
+        console.log("BEHAVE_ERR chmod failed")
+        Qt.quit()
+        return
+      }}
+      service.retryPersistence()
+    }}
+  }}
+
+  Timer {{
+    id: watch
+    interval: 20
+    repeat: true
+    property int attempts: 0
+    onTriggered: {{
+      attempts += 1
+      if (!observedFailure && service.persistenceState === "failed") {{
+        observedFailure = service.retrySavePayload !== "" && service.persistenceError !== ""
+        unlock.running = true
+      }} else if (observedFailure && service.persistenceState === "saved") {{
+        console.log("BEHAVE " + JSON.stringify({{
+          failed: observedFailure,
+          state: service.persistenceState,
+          requested: service.requestedSaveRevision,
+          confirmed: service.confirmedSaveRevision,
+          retryAvailable: service.retrySavePayload !== ""
+        }}))
+        Qt.quit()
+      }} else if (attempts > 300) {{
+        console.log("BEHAVE_ERR retry timeout " + service.persistenceState + " " + service.persistenceError)
+        Qt.quit()
+      }}
+    }}
+  }}
+}}
+'''
+            try:
+                output = run_quickshell(qml, config_home=Path(cfg), timeout=12)
+            finally:
+                settings_dir.chmod(0o700)
+            require_no_qml_errors(output)
+            row = parse_behave(output)[-1]
+            self.assertTrue(row["failed"], output[-2000:])
+            self.assertEqual("saved", row["state"])
+            self.assertEqual(row["requested"], row["confirmed"])
+            self.assertFalse(row["retryAvailable"])
+            self.assertIn('"persisted": true', Path(settings_dir, "settings.json").read_text(encoding="utf-8"))
+
     def test_sidebar_save_merges_owned_fields_without_dropping_future_fields(self):
         qml = f"""
 import Quickshell

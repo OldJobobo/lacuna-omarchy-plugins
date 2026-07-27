@@ -21,8 +21,18 @@ Item {
   property bool pendingSaveTouchedQuickLaunch: false
   property bool pendingSaveTouchedSidebar: false
   property string queuedSavePayload: ""
-  property string lastWrittenPayload: ""
+  property int queuedSaveRevision: 0
+  property string inFlightSavePayload: ""
+  property int inFlightSaveRevision: 0
+  property string lastConfirmedSavePayload: ""
+  property string retrySavePayload: ""
+  property int retrySaveRevision: 0
+  property int retryWriteNonce: 0
   property bool writeInFlight: false
+  property int requestedSaveRevision: 0
+  property int confirmedSaveRevision: 0
+  property string persistenceState: "idle"
+  property string persistenceError: ""
   property int suppressFileReloads: 0
   property bool hasLoaded: false
   property bool recoveredFromCorruptSettings: false
@@ -951,6 +961,7 @@ Item {
 
     data = parsed
     lastLoadedData = data
+    if (!writeInFlight) lastConfirmedSavePayload = JSON.stringify(data, null, 2) + "\n"
     hasLoaded = true
     loaded()
     if (pendingSave) {
@@ -964,26 +975,103 @@ Item {
     }
   }
 
-  function writePayload(payload) {
+  function writePayload(payload, revision) {
+    var nextRevision = Math.max(1, Number(revision) || 0)
     if (writeInFlight) {
-      queuedSavePayload = payload
+      // If the newest intent is byte-identical to the active write, advance
+      // that write's revision and discard an older queued detour. Otherwise
+      // retain only the newest complete normalized payload.
+      if (payload === inFlightSavePayload) {
+        inFlightSaveRevision = nextRevision
+        queuedSavePayload = ""
+        queuedSaveRevision = 0
+      } else {
+        queuedSavePayload = payload
+        queuedSaveRevision = nextRevision
+      }
+      persistenceState = "saving"
       return
     }
 
     writeInFlight = true
-    lastWrittenPayload = payload
+    inFlightSavePayload = payload
+    inFlightSaveRevision = nextRevision
+    persistenceState = persistenceState === "retrying" ? "retrying" : "saving"
+    persistenceError = ""
     suppressFileReloads += 1
     settingsFileView.setText(payload)
-    secureSettingsFile()
-    writeInFlight = false
+  }
 
-    if (queuedSavePayload !== "" && queuedSavePayload !== payload) {
+  function handleSaveSucceeded() {
+    if (!writeInFlight) return
+    confirmedSaveRevision = Math.max(confirmedSaveRevision, inFlightSaveRevision)
+    lastConfirmedSavePayload = inFlightSavePayload
+    retrySavePayload = ""
+    retrySaveRevision = 0
+    writeInFlight = false
+    inFlightSavePayload = ""
+    inFlightSaveRevision = 0
+    secureSettingsFile()
+
+    if (queuedSavePayload !== "") {
       var nextPayload = queuedSavePayload
+      var nextRevision = queuedSaveRevision
       queuedSavePayload = ""
-      writePayload(nextPayload)
+      queuedSaveRevision = 0
+      persistenceState = "saving"
+      writePayload(nextPayload, nextRevision)
     } else {
-      queuedSavePayload = ""
+      persistenceState = "saved"
+      persistenceError = ""
+      retryWriteNonce = 0
     }
+  }
+
+  function handleSaveFailed(error) {
+    if (!writeInFlight) return
+    // Failed writes do not emit fileChanged, so release the matching reload
+    // suppression token here instead of swallowing a future external edit.
+    suppressFileReloads = Math.max(0, suppressFileReloads - 1)
+    var failedPayload = inFlightSavePayload
+    var failedRevision = inFlightSaveRevision
+    writeInFlight = false
+    inFlightSavePayload = ""
+    inFlightSaveRevision = 0
+
+    if (queuedSavePayload !== "") {
+      // A newer intent supersedes this failure and gets an immediate chance to
+      // converge. If it also fails, that newest payload becomes retryable.
+      var nextPayload = queuedSavePayload
+      var nextRevision = queuedSaveRevision
+      queuedSavePayload = ""
+      queuedSaveRevision = 0
+      persistenceState = "saving"
+      writePayload(nextPayload, nextRevision)
+      return
+    }
+
+    retrySavePayload = failedPayload
+    retrySaveRevision = failedRevision
+    persistenceState = "failed"
+    persistenceError = "Could not save Lacuna settings (" + String(error) + ")"
+  }
+
+  function retryPersistence() {
+    if (writeInFlight || retrySavePayload === "") return false
+    writeInFlight = true
+    inFlightSavePayload = retrySavePayload
+    inFlightSaveRevision = retrySaveRevision || requestedSaveRevision
+    persistenceState = "retrying"
+    persistenceError = ""
+    suppressFileReloads += 1
+    // setText() suppresses identical assignments even when the prior write
+    // failed. Add harmless trailing JSON whitespace so every explicit retry
+    // schedules a fresh atomic write without changing the document value.
+    retryWriteNonce += 1
+    var retryText = retrySavePayload
+    for (var i = 0; i < retryWriteNonce; i++) retryText += "\n"
+    settingsFileView.setText(retryText)
+    return true
   }
 
   function secureSettingsFile() {
@@ -1001,7 +1089,14 @@ Item {
 
     data = normalize(next)
     var json = JSON.stringify(data, null, 2) + "\n"
-    writePayload(json)
+    requestedSaveRevision += 1
+    if (!writeInFlight && json === lastConfirmedSavePayload) {
+      confirmedSaveRevision = requestedSaveRevision
+      persistenceState = "saved"
+      persistenceError = ""
+      return
+    }
+    writePayload(json, requestedSaveRevision)
   }
 
   function mergePendingSave(base, queued, queuedTouchedQuickLaunch, queuedTouchedSidebar) {
@@ -1057,6 +1152,8 @@ Item {
     atomicWrites: true
     printErrors: false
     onLoaded: root.applyLoadedText(text())
+    onSaved: root.handleSaveSucceeded()
+    onSaveFailed: function(error) { root.handleSaveFailed(error) }
     onFileChanged: {
       if (root.settingsPermissionChangePending) {
         root.settingsPermissionChangePending = false
@@ -1068,7 +1165,9 @@ Item {
         reload()
       }
     }
-    onLoadFailed: root.applyLoadedText("{}")
+    // Missing at startup seeds defaults; a transient failure after a valid
+    // load retains the last known-good document instead of resetting state.
+    onLoadFailed: if (!root.hasLoaded) root.applyLoadedText("{}")
   }
 
   FileView {
@@ -1091,8 +1190,18 @@ Item {
         schemaVersion: root.settingsSchemaVersion,
         sidebarConnectorPieces: sidebar.connectorPieces !== false,
         frameMoldingPieces: frame.moldingPieces !== false,
-        frameRoundedContentCorners: frame.moldingPieces !== false
+        frameRoundedContentCorners: frame.moldingPieces !== false,
+        persistenceState: root.persistenceState,
+        persistenceError: root.persistenceError,
+        requestedRevision: root.requestedSaveRevision,
+        confirmedRevision: root.confirmedSaveRevision,
+        queuedRevision: root.queuedSaveRevision,
+        retryAvailable: root.retrySavePayload !== ""
       })
+    }
+
+    function retry(): string {
+      return JSON.stringify({ ok: root.retryPersistence(), state: root.persistenceState })
     }
 
     function patchBarSize(payload: string): string {
