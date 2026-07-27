@@ -336,6 +336,16 @@ Item {
     return records[frameScreenKey(screen)] || calculateFrameRecord(screen)
   }
 
+  // MultiEffect can flash when its Shape source is rebuilt on every animation
+  // tick. Keep the shadow caster on the immutable target record while paint,
+  // video, and vignette continue to consume the interpolated effective record.
+  // Sidebar disclosure covers the one-time caster endpoint switch.
+  function lacunaTargetFrameGeometryRecord(screen) {
+    var records = targetFrameGeometrySnapshot && targetFrameGeometrySnapshot.records
+      ? targetFrameGeometrySnapshot.records : ({})
+    return records[frameScreenKey(screen)] || calculateFrameRecord(screen)
+  }
+
   function lacunaFrameContentRect(screen) {
     var record = lacunaFrameGeometryRecord(screen)
     return {
@@ -423,6 +433,7 @@ Item {
 
       targetScreen: modelData
       geometryRecord: root.lacunaFrameGeometryRecord(modelData)
+      shadowGeometryRecord: root.lacunaTargetFrameGeometryRecord(modelData)
       active: geometryRecord && geometryRecord.framed === true
       barPosition: root.position
       barSize: root.barSize

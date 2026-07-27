@@ -2277,14 +2277,18 @@ class QmlContractTests(unittest.TestCase):
         self.assertNotIn("shadowEnabled: root.frameEnabled && root.frameShadow", bar)
 
         # The shadow is cast by the hidden caster, never by the painted
-        # shape, and the caster hole collapses to the bar edge on frame OFF.
+        # shape. Its Shape source consumes the immutable target record rather
+        # than being rebuilt on every animation tick, and the caster hole
+        # still collapses to the owning bar edge when the frame is off.
         self.assertIn("source: frameShadowCaster", frame)
         self.assertNotIn("source: frameSource", frame)
-        self.assertIn("readonly property real casterHoleX: isRenderable ? holeX : (leftBar ? effectiveBarSize : 0)", frame)
-        self.assertIn("readonly property real casterHoleY: isRenderable ? holeY : (topBar || effectiveTopEdgeOccupied ? effectiveBarSize : 0)", frame)
-        self.assertIn("readonly property real casterHoleRight: isRenderable ? holeRight : (rightBar ? Math.max(casterHoleX + 1, width - effectiveBarSize) : width)", frame)
-        self.assertIn("readonly property real casterHoleBottom: isRenderable ? holeBottom : (bottomBar || effectiveBottomEdgeOccupied ? Math.max(casterHoleY + 1, height - effectiveBarSize) : height)", frame)
-        self.assertIn("readonly property real casterHoleRadius: isRenderable ? holeRadius : minArcRadius", frame)
+        self.assertIn("property var shadowGeometryRecord: null", frame)
+        self.assertIn("shadowGeometryRecord: root.lacunaTargetFrameGeometryRecord(modelData)", bar)
+        self.assertIn('readonly property real casterHoleX: shadowFrameRenderable ? shadowRecordHoleX : (shadowBarPosition === "left" ? shadowBarSize : 0)', frame)
+        self.assertIn('readonly property real casterHoleY: shadowFrameRenderable ? shadowRecordHoleY : (shadowBarPosition === "top" || shadowTopEdgeOccupied ? shadowBarSize : 0)', frame)
+        self.assertIn('readonly property real casterHoleRight: shadowFrameRenderable ? shadowRecordHoleRight : (shadowBarPosition === "right" ? Math.max(casterHoleX + 1, width - shadowBarSize) : width)', frame)
+        self.assertIn('readonly property real casterHoleBottom: shadowFrameRenderable ? shadowRecordHoleBottom : (shadowBarPosition === "bottom" || shadowBottomEdgeOccupied ? Math.max(casterHoleY + 1, height - shadowBarSize) : height)', frame)
+        self.assertIn("readonly property real casterHoleRadius: shadowFrameRenderable", frame)
 
         # The rendered shadow is clipped to the content side of the chrome,
         # and neither paint nor shadow may cover the bar strip.
@@ -3681,7 +3685,9 @@ class QmlContractTests(unittest.TestCase):
         # the bar in every frame mode without painting over the bar.
         self.assertIn("id: frameShadowCaster", frame)
         self.assertIn("source: frameShadowCaster", frame)
-        self.assertIn("readonly property real casterHoleY: isRenderable ? holeY : (topBar || effectiveTopEdgeOccupied ? effectiveBarSize : 0)", frame)
+        self.assertIn("property var shadowGeometryRecord: null", frame)
+        self.assertIn("shadowGeometryRecord: root.lacunaTargetFrameGeometryRecord(modelData)", bar)
+        self.assertIn('readonly property real casterHoleY: shadowFrameRenderable ? shadowRecordHoleY : (shadowBarPosition === "top" || shadowTopEdgeOccupied ? shadowBarSize : 0)', frame)
         self.assertIn("shadowEnabled: root.shadowEnabled && root.width > 0 && root.height > 0", frame)
         self.assertIn("id: shadowClip", frame)
         self.assertIn("Shape {", frame)

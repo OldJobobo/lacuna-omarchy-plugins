@@ -422,7 +422,9 @@ class QmlGeometryTests(unittest.TestCase):
             "function commitFrameGeometrySnapshot()",
             "onReducedMotionChanged: if (reducedMotion) commitFrameGeometrySnapshot()",
             "function lacunaFrameGeometryRecord(screen)",
+            "function lacunaTargetFrameGeometryRecord(screen)",
             "geometryRecord: root.lacunaFrameGeometryRecord(modelData)",
+            "shadowGeometryRecord: root.lacunaTargetFrameGeometryRecord(modelData)",
             "revision: root.lacunaFrameGeometryRevision",
         ):
             self.assertIn(contract, bar)
@@ -444,6 +446,9 @@ class QmlGeometryTests(unittest.TestCase):
         self.assertIn("readonly property real outerY: hasGeometryRecord ? Number(geometryRecord.outerY || 0)", frame)
         self.assertIn("readonly property real outerX: hasGeometryRecord ? Number(geometryRecord.outerX || 0)", frame)
         self.assertIn("id: shadowClip", frame)
+        self.assertIn("property var shadowGeometryRecord: null", frame)
+        self.assertIn("readonly property bool shadowFrameRenderable:", frame)
+        self.assertIn("readonly property real shadowRecordHoleX: hasShadowGeometryRecord ? Number(shadowGeometryRecord.holeX || 0) : holeX", frame)
 
         for position in ("top", "bottom", "left", "right"):
             g = frame_geometry(active=True, bar_position=position, bar_size=32, thickness=8, radius=14)

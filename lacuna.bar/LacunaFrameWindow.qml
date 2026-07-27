@@ -9,6 +9,7 @@ PanelWindow {
 
   property var targetScreen: null
   property var geometryRecord: null
+  property var shadowGeometryRecord: null
   property bool active: false
   property string barPosition: "top"
   property int barSize: 0
@@ -67,16 +68,34 @@ PanelWindow {
   readonly property real holeBottom: hasGeometryRecord ? Number(geometryRecord.holeBottom || holeY + 1) : Math.max(holeY + 1, height - bottomInset)
   readonly property real holeWidth: Math.max(1, holeRight - holeX)
   readonly property real holeHeight: Math.max(1, holeBottom - holeY)
-  // Shadow caster hole. With the frame active it matches the paint hole so
-  // the shadow rings the whole content area (bar, rails, molding, sidebar
-  // occlusion edge). With the frame off it collapses to the bar edge alone,
-  // so the bar still casts its shadow — the bar's shadow must not depend on
-  // the frame or on the menu being open.
-  readonly property real casterHoleX: isRenderable ? holeX : (leftBar ? effectiveBarSize : 0)
-  readonly property real casterHoleY: isRenderable ? holeY : (topBar || effectiveTopEdgeOccupied ? effectiveBarSize : 0)
-  readonly property real casterHoleRight: isRenderable ? holeRight : (rightBar ? Math.max(casterHoleX + 1, width - effectiveBarSize) : width)
-  readonly property real casterHoleBottom: isRenderable ? holeBottom : (bottomBar || effectiveBottomEdgeOccupied ? Math.max(casterHoleY + 1, height - effectiveBarSize) : height)
-  readonly property real casterHoleRadius: isRenderable ? holeRadius : minArcRadius
+  // Shadow caster hole. MultiEffect can briefly flash when a Shape source is
+  // rebuilt every frame, so the caster consumes the immutable transaction
+  // target while frame paint consumes the interpolated effective geometry.
+  // With the frame off it collapses to the bar edge alone, preserving the bar
+  // shadow independently of frame and menu visibility.
+  readonly property bool hasShadowGeometryRecord: shadowGeometryRecord && typeof shadowGeometryRecord === "object"
+  readonly property bool shadowFrameRenderable: hasShadowGeometryRecord
+    ? shadowGeometryRecord.framed === true : isRenderable
+  readonly property string shadowBarPosition: hasShadowGeometryRecord
+    ? String(shadowGeometryRecord.barPosition || "") : (topBar ? "top" : bottomBar ? "bottom" : leftBar ? "left" : "right")
+  readonly property int shadowBarSize: hasShadowGeometryRecord
+    ? Math.max(0, Number(shadowGeometryRecord.barSize) || 0) : effectiveBarSize
+  readonly property bool shadowTopEdgeOccupied: hasShadowGeometryRecord
+    ? shadowGeometryRecord.topEdgeOccupied === true : effectiveTopEdgeOccupied
+  readonly property bool shadowBottomEdgeOccupied: hasShadowGeometryRecord
+    ? shadowGeometryRecord.bottomEdgeOccupied === true : effectiveBottomEdgeOccupied
+  readonly property real shadowRecordHoleX: hasShadowGeometryRecord ? Number(shadowGeometryRecord.holeX || 0) : holeX
+  readonly property real shadowRecordHoleY: hasShadowGeometryRecord ? Number(shadowGeometryRecord.holeY || 0) : holeY
+  readonly property real shadowRecordHoleRight: hasShadowGeometryRecord ? Number(shadowGeometryRecord.holeRight || width) : holeRight
+  readonly property real shadowRecordHoleBottom: hasShadowGeometryRecord ? Number(shadowGeometryRecord.holeBottom || height) : holeBottom
+  readonly property real shadowRecordRadius: hasShadowGeometryRecord ? Math.max(0, Number(shadowGeometryRecord.contentRadius) || 0) : holeRadius
+  readonly property real casterHoleX: shadowFrameRenderable ? shadowRecordHoleX : (shadowBarPosition === "left" ? shadowBarSize : 0)
+  readonly property real casterHoleY: shadowFrameRenderable ? shadowRecordHoleY : (shadowBarPosition === "top" || shadowTopEdgeOccupied ? shadowBarSize : 0)
+  readonly property real casterHoleRight: shadowFrameRenderable ? shadowRecordHoleRight : (shadowBarPosition === "right" ? Math.max(casterHoleX + 1, width - shadowBarSize) : width)
+  readonly property real casterHoleBottom: shadowFrameRenderable ? shadowRecordHoleBottom : (shadowBarPosition === "bottom" || shadowBottomEdgeOccupied ? Math.max(casterHoleY + 1, height - shadowBarSize) : height)
+  readonly property real casterHoleRadius: shadowFrameRenderable
+    ? Math.max(minArcRadius, Math.min(shadowRecordRadius, (casterHoleRight - casterHoleX) / 2, (casterHoleBottom - casterHoleY) / 2))
+    : minArcRadius
   readonly property real minArcRadius: 0.01
   readonly property real holeRadius: effectiveMoldingPieces ? Math.max(minArcRadius, Math.min(r, holeWidth / 2, holeHeight / 2)) : minArcRadius
   readonly property bool isRenderable: (hasGeometryRecord ? geometryRecord.framed === true : active) && width > 0 && height > 0 && holeWidth > 0 && holeHeight > 0
