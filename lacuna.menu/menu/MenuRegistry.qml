@@ -6,7 +6,7 @@ Item {
   property string lacunaPath: ""
   property bool sidebarExclusive: true
   property bool sidebarCollapsed: false
-  property bool sidebarCornerPieces: true
+  property bool sidebarConnectorPieces: true
   property string sidebarDefaultMode: "off"
   property string sidebarMonitorPolicy: "auto"
   property var sidebarMonitorNames: []
@@ -31,6 +31,7 @@ Item {
   property string frameReserveMode: "auto"
   property bool frameShadow: false
   property bool frameBorder: false
+  property bool frameMoldingPieces: true
   property bool portraitSplit: true
   property var mediaProviders: ({})
   property var backgroundEffects: ({})

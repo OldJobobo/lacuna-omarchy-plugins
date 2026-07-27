@@ -29,7 +29,7 @@ Item {
   property bool drawBackground: true
   property var controlOverrides: ({})
   property int controlRevision: 0
-  readonly property int panelRadius: Math.max(designTokens.radius, compact ? 10 : 14)
+  readonly property int panelRadius: designTokens.panelRadius !== undefined ? designTokens.panelRadius : 14
   readonly property real curveKappa: lacunaGeometry.curveKappa
 
   LacunaGeometry { id: lacunaGeometry }
@@ -345,7 +345,7 @@ Item {
           { value: "material", label: "Material" }
         ], root.registry.designStyle, "set-design-style-"),
         row("color-swatch", "Color Profile", root.registry.colorProfile === "colorful" ? "Use theme colors across Lacuna surfaces" : "Use semantic accents with restrained color", colorProfileName(), "lacuna", "toggle-color-profile", "toggle", root.registry.colorProfile === "colorful"),
-        row("corners", "Corner Pieces", root.registry.sidebarCornerPieces ? "Rounded connector pieces are visible" : "Use a flat sidebar edge", root.registry.sidebarCornerPieces ? "On" : "Off", "lacuna", "toggle-corner-pieces", "toggle", root.registry.sidebarCornerPieces),
+        row("corners", "Sidebar Connectors", root.registry.sidebarConnectorPieces ? "Allow style-provided molding between the sidebar and flyouts" : "Attach flyouts directly to the sidebar", root.registry.sidebarConnectorPieces ? "On" : "Off", "lacuna", "toggle-sidebar-connectors", "toggle", root.registry.sidebarConnectorPieces),
         section("Frame", "Fake fullscreen frame and unified shadow treatment.", "lacuna"),
         row("corners", "Frame", "Draw Lacuna-owned frame pieces around the screen perimeter", frameModeName(), "lacuna", "", "segments", false, [
           { value: "off", label: "Off" },
@@ -353,6 +353,7 @@ Item {
         ], root.registry.frameMode, "set-frame-mode-"),
         row("photo", "Frame Shadow", root.registry.frameShadow ? "Apply one cohesive shadow pass to the frame layer" : "Keep frame pieces fill-only", root.registry.frameShadow ? "On" : "Off", "lacuna", "toggle-frame-shadow", "toggle", root.registry.frameShadow),
         row("corners", "Frame Border", root.registry.frameBorder ? "Draw a fine inner edge around the frame reveal" : "Keep the frame reveal without an inner edge", root.registry.frameBorder ? "On" : "Off", "lacuna", "toggle-frame-border", "toggle", root.registry.frameBorder),
+        row("corners", "Frame Molding Pieces", root.registry.frameMoldingPieces ? "Curve the upper and lower frame joins around the content shell" : "Keep frame content corners square", root.registry.frameMoldingPieces ? "On" : "Off", "lacuna", "toggle-frame-molding-pieces", "toggle", root.registry.frameMoldingPieces),
         row("density-normal", "Frame Reserve", frameReserveModeHint(), frameReserveModeName(), "lacuna", "", "segments", false, [
           { value: "auto", label: "Auto" },
           { value: "comfort", label: "Comfort" },

@@ -39,9 +39,10 @@ class MenuFlyoutGeometryTests(unittest.TestCase):
     def test_menu_uses_one_bounded_geometry_source_for_paint_and_masks(self):
         menu = (ROOT / "lacuna.menu/menu/MenuWindow.qml").read_text(encoding="utf-8")
         self.assertIn('import "MenuFlyoutGeometry.js" as MenuFlyoutGeometry', menu)
-        self.assertIn("function flyoutGeometryFor(screen, kind)", menu)
+        self.assertIn("function flyoutGeometryFor(screen, kind, connectorWidthOverride)", menu)
         self.assertIn("preferredWidth: preferredFlyoutWidth(kind)", menu)
-        self.assertIn("flyoutWidth: Math.max(0, root.activeFlyoutWidthFor(modelData))", menu)
+        self.assertIn("Math.max(0, root.flyoutGeometryFor(modelData, root.geometryTargetFlyout).width)", menu)
+        self.assertIn("flyoutWidth: panelHost.flyoutMaskWidth", menu)
         self.assertNotIn("return Math.max(360, Math.min(availableHeight", menu)
 
 

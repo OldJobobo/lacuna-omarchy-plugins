@@ -59,6 +59,22 @@ def set_reduce_motion(enabled: bool) -> None:
     time.sleep(0.5)
 
 
+def set_molding_geometry(style: str, connector_pieces: bool, molding_pieces: bool, radius: int) -> dict:
+    data = read_settings()
+    data["version"] = 2
+    data["designStyle"] = style
+    sidebar = data.setdefault("sidebar", {})
+    sidebar["connectorPieces"] = connector_pieces
+    sidebar["cornerPieces"] = connector_pieces
+    frame = data.setdefault("frame", {})
+    frame["moldingPieces"] = molding_pieces
+    frame["radius"] = radius
+    write_settings(data)
+    run(["omarchy", "restart", "shell"], timeout=60)
+    time.sleep(0.5)
+    return json.loads(run(["omarchy-shell", "lacuna-settings-state", "status"]))
+
+
 def summon_menu(flyout: str) -> None:
     run(["omarchy-shell", "shell", "summon", "lacuna.menu", json.dumps({"flyout": flyout})])
 
@@ -369,6 +385,31 @@ class LiveVisualTests(unittest.TestCase):
                         10,
                     )
                     self.assertFalse(stopped_video.get("wallpaperRunning"), stopped_video)
+
+    def test_split_molding_connector_schema_visual_matrix(self):
+        # Capture each independent geometry control and every design style.
+        # tearDown restores the exact pre-test settings document, including its
+        # schema version and any provider credentials not inspected here.
+        cases = (
+            ("lacuna-on", "lacuna", True, True, 14),
+            ("lacuna-connectors-off", "lacuna", False, True, 14),
+            ("lacuna-molding-off", "lacuna", True, False, 14),
+            ("lacuna-radius-zero", "lacuna", True, True, 0),
+            ("omarchy", "omarchy", True, True, 14),
+            ("material", "material", True, True, 14),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for name, style, connectors, molding, radius in cases:
+                status = set_molding_geometry(style, connectors, molding, radius)
+                self.assertEqual(2, status.get("schemaVersion"), status)
+                self.assertEqual(connectors, status.get("sidebarConnectorPieces"), status)
+                self.assertEqual(molding, status.get("frameMoldingPieces"), status)
+                summon_menu("settings")
+                time.sleep(0.45)
+                image = root / f"{name}.png"
+                run(["grim", str(image)])
+                self.assertGreater(image.stat().st_size, 0, name)
 
     def test_transition_pipeline_smoke_states(self):
         # This is intentionally opt-in: it exercises the real menu surface,

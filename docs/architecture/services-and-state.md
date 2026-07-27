@@ -59,7 +59,7 @@ Both services normalize the same runtime shape:
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "designStyle": "lacuna",
   "designStyles": {
     "lacuna": {
@@ -85,6 +85,21 @@ require a non-empty `id` and preserve recursively JSON-safe metadata (strings,
 booleans, finite numbers, nulls, arrays, and objects). Unsupported values are
 discarded. `migrateSettings()` owns version handling and always emits the
 current `settingsSchemaVersion`.
+
+Settings schema v2 separates attached-flyout connectors from frame molding:
+`sidebar.connectorPieces` controls only the molding bridge between the sidebar
+and an attached flyout. `frame.moldingPieces` controls the curved upper/lower
+frame joins and framed content radius, including the joins beside a visible
+sidebar. Migration precedence is `frame.moldingPieces`, then the interim
+`frame.roundedContentCorners` alias, then legacy `sidebar.cornerPieces`, then
+the enabled default. For one release, normalized settings retain both interim
+aliases for rollback. That downgrade is intentionally lossy once connector and
+frame molding values diverge.
+
+The unqualified term **corner pieces** is reserved for a future, separate
+feature: black masks in the physical outer screen corners that make the outer
+shell silhouette appear rounded, similar to Noctalia. Those masks are not part
+of schema v2 and are not implemented by `frame.moldingPieces`.
 
 When adding a settings key, update the canonical service first, run
 `scripts/sync-vendored`, and extend the normalization contract tests before

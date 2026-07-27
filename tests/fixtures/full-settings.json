@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "designStyle": "carbon",
   "designStyles": {
     "lacuna": {
@@ -34,11 +34,13 @@
   "barSizeSnapshot": {
     "themeName": "fixture-theme",
     "sizeHorizontal": 30,
-    "sizeVertical": 32
+    "sizeVertical": 32,
+    "futureSnapshotField": { "keep": true }
   },
   "sizeTransition": {
     "holdCompact": false,
-    "holdUntil": 0
+    "holdUntil": 0,
+    "futureTransitionField": [1, 2, 3]
   },
   "customQuickLaunchApps": [
     "firefox.desktop",
@@ -54,40 +56,49 @@
     "files": "org.gnome.Nautilus.desktop",
     "editor": "code.desktop",
     "email": "thunderbird.desktop",
-    "discord": "vesktop.desktop"
+    "discord": "vesktop.desktop",
+    "futureRole": { "desktopId": "future.desktop" }
   },
   "power": {
-    "instantRestart": false
+    "instantRestart": false,
+    "futurePowerField": { "keep": true }
   },
   "shellSettings": {
-    "surface": "flyout"
+    "surface": "flyout",
+    "futureShellField": ["keep"]
   },
   "mediaProviders": {
     "youtube": {
       "enabled": true,
       "cookiesFromBrowser": "firefox",
-      "cookiesFile": ""
+      "cookiesFile": "",
+      "futureAuthField": { "keep": true }
     },
     "jellyfin": {
       "enabled": true,
       "serverUrl": "https://jellyfin.example",
       "apiKey": "fixture-api-key",
       "userId": "fixture-user",
-      "preferredAudioLanguage": "English"
-    }
+      "preferredAudioLanguage": "English",
+      "futurePlaybackField": ["keep"]
+    },
+    "futureProvider": { "enabled": true, "endpoint": "future" }
   },
   "mediaPlayer": {
     "presentationMode": "background",
     "videoQuality": "stable",
-    "providerFilter": "jellyfin"
+    "providerFilter": "jellyfin",
+    "futurePlayerField": { "keep": true }
   },
   "sidebar": {
     "defaultMode": "rail",
     "collapsed": true,
     "exclusive": false,
+    "connectorPieces": false,
     "cornerPieces": false,
     "monitorPolicy": "pinned",
-    "monitorNames": ["DP-1", "DP-2"]
+    "monitorNames": ["DP-1", "DP-2"],
+    "futureSidebarField": { "keep": true }
   },
     "backgroundEffects": {
         "enabled": true,
@@ -104,7 +115,8 @@
                 "speed": 1.1,
                 "grainCount": 220,
                 "grainSize": 1.6,
-                "accentBlend": 0.25
+                "accentBlend": 0.25,
+                "futureTuningField": { "keep": true }
             },
             "auroraDrift": {
                 "enabled": true
@@ -120,24 +132,33 @@
       },
       "crt": {
         "enabled": true
+      },
+      "futureEffect": {
+        "enabled": true,
+        "futureEffectField": { "keep": true }
       }
-    }
+    },
+    "futureEffectsField": ["keep"]
   },
   "backgroundVignette": {
     "enabled": true,
     "intensity": 0.85,
-    "ignoreBackgroundAnimationLayer": false
+    "ignoreBackgroundAnimationLayer": false,
+    "futureVignetteField": { "keep": true }
   },
   "frame": {
     "mode": "fullframe",
     "reserveMode": "comfort",
     "shadow": true,
     "border": true,
+    "moldingPieces": true,
+    "roundedContentCorners": true,
     "thickness": 10,
     "radius": 16,
     "shadowDirection": "bottom_right",
     "shadowOffsetX": 2,
-    "shadowOffsetY": 3
+    "shadowOffsetY": 3,
+    "futureFrameField": { "keep": true }
   },
   "barPresentation": {
     "portraitSplit": false,

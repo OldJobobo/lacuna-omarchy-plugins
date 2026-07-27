@@ -8,7 +8,7 @@ Item {
   property var settingsService: null
   property bool exclusive: true
   property bool collapsed: false
-  property bool cornerPieces: true
+  property bool connectorPieces: true
   property string defaultMode: "off"
   property string monitorPolicy: "auto"
   property var monitorNames: []
@@ -38,12 +38,12 @@ Item {
     collapsed = !collapsed
   }
 
-  function toggleCornerPieces() {
-    setCornerPiecesEnabled(!cornerPieces)
+  function toggleConnectorPieces() {
+    setConnectorPiecesEnabled(!connectorPieces)
   }
 
-  function setCornerPiecesEnabled(value) {
-    cornerPieces = value === true
+  function setConnectorPiecesEnabled(value) {
+    connectorPieces = value === true
     save()
   }
 
@@ -71,18 +71,20 @@ Item {
   function save() {
     if (!settingsService || !settingsService.save) return
     var next = settingsService.normalize ? settingsService.normalize(settingsService.data) : settingsService.data
-    if (!next || typeof next !== "object") next = { version: 1 }
-    next.sidebar = {
-      defaultMode: defaultMode,
-      // Persist the real runtime toggle rather than a value re-derived from
-      // defaultMode, so changing the default preference no longer silently
-      // rewrites the stored collapsed state.
-      collapsed: collapsed,
-      exclusive: exclusive,
-      cornerPieces: cornerPieces,
-      monitorPolicy: next.sidebar && next.sidebar.monitorPolicy ? String(next.sidebar.monitorPolicy) : monitorPolicy,
-      monitorNames: next.sidebar && Array.isArray(next.sidebar.monitorNames) ? next.sidebar.monitorNames : monitorNames
-    }
+    if (!next || typeof next !== "object") next = { version: 2 }
+    if (!next.sidebar || typeof next.sidebar !== "object") next.sidebar = {}
+    next.sidebar.defaultMode = defaultMode
+    // Persist the real runtime toggle rather than a value re-derived from
+    // defaultMode, so changing the default preference no longer silently
+    // rewrites the stored collapsed state.
+    next.sidebar.collapsed = collapsed
+    next.sidebar.exclusive = exclusive
+    next.sidebar.connectorPieces = connectorPieces
+    // One-release schema-v1 alias; downgrade cannot preserve frame rounding
+    // independently once the two schema-v2 controls diverge.
+    next.sidebar.cornerPieces = connectorPieces
+    next.sidebar.monitorPolicy = next.sidebar.monitorPolicy ? String(next.sidebar.monitorPolicy) : monitorPolicy
+    next.sidebar.monitorNames = Array.isArray(next.sidebar.monitorNames) ? next.sidebar.monitorNames : monitorNames
     settingsService.save(next, false, true)
   }
 
@@ -96,7 +98,8 @@ Item {
       displayInitialized = true
     }
     exclusive = !(sidebar && sidebar.exclusive === false)
-    cornerPieces = !(sidebar && sidebar.cornerPieces === false)
+    connectorPieces = sidebar && typeof sidebar.connectorPieces === "boolean"
+      ? sidebar.connectorPieces : !(sidebar && sidebar.cornerPieces === false)
     monitorPolicy = sidebar && sidebar.monitorPolicy ? String(sidebar.monitorPolicy) : "auto"
     monitorNames = sidebar && Array.isArray(sidebar.monitorNames) ? sidebar.monitorNames : []
   }

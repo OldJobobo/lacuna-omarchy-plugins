@@ -19,6 +19,7 @@ Item {
   readonly property bool ignoreBackgroundAnimationLayer: boolValue(vignetteSettings.ignoreBackgroundAnimationLayer, false)
   readonly property bool effectVisible: vignetteEnabled && vignetteIntensity > 0.001
   readonly property string frameGeometryKey: resolveFrameGeometryKey()
+  readonly property int frameGeometryRevision: resolveFrameGeometryRevision()
 
   function clamp(value, minimum, maximum) {
     var numeric = Number(value)
@@ -53,6 +54,12 @@ Item {
     }
 
     return vignette && typeof vignette === "object" ? vignette : ({})
+  }
+
+  function resolveFrameGeometryRevision() {
+    if (root.shell && root.shell.bar && root.shell.bar.lacunaFrameGeometryRevision !== undefined)
+      return Number(root.shell.bar.lacunaFrameGeometryRevision) || 0
+    return 0
   }
 
   function resolveFrameGeometryKey() {
@@ -106,6 +113,7 @@ Item {
       required property var modelData
       readonly property var frameRect: {
         root.frameGeometryKey
+        root.frameGeometryRevision
         modelData.width
         modelData.height
         return root.resolveFrameRect(modelData)

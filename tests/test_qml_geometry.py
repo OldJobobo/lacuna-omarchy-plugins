@@ -196,7 +196,7 @@ def interpolated_flyout_geometry(
     to_connector_width: float,
 ) -> dict[str, float]:
     p = max(0.0, min(1.0, progress))
-    blend = lambda start, end: start + (end - start) * p
+    blend = lambda start, end: math.floor(start + (end - start) * p + 0.5)
     return {
         "y": blend(from_y, to_y),
         "width": blend(from_width, to_width),
@@ -316,9 +316,17 @@ class QmlGeometryTests(unittest.TestCase):
 
     def test_panel_host_switch_geometry_uses_one_interpolated_set(self):
         host = read("lacuna.menu/menu/LacunaPanelHost.qml")
-        self.assertIn("property bool geometrySwitchActive: false", host)
-        self.assertIn("function captureEffectiveGeometryForSwitch()", host)
-        self.assertIn("readonly property real effectiveFlyoutY: geometrySwitchActive ? interpolate(fromFlyoutY, flyoutY)", host)
+        self.assertIn("readonly property var requestedPanelGeometry", host)
+        self.assertIn("property var fromPanelGeometry", host)
+        self.assertIn("property var targetPanelGeometry", host)
+        self.assertIn("readonly property var effectivePanelGeometry", host)
+        self.assertIn("function requestPanelGeometry(geometry, key)", host)
+        self.assertIn("var current = copyPanelGeometry(effectivePanelGeometry)", host)
+        self.assertIn("function pixelSnap(value)", host)
+        self.assertIn("connectorWidth: pixelSnap(interpolateValue", host)
+        self.assertIn("connectorOverlap: pixelSnap(interpolateValue", host)
+        self.assertIn("readonly property bool effectiveConnectorVisible", host)
+        self.assertIn("effectiveConnectorWidth > connectorEpsilon", host)
         self.assertIn("readonly property real flyoutMaskWidth: flyoutRenderable ? flyoutCurrentWidth : 0", host)
 
         start = interpolated_flyout_geometry(
@@ -336,10 +344,105 @@ class QmlGeometryTests(unittest.TestCase):
         self.assertEqual(start, {"y": 80, "width": 560, "height": 620, "connectorWidth": 18})
         self.assertEqual(middle, {"y": 120, "width": 490, "height": 530, "connectorWidth": 9})
         self.assertEqual(end, {"y": 160, "width": 420, "height": 440, "connectorWidth": 0})
+
+        # A newest-wins C request captures the currently painted A->B shape,
+        # rather than restarting from stale A or jumping to B.
+        interrupted = interpolated_flyout_geometry(
+            progress=0.4, from_y=80, from_width=560, from_height=620, from_connector_width=18,
+            to_y=160, to_width=420, to_height=440, to_connector_width=0,
+        )
+        newest_mid = interpolated_flyout_geometry(
+            progress=0.5,
+            from_y=interrupted["y"], from_width=interrupted["width"],
+            from_height=interrupted["height"], from_connector_width=interrupted["connectorWidth"],
+            to_y=40, to_width=600, to_height=500, to_connector_width=18,
+        )
+        self.assertEqual(interrupted, {"y": 112, "width": 504, "height": 548, "connectorWidth": 11})
+        self.assertEqual(newest_mid, {"y": 76, "width": 552, "height": 524, "connectorWidth": 15})
+
+        menu = read("lacuna.menu/menu/MenuWindow.qml")
+        for binding in (
+            "surfaceRightInset: Math.max(panelHost.effectiveConnectorWidth, root.frameMoldingPieces ? root.frameRadius : 0)",
+            "sidebarMoldingWidth: root.frameMoldingPieces ? root.frameRadius : 0",
+            "connectorWidth: panelHost.effectiveConnectorWidth",
+            "x: panelHost.connectorX",
+            "openX: panelHost.flyoutX",
+            "connectorMaskWidth: panelHost.connectorMaskWidth",
+            "flyoutMaskWidth: panelHost.flyoutMaskWidth",
+        ):
+            self.assertIn(binding, menu)
+        self.assertIn("function maxFlyoutExtentFor(screen)", menu)
+        self.assertIn("flyoutGeometryFor(screen, kinds[i], 0).width", menu)
+        self.assertIn("connectorWidth + flyoutGeometryFor(screen, kinds[i], connectorWidth).width", menu)
+        self.assertIn("- Math.max(0, Number(effectiveConnectorWidth) || 0)", menu)
+
+        # Reserve the larger endpoint plus one pixel because independently
+        # snapped odd connector/flyout widths can exceed both endpoint sums.
+        js_round = lambda value: math.floor(value + 0.5)
+        for off_width, on_width, connector in (
+            (560, 560, 18),
+            (432, 414, 18),
+            (432, 417, 15),
+            (432, 415, 17),
+        ):
+            reserved = max(off_width, connector + on_width) + 1
+            for progress in (0, 0.25, 0.5, 0.75, 1):
+                effective_flyout = js_round(off_width + (on_width - off_width) * progress)
+                effective_connector = js_round(connector * progress)
+                self.assertLessEqual(effective_flyout + effective_connector, reserved)
+                lane = reserved - effective_connector
+                self.assertEqual(reserved, effective_connector + lane)
+
+    def test_frame_molding_is_independent_from_flyout_connectors(self):
+        window = read("lacuna.menu/menu/MenuWindow.qml")
+        overlay = read("lacuna.menu/menu/LacunaFrameOverlay.qml")
+        surface = read("lacuna.menu/menu/MenuSurface.qml")
+        self.assertIn("moldingPieces: root.frameMoldingPieces", window)
+        self.assertIn("sidebarMoldingVisible: menuWindow.sidebarRenderable && root.frameMoldingPieces", window)
+        self.assertIn("frameMoldingPieces: root.frameMoldingPieces", window)
+        self.assertIn("property bool moldingPieces: true", overlay)
+        self.assertIn("property bool sidebarMoldingVisible: false", overlay)
+        self.assertIn("property bool frameMoldingPieces: true", surface)
+        self.assertNotIn("sidebarMoldingVisible: menuWindow.sidebarRenderable && panelHost.effectiveConnectorVisible", window)
+        self.assertNotIn("frameMoldingPieces: panelHost.effectiveConnectorVisible", window)
+
+    def test_bar_frame_geometry_transaction_is_newest_wins_and_per_output(self):
+        bar = read("lacuna.bar/Bar.qml")
+        for contract in (
+            "readonly property string requestedFrameGeometryKey",
+            "property var fromFrameGeometrySnapshot",
+            "property var targetFrameGeometrySnapshot",
+            "readonly property var effectiveFrameGeometrySnapshot",
+            "property int lacunaFrameGeometryRevision",
+            "function selectedOutputGeometrySignature()",
+            "values.sort()",
+            "function requestFrameGeometrySnapshot()",
+            "var current = copyFrameGeometrySnapshot(effectiveFrameGeometrySnapshot)",
+            "frameGeometryAnimation.restart()",
+            "function commitFrameGeometrySnapshot()",
+            "onReducedMotionChanged: if (reducedMotion) commitFrameGeometrySnapshot()",
+            "function lacunaFrameGeometryRecord(screen)",
+            "geometryRecord: root.lacunaFrameGeometryRecord(modelData)",
+            "revision: root.lacunaFrameGeometryRevision",
+        ):
+            self.assertIn(contract, bar)
+
+        def blend(start: dict[str, int], target: dict[str, int], progress: float) -> dict[str, int]:
+            return {key: math.floor(start[key] + (target[key] - start[key]) * progress + 0.5)
+                    for key in start}
+
+        initial = {"holeX": 8, "holeY": 32, "holeRight": 1912, "radius": 14}
+        target = {"holeX": 310, "holeY": 32, "holeRight": 1912, "radius": 0}
+        midpoint = blend(initial, target, 0.5)
+        self.assertEqual({"holeX": 159, "holeY": 32, "holeRight": 1912, "radius": 7}, midpoint)
+        newest_target = {"holeX": 270, "holeY": 40, "holeRight": 1900, "radius": 18}
+        newest_midpoint = blend(midpoint, newest_target, 0.5)
+        self.assertEqual({"holeX": 215, "holeY": 36, "holeRight": 1906, "radius": 13}, newest_midpoint)
+
     def test_frame_geometry_never_paints_under_owning_bar_edge(self):
         frame = read("lacuna.bar/LacunaFrameWindow.qml")
-        self.assertIn("readonly property real outerY: topBar || topEdgeOccupied ? Math.max(0, barSize) : 0", frame)
-        self.assertIn("readonly property real outerX: leftBar ? Math.max(0, barSize) : 0", frame)
+        self.assertIn("readonly property real outerY: hasGeometryRecord ? Number(geometryRecord.outerY || 0)", frame)
+        self.assertIn("readonly property real outerX: hasGeometryRecord ? Number(geometryRecord.outerX || 0)", frame)
         self.assertIn("id: shadowClip", frame)
 
         for position in ("top", "bottom", "left", "right"):

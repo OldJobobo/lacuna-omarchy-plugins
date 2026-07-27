@@ -8,12 +8,13 @@ PanelWindow {
   id: root
 
   property var targetScreen: null
+  property var geometryRecord: null
   property bool active: false
   property string barPosition: "top"
   property int barSize: 0
   property int frameThickness: 8
   property int frameRadius: 14
-  property bool cornerPieces: true
+  property bool moldingPieces: true
   property color frameColor: "#17105a"
   property bool shadowEnabled: false
   property int shadowOffsetX: 2
@@ -33,30 +34,37 @@ PanelWindow {
   property real attachedFlyoutY: 0
   property real attachedFlyoutHeight: 0
 
-  readonly property int t: Math.max(1, frameThickness)
-  readonly property int r: Math.max(t, frameRadius)
-  readonly property real leftOcclusion: leftEdgeOccupied ? Math.max(0, leftOccupiedWidth) : 0
-  readonly property real rightOcclusion: rightEdgeOccupied ? Math.max(0, rightOccupiedWidth) : 0
-  readonly property bool topBar: barPosition === "top"
-  readonly property bool bottomBar: barPosition === "bottom"
-  readonly property bool leftBar: barPosition === "left"
-  readonly property bool rightBar: barPosition === "right"
-  readonly property int topInset: topBar || topEdgeOccupied ? Math.max(0, barSize) : t
-  readonly property int bottomInset: bottomBar || bottomEdgeOccupied ? Math.max(0, barSize) : t
-  readonly property int leftInset: leftBar ? Math.max(0, barSize) : t
-  readonly property int rightInset: rightBar ? Math.max(0, barSize) : t
+  readonly property bool hasGeometryRecord: geometryRecord && typeof geometryRecord === "object"
+  readonly property int t: hasGeometryRecord ? Math.max(1, Number(geometryRecord.thickness) || 1) : Math.max(1, frameThickness)
+  readonly property int r: hasGeometryRecord ? Math.max(0, Number(geometryRecord.contentRadius) || 0) : Math.max(0, frameRadius)
+  readonly property real leftOcclusion: hasGeometryRecord ? Math.max(0, Number(geometryRecord.leftOccupiedWidth) || 0) : (leftEdgeOccupied ? Math.max(0, leftOccupiedWidth) : 0)
+  readonly property real rightOcclusion: hasGeometryRecord ? Math.max(0, Number(geometryRecord.rightOccupiedWidth) || 0) : (rightEdgeOccupied ? Math.max(0, rightOccupiedWidth) : 0)
+  readonly property bool topBar: (hasGeometryRecord ? String(geometryRecord.barPosition || "") : barPosition) === "top"
+  readonly property bool bottomBar: (hasGeometryRecord ? String(geometryRecord.barPosition || "") : barPosition) === "bottom"
+  readonly property bool leftBar: (hasGeometryRecord ? String(geometryRecord.barPosition || "") : barPosition) === "left"
+  readonly property bool rightBar: (hasGeometryRecord ? String(geometryRecord.barPosition || "") : barPosition) === "right"
+  readonly property int effectiveBarSize: hasGeometryRecord ? Math.max(0, Number(geometryRecord.barSize) || 0) : Math.max(0, barSize)
+  readonly property bool effectiveTopEdgeOccupied: hasGeometryRecord ? geometryRecord.topEdgeOccupied === true : topEdgeOccupied
+  readonly property bool effectiveBottomEdgeOccupied: hasGeometryRecord ? geometryRecord.bottomEdgeOccupied === true : bottomEdgeOccupied
+  readonly property bool effectiveLeftEdgeOccupied: hasGeometryRecord ? geometryRecord.leftEdgeOccupied === true : leftEdgeOccupied
+  readonly property bool effectiveRightEdgeOccupied: hasGeometryRecord ? geometryRecord.rightEdgeOccupied === true : rightEdgeOccupied
+  readonly property bool effectiveMoldingPieces: hasGeometryRecord ? r > 0 : moldingPieces
+  readonly property int topInset: topBar || effectiveTopEdgeOccupied ? effectiveBarSize : t
+  readonly property int bottomInset: bottomBar || effectiveBottomEdgeOccupied ? effectiveBarSize : t
+  readonly property int leftInset: leftBar ? effectiveBarSize : t
+  readonly property int rightInset: rightBar ? effectiveBarSize : t
   // The frame never paints the strip occupied by the bar: the bar itself is
   // the frame edge on its side. Map order of the vendored bar window is not
   // ours to control, so bar-over-frame correctness must come from geometry,
   // not stacking.
-  readonly property real outerX: leftBar ? Math.max(0, barSize) : 0
-  readonly property real outerY: topBar || topEdgeOccupied ? Math.max(0, barSize) : 0
-  readonly property real outerRight: rightBar ? Math.max(outerX + 1, width - Math.max(0, barSize)) : width
-  readonly property real outerBottom: bottomBar || bottomEdgeOccupied ? Math.max(outerY + 1, height - Math.max(0, barSize)) : height
-  readonly property real holeX: Math.max(0, leftEdgeOccupied ? leftOcclusion : leftInset)
-  readonly property real holeY: Math.max(0, topInset)
-  readonly property real holeRight: Math.max(holeX + 1, width - (rightEdgeOccupied ? rightOcclusion : rightInset))
-  readonly property real holeBottom: Math.max(holeY + 1, height - bottomInset)
+  readonly property real outerX: hasGeometryRecord ? Number(geometryRecord.outerX || 0) : (leftBar ? effectiveBarSize : 0)
+  readonly property real outerY: hasGeometryRecord ? Number(geometryRecord.outerY || 0) : (topBar || effectiveTopEdgeOccupied ? effectiveBarSize : 0)
+  readonly property real outerRight: hasGeometryRecord ? Number(geometryRecord.outerRight || width) : (rightBar ? Math.max(outerX + 1, width - effectiveBarSize) : width)
+  readonly property real outerBottom: hasGeometryRecord ? Number(geometryRecord.outerBottom || height) : (bottomBar || effectiveBottomEdgeOccupied ? Math.max(outerY + 1, height - effectiveBarSize) : height)
+  readonly property real holeX: hasGeometryRecord ? Number(geometryRecord.holeX || 0) : Math.max(0, effectiveLeftEdgeOccupied ? leftOcclusion : leftInset)
+  readonly property real holeY: hasGeometryRecord ? Number(geometryRecord.holeY || 0) : Math.max(0, topInset)
+  readonly property real holeRight: hasGeometryRecord ? Number(geometryRecord.holeRight || holeX + 1) : Math.max(holeX + 1, width - (effectiveRightEdgeOccupied ? rightOcclusion : rightInset))
+  readonly property real holeBottom: hasGeometryRecord ? Number(geometryRecord.holeBottom || holeY + 1) : Math.max(holeY + 1, height - bottomInset)
   readonly property real holeWidth: Math.max(1, holeRight - holeX)
   readonly property real holeHeight: Math.max(1, holeBottom - holeY)
   // Shadow caster hole. With the frame active it matches the paint hole so
@@ -64,14 +72,14 @@ PanelWindow {
   // occlusion edge). With the frame off it collapses to the bar edge alone,
   // so the bar still casts its shadow — the bar's shadow must not depend on
   // the frame or on the menu being open.
-  readonly property real casterHoleX: isRenderable ? holeX : (leftBar ? Math.max(0, barSize) : 0)
-  readonly property real casterHoleY: isRenderable ? holeY : (topBar || topEdgeOccupied ? Math.max(0, barSize) : 0)
-  readonly property real casterHoleRight: isRenderable ? holeRight : (rightBar ? Math.max(casterHoleX + 1, width - Math.max(0, barSize)) : width)
-  readonly property real casterHoleBottom: isRenderable ? holeBottom : (bottomBar || bottomEdgeOccupied ? Math.max(casterHoleY + 1, height - Math.max(0, barSize)) : height)
+  readonly property real casterHoleX: isRenderable ? holeX : (leftBar ? effectiveBarSize : 0)
+  readonly property real casterHoleY: isRenderable ? holeY : (topBar || effectiveTopEdgeOccupied ? effectiveBarSize : 0)
+  readonly property real casterHoleRight: isRenderable ? holeRight : (rightBar ? Math.max(casterHoleX + 1, width - effectiveBarSize) : width)
+  readonly property real casterHoleBottom: isRenderable ? holeBottom : (bottomBar || effectiveBottomEdgeOccupied ? Math.max(casterHoleY + 1, height - effectiveBarSize) : height)
   readonly property real casterHoleRadius: isRenderable ? holeRadius : minArcRadius
   readonly property real minArcRadius: 0.01
-  readonly property real holeRadius: cornerPieces ? Math.max(minArcRadius, Math.min(r, holeWidth / 2, holeHeight / 2)) : minArcRadius
-  readonly property bool isRenderable: active && width > 0 && height > 0 && holeWidth > 0 && holeHeight > 0
+  readonly property real holeRadius: effectiveMoldingPieces ? Math.max(minArcRadius, Math.min(r, holeWidth / 2, holeHeight / 2)) : minArcRadius
+  readonly property bool isRenderable: (hasGeometryRecord ? geometryRecord.framed === true : active) && width > 0 && height > 0 && holeWidth > 0 && holeHeight > 0
   readonly property real curveKappa: lacunaGeometry.curveKappa
   readonly property color effectiveFrameColor: isRenderable
     ? Qt.rgba(frameColor.r, frameColor.g, frameColor.b, 1)
@@ -328,18 +336,18 @@ PanelWindow {
     anchors.fill: parent
     z: 2
     active: root.active && root.borderEnabled
-    barPosition: root.barPosition
-    barSize: root.barSize
-    frameThickness: root.frameThickness
-    frameRadius: root.frameRadius
-    cornerPieces: root.cornerPieces
+    barPosition: root.hasGeometryRecord ? String(root.geometryRecord.barPosition || "top") : root.barPosition
+    barSize: root.effectiveBarSize
+    frameThickness: root.t
+    frameRadius: root.r
+    moldingPieces: root.effectiveMoldingPieces
     borderColor: root.borderColor
-    topEdgeOccupied: root.topEdgeOccupied
-    bottomEdgeOccupied: root.bottomEdgeOccupied
-    leftEdgeOccupied: root.leftEdgeOccupied
-    rightEdgeOccupied: root.rightEdgeOccupied
-    leftOccupiedWidth: root.leftOccupiedWidth
-    rightOccupiedWidth: root.rightOccupiedWidth
+    topEdgeOccupied: root.effectiveTopEdgeOccupied
+    bottomEdgeOccupied: root.effectiveBottomEdgeOccupied
+    leftEdgeOccupied: root.effectiveLeftEdgeOccupied
+    rightEdgeOccupied: root.effectiveRightEdgeOccupied
+    leftOccupiedWidth: root.leftOcclusion
+    rightOccupiedWidth: root.rightOcclusion
     attachedFlyoutVisible: root.attachedFlyoutVisible
     attachedFlyoutY: root.attachedFlyoutY
     attachedFlyoutHeight: root.attachedFlyoutHeight

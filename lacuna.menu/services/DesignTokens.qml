@@ -16,6 +16,7 @@ QtObject {
   readonly property bool material: style === "material"
 
   readonly property int radius: lacuna ? 0 : omarchy ? 2 : 8
+  readonly property int panelRadius: lacuna ? 14 : omarchy ? 2 : 12
   readonly property int controlRadius: lacuna ? 0 : omarchy ? 2 : 9
   readonly property int borderWidth: lacuna ? 0 : 1
   readonly property real surfaceOpacity: lacuna ? 1.0 : omarchy ? 0.98 : 0.96

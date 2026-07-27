@@ -12,7 +12,7 @@ Item {
   property int barSize: 0
   property int frameThickness: 8
   property int frameRadius: 14
-  property bool cornerPieces: true
+  property bool moldingPieces: true
   property color borderColor: Qt.rgba(1, 1, 1, 0.18)
   property real borderWidth: 1
   property bool topEdgeOccupied: false
@@ -26,7 +26,7 @@ Item {
   property real attachedFlyoutHeight: 0
 
   readonly property int t: Math.max(1, frameThickness)
-  readonly property int r: Math.max(t, frameRadius)
+  readonly property int r: Math.max(0, frameRadius)
   readonly property real leftOcclusion: leftEdgeOccupied ? Math.max(0, leftOccupiedWidth) : 0
   readonly property real rightOcclusion: rightEdgeOccupied ? Math.max(0, rightOccupiedWidth) : 0
   readonly property bool topBar: barPosition === "top"
@@ -44,7 +44,7 @@ Item {
   readonly property real holeWidth: Math.max(1, holeRight - holeX)
   readonly property real holeHeight: Math.max(1, holeBottom - holeY)
   readonly property real minArcRadius: 0.01
-  readonly property real holeRadius: cornerPieces ? Math.max(minArcRadius, Math.min(r, holeWidth / 2, holeHeight / 2)) : minArcRadius
+  readonly property real holeRadius: moldingPieces ? Math.max(minArcRadius, Math.min(r, holeWidth / 2, holeHeight / 2)) : minArcRadius
   readonly property real borderInset: Math.max(0, borderWidth / 2)
   readonly property real borderLeft: holeX + borderInset
   readonly property real borderTop: holeY + borderInset

@@ -113,6 +113,10 @@ def vendored_pairs() -> list[tuple[Path, Path]]:
             ROOT / "lacuna.menu/services/OmarchyShellSettingsService.qml",
         ),
         (
+            ROOT / "lacuna.shell-settings/services/DesignTokens.qml",
+            ROOT / "lacuna.menu/services/DesignTokens.qml",
+        ),
+        (
             ROOT / "lacuna.shell-settings/CommandRunner.qml",
             ROOT / "lacuna.menu/services/CommandRunner.qml",
         ),

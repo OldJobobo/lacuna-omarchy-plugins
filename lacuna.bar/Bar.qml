@@ -23,18 +23,18 @@ Item {
   readonly property var lacunaState: resolveLacunaState()
   readonly property var lacunaSettings: lacunaState && lacunaState.data ? lacunaState.data : ({})
   readonly property var frameSettings: lacunaSettings && lacunaSettings.frame ? lacunaSettings.frame : ({})
-  readonly property var sidebarSettings: lacunaSettings && lacunaSettings.sidebar ? lacunaSettings.sidebar : ({})
   readonly property var barPresentationSettings: lacunaSettings && lacunaSettings.barPresentation ? lacunaSettings.barPresentation : ({})
   readonly property bool portraitSplitEnabled: barPresentationSettings.portraitSplit !== false
   readonly property string frameMode: validFrameMode(frameSettings.mode)
   readonly property bool frameEnabled: frameMode === "fullframe"
   readonly property int frameThickness: positiveInt(frameSettings.thickness, 8)
-  readonly property int frameRadius: Math.max(0, positiveInt(frameSettings.radius, 14))
+  readonly property int frameRadius: Math.max(0, numberSetting(frameSettings.radius, 14))
+  readonly property bool frameMoldingPieces: typeof frameSettings.moldingPieces === "boolean"
+    ? frameSettings.moldingPieces : frameSettings.roundedContentCorners !== false
   readonly property bool frameShadow: frameSettings.shadow === true
   readonly property bool frameBorder: frameSettings.border === true
   readonly property int frameShadowOffsetX: numberSetting(frameSettings.shadowOffsetX, 2)
   readonly property int frameShadowOffsetY: numberSetting(frameSettings.shadowOffsetY, 3)
-  readonly property bool cornerPieces: sidebarSettings.cornerPieces !== false
   readonly property bool hostedMenuOpen: hostedMenu.menuState && hostedMenu.menuState.open === true
   readonly property bool hostedSidebarVisible: hostedMenu.sidebarSurfaceVisible === true
   readonly property bool hostedSidebarOnLeft: hostedSidebarVisible && !hostedMenu.panelOnRight
@@ -45,20 +45,15 @@ Item {
   readonly property real hostedSidebarFrameOcclusionWidth: hostedSidebarVisible
     ? Math.max(0, Number(hostedMenu.panelWidth || 0))
     : 0
-  readonly property string lacunaFrameGeometryKey: [
-    frameMode,
-    frameThickness,
-    frameRadius,
-    cornerPieces,
-    position,
-    barSize,
-    hostedSidebarVisible,
-    hostedSidebarFrameOcclusionWidth,
-    hostedMenu.panelOnRight,
-    hostedMenu.sidebarScreen ? String(hostedMenu.sidebarScreen.name || "") : "",
-    portraitSplitEnabled,
-    portraitSplitGeometrySignature()
-  ].join("|")
+  readonly property bool reducedMotion: lacunaSettings && lacunaSettings.reduceMotion === true
+  readonly property string requestedFrameGeometryKey: resolveRequestedFrameGeometryKey()
+  property var fromFrameGeometrySnapshot: ({ key: "", records: ({}) })
+  property var targetFrameGeometrySnapshot: ({ key: "", records: ({}) })
+  property real frameGeometryProgress: 1
+  property int lacunaFrameGeometryRevision: 0
+  readonly property var effectiveFrameGeometrySnapshot: interpolateFrameGeometrySnapshot(
+    fromFrameGeometrySnapshot, targetFrameGeometrySnapshot, frameGeometryProgress)
+  readonly property string lacunaFrameGeometryKey: targetFrameGeometrySnapshot.key || requestedFrameGeometryKey
   readonly property string lacunaBarSourceDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : ""
   readonly property string lacunaRepoDir: lacunaBarSourceDir.replace(/\/lacuna\.bar\/?$/, "")
   readonly property string lacunaMenuSourceDir: lacunaRepoDir ? lacunaRepoDir + "/lacuna.menu" : ""
@@ -67,6 +62,21 @@ Item {
     __sourceDir: lacunaMenuSourceDir
   })
   readonly property var validBarScreens: ScreenModel.validScreens(Quickshell.screens)
+
+  property NumberAnimation frameGeometryAnimation: NumberAnimation {
+    target: root
+    property: "frameGeometryProgress"
+    from: 0
+    to: 1
+    duration: 250
+    easing.type: Easing.OutCubic
+    onFinished: root.commitFrameGeometrySnapshot()
+  }
+
+  onRequestedFrameGeometryKeyChanged: Qt.callLater(root.requestFrameGeometrySnapshot)
+  onEffectiveFrameGeometrySnapshotChanged: lacunaFrameGeometryRevision += 1
+  onReducedMotionChanged: if (reducedMotion) commitFrameGeometrySnapshot()
+  Component.onCompleted: requestFrameGeometrySnapshot()
 
   function resolveLacunaState() {
     if (root.shell && typeof root.shell.ensureService === "function") {
@@ -142,7 +152,97 @@ Item {
     return hostedMenu.frameBorderAttachedFlyoutVisible === true
   }
 
-  function lacunaFrameContentRect(screen) {
+  function frameScreenKey(screen) {
+    var name = ScreenModel.screenName(screen)
+    if (name !== "") return name
+    var screens = root.validBarScreens || []
+    var index = screens.indexOf(screen)
+    return "screen-" + Math.max(0, index) + "-" + Number(screen && screen.width || 0)
+      + "x" + Number(screen && screen.height || 0)
+  }
+
+  function selectedOutputGeometrySignature() {
+    var values = []
+    var screens = root.validBarScreens || []
+    for (var i = 0; i < screens.length; i++) {
+      var screen = screens[i]
+      values.push([
+        frameScreenKey(screen),
+        Number(screen && screen.width || 0),
+        Number(screen && screen.height || 0),
+        root.portraitCompanionEdge(screen),
+        root.hostedSidebarVisibleOnScreen(screen) ? "sidebar" : ""
+      ].join(":"))
+    }
+    values.sort()
+    return values.join(",")
+  }
+
+  function resolveRequestedFrameGeometryKey() {
+    return [
+      frameMode,
+      frameThickness,
+      frameRadius,
+      frameMoldingPieces,
+      position,
+      barSize,
+      hostedSidebarVisible,
+      hostedSidebarFrameOcclusionWidth,
+      hostedMenu.panelOnRight,
+      hostedMenu.sidebarScreen ? String(hostedMenu.sidebarScreen.name || "") : "",
+      portraitSplitEnabled,
+      selectedOutputGeometrySignature()
+    ].join("|")
+  }
+
+  function copyFrameRecord(value) {
+    var source = value && typeof value === "object" ? value : ({})
+    var next = {}
+    for (var key in source) next[key] = source[key]
+    return next
+  }
+
+  function copyFrameGeometrySnapshot(value) {
+    var source = value && typeof value === "object" ? value : ({})
+    var sourceRecords = source.records && typeof source.records === "object" ? source.records : ({})
+    var records = {}
+    for (var key in sourceRecords) records[key] = copyFrameRecord(sourceRecords[key])
+    return { key: String(source.key || ""), records: records }
+  }
+
+  function interpolateFrameRecord(from, to, progress) {
+    var start = from && typeof from === "object" ? from : to
+    var end = to && typeof to === "object" ? to : from
+    if (!start || !end) return ({})
+    var p = Math.max(0, Math.min(1, Number(progress) || 0))
+    var next = {}
+    var numeric = {
+      screenWidth: true, screenHeight: true, thickness: true, radius: true,
+      barSize: true, leftOccupiedWidth: true, rightOccupiedWidth: true,
+      outerX: true, outerY: true, outerRight: true, outerBottom: true,
+      holeX: true, holeY: true, holeRight: true, holeBottom: true,
+      contentX: true, contentY: true, contentWidth: true, contentHeight: true,
+      contentRadius: true, bleed: true
+    }
+    for (var key in end) {
+      if (numeric[key]) next[key] = Math.round(Number(start[key] || 0)
+        + (Number(end[key] || 0) - Number(start[key] || 0)) * p)
+      else next[key] = p < 0.5 ? start[key] : end[key]
+    }
+    next.framed = p < 0.999 ? (start.framed === true || end.framed === true) : end.framed === true
+    next.moldingPieces = p < 0.5 ? start.moldingPieces === true : end.moldingPieces === true
+    return next
+  }
+
+  function interpolateFrameGeometrySnapshot(from, to, progress) {
+    var start = from && from.records ? from.records : ({})
+    var end = to && to.records ? to.records : ({})
+    var records = {}
+    for (var key in end) records[key] = interpolateFrameRecord(start[key] || end[key], end[key], progress)
+    return { key: String(to && to.key || ""), records: records }
+  }
+
+  function calculateFrameRecord(screen) {
     var screenWidth = screen && screen.width !== undefined ? Number(screen.width) : 0
     var screenHeight = screen && screen.height !== undefined ? Number(screen.height) : 0
     var t = Math.max(1, root.frameThickness)
@@ -154,41 +254,115 @@ Item {
     var sidebarOnThisScreen = root.hostedSidebarVisibleOnScreen(screen)
     var leftOcclusion = sidebarOnThisScreen && !hostedMenu.panelOnRight ? root.hostedSidebarFrameOcclusionWidth : 0
     var rightOcclusion = sidebarOnThisScreen && hostedMenu.panelOnRight ? root.hostedSidebarFrameOcclusionWidth : 0
-    var x = Math.max(0, leftOcclusion > 0 ? leftOcclusion : leftInset)
-    var y = Math.max(0, topInset)
-    var right = Math.max(x + 1, screenWidth - (rightOcclusion > 0 ? rightOcclusion : rightInset))
-    var bottom = Math.max(y + 1, screenHeight - bottomInset)
-    var bleed = root.frameEnabled ? Math.max(t + 2, Math.ceil(root.frameRadius * 0.5)) : 0
-
-    if (!root.frameEnabled || screenWidth <= 0 || screenHeight <= 0) {
-      return {
-        x: 0,
-        y: 0,
-        width: Math.max(1, screenWidth),
-        height: Math.max(1, screenHeight),
-        radius: 0,
-        bleed: 0,
-        framed: false
-      }
-    }
-
+    var holeX = Math.max(0, leftOcclusion > 0 ? leftOcclusion : leftInset)
+    var holeY = Math.max(0, topInset)
+    var holeRight = Math.max(holeX + 1, screenWidth - (rightOcclusion > 0 ? rightOcclusion : rightInset))
+    var holeBottom = Math.max(holeY + 1, screenHeight - bottomInset)
+    var framed = root.frameEnabled && screenWidth > 0 && screenHeight > 0
+    var bleed = framed ? Math.max(t + 2, Math.ceil(root.frameRadius * 0.5)) : 0
+    var contentX = framed ? Math.max(0, holeX - bleed) : 0
+    var contentY = framed ? Math.max(0, holeY - bleed) : 0
+    var contentRight = framed ? Math.min(screenWidth, holeRight + bleed) : screenWidth
+    var contentBottom = framed ? Math.min(screenHeight, holeBottom + bleed) : screenHeight
     return {
-      x: Math.max(0, x - bleed),
-      y: Math.max(0, y - bleed),
-      width: Math.max(1, Math.min(screenWidth, right + bleed) - Math.max(0, x - bleed)),
-      height: Math.max(1, Math.min(screenHeight, bottom + bleed) - Math.max(0, y - bleed)),
-      radius: root.cornerPieces ? Math.max(t, root.frameRadius) : 0,
-      bleed: bleed,
-      framed: true,
-      innerX: x,
-      innerY: y,
-      innerWidth: Math.max(1, right - x),
-      innerHeight: Math.max(1, bottom - y)
+      screenKey: frameScreenKey(screen),
+      screenWidth: screenWidth,
+      screenHeight: screenHeight,
+      framed: framed,
+      moldingPieces: root.frameMoldingPieces,
+      thickness: t,
+      radius: root.frameRadius,
+      contentRadius: framed && root.frameMoldingPieces ? root.frameRadius : 0,
+      barPosition: root.position,
+      barSize: root.barSize,
+      topEdgeOccupied: companionEdge === "top",
+      bottomEdgeOccupied: companionEdge === "bottom",
+      leftEdgeOccupied: sidebarOnThisScreen && !hostedMenu.panelOnRight,
+      rightEdgeOccupied: sidebarOnThisScreen && hostedMenu.panelOnRight,
+      leftOccupiedWidth: leftOcclusion,
+      rightOccupiedWidth: rightOcclusion,
+      outerX: root.position === "left" ? Math.max(0, root.barSize) : 0,
+      outerY: root.position === "top" || companionEdge === "top" ? Math.max(0, root.barSize) : 0,
+      outerRight: root.position === "right" ? Math.max(1, screenWidth - Math.max(0, root.barSize)) : screenWidth,
+      outerBottom: root.position === "bottom" || companionEdge === "bottom" ? Math.max(1, screenHeight - Math.max(0, root.barSize)) : screenHeight,
+      holeX: holeX,
+      holeY: holeY,
+      holeRight: holeRight,
+      holeBottom: holeBottom,
+      contentX: contentX,
+      contentY: contentY,
+      contentWidth: Math.max(1, contentRight - contentX),
+      contentHeight: Math.max(1, contentBottom - contentY),
+      bleed: bleed
+    }
+  }
+
+  function buildFrameGeometrySnapshot(key) {
+    var records = {}
+    var screens = root.validBarScreens || []
+    for (var i = 0; i < screens.length; i++) {
+      var record = calculateFrameRecord(screens[i])
+      records[record.screenKey] = record
+    }
+    return { key: String(key || requestedFrameGeometryKey), records: records }
+  }
+
+  function requestFrameGeometrySnapshot() {
+    var key = root.requestedFrameGeometryKey
+    if (key === targetFrameGeometrySnapshot.key) return false
+    var current = copyFrameGeometrySnapshot(effectiveFrameGeometrySnapshot)
+    var target = buildFrameGeometrySnapshot(key)
+    frameGeometryAnimation.stop()
+    fromFrameGeometrySnapshot = current.records && Object.keys(current.records).length > 0 ? current : target
+    targetFrameGeometrySnapshot = target
+    if (reducedMotion) {
+      commitFrameGeometrySnapshot()
+    } else {
+      frameGeometryProgress = 0
+      frameGeometryAnimation.restart()
+    }
+    return true
+  }
+
+  function commitFrameGeometrySnapshot() {
+    frameGeometryAnimation.stop()
+    frameGeometryProgress = 1
+    fromFrameGeometrySnapshot = copyFrameGeometrySnapshot(targetFrameGeometrySnapshot)
+  }
+
+  function lacunaFrameGeometryRecord(screen) {
+    var records = effectiveFrameGeometrySnapshot && effectiveFrameGeometrySnapshot.records
+      ? effectiveFrameGeometrySnapshot.records : ({})
+    return records[frameScreenKey(screen)] || calculateFrameRecord(screen)
+  }
+
+  function lacunaFrameContentRect(screen) {
+    var record = lacunaFrameGeometryRecord(screen)
+    return {
+      x: record.contentX,
+      y: record.contentY,
+      width: record.contentWidth,
+      height: record.contentHeight,
+      radius: record.contentRadius,
+      bleed: record.bleed,
+      framed: record.framed,
+      innerX: record.holeX,
+      innerY: record.holeY,
+      innerWidth: Math.max(1, record.holeRight - record.holeX),
+      innerHeight: Math.max(1, record.holeBottom - record.holeY),
+      revision: root.lacunaFrameGeometryRevision,
+      geometryKey: root.lacunaFrameGeometryKey,
+      screenKey: record.screenKey
     }
   }
 
   function debugBarGeometry() {
-    return omarchyBar.debugBarGeometry()
+    var value = omarchyBar.debugBarGeometry()
+    var next = value && typeof value === "object" ? value : ({})
+    next.lacunaFrameGeometryRevision = root.lacunaFrameGeometryRevision
+    next.lacunaFrameGeometryKey = root.lacunaFrameGeometryKey
+    next.lacunaFrameSelectedOutputs = root.selectedOutputGeometrySignature()
+    return next
   }
 
   function openConfigPanel() {
@@ -248,12 +422,13 @@ Item {
       required property var modelData
 
       targetScreen: modelData
-      active: root.frameEnabled
+      geometryRecord: root.lacunaFrameGeometryRecord(modelData)
+      active: geometryRecord && geometryRecord.framed === true
       barPosition: root.position
       barSize: root.barSize
       frameThickness: root.frameThickness
       frameRadius: root.frameRadius
-      cornerPieces: root.cornerPieces
+      moldingPieces: root.frameMoldingPieces
       frameColor: barTheme.panelBackground
       shadowEnabled: root.frameShadow
       shadowOffsetX: root.frameShadowOffsetX

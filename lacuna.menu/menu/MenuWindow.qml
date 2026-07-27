@@ -73,7 +73,7 @@ Item {
   // offsets and sizing, not which edge Lacuna owns.
   readonly property bool panelOnRight: false
   readonly property bool sidebarSurfaceVisible: lacunaEnabled && panelController.menuRenderable
-  readonly property bool effectiveCornerPieces: sidebarSurfaceVisible && sidebarState.cornerPieces && !panelOnRight
+  readonly property bool effectiveConnectorPieces: sidebarSurfaceVisible && sidebarState.connectorPieces && !panelOnRight
   property int defaultTopBarHeight: 26
   property int barHeight: topBarHeight()
   property int fullPanelWidth: Math.round(sizeMix(310, 270))
@@ -84,13 +84,14 @@ Item {
   property int railLeftInset: 0
   property int railRightInset: 0
   property int panelWidth: sidebarSurfaceVisible ? (sidebarState.collapsed ? railPanelWidth : fullPanelWidth) : 0
-  property int lacunaJoinRadius: Math.max(frameThickness, frameRadius)
-  property int joinRadius: effectiveCornerPieces ? lacunaJoinRadius : 0
-  property int connectorOverlap: effectiveCornerPieces ? Math.round(lacunaJoinRadius * 1.85) : 0
+  readonly property int lacunaJoinRadius: designTokens.joinRadius
+  readonly property int attachedFlyoutRadius: designTokens.panelRadius
+  property int joinRadius: effectiveConnectorPieces ? lacunaJoinRadius : 0
+  property int connectorOverlap: effectiveConnectorPieces ? designTokens.connectorOverlap : 0
   property int railTopGap: Math.round(sizeMix(10, 6))
-  property int bodyRightInset: effectiveCornerPieces ? joinRadius : 0
+  property int bodyRightInset: effectiveConnectorPieces ? joinRadius : 0
   property int surfaceRightInset: bodyRightInset
-  property int settingsConnectorWidth: effectiveCornerPieces ? joinRadius : 0
+  property int settingsConnectorWidth: effectiveConnectorPieces ? joinRadius : 0
   property int barEdgeCasterSize: frameThickness
   property int frameReservePadding: 4
   property int sidebarReserveExtra: 0
@@ -126,6 +127,11 @@ Item {
   readonly property string retainedFlyout: panelController.retainedFlyout
   readonly property string closingFlyout: panelController.closingFlyout
   readonly property string incomingFlyout: panelController.incomingFlyout
+  readonly property string geometryTargetFlyout: incomingFlyout !== "" ? incomingFlyout
+    : panelController.activeFlyout !== "" ? panelController.activeFlyout
+    : visibleFlyout !== "" ? visibleFlyout
+    : outgoingFlyout !== "" ? outgoingFlyout
+    : closingFlyout
   readonly property bool activeFlyoutSettings: panelController.activeFlyout === "settings"
   readonly property bool activeFlyoutShellSettings: panelController.activeFlyout === "shellSettings"
   readonly property bool activeFlyoutAppPicker: panelController.activeFlyout === "appPicker"
@@ -137,8 +143,11 @@ Item {
   readonly property int activeFlyoutWidth: activeFlyoutWidthFor(sidebarScreen)
   readonly property int activeFlyoutHeight: activeFlyoutHeightFor(sidebarScreen)
   readonly property int activeFlyoutY: activeFlyoutYFor(sidebarScreen)
+  property var panelGeometryByScreen: ({})
+  property int panelGeometryRevision: 0
   readonly property bool frameBorderAttachedFlyoutVisible: lacunaEnabled && panelController.flyoutRenderable && panelController.flyoutProgress > 0.001
-  readonly property bool frameBorderAttachedConnectorVisible: frameBorderAttachedFlyoutVisible && sidebarSurfaceVisible && sidebarState.cornerPieces && settingsConnectorWidth > 0
+  readonly property bool frameBorderAttachedConnectorVisible: frameBorderAttachedFlyoutVisible
+    && panelGeometryFor(sidebarScreen).connectorVisible === true
   readonly property real frameBorderWindowY: visualTopInset
   readonly property real frameBorderAttachedFlyoutY: frameBorderAttachedFlyoutYFor(sidebarScreen)
   readonly property real frameBorderAttachedFlyoutHeight: frameBorderAttachedFlyoutHeightFor(sidebarScreen)
@@ -215,8 +224,10 @@ Item {
   readonly property string frameReserveMode: validFrameReserveMode(frameSettings.reserveMode)
   readonly property bool frameShadow: boolSetting(frameSettings.shadow, false)
   readonly property bool frameBorder: boolSetting(frameSettings.border, false)
+  readonly property bool frameMoldingPieces: frameSettings && typeof frameSettings.moldingPieces === "boolean"
+    ? frameSettings.moldingPieces : boolSetting(frameSettings.roundedContentCorners, true)
   readonly property int frameThickness: positiveInt(frameSettings.thickness, 8)
-  readonly property int frameRadius: Math.max(0, positiveInt(frameSettings.radius, 14))
+  readonly property int frameRadius: Math.max(0, numberSetting(frameSettings.radius, 14))
   readonly property int frameShadowOffsetX: numberSetting(frameSettings.shadowOffsetX, 2)
   readonly property int frameShadowOffsetY: numberSetting(frameSettings.shadowOffsetY, 3)
   // The default policy follows the focused Hyprland output. Pinned mode keeps
@@ -272,11 +283,14 @@ Item {
     return flyoutInteractive && flyoutOpenOnScreen(screen)
   }
 
-  function flyoutLaneWidthFor(screen) {
-    // Keep every mapped sidebar window at its maximum bounded flyout width.
-    // Changing the layer-shell buffer width while opening still squeezes the
-    // existing sidebar buffer, so only monitor geometry may change this lane.
-    return sidebarVisibleOnScreen(screen) ? maxFlyoutWidthFor(screen) + panelShadowOutset : 0
+  function flyoutLaneWidthFor(screen, effectiveConnectorWidth) {
+    // Reserve the larger complete extent of connector-off and connector-on
+    // targets, then subtract the transaction's effective connector width.
+    // panel + effective connector + lane is therefore constant on both bounded
+    // and unconstrained outputs throughout either toggle direction.
+    if (!sidebarVisibleOnScreen(screen)) return 0
+    return Math.max(0, maxFlyoutExtentFor(screen)
+      - Math.max(0, Number(effectiveConnectorWidth) || 0) + panelShadowOutset)
   }
 
   function frameBorderAttachedFlyoutVisibleOnScreen(screen) {
@@ -503,7 +517,7 @@ Item {
     return compact ? 560 : 660
   }
 
-  function flyoutGeometryFor(screen, kind) {
+  function flyoutGeometryFor(screen, kind, connectorWidthOverride) {
     var windowHeight = sidebarWindowHeightFor(screen)
     var screenWidth = screen && screen.width !== undefined ? Number(screen.width) : 1920
     if (!isFinite(screenWidth) || screenWidth <= 0) screenWidth = 1920
@@ -512,10 +526,12 @@ Item {
     var preferredY = kind === "appPicker"
       ? topLimit + (compact ? 38 : 52)
       : windowHeight - preferredHeight - designTokens.bottomInset - (compact ? 72 : 112)
+    var geometryConnectorWidth = connectorWidthOverride === undefined
+      ? settingsConnectorWidth : Math.max(0, Number(connectorWidthOverride) || 0)
     return MenuFlyoutGeometry.boundedGeometry({
       screenWidth: screenWidth,
       screenHeight: windowHeight,
-      leftInset: panelWidth + settingsConnectorWidth,
+      leftInset: panelWidth + geometryConnectorWidth,
       rightInset: panelShadowOutset + designTokens.contentInset,
       topInset: topLimit,
       bottomInset: designTokens.bottomInset,
@@ -530,6 +546,20 @@ Item {
     var width = 0
     for (var i = 0; i < kinds.length; i++) width = Math.max(width, flyoutGeometryFor(screen, kinds[i]).width)
     return width
+  }
+
+  function maxFlyoutExtentFor(screen) {
+    var kinds = ["settings", "shellSettings", "appPicker", "mediaPlayer"]
+    var connectorWidth = Math.max(0, Number(designTokens.joinRadius) || 0)
+    var extent = 0
+    for (var i = 0; i < kinds.length; i++) {
+      var withoutConnector = flyoutGeometryFor(screen, kinds[i], 0).width
+      var withConnector = connectorWidth + flyoutGeometryFor(screen, kinds[i], connectorWidth).width
+      extent = Math.max(extent, withoutConnector, withConnector)
+    }
+    // Independently snapped flyout and connector widths can sum to one pixel
+    // above both endpoints for odd connector sizes. Reserve that pixel here.
+    return extent + 1
   }
 
   function activeFlyoutKind() {
@@ -555,16 +585,41 @@ Item {
     return kind === "" ? 0 : flyoutGeometryFor(screen, kind).y
   }
 
+  function publishPanelGeometry(screen, host) {
+    if (!host) return
+    var key = screenNamespace(screen)
+    var next = {}
+    for (var existing in panelGeometryByScreen) next[existing] = panelGeometryByScreen[existing]
+    next[key] = {
+      y: host.effectiveFlyoutY,
+      width: host.effectiveFlyoutWidth,
+      height: host.effectiveFlyoutHeight,
+      connectorWidth: host.effectiveConnectorWidth,
+      connectorVisible: host.effectiveConnectorVisible,
+      revision: host.panelGeometryRevision,
+      key: host.targetPanelGeometryKey
+    }
+    panelGeometryByScreen = next
+    panelGeometryRevision += 1
+  }
+
+  function panelGeometryFor(screen) {
+    panelGeometryRevision
+    var value = panelGeometryByScreen[screenNamespace(screen)]
+    if (value && typeof value === "object") return value
+    return { y: 0, width: 0, height: 0, connectorWidth: 0, connectorVisible: false }
+  }
+
   function frameBorderAttachedFlyoutYFor(screen) {
-    var connectorVisible = frameBorderAttachedConnectorVisible && flyoutVisibleOnScreen(screen)
-    var y = activeFlyoutYFor(screen)
-    return frameBorderWindowY + (connectorVisible ? y - settingsConnectorWidth : y)
+    var geometry = panelGeometryFor(screen)
+    var connectorVisible = geometry.connectorVisible === true && flyoutVisibleOnScreen(screen)
+    return frameBorderWindowY + (connectorVisible ? geometry.y - geometry.connectorWidth : geometry.y)
   }
 
   function frameBorderAttachedFlyoutHeightFor(screen) {
-    var connectorVisible = frameBorderAttachedConnectorVisible && flyoutVisibleOnScreen(screen)
-    var height = activeFlyoutHeightFor(screen)
-    return connectorVisible ? height + settingsConnectorWidth * 2 : height
+    var geometry = panelGeometryFor(screen)
+    var connectorVisible = geometry.connectorVisible === true && flyoutVisibleOnScreen(screen)
+    return connectorVisible ? geometry.height + geometry.connectorWidth * 2 : geometry.height
   }
 
   function frameOverlayWidthFor(screen) {
@@ -1406,6 +1461,13 @@ Item {
     setFrameBorder(!lacunaSettings.normalize(lacunaSettings.data).frame.border)
   }
 
+  function setFrameMoldingPieces(enabled) {
+    var next = lacunaSettings.normalize(lacunaSettings.data)
+    next.frame.moldingPieces = enabled === true
+    next.frame.roundedContentCorners = next.frame.moldingPieces
+    lacunaSettings.save(next)
+  }
+
   function setPortraitSplit(enabled) {
     var next = lacunaSettings.normalize(lacunaSettings.data)
     next.barPresentation.portraitSplit = enabled === true
@@ -1608,8 +1670,8 @@ Item {
       return true
     }
 
-    if (entry.action === "toggle-corner-pieces") {
-      sidebarState.setCornerPiecesEnabled(desiredChecked(entry, !sidebarState.cornerPieces))
+    if (entry.action === "toggle-sidebar-connectors" || entry.action === "toggle-corner-pieces") {
+      sidebarState.setConnectorPiecesEnabled(desiredChecked(entry, !sidebarState.connectorPieces))
       return true
     }
 
@@ -1674,6 +1736,12 @@ Item {
 
     if (entry.action === "toggle-frame-border") {
       setFrameBorder(desiredChecked(entry, !lacunaSettings.normalize(lacunaSettings.data).frame.border))
+      return true
+    }
+
+    if (entry.action === "toggle-frame-molding-pieces") {
+      setFrameMoldingPieces(desiredChecked(entry,
+        !lacunaSettings.normalize(lacunaSettings.data).frame.moldingPieces))
       return true
     }
 
@@ -2108,7 +2176,7 @@ Item {
     lacunaPath: root.lacunaPath
     sidebarExclusive: sidebarState.exclusive
     sidebarCollapsed: sidebarState.collapsed
-    sidebarCornerPieces: sidebarState.cornerPieces
+    sidebarConnectorPieces: sidebarState.connectorPieces
     sidebarDefaultMode: root.sidebarDefaultMode()
     sidebarMonitorPolicy: root.sidebarMonitorPolicy
     sidebarMonitorNames: root.sidebarMonitorNames
@@ -2126,6 +2194,7 @@ Item {
     frameReserveMode: root.frameReserveMode
     frameShadow: root.frameShadow
     frameBorder: root.frameBorder
+    frameMoldingPieces: root.frameMoldingPieces
     portraitSplit: root.portraitSplit
     mediaProviders: root.mediaProvidersSettings
     backgroundEffects: root.backgroundEffectsSettings
@@ -2213,8 +2282,8 @@ Item {
     dismissActive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)
     exclusive: sidebarState.exclusive
     panelWidth: root.panelWidth
-    surfaceRightInset: root.surfaceRightInset
-    flyoutLaneWidth: root.flyoutLaneWidthFor(modelData)
+    surfaceRightInset: Math.max(panelHost.effectiveConnectorWidth, root.frameMoldingPieces ? root.frameRadius : 0)
+    flyoutLaneWidth: root.flyoutLaneWidthFor(modelData, panelHost.effectiveConnectorWidth)
     visualWidth: Math.max(root.frameOverlayWidthFor(modelData), root.topBarPanelShadowVisualWidthFor(modelData))
     visualTopInset: root.visualTopInset
     visualBottomInset: root.visualBottomInset
@@ -2240,26 +2309,26 @@ Item {
       id: panelHost
 
       panelWidth: root.panelWidth
-      surfaceRightInset: root.surfaceRightInset
       surfaceX: surface.x + surface.surfaceX
       sidebarHeight: menuWindow.height
       anchorRight: root.panelOnRight
       connectorWidth: root.settingsConnectorWidth
-      connectorRenderable: root.lacunaEnabled && menuWindow.sidebarRenderable && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
-      flyoutY: root.activeFlyoutYFor(modelData)
-      flyoutWidth: Math.max(0, root.activeFlyoutWidthFor(modelData))
-      flyoutHeight: Math.max(0, root.activeFlyoutHeightFor(modelData))
+      connectorOverlap: root.effectiveConnectorPieces ? root.connectorOverlap : 0
+      geometrySemanticKey: root.geometryTargetFlyout
+      flyoutY: root.geometryTargetFlyout === "" ? 0
+        : root.flyoutGeometryFor(modelData, root.geometryTargetFlyout).y
+      flyoutWidth: root.geometryTargetFlyout === "" ? 0
+        : Math.max(0, root.flyoutGeometryFor(modelData, root.geometryTargetFlyout).width)
+      flyoutHeight: root.geometryTargetFlyout === "" ? 0
+        : Math.max(0, root.flyoutGeometryFor(modelData, root.geometryTargetFlyout).height)
       flyoutProgress: root.menuPanelControllerRef.flyoutProgress
       flyoutRenderable: root.lacunaEnabled && root.flyoutVisibleOnScreen(modelData)
-      geometrySwitchActive: root.menuPanelControllerRef.incomingFlyout !== ""
-      geometrySwitchProgress: root.menuPanelControllerRef.contentSwitchProgress
-    }
-
-    Connections {
-      target: root.menuPanelControllerRef
-      function onIncomingFlyoutChanged() {
-        if (root.menuPanelControllerRef.incomingFlyout !== "") panelHost.captureEffectiveGeometryForSwitch()
-      }
+      geometryTransitionEnabled: flyoutRenderable && flyoutProgress > 0.001
+      reducedMotion: root.menuMotionTokensRef.animationDisabled
+      geometryAnimationDuration: root.menuMotionTokensRef.quick
+      onEffectivePanelGeometryChanged: root.publishPanelGeometry(modelData, panelHost)
+      onEffectiveConnectorVisibleChanged: root.publishPanelGeometry(modelData, panelHost)
+      Component.onCompleted: root.publishPanelGeometry(modelData, panelHost)
     }
 
     LacunaFrameOverlay {
@@ -2276,8 +2345,7 @@ Item {
       frameWidth: modelData && modelData.width !== undefined ? Number(modelData.width) : menuWindow.width
       frameThickness: root.frameThickness
       frameRadius: root.frameRadius
-      joinRadius: root.lacunaJoinRadius
-      cornerPieces: sidebarState.cornerPieces
+      moldingPieces: root.frameMoldingPieces
       progress: root.frameOverlayProgress
       frameColor: root.panelColor
       borderColor: root.menuThemeRef.seam
@@ -2287,15 +2355,15 @@ Item {
       sidebarY: panelHost.sidebarMaskY
       sidebarWidth: menuWindow.sidebarRenderable ? root.panelWidth : 0
       sidebarHeight: panelHost.sidebarMaskHeight
-      sidebarCornerWidth: root.surfaceRightInset
-      sidebarCornerVisible: menuWindow.sidebarRenderable && root.effectiveCornerPieces && root.surfaceRightInset > 0
+      sidebarMoldingWidth: root.frameMoldingPieces ? root.frameRadius : 0
+      sidebarMoldingVisible: menuWindow.sidebarRenderable && root.frameMoldingPieces && root.frameRadius > 0
       leftEdgeOccupied: menuWindow.sidebarRenderable && !root.panelOnRight
       rightEdgeOccupied: menuWindow.sidebarRenderable && root.panelOnRight
       connectorX: panelHost.connectorX
       connectorY: panelHost.connectorY
       connectorWidth: panelHost.effectiveConnectorWidth
       connectorHeight: panelHost.effectiveFlyoutHeight + panelHost.effectiveConnectorWidth * 2
-      connectorVisible: menuWindow.sidebarRenderable && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      connectorVisible: menuWindow.sidebarRenderable && panelHost.effectiveConnectorVisible
       flyoutX: panelHost.flyoutMaskX
       flyoutY: panelHost.flyoutMaskY
       flyoutWidth: panelHost.flyoutMaskWidth
@@ -2315,21 +2383,21 @@ Item {
       sidebarVisible: false
       flyoutOpen: root.flyoutOpenOnScreen(modelData)
       flyoutRenderable: root.flyoutVisibleOnScreen(modelData)
-      connectorRenderable: menuWindow.sidebarRenderable && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      connectorRenderable: menuWindow.sidebarRenderable && panelHost.effectiveConnectorVisible
       shadowEnabled: root.lacunaEnabled && root.frameShadow && root.menuPanelControllerRef.flyoutRenderable
       menuProgress: root.menuPanelControllerRef.menuProgress
       flyoutProgress: root.menuPanelControllerRef.flyoutProgress
       contentProgress: root.menuPanelControllerRef.contentProgress
       sidebarX: panelHost.sidebarX
       panelWidth: root.panelWidth
-      surfaceRightInset: root.surfaceRightInset
+      surfaceRightInset: Math.max(panelHost.effectiveConnectorWidth, root.frameMoldingPieces ? root.frameRadius : 0)
       barHeight: root.barHeight
       barBottomY: root.barBottomY
-      joinRadius: root.joinRadius
+      joinRadius: root.frameRadius
       connectorOverlap: root.connectorOverlap
       fullFrame: root.frameMode === "fullframe"
       frameThickness: root.frameThickness
-      cornerPieces: root.effectiveCornerPieces
+      frameMoldingPieces: root.frameMoldingPieces
       openFromRight: root.panelOnRight
       connectorX: panelHost.connectorX
       connectorY: panelHost.connectorY
@@ -2339,7 +2407,7 @@ Item {
       flyoutY: panelHost.effectiveFlyoutY
       flyoutWidth: panelHost.effectiveFlyoutWidth
       flyoutHeight: panelHost.effectiveFlyoutHeight
-      panelRadius: root.lacunaJoinRadius
+      panelRadius: root.attachedFlyoutRadius
       panelColor: root.panelColor
       foreground: root.foreground
       designTokens: root.menuDesignTokensRef
@@ -2370,12 +2438,12 @@ Item {
       progress: root.menuPanelControllerRef.menuProgress
       barHeight: root.barHeight
       barBottomY: root.barBottomY
-      joinRadius: root.joinRadius
+      joinRadius: root.frameRadius
       connectorOverlap: root.connectorOverlap
-      bodyRightInset: root.surfaceRightInset
+      bodyRightInset: root.frameMoldingPieces ? root.frameRadius : 0
       fullFrame: root.frameMode === "fullframe"
       frameThickness: root.frameThickness
-      cornerPieces: root.effectiveCornerPieces
+      frameMoldingPieces: root.frameMoldingPieces
       openFromRight: root.panelOnRight
       panelColor: root.panelColor
       foreground: root.foreground
@@ -2472,7 +2540,7 @@ Item {
 
       z: 20
       open: root.flyoutOpenOnScreen(modelData)
-      renderable: menuWindow.sidebarRenderable && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      renderable: menuWindow.sidebarRenderable && panelHost.effectiveConnectorVisible
       progress: root.menuPanelControllerRef.flyoutProgress
       x: panelHost.connectorX
       y: panelHost.connectorY
@@ -2497,7 +2565,7 @@ Item {
       openToLeft: root.panelOnRight
       panelWidth: panelHost.effectiveFlyoutWidth
       panelHeight: panelHost.effectiveFlyoutHeight
-      panelRadius: root.lacunaJoinRadius
+      panelRadius: root.attachedFlyoutRadius
       panelColor: root.panelColor
       foreground: root.foreground
       designTokens: root.menuDesignTokensRef
@@ -2646,7 +2714,7 @@ Item {
 
       anchors.fill: parent
       active: root.lacunaEnabled && root.frameBorder
-      connectorVisible: menuWindow.sidebarRenderable && root.flyoutVisibleOnScreen(modelData) && sidebarState.cornerPieces && root.settingsConnectorWidth > 0
+      connectorVisible: menuWindow.sidebarRenderable && panelHost.effectiveConnectorVisible
       flyoutVisible: root.flyoutVisibleOnScreen(modelData) && root.menuPanelControllerRef.flyoutProgress > 0.001
       openToLeft: root.panelOnRight
       connectorX: panelHost.connectorX
@@ -2656,7 +2724,7 @@ Item {
       flyoutY: panelHost.flyoutMaskY
       flyoutWidth: panelHost.flyoutMaskWidth
       flyoutHeight: panelHost.flyoutMaskHeight
-      panelRadius: root.lacunaJoinRadius
+      panelRadius: root.attachedFlyoutRadius
       borderColor: root.menuThemeRef.seam
     }
 

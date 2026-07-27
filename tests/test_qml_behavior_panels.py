@@ -24,6 +24,110 @@ class SettingsFlyoutTransitionContracts(unittest.TestCase):
 
 @unittest.skipUnless(HAVE_SESSION, "needs a quickshell binary and a Wayland session")
 class QmlPanelBehaviorTests(unittest.TestCase):
+    def test_panel_geometry_transaction_is_newest_wins_and_reduced_motion_atomic(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var host: null
+
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.menu/menu/LacunaPanelHost.qml')}", Component.PreferSynchronous)
+    if (component.status !== Component.Ready) {{
+      console.log("BEHAVE_ERR " + component.errorString())
+      Qt.quit()
+      return
+    }}
+    host = component.createObject(root, {{
+      flyoutRenderable: true,
+      flyoutProgress: 1,
+      geometryTransitionEnabled: false,
+      geometryAnimationDuration: 10000
+    }})
+    probe.restart()
+  }}
+
+  Timer {{
+    id: probe
+    interval: 30
+    onTriggered: {{
+      var a = host.makePanelGeometry(80, 560, 620, 18, 33, false)
+      var b = host.makePanelGeometry(160, 420, 440, 0, 0, false)
+      var c = host.makePanelGeometry(40, 600, 500, 18, 33, false)
+      host.requestPanelGeometry(a, "A")
+      host.geometryTransitionEnabled = true
+      host.requestPanelGeometry(b, "B")
+      host.geometryAnimationController.stop()
+      host.panelGeometryProgress = 0.4
+      var interrupted = host.copyPanelGeometry(host.effectivePanelGeometry)
+      var visibleDuringConnectorExit = host.effectiveConnectorVisible
+      var beforeRevision = host.panelGeometryRevision
+      host.requestPanelGeometry(c, "C")
+      host.geometryAnimationController.stop()
+      var capturedNewest = host.copyPanelGeometry(host.fromPanelGeometry)
+      host.panelGeometryProgress = 0.5
+      var newestMiddle = host.copyPanelGeometry(host.effectivePanelGeometry)
+      host.requestPanelGeometry(a, "A-reversal")
+      host.geometryAnimationController.stop()
+      var reversalFrom = host.copyPanelGeometry(host.fromPanelGeometry)
+      host.reducedMotion = true
+      host.requestPanelGeometry(b, "reduced")
+      console.log("BEHAVE " + JSON.stringify({{
+        interrupted: interrupted,
+        capturedNewest: capturedNewest,
+        newestMiddle: newestMiddle,
+        reversalFrom: reversalFrom,
+        revisionAdvanced: host.panelGeometryRevision > beforeRevision,
+        visibleDuringConnectorExit: visibleDuringConnectorExit,
+        reducedTarget: host.copyPanelGeometry(host.effectivePanelGeometry),
+        reducedInactive: !host.panelGeometryTransitionActive,
+        connectorHiddenAtZero: !host.effectiveConnectorVisible
+      }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        row = parse_behave(output)[-1]
+        expected_interrupted = {
+            "flyoutY": 112,
+            "flyoutWidth": 504,
+            "flyoutHeight": 548,
+            "connectorWidth": 11,
+            "connectorOverlap": 20,
+            "anchorRight": False,
+        }
+        for key, expected in expected_interrupted.items():
+            if isinstance(expected, bool):
+                self.assertEqual(expected, row["interrupted"][key], output[-2000:])
+                self.assertEqual(expected, row["capturedNewest"][key], output[-2000:])
+            else:
+                self.assertAlmostEqual(expected, row["interrupted"][key], places=6, msg=output[-2000:])
+                self.assertAlmostEqual(expected, row["capturedNewest"][key], places=6, msg=output[-2000:])
+        expected_middle = {
+            "flyoutY": 76,
+            "flyoutWidth": 552,
+            "flyoutHeight": 524,
+            "connectorWidth": 15,
+            "connectorOverlap": 27,
+            "anchorRight": False,
+        }
+        for key, expected in expected_middle.items():
+            if isinstance(expected, bool):
+                self.assertEqual(expected, row["newestMiddle"][key], output[-2000:])
+            else:
+                self.assertAlmostEqual(expected, row["newestMiddle"][key], places=6, msg=output[-2000:])
+        self.assertEqual(row["newestMiddle"], row["reversalFrom"], output[-2000:])
+        self.assertTrue(row["revisionAdvanced"], output[-2000:])
+        self.assertTrue(row["visibleDuringConnectorExit"], output[-2000:])
+        self.assertEqual(0, row["reducedTarget"]["connectorWidth"], output[-2000:])
+        self.assertTrue(row["reducedInactive"], output[-2000:])
+        self.assertTrue(row["connectorHiddenAtZero"], output[-2000:])
+
     def test_persistent_sidebar_rejects_external_close_without_hiding(self):
         qml = f"""
 import Quickshell

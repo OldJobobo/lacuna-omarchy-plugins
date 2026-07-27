@@ -57,10 +57,38 @@ From `lacuna.menu/menu/MenuSurface.qml` and the corner system:
                  └──┘
 ```
 
-- If `sidebarState.cornerPieces` is **enabled**: reserve `connectorWidth = joinRadius`, place the
+- If `sidebar.connectorPieces` is **enabled**: reserve `connectorWidth = joinRadius`, place the
   flyout at `panelWidth + connectorWidth`, and draw the connector at `x: panelWidth` so it sits
   *between* sidebar and flyout.
-- If corner pieces are **disabled**: attach the flyout directly at `panelWidth`.
+- If connector pieces are **disabled**: attach the flyout directly at `panelWidth`.
+  This setting does not alter frame molding. The curved upper/lower frame joins
+  beside the sidebar are `frame.moldingPieces` and remain independently owned
+  by the frame.
+
+`LacunaPanelHost` applies this as a newest-wins geometry transaction. Flyout
+bounds, connector width/overlap, attachment offset, panel paint, shadow, border,
+and compositor input masks all read the same interpolated
+`effectivePanelGeometry`. A request that arrives mid-transition captures the
+currently painted geometry before targeting the new key. Effective values are
+pixel-snapped once at the transaction boundary so paint, shadow, border,
+offsets, and compositor masks cannot narrow fractional values differently. The
+mapped flyout lane counterbalances the effective connector width and reserves
+one rounding-safety pixel, so it stays constant without clipping independently
+snapped odd-width transitions. Connector visibility is derived from
+the effective width crossing a small epsilon, so disabling it cannot leave a
+detached gap or input hole. Reduced motion commits the same transaction at
+progress 1 without animation.
+
+## Frame molding versus future corner pieces
+
+Frame molding pieces are the curved trim that joins frame rails around the
+content shell, including the upper and lower joins beside a sidebar. They use
+`frame.moldingPieces` and must never depend on `sidebar.connectorPieces`.
+
+The phrase **corner pieces** is reserved for a future black outer-screen mask
+that will visually round the physical shell corners in the Noctalia style.
+That feature is intentionally not implemented here and will not reuse frame
+molding or attached-flyout connector state.
 
 ## Corner states
 
@@ -119,7 +147,7 @@ below). Current `lacuna`-style values in `DesignTokens.qml`:
 |---|---|---|---|
 | `radius` | `0` | `0` | interior surfaces / item backgrounds — **always square** |
 | `controlRadius` | `0` | `0` | controls (buttons, toggles) — **always square** |
-| `panelRadius` | `14` | — | exposed outer corners of a surface |
+| `panelRadius` | `14` | `14` | exposed outer corners of a surface |
 | `joinRadius` | `18` | `14` | connector trim radius (also the connector width) |
 | `connectorOverlap` | `33` | `25` | how far the connector overlaps for a seamless join |
 | `borderWidth` | `0` | `0` | **no shell borders** (Principle 2 / fill-only) |
@@ -152,6 +180,7 @@ conventional look; they are **not** the Lacuna language:
 | | `lacuna` | `omarchy` | `material` |
 |---|---|---|---|
 | `radius` | 0 | 2 | 8 |
+| `panelRadius` | 14 | 2 | 12 |
 | `controlRadius` | 0 | 2 | 9 |
 | `borderWidth` | 0 | 1 | 1 |
 | `joinRadius` | 18 | 0 | 16 |

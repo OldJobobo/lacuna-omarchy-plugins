@@ -77,6 +77,10 @@ Background source changes raise the black cover for 300ms, hold for 150ms,
 then reveal over 750ms. Exit uses 350ms to black and 600ms back to the Lacuna
 frame. Reduced motion uses 75ms transitions. The background layer remains
 mapped to preserve layer-shell ordering and gates only its in-window paint.
+Its per-output clip consumes the bar-owned effective frame geometry record and
+monotonic revision; frame paint, border, background video, and vignette therefore
+move through the same immutable transaction rather than sampling mutable frame
+settings independently.
 The overlay owns only fade settlement, adaptive fallback, drift validation,
 and a pre-source output-registration guard. The service is the sole generic
 renderer-deadline owner. When forced inline mode is selected while no visible

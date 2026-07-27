@@ -22,7 +22,7 @@ Item {
   property real connectorOverlap: 33
   property bool fullFrame: false
   property real frameThickness: 8
-  property bool cornerPieces: true
+  property bool frameMoldingPieces: true
   property bool openFromRight: false
   property real connectorX: 0
   property real connectorY: 0
@@ -125,7 +125,7 @@ Item {
       bodyRightInset: root.surfaceRightInset
       fullFrame: root.fullFrame
       frameThickness: root.frameThickness
-      cornerPieces: root.cornerPieces
+      frameMoldingPieces: root.frameMoldingPieces
       openFromRight: root.openFromRight
       panelColor: root.panelColor
       foreground: root.foreground

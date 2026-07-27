@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "designStyle": "lacuna",
   "designStyles": {
     "lacuna": {},
@@ -49,6 +49,7 @@
     "defaultMode": "off",
     "collapsed": false,
     "exclusive": true,
+    "connectorPieces": true,
     "cornerPieces": true,
     "monitorPolicy": "auto",
     "monitorNames": []
@@ -110,6 +111,8 @@
     "reserveMode": "auto",
     "shadow": false,
     "border": false,
+    "moldingPieces": true,
+    "roundedContentCorners": true,
     "thickness": 8,
     "radius": 14,
     "shadowDirection": "bottom_right",

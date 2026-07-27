@@ -14,8 +14,7 @@ Item {
   property real frameWidth: 0
   property int frameThickness: 8
   property int frameRadius: 14
-  property int joinRadius: frameRadius
-  property bool cornerPieces: true
+  property bool moldingPieces: true
   property real progress: 1
   property color frameColor: "#101315"
   property color borderColor: Qt.rgba(1, 1, 1, 0.18)
@@ -31,8 +30,8 @@ Item {
   property real sidebarY: 0
   property real sidebarWidth: 0
   property real sidebarHeight: 0
-  property real sidebarCornerWidth: 0
-  property bool sidebarCornerVisible: false
+  property real sidebarMoldingWidth: 0
+  property bool sidebarMoldingVisible: false
   property bool leftEdgeOccupied: true
   property bool rightEdgeOccupied: false
 
@@ -62,7 +61,7 @@ Item {
   readonly property real curveKappa: lacunaGeometry.curveKappa
 
   LacunaGeometry { id: lacunaGeometry }
-  readonly property real cornerSize: Math.max(t, joinRadius)
+  readonly property real moldingSize: Math.max(0, frameRadius)
   readonly property real frameAlpha: 1
   readonly property color solidFrameColor: Qt.rgba(frameColor.r, frameColor.g, frameColor.b, 1)
   readonly property real shadowAlphaCompensation: 1
@@ -73,7 +72,7 @@ Item {
   readonly property real surfaceShadowOpacity: Math.min(1, shadowOpacity * 0.42)
   readonly property real surfaceShadowSize: Math.max(12, Math.min(34, shadowExtent))
   readonly property bool sidebarOnRight: rightEdgeOccupied && !leftEdgeOccupied
-  readonly property real sidebarOccupiedWidth: sidebarWidth + (sidebarCornerVisible ? sidebarCornerWidth : 0)
+  readonly property real sidebarOccupiedWidth: sidebarWidth + (sidebarMoldingVisible ? sidebarMoldingWidth : 0)
   readonly property real borderLeft: Math.max(0, leftEdgeOccupied ? sidebarX + sidebarWidth : (leftBar ? effectiveBarSize : t))
   readonly property real borderTop: Math.max(0, topBar ? barBottomY : t)
   readonly property real borderRight: Math.max(borderLeft + 1, effectiveFrameWidth - (rightEdgeOccupied ? Math.max(0, effectiveFrameWidth - sidebarX) : (rightBar ? effectiveBarSize : t)))
@@ -83,7 +82,7 @@ Item {
   readonly property real strokeTop: borderTop + borderInset
   readonly property real strokeRight: borderRight - borderInset
   readonly property real strokeBottom: borderBottom - borderInset
-  readonly property real borderRadius: cornerPieces ? Math.max(0.01, Math.min(cornerSize, (borderRight - borderLeft) / 2, (borderBottom - borderTop) / 2) - borderInset) : 0.01
+  readonly property real borderRadius: moldingPieces ? Math.max(0.01, Math.min(moldingSize, (borderRight - borderLeft) / 2, (borderBottom - borderTop) / 2) - borderInset) : 0.01
   readonly property bool leftAttachmentGapVisible: leftEdgeOccupied && flyoutVisible && flyoutHeight > 0
   readonly property bool rightAttachmentGapVisible: rightEdgeOccupied && flyoutVisible && flyoutHeight > 0
   readonly property real attachmentGapTop: Math.max(strokeTop + borderRadius, flyoutY - borderInset)
@@ -94,9 +93,9 @@ Item {
   readonly property real leftVerticalLowerEndY: leftAttachmentGapVisible && attachmentGapRenderable ? attachmentGapBottom : strokeTop + borderRadius
   readonly property real leftVerticalUpperStartY: leftAttachmentGapVisible && attachmentGapRenderable ? attachmentGapTop : strokeTop + borderRadius
   readonly property real horizontalBarShadowX: leftEdgeOccupied ? Math.max(0, sidebarX + sidebarOccupiedWidth) : 0
-  readonly property real horizontalBarShadowRightInset: rightEdgeOccupied ? Math.max(0, effectiveFrameWidth - sidebarX + (sidebarCornerVisible ? sidebarCornerWidth : 0)) : 0
+  readonly property real horizontalBarShadowRightInset: rightEdgeOccupied ? Math.max(0, effectiveFrameWidth - sidebarX + (sidebarMoldingVisible ? sidebarMoldingWidth : 0)) : 0
   readonly property real horizontalBarShadowWidth: Math.max(0, effectiveFrameWidth - horizontalBarShadowX - horizontalBarShadowRightInset + barEdgeCasterOverrun)
-  readonly property real sidebarJoinTop: Math.max(-sidebarCornerWidth, barBottomY - 1)
+  readonly property real sidebarJoinTop: Math.max(-sidebarMoldingWidth, barBottomY - 1)
   readonly property real sidebarJoinHeight: Math.max(0, sidebarHeight - sidebarJoinTop)
 
   visible: frameEnabled && clampedProgress > 0.001
@@ -144,13 +143,13 @@ Item {
     }
 
     Shape {
-      id: fullFrameTopLeftCorner
+      id: fullFrameTopLeftMolding
 
-      visible: root.fullFrame && root.cornerPieces && root.topBar && !root.leftBar && !root.leftEdgeOccupied && root.cornerSize > 0
-      x: -root.cornerSize + (root.t + root.cornerSize) * root.edgeProgress
+      visible: root.fullFrame && root.moldingPieces && root.topBar && !root.leftBar && !root.leftEdgeOccupied && root.moldingSize > 0
+      x: -root.moldingSize + (root.t + root.moldingSize) * root.edgeProgress
       y: root.barBottomY
-      width: root.cornerSize
-      height: root.cornerSize
+      width: root.moldingSize
+      height: root.moldingSize
       asynchronous: false
       antialiasing: true
       opacity: root.frameAlpha
@@ -164,14 +163,14 @@ Item {
 
         PathLine {
           x: 0
-          y: root.cornerSize
+          y: root.moldingSize
         }
         PathCubic {
-          x: root.cornerSize
+          x: root.moldingSize
           y: 0
           control1X: 0
-          control1Y: root.cornerSize * (1 - root.curveKappa)
-          control2X: root.cornerSize * root.curveKappa
+          control1Y: root.moldingSize * (1 - root.curveKappa)
+          control2X: root.moldingSize * root.curveKappa
           control2Y: 0
         }
         PathLine {
@@ -192,13 +191,13 @@ Item {
     }
 
     Shape {
-      id: fullFrameTopRightCorner
+      id: fullFrameTopRightMolding
 
-      visible: root.fullFrame && root.cornerPieces && root.topBar && !root.rightBar && !root.rightEdgeOccupied && root.cornerSize > 0
-      x: root.effectiveFrameWidth - (root.t + root.cornerSize) * root.edgeProgress
+      visible: root.fullFrame && root.moldingPieces && root.topBar && !root.rightBar && !root.rightEdgeOccupied && root.moldingSize > 0
+      x: root.effectiveFrameWidth - (root.t + root.moldingSize) * root.edgeProgress
       y: root.barBottomY
-      width: root.cornerSize
-      height: root.cornerSize
+      width: root.moldingSize
+      height: root.moldingSize
       asynchronous: false
       antialiasing: true
       opacity: root.frameAlpha
@@ -207,36 +206,36 @@ Item {
       ShapePath {
         fillColor: root.solidFrameColor
         strokeWidth: 0
-        startX: root.cornerSize
+        startX: root.moldingSize
         startY: 0
 
         PathLine {
-          x: root.cornerSize
-          y: root.cornerSize
+          x: root.moldingSize
+          y: root.moldingSize
         }
         PathCubic {
           x: 0
           y: 0
-          control1X: root.cornerSize
-          control1Y: root.cornerSize * (1 - root.curveKappa)
-          control2X: root.cornerSize * (1 - root.curveKappa)
+          control1X: root.moldingSize
+          control1Y: root.moldingSize * (1 - root.curveKappa)
+          control2X: root.moldingSize * (1 - root.curveKappa)
           control2Y: 0
         }
         PathLine {
-          x: root.cornerSize
+          x: root.moldingSize
           y: 0
         }
       }
     }
 
     Shape {
-      id: fullFrameBottomRightCorner
+      id: fullFrameBottomRightMolding
 
-      visible: root.fullFrame && root.cornerPieces && !root.bottomBar && !root.rightBar && !root.rightEdgeOccupied && root.cornerSize > 0
-      x: root.effectiveFrameWidth - (root.t + root.cornerSize) * root.edgeProgress
-      y: parent.height - (root.t + root.cornerSize) * root.edgeProgress
-      width: root.cornerSize
-      height: root.cornerSize
+      visible: root.fullFrame && root.moldingPieces && !root.bottomBar && !root.rightBar && !root.rightEdgeOccupied && root.moldingSize > 0
+      x: root.effectiveFrameWidth - (root.t + root.moldingSize) * root.edgeProgress
+      y: parent.height - (root.t + root.moldingSize) * root.edgeProgress
+      width: root.moldingSize
+      height: root.moldingSize
       asynchronous: false
       antialiasing: true
       opacity: root.frameAlpha
@@ -245,36 +244,36 @@ Item {
       ShapePath {
         fillColor: root.solidFrameColor
         strokeWidth: 0
-        startX: root.cornerSize
-        startY: root.cornerSize
+        startX: root.moldingSize
+        startY: root.moldingSize
 
         PathLine {
           x: 0
-          y: root.cornerSize
+          y: root.moldingSize
         }
         PathCubic {
-          x: root.cornerSize
+          x: root.moldingSize
           y: 0
-          control1X: root.cornerSize * (1 - root.curveKappa)
-          control1Y: root.cornerSize
-          control2X: root.cornerSize
-          control2Y: root.cornerSize * (1 - root.curveKappa)
+          control1X: root.moldingSize * (1 - root.curveKappa)
+          control1Y: root.moldingSize
+          control2X: root.moldingSize
+          control2Y: root.moldingSize * (1 - root.curveKappa)
         }
         PathLine {
-          x: root.cornerSize
-          y: root.cornerSize
+          x: root.moldingSize
+          y: root.moldingSize
         }
       }
     }
 
     Shape {
-      id: fullFrameBottomLeftCorner
+      id: fullFrameBottomLeftMolding
 
-      visible: root.fullFrame && root.cornerPieces && !root.bottomBar && root.leftEdgeOccupied && root.sidebarCornerVisible && root.cornerSize > 0
+      visible: root.fullFrame && root.moldingPieces && !root.bottomBar && root.leftEdgeOccupied && root.sidebarMoldingVisible && root.moldingSize > 0
       x: root.sidebarX + root.sidebarWidth
-      y: parent.height - (root.t + root.cornerSize) * root.edgeProgress
-      width: root.cornerSize
-      height: root.cornerSize
+      y: parent.height - (root.t + root.moldingSize) * root.edgeProgress
+      width: root.moldingSize
+      height: root.moldingSize
       asynchronous: false
       antialiasing: true
       opacity: root.frameAlpha
@@ -284,35 +283,35 @@ Item {
         fillColor: root.solidFrameColor
         strokeWidth: 0
         startX: 0
-        startY: root.cornerSize
+        startY: root.moldingSize
 
         PathLine {
-          x: root.cornerSize
-          y: root.cornerSize
+          x: root.moldingSize
+          y: root.moldingSize
         }
         PathCubic {
           x: 0
           y: 0
-          control1X: root.cornerSize * (1 - root.curveKappa)
-          control1Y: root.cornerSize
+          control1X: root.moldingSize * (1 - root.curveKappa)
+          control1Y: root.moldingSize
           control2X: 0
-          control2Y: root.cornerSize * (1 - root.curveKappa)
+          control2Y: root.moldingSize * (1 - root.curveKappa)
         }
         PathLine {
           x: 0
-          y: root.cornerSize
+          y: root.moldingSize
         }
       }
     }
 
     Shape {
-      id: fullFrameBottomLeftEdgeCorner
+      id: fullFrameBottomLeftEdgeMolding
 
-      visible: root.fullFrame && root.cornerPieces && !root.bottomBar && !root.leftBar && !root.leftEdgeOccupied && root.cornerSize > 0
-      x: -root.cornerSize + (root.t + root.cornerSize) * root.edgeProgress
-      y: parent.height - (root.t + root.cornerSize) * root.edgeProgress
-      width: root.cornerSize
-      height: root.cornerSize
+      visible: root.fullFrame && root.moldingPieces && !root.bottomBar && !root.leftBar && !root.leftEdgeOccupied && root.moldingSize > 0
+      x: -root.moldingSize + (root.t + root.moldingSize) * root.edgeProgress
+      y: parent.height - (root.t + root.moldingSize) * root.edgeProgress
+      width: root.moldingSize
+      height: root.moldingSize
       asynchronous: false
       antialiasing: true
       opacity: root.frameAlpha
@@ -322,23 +321,23 @@ Item {
         fillColor: root.solidFrameColor
         strokeWidth: 0
         startX: 0
-        startY: root.cornerSize
+        startY: root.moldingSize
 
         PathLine {
-          x: root.cornerSize
-          y: root.cornerSize
+          x: root.moldingSize
+          y: root.moldingSize
         }
         PathCubic {
           x: 0
           y: 0
-          control1X: root.cornerSize * (1 - root.curveKappa)
-          control1Y: root.cornerSize
+          control1X: root.moldingSize * (1 - root.curveKappa)
+          control1Y: root.moldingSize
           control2X: 0
-          control2Y: root.cornerSize * (1 - root.curveKappa)
+          control2Y: root.moldingSize * (1 - root.curveKappa)
         }
         PathLine {
           x: 0
-          y: root.cornerSize
+          y: root.moldingSize
         }
       }
     }

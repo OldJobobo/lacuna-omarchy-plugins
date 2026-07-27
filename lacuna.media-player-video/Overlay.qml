@@ -270,6 +270,18 @@ Item {
         outputDiagnostics(String(stage || "loading-renderer")))
   }
 
+  function resolveFrameGeometryRevision() {
+    if (root.shell && root.shell.bar && root.shell.bar.lacunaFrameGeometryRevision !== undefined)
+      return Number(root.shell.bar.lacunaFrameGeometryRevision) || 0
+    return 0
+  }
+
+  function resolveFrameGeometryKey() {
+    if (root.shell && root.shell.bar && root.shell.bar.lacunaFrameGeometryKey !== undefined)
+      return String(root.shell.bar.lacunaFrameGeometryKey || "")
+    return ""
+  }
+
   function resolveFrameRect(screen) {
     if (root.shell && root.shell.bar && typeof root.shell.bar.lacunaFrameContentRect === "function") {
       var rect = root.shell.bar.lacunaFrameContentRect(screen)
@@ -906,7 +918,13 @@ Item {
 
       required property var modelData
       readonly property bool targetMatched: root.outputMatches(modelData)
-      readonly property var frameRect: root.resolveFrameRect(modelData)
+      readonly property var frameRect: {
+        root.resolveFrameGeometryKey()
+        root.resolveFrameGeometryRevision()
+        modelData.width
+        modelData.height
+        return root.resolveFrameRect(modelData)
+      }
       readonly property bool renderable: targetMatched && root.wallpaperLayerVisible
 
       screen: modelData

@@ -9,7 +9,7 @@ Item {
 
   // Keep this version separate from plugin manifest schemaVersion values. It
   // describes the on-disk Lacuna runtime settings contract only.
-  readonly property int settingsSchemaVersion: 1
+  readonly property int settingsSchemaVersion: 2
   readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy/lacuna"
   readonly property string settingsFile: configDir + "/settings.json"
   readonly property bool primarySettingsService: String(Qt.resolvedUrl(".")).indexOf("/lacuna.state/") >= 0
@@ -89,6 +89,9 @@ Item {
         defaultMode: "off",
         collapsed: false,
         exclusive: true,
+        connectorPieces: true,
+        // One-release downgrade alias. It follows connectorPieces only; once
+        // frame and connector settings diverge a v1 reader cannot preserve both.
         cornerPieces: true,
         monitorPolicy: "auto",
         monitorNames: []
@@ -150,6 +153,9 @@ Item {
         reserveMode: "auto",
         shadow: false,
         border: false,
+        moldingPieces: true,
+        // One-release schema-v2 alias for builds that used this interim name.
+        roundedContentCorners: true,
         thickness: 8,
         radius: 14,
         shadowDirection: "bottom_right",
@@ -198,6 +204,17 @@ Item {
     value = value && typeof value === "object" ? value : ({})
     var next = defaultData()
     if (source && typeof source === "object") {
+      var sourceSidebar = source.sidebar && typeof source.sidebar === "object" ? source.sidebar : ({})
+      var sourceFrame = source.frame && typeof source.frame === "object" ? source.frame : ({})
+      var legacyCornerPieces = sourceSidebar.cornerPieces !== false
+      next.sidebar.connectorPieces = typeof sourceSidebar.connectorPieces === "boolean"
+        ? sourceSidebar.connectorPieces : legacyCornerPieces
+      next.sidebar.cornerPieces = next.sidebar.connectorPieces
+      var legacyFrameMolding = typeof sourceFrame.roundedContentCorners === "boolean"
+        ? sourceFrame.roundedContentCorners : legacyCornerPieces
+      next.frame.moldingPieces = typeof sourceFrame.moldingPieces === "boolean"
+        ? sourceFrame.moldingPieces : legacyFrameMolding
+      next.frame.roundedContentCorners = next.frame.moldingPieces
       preserveUnknownJson(next, source, {
         version: true,
         designStyle: true,
@@ -274,16 +291,20 @@ Item {
       next.mediaProviders = normalizeMediaProviders(source.mediaProviders || source.providers)
       next.mediaPlayer = normalizeMediaPlayer(source.mediaPlayer || source.player)
       if (source.sidebar && typeof source.sidebar === "object") {
-        next.sidebar.defaultMode = normalizeSidebarDefaultMode(source.sidebar.defaultMode)
-        next.sidebar.collapsed = source.sidebar.collapsed === true
-        next.sidebar.exclusive = source.sidebar.exclusive !== false
-        next.sidebar.cornerPieces = source.sidebar.cornerPieces !== false
-        next.sidebar.monitorPolicy = normalizeSidebarMonitorPolicy(source.sidebar.monitorPolicy)
-        next.sidebar.monitorNames = normalizeSidebarMonitorNames(source.sidebar.monitorNames)
-        preserveUnknownJson(next.sidebar, source.sidebar, {
+        next.sidebar.defaultMode = normalizeSidebarDefaultMode(sourceSidebar.defaultMode)
+        next.sidebar.collapsed = sourceSidebar.collapsed === true
+        next.sidebar.exclusive = sourceSidebar.exclusive !== false
+        next.sidebar.connectorPieces = typeof sourceSidebar.connectorPieces === "boolean"
+          ? sourceSidebar.connectorPieces : legacyCornerPieces
+        // Persist the legacy v1 alias as the sidebar connector value only.
+        next.sidebar.cornerPieces = next.sidebar.connectorPieces
+        next.sidebar.monitorPolicy = normalizeSidebarMonitorPolicy(sourceSidebar.monitorPolicy)
+        next.sidebar.monitorNames = normalizeSidebarMonitorNames(sourceSidebar.monitorNames)
+        preserveUnknownJson(next.sidebar, sourceSidebar, {
           defaultMode: true,
           collapsed: true,
           exclusive: true,
+          connectorPieces: true,
           cornerPieces: true,
           monitorPolicy: true,
           monitorNames: true
@@ -292,21 +313,28 @@ Item {
       next.backgroundEffects = normalizeBackgroundEffects(source.backgroundEffects || source.bgEffects)
       next.backgroundVignette = normalizeBackgroundVignette(source.backgroundVignette || source.bgVignette || source.vignette)
       if (source.frame && typeof source.frame === "object") {
-        next.frame.mode = normalizeFrameMode(source.frame.mode)
-        next.frame.reserveMode = normalizeFrameReserveMode(source.frame.reserveMode)
-        next.frame.shadow = source.frame.shadow === true
-        next.frame.border = value.frame.border === true
-        next.frame.thickness = boundedInt(source.frame.thickness, 8, 2, 24)
-        next.frame.radius = boundedInt(source.frame.radius, 14, 0, 32)
-        next.frame.shadowDirection = normalizeShadowDirection(source.frame.shadowDirection)
+        next.frame.mode = normalizeFrameMode(sourceFrame.mode)
+        next.frame.reserveMode = normalizeFrameReserveMode(sourceFrame.reserveMode)
+        next.frame.shadow = sourceFrame.shadow === true
+        next.frame.border = sourceFrame.border === true
+        next.frame.moldingPieces = typeof sourceFrame.moldingPieces === "boolean"
+          ? sourceFrame.moldingPieces : legacyFrameMolding
+        // Temporary compatibility alias; future black outer corner pieces are
+        // a separate feature and are intentionally not represented here.
+        next.frame.roundedContentCorners = next.frame.moldingPieces
+        next.frame.thickness = boundedInt(sourceFrame.thickness, 8, 2, 24)
+        next.frame.radius = boundedInt(sourceFrame.radius, 14, 0, 32)
+        next.frame.shadowDirection = normalizeShadowDirection(sourceFrame.shadowDirection)
         var offset = shadowOffsetFor(next.frame.shadowDirection)
         next.frame.shadowOffsetX = boundedInt(source.frame.shadowOffsetX, offset.x, -8, 8)
         next.frame.shadowOffsetY = boundedInt(source.frame.shadowOffsetY, offset.y, -8, 8)
-        preserveUnknownJson(next.frame, source.frame, {
+        preserveUnknownJson(next.frame, sourceFrame, {
           mode: true,
           reserveMode: true,
           shadow: true,
           border: true,
+          moldingPieces: true,
+          roundedContentCorners: true,
           thickness: true,
           radius: true,
           shadowDirection: true,
@@ -338,6 +366,13 @@ Item {
       next.ignoreBackgroundAnimationLayer = value.ignoreBackgroundAnimationLayer === true
         || value.ignoreBackgroundAnimations === true
         || value.ignoreAnimationLayer === true
+      preserveUnknownJson(next, value, {
+        enabled: true,
+        intensity: true,
+        ignoreBackgroundAnimationLayer: true,
+        ignoreBackgroundAnimations: true,
+        ignoreAnimationLayer: true
+      })
     }
 
     return next
@@ -347,6 +382,10 @@ Item {
     var next = defaultData().power
     if (value && typeof value === "object") {
       next.instantRestart = value.instantRestart === true || value.instantReboot === true
+      preserveUnknownJson(next, value, {
+        instantRestart: true,
+        instantReboot: true
+      })
     }
     return next
   }
@@ -356,6 +395,10 @@ Item {
     if (value && typeof value === "object") {
       var surface = String(value.surface || value.mode || "").toLowerCase()
       next.surface = surface === "window" || surface === "floating" || surface === "panel" ? "window" : "flyout"
+      preserveUnknownJson(next, value, {
+        surface: true,
+        mode: true
+      })
     }
     return next
   }
@@ -370,6 +413,20 @@ Item {
         cookiesFromBrowser: String(youtube.cookiesFromBrowser || ""),
         cookiesFile: String(youtube.cookiesFile || legacyYoutubeMusic.authPath || "")
       }
+      // Preserve future legacy-provider fields while migrating them into the
+      // canonical youtube object. Apply canonical fields second so they win
+      // unknown-key collisions as well as the documented known-key aliases.
+      preserveUnknownJson(next.youtube, legacyYoutubeMusic, {
+        enabled: true,
+        authPath: true,
+        cookiesFromBrowser: true,
+        cookiesFile: true
+      })
+      preserveUnknownJson(next.youtube, youtube, {
+        enabled: true,
+        cookiesFromBrowser: true,
+        cookiesFile: true
+      })
       var jellyfin = value.jellyfin && typeof value.jellyfin === "object" ? value.jellyfin : ({})
       next.jellyfin = {
         enabled: jellyfin.enabled === true,
@@ -378,6 +435,18 @@ Item {
         userId: String(jellyfin.userId || ""),
         preferredAudioLanguage: normalizeJellyfinAudioLanguage(jellyfin.preferredAudioLanguage)
       }
+      preserveUnknownJson(next.jellyfin, jellyfin, {
+        enabled: true,
+        serverUrl: true,
+        apiKey: true,
+        userId: true,
+        preferredAudioLanguage: true
+      })
+      preserveUnknownJson(next, value, {
+        youtube: true,
+        youtubeMusic: true,
+        jellyfin: true
+      })
     }
     return next
   }
@@ -398,11 +467,17 @@ Item {
     var presentationMode = String(source.presentationMode || defaults.presentationMode).toLowerCase()
     var videoQuality = String(source.videoQuality || defaults.videoQuality).toLowerCase()
     var providerFilter = String(source.providerFilter || defaults.providerFilter).toLowerCase()
-    return {
+    var next = {
       presentationMode: presentationMode === "inline" || presentationMode === "background" ? presentationMode : "auto",
       videoQuality: videoQuality === "stable" ? "stable" : "adaptive",
       providerFilter: providerFilter === "youtube" || providerFilter === "jellyfin" ? providerFilter : "all"
     }
+    preserveUnknownJson(next, source, {
+      presentationMode: true,
+      videoQuality: true,
+      providerFilter: true
+    })
+    return next
   }
 
   function normalizeBackgroundEffects(value) {
@@ -431,6 +506,16 @@ Item {
       for (var effectId in sourceEffects) {
         next.effects[effectId] = normalizeBackgroundEffectConfig(effectId, sourceEffects[effectId])
       }
+      preserveUnknownJson(next, value, {
+        enabled: true,
+        foregroundOverlay: true,
+        opacity: true,
+        activeEffect: true,
+        activeEffects: true,
+        selectedEffect: true,
+        currentEffect: true,
+        effects: true
+      })
     }
 
     if (!next.effects.trackingLines) next.effects.trackingLines = normalizeBackgroundEffectConfig("trackingLines", true)
@@ -474,9 +559,30 @@ Item {
         next.mouseReactive = value.mouseReactive !== false
         next.mouseInfluence = boundedReal(value.mouseInfluence, defaults.mouseInfluence, 0, 1)
       }
+      preserveUnknownJson(next, value, backgroundEffectKnownKeys(effectId))
     }
 
     return next
+  }
+
+  function backgroundEffectKnownKeys(effectId) {
+    var known = { enabled: true }
+    if (effectId === "filmGrain") {
+      known.intensity = true
+      known.speed = true
+      known.grainCount = true
+      known.grainSize = true
+      known.accentBlend = true
+    } else if (effectId === "dustMotes") {
+      known.intensity = true
+      known.speed = true
+      known.moteCount = true
+      known.moteSize = true
+      known.accentBlend = true
+      known.mouseReactive = true
+      known.mouseInfluence = true
+    }
+    return known
   }
 
   function normalizeBackgroundEffectStack(value, fallback) {
@@ -606,19 +712,30 @@ Item {
     if (themeName === "" || !isFinite(sizeHorizontal) || !isFinite(sizeVertical)) return null
     if (sizeHorizontal <= 0 || sizeVertical <= 0) return null
 
-    return {
+    var next = {
       themeName: themeName,
       sizeHorizontal: sizeHorizontal,
       sizeVertical: sizeVertical
     }
+    preserveUnknownJson(next, value, {
+      themeName: true,
+      sizeHorizontal: true,
+      sizeVertical: true
+    })
+    return next
   }
 
   function normalizeSizeTransition(value) {
     if (!value || typeof value !== "object") return defaultData().sizeTransition
-    return {
+    var next = {
       holdCompact: value.holdCompact === true,
       holdUntil: boundedInt(value.holdUntil, 0, 0, 9999999999999)
     }
+    preserveUnknownJson(next, value, {
+      holdCompact: true,
+      holdUntil: true
+    })
+    return next
   }
 
   function normalizeCustomQuickLaunchApps(value) {
@@ -664,6 +781,12 @@ Item {
       var id = String(value[role] || "").trim()
       next[role] = id === "" ? "system" : id
     }
+    preserveUnknownJson(next, value, {
+      files: true,
+      editor: true,
+      email: true,
+      discord: true
+    })
 
     return next
   }
@@ -679,6 +802,11 @@ Item {
     var next = defaultData().designStyles
     if (!value || typeof value !== "object") return next
 
+    preserveUnknownJson(next, value, {
+      lacuna: true,
+      omarchy: true,
+      material: true
+    })
     var styles = ["lacuna", "omarchy", "material"]
     for (var i = 0; i < styles.length; i++) {
       var style = styles[i]
@@ -727,6 +855,11 @@ Item {
         if (entry !== null) next[section].push(entry)
       }
     }
+    preserveUnknownJson(next, value, {
+      left: true,
+      center: true,
+      right: true
+    })
 
     return next
   }
@@ -950,7 +1083,16 @@ Item {
     target: root.settingsIpcTarget
 
     function status(): string {
-      return JSON.stringify({ ready: root.hasLoaded, settingsFile: root.settingsFile })
+      var sidebar = root.data && root.data.sidebar ? root.data.sidebar : ({})
+      var frame = root.data && root.data.frame ? root.data.frame : ({})
+      return JSON.stringify({
+        ready: root.hasLoaded,
+        settingsFile: root.settingsFile,
+        schemaVersion: root.settingsSchemaVersion,
+        sidebarConnectorPieces: sidebar.connectorPieces !== false,
+        frameMoldingPieces: frame.moldingPieces !== false,
+        frameRoundedContentCorners: frame.moldingPieces !== false
+      })
     }
 
     function patchBarSize(payload: string): string {

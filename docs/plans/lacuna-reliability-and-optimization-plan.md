@@ -1,6 +1,6 @@
 # Lacuna Reliability And Optimization Plan
 
-Status: proposed execution plan; investigation complete, implementation not started
+Status: Phases 0–3 implemented and live-verified; Phase 4 is the next target
 
 Date: 2026-07-26
 
@@ -307,7 +307,7 @@ Adopt narrow settings instead of one overloaded flag:
     "connectorPieces": true
   },
   "frame": {
-    "roundedContentCorners": true,
+    "moldingPieces": true,
     "radius": 14
   }
 }
@@ -323,7 +323,7 @@ vendored consumers synchronized with the documented radius table.
 - `sidebarConnectorWidth = sidebar.connectorPieces ? designTokens.joinRadius : 0`
 - `sidebarConnectorOverlap = sidebar.connectorPieces ? designTokens.connectorOverlap : 0`
 - `attachedFlyoutRadius = designTokens.panelRadius`
-- `frameContentRadius = frame.roundedContentCorners ? normalizedFrameRadius : 0`
+- `frameContentRadius = frame.moldingPieces ? normalizedFrameRadius : 0`
 - Configured `frame.radius: 0` remains zero.
 - Alternate style and density tokens determine numeric radii; booleans only enable/disable their own family.
 
@@ -334,10 +334,10 @@ vendored consumers synchronized with the documented radius table.
    future-field parity tests.
 2. Bump the canonical settings schema and sync the vendored menu copy.
 3. Precedence: new key → legacy key → default.
-4. Legacy explicit false maps to both new sidebar-connector and frame-rounded settings to preserve the initial migrated appearance.
+4. Legacy explicit false maps to both new sidebar-connector and frame-molding settings to preserve the initial migrated appearance.
 5. Missing/true maps both to true.
 6. For one release, write legacy `sidebar.cornerPieces` as an alias of
-   `sidebar.connectorPieces` only. Once connector and frame values diverge,
+   `sidebar.connectorPieces` only. Once connector and frame-molding values diverge,
    downgrade is necessarily lossy; document and test the rollback conversion
    rather than claiming both appearances survive.
 7. Change `SidebarState.save()` to merge, not reconstruct, the sidebar object.

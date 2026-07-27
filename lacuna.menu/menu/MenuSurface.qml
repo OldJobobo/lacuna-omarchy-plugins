@@ -23,7 +23,7 @@ Item {
   property bool fullFrame: false
   property bool backgroundVisible: true
   property int frameThickness: 8
-  property bool cornerPieces: true
+  property bool frameMoldingPieces: true
   property bool openFromRight: false
   property color panelColor: "#101315"
   property color foreground: "#d8dee9"
@@ -65,7 +65,7 @@ Item {
     Shape {
       id: barJoinShape
 
-      visible: root.backgroundVisible && root.cornerPieces && root.bodyRightInset > 0
+      visible: root.backgroundVisible && root.frameMoldingPieces && root.bodyRightInset > 0
       width: root.bodyRightInset
       height: Math.max(0, (root.fullFrame ? root.bottomJoinTop : surface.height) - root.joinTop)
       x: root.panelWidth
@@ -106,7 +106,7 @@ Item {
     Shape {
       id: bottomFrameJoinShape
 
-      visible: root.backgroundVisible && root.fullFrame && root.cornerPieces && root.bodyRightInset > 0
+      visible: root.backgroundVisible && root.fullFrame && root.frameMoldingPieces && root.bodyRightInset > 0
       width: root.bodyRightInset
       height: root.bodyRightInset
       x: root.panelWidth
@@ -151,7 +151,7 @@ Item {
     }
 
     MouseArea {
-      enabled: root.cornerPieces && root.bodyRightInset > 0
+      enabled: root.frameMoldingPieces && root.bodyRightInset > 0
       x: root.panelWidth
       y: root.bodyTop
       width: root.bodyRightInset
