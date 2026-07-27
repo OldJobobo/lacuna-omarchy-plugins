@@ -317,6 +317,24 @@ Item {
     return root.registry.jellyfinProviderEnabled ? "Jellyfin on" : "Jellyfin off"
   }
 
+  function settingsPersistenceName() {
+    var state = String(root.registry.settingsPersistenceState || "idle")
+    if (state === "saving") return "Saving"
+    if (state === "saved") return "Saved"
+    if (state === "failed") return "Failed"
+    if (state === "retrying") return "Retrying"
+    return "Idle"
+  }
+
+  function settingsPersistenceHint() {
+    if (root.registry.settingsPersistenceError !== "") return root.registry.settingsPersistenceError
+    if (root.registry.settingsPersistenceState === "saved")
+      return "Revision " + root.registry.settingsConfirmedRevision + " is durably stored"
+    if (root.registry.settingsPersistenceState === "saving" || root.registry.settingsPersistenceState === "retrying")
+      return "Writing revision " + root.registry.settingsRequestedRevision
+    return "Lacuna runtime settings persistence"
+  }
+
   function navRow(icon, label, hint, sectionId, tone, value) {
     return row(icon, label, hint, value || "", tone || "lacuna", "", "nav", false, [], "", "", sectionId)
   }
@@ -464,6 +482,7 @@ Item {
     if (sectionId === "runtime") {
       return [
         section("Lacuna Maintenance", "Plugin-owned tools and cached app metadata.", "lacuna"),
+        row("settings", "Settings Persistence", settingsPersistenceHint(), settingsPersistenceName(), root.registry.settingsPersistenceState === "failed" ? "danger" : "lacuna", root.registry.settingsPersistenceState === "failed" ? "retry-settings-save" : "", root.registry.settingsPersistenceState === "failed" ? "button" : "value"),
         row("refresh", "Reload App Catalog", "Rescan desktop launchers used by Lacuna launch rows", "Reload", "lacuna", "reload-apps", "button"),
         commandRow("edit", "Open Plugin Source", "Edit the Lacuna plugin repository", root.registry.editPluginCommand(), "lacuna"),
         section("Menu Safety", "Controls Lacuna's confirmation step before system restart actions.", "danger"),

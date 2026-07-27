@@ -50,6 +50,10 @@ Item {
   property var customQuickLaunchApps: []
   property var customQuickLaunchNames: ({})
   property var preferredApps: ({})
+  property string settingsPersistenceState: "idle"
+  property string settingsPersistenceError: ""
+  property int settingsRequestedRevision: 0
+  property int settingsConfirmedRevision: 0
 
   onBarWidgetRegistryChanged: catalogRevision++
   // The app-backed views (quick launch, daily launch) depend on this data,

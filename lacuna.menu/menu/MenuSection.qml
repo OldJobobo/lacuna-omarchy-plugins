@@ -100,7 +100,7 @@ Item {
     fontFamily: root.fontFamily
     font.pixelSize: typeTokens.textHint
     font.weight: Font.DemiBold
-    font.letterSpacing: tokens.trackingSection
+    font.letterSpacing: typeTokens.trackingSection
   }
 
   Row {

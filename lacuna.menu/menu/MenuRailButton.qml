@@ -28,33 +28,18 @@ LacunaRect {
   height: implicitHeight
   radius: buttonRadius
   clip: true
-  activeFocusOnTab: !disabled
-  border.width: activeFocus ? 1 : 0
-  border.color: activeFocus ? hoverAccent : "transparent"
+  activeFocusOnTab: false
+  border.width: 0
+  border.color: "transparent"
 
   Accessible.role: Accessible.Button
   Accessible.name: accessibleName
   Accessible.description: accessibleDescription
-  Accessible.focusable: !disabled
+  Accessible.focusable: false
   Accessible.onPressAction: root.activate()
 
   function activate() {
     if (!disabled) triggered()
-  }
-
-  Keys.onReturnPressed: function(event) {
-    root.activate()
-    event.accepted = true
-  }
-
-  Keys.onEnterPressed: function(event) {
-    root.activate()
-    event.accepted = true
-  }
-
-  Keys.onSpacePressed: function(event) {
-    root.activate()
-    event.accepted = true
   }
 
   LacunaTablerIcon {

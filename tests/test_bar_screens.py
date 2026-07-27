@@ -104,13 +104,15 @@ class BarScreenModelTests(unittest.TestCase):
 
     def test_widget_polish_keeps_state_signals_bounded(self):
         stats = (ROOT / "lacuna.system-stats" / "Widget.qml").read_text(encoding="utf-8")
+        stats_service = (ROOT / "lacuna.system-stats" / "Service.qml").read_text(encoding="utf-8")
         workspaces = (ROOT / "lacuna.workspaces" / "Widget.qml").read_text(encoding="utf-8")
         media = (ROOT / "lacuna.mpris" / "Widget.qml").read_text(encoding="utf-8")
 
         self.assertIn("readonly property int historyLimit: 60", stats)
-        self.assertIn("slice(-historyLimit)", stats)
+        self.assertIn("slice(-historyLimit)", stats_service)
         for history in ("cpuHistory", "memoryHistory", "diskHistory"):
-            self.assertIn(f"property var {history}: []", stats)
+            self.assertIn(f"property var {history}: []", stats_service)
+            self.assertIn(f"readonly property var {history}: statsService ? statsService.{history} : []", stats)
         self.assertIn("readonly property bool workspaceOccupied", workspaces)
         self.assertIn('sweepActive: root.sweepOnPlaying && root.cssClass === "playing"', media)
 

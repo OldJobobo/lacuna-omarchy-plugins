@@ -19,6 +19,21 @@ ShellRoot {{
   property real temperatureWidthAtMinimum: 0
 
   QtObject {{
+    id: mockStats
+    property int cpuPercent: 0
+    property int memoryPercent: 0
+    property string diskText: "--"
+    property int diskPercent: 0
+    property var snapshot: ({{}})
+    property var cpuHistory: []
+    property var memoryHistory: []
+    property var diskHistory: []
+    function subscribe(consumer) {{}}
+    function unsubscribe(consumer) {{}}
+    function refresh() {{}}
+  }}
+
+  QtObject {{
     id: mockBar
     property bool vertical: false
     property int barSize: 30
@@ -36,15 +51,16 @@ ShellRoot {{
     var temperatureComponent = Qt.createComponent("{qml_url('lacuna.temperature/Widget.qml')}", Component.PreferSynchronous)
     stats = statsComponent.createObject(root, {{
       bar: mockBar,
+      statsService: mockStats,
       settings: {{ showLabels: true, interval: 999999 }}
     }})
     temperature = temperatureComponent.createObject(root, {{
       bar: mockBar,
       settings: {{ showText: true, interval: 999999 }}
     }})
-    stats.diskText = "9%"
-    stats.memoryPercent = 9
-    stats.cpuPercent = 9
+    mockStats.diskText = "9%"
+    mockStats.memoryPercent = 9
+    mockStats.cpuPercent = 9
     temperature.parseTemperature(JSON.stringify({{ primary: {{ fahrenheit: 9 }} }}))
     settle.restart()
   }}
@@ -56,12 +72,12 @@ ShellRoot {{
       root.widthBeforeHistory = stats.implicitWidth
       root.statsWidthAtMinimum = stats.implicitWidth
       root.temperatureWidthAtMinimum = temperature.implicitWidth
-      stats.cpuHistory = [5, 20, 40, 80]
-      stats.memoryHistory = [20, 30, 40, 50]
-      stats.diskHistory = [60, 61, 62, 63]
-      stats.diskText = "100%"
-      stats.memoryPercent = 100
-      stats.cpuPercent = 100
+      mockStats.cpuHistory = [5, 20, 40, 80]
+      mockStats.memoryHistory = [20, 30, 40, 50]
+      mockStats.diskHistory = [60, 61, 62, 63]
+      mockStats.diskText = "100%"
+      mockStats.memoryPercent = 100
+      mockStats.cpuPercent = 100
       temperature.parseTemperature(JSON.stringify({{ primary: {{ fahrenheit: 100 }} }}))
       finish.restart()
     }}

@@ -128,6 +128,66 @@ ShellRoot {{
         self.assertTrue(row["reducedInactive"], output[-2000:])
         self.assertTrue(row["connectorHiddenAtZero"], output[-2000:])
 
+    def test_transactional_input_masks_empty_and_track_effective_geometry(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var host: null
+
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.menu/menu/LacunaPanelHost.qml')}", Component.PreferSynchronous)
+    if (component.status !== Component.Ready) {{
+      console.log("BEHAVE_ERR " + component.errorString())
+      Qt.quit()
+      return
+    }}
+    host = component.createObject(root, {{
+      panelWidth: 248,
+      sidebarHeight: 900,
+      flyoutRenderable: true,
+      flyoutProgress: 0.5,
+      geometryTransitionEnabled: false
+    }})
+    host.requestPanelGeometry(host.makePanelGeometry(60, 560, 620, 18, 33, false), "open")
+    var middle = {{
+      connectorWidth: host.connectorMaskWidth,
+      connectorHeight: host.connectorMaskHeight,
+      flyoutWidth: host.flyoutMaskWidth,
+      flyoutHeight: host.flyoutMaskHeight
+    }}
+    host.flyoutProgress = 0
+    var closedProgress = {{ connectorWidth: host.connectorMaskWidth, flyoutWidth: host.flyoutMaskWidth }}
+    host.flyoutRenderable = false
+    var empty = {{
+      connectorWidth: host.connectorMaskWidth,
+      connectorHeight: host.connectorMaskHeight,
+      flyoutWidth: host.flyoutMaskWidth,
+      flyoutHeight: host.flyoutMaskHeight
+    }}
+    console.log("BEHAVE " + JSON.stringify({{ middle: middle, closedProgress: closedProgress, empty: empty }}))
+    finish.start()
+  }}
+
+  Timer {{ id: finish; interval: 20; onTriggered: Qt.quit() }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        row = parse_behave(output)[-1]
+        self.assertEqual(18, row["middle"]["connectorWidth"])
+        self.assertEqual(656, row["middle"]["connectorHeight"])
+        self.assertEqual(280, row["middle"]["flyoutWidth"])
+        self.assertEqual(620, row["middle"]["flyoutHeight"])
+        self.assertEqual(18, row["closedProgress"]["connectorWidth"])
+        self.assertEqual(0, row["closedProgress"]["flyoutWidth"])
+        self.assertEqual(
+            {"connectorWidth": 0, "connectorHeight": 0, "flyoutWidth": 0, "flyoutHeight": 0},
+            row["empty"],
+        )
+
     def test_persistent_sidebar_rejects_external_close_without_hiding(self):
         qml = f"""
 import Quickshell

@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class QmlAccessibilitySourceContracts(unittest.TestCase):
-    def test_media_flyout_exposes_keyboard_and_semantic_controls(self):
+    def test_media_flyout_exposes_text_entry_and_semantic_controls(self):
         qml = (ROOT / "lacuna.menu/menu/FlyoutMediaPlayerContent.qml").read_text(encoding="utf-8")
         sidebar_tile = (ROOT / "lacuna.menu/menu/MediaPlayerTile.qml").read_text(encoding="utf-8")
         rail = (ROOT / "lacuna.menu/settings/SettingsRail.qml").read_text(encoding="utf-8")
@@ -26,9 +26,10 @@ class QmlAccessibilitySourceContracts(unittest.TestCase):
         ]:
             self.assertIn(snippet, qml)
 
-        self.assertIn("activeFocusOnTab: true", rail)
+        self.assertIn("activeFocusOnTab: false", rail)
         self.assertIn("Accessible.role: Accessible.Button", rail)
-        self.assertIn("Keys.onReturnPressed: root.sectionSelected(sectionId)", rail)
+        self.assertNotIn("Keys.onReturnPressed: root.sectionSelected(sectionId)", rail)
+        self.assertNotIn("activeFocusOnTab: true", qml)
         self.assertIn("id: transportControls", qml)
         self.assertIn('accessibleName: "Previous track or restart"', qml)
         self.assertIn('accessibleName: "Next track"', qml)
@@ -36,7 +37,7 @@ class QmlAccessibilitySourceContracts(unittest.TestCase):
         self.assertIn("service.previousOrRestart()", sidebar_tile)
         self.assertIn("service.next()", sidebar_tile)
 
-    def test_media_search_alone_enables_panel_keyboard_input(self):
+    def test_direct_text_surfaces_enable_bounded_panel_keyboard_input(self):
         panel = (ROOT / "lacuna.menu/menu/LacunaPanelWindow.qml").read_text(encoding="utf-8")
         menu = (ROOT / "lacuna.menu/menu/MenuWindow.qml").read_text(encoding="utf-8")
 
@@ -45,28 +46,59 @@ class QmlAccessibilitySourceContracts(unittest.TestCase):
             panel,
         )
         self.assertIn("root.dismissActive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None", panel)
-        self.assertIn(
-            "keyboardInputActive: root.lacunaEnabled && root.activeFlyoutMediaPlayer && root.flyoutInteractiveOnScreen(modelData)",
-            menu,
-        )
+        self.assertIn("root.activeFlyoutMediaPlayer || root.activeFlyoutAppPicker", menu)
+        self.assertIn("menuContent.quickLaunchRenameOpen", menu)
         self.assertIn("active: root.focusGrabActive", panel)
-        self.assertIn("if (root.dismissActive) root.focusGrabActive = true", panel)
+        self.assertIn("root.focusSessionRevision += 1", panel)
+        self.assertIn("root.focusGrabActive = true", panel)
         self.assertIn('sequence: "Escape"', panel)
-        self.assertIn("onActivated: root.dismissRequested()", panel)
+        self.assertIn('sequence: "Backspace"', panel)
+        self.assertIn("!root.textEditingActive", panel)
+        self.assertIn('onActivated: root.requestDismiss("escape")', panel)
+        self.assertIn('onActivated: root.requestDismiss("backspace")', panel)
 
-    def test_shared_buttons_are_keyboard_focusable_and_accessible(self):
+    def test_passive_sidebar_has_no_general_keyboard_navigation(self):
+        content = (ROOT / "lacuna.menu/menu/MenuContent.qml").read_text(encoding="utf-8")
+        self.assertIn("focus: false", content)
+        self.assertNotIn("property int focusedIndex", content)
+        self.assertNotIn("function moveFocus", content)
+        self.assertNotIn("function activateFocused", content)
+        self.assertNotIn("Keys.onPressed", content)
+        self.assertNotIn("forceActiveFocus()\n    } else", content)
+        # Direct rename editing remains intentionally focusable.
+        self.assertIn("renameInput.forceActiveFocus()", content)
+        rail = (ROOT / "lacuna.menu/menu/MenuRailButton.qml").read_text(encoding="utf-8")
+        item = (ROOT / "lacuna.menu/modules/LacunaMenuItem.qml").read_text(encoding="utf-8")
+        self.assertIn("Accessible.role:", rail)
+        self.assertIn("Accessible.role:", item)
+
+    def test_dismissal_paths_record_focus_restore_reason(self):
+        panel = (ROOT / "lacuna.menu/menu/LacunaPanelWindow.qml").read_text(encoding="utf-8")
+        menu = (ROOT / "lacuna.menu/menu/MenuWindow.qml").read_text(encoding="utf-8")
+        for reason in ("escape", "backspace", "click-away"):
+            self.assertIn(f'"{reason}"', panel)
+        self.assertIn('focusDismissReason = "explicit-close"', menu)
+        self.assertIn('focusDismissReason = "shell-rescan"', menu)
+        self.assertIn('closeFlyouts("explicit-close")', menu)
+        self.assertIn("focusSessionReleased(dismissReason, focusSessionRevision)", panel)
+        self.assertIn('requestFlyoutFocus("settings")', menu)
+        self.assertIn('requestFlyoutFocus("shellSettings")', menu)
+        self.assertIn("settings.forceActiveFocus()", menu)
+        self.assertIn("shellSettings.forceActiveFocus()", menu)
+
+    def test_shared_buttons_are_pointer_first_and_accessible(self):
         for relative in [
             "lacuna.menu/components/LacunaIconButton.qml",
             "lacuna.menu/menu/MenuRailButton.qml",
         ]:
             qml = (ROOT / relative).read_text(encoding="utf-8")
-            self.assertIn("activeFocusOnTab: !disabled", qml, relative)
+            self.assertIn("activeFocusOnTab: false", qml, relative)
             self.assertIn("Accessible.role: Accessible.Button", qml, relative)
             self.assertIn("Accessible.name: accessibleName", qml, relative)
             self.assertIn("Accessible.onPressAction: root.activate()", qml, relative)
-            self.assertIn("Keys.onReturnPressed", qml, relative)
-            self.assertIn("Keys.onEnterPressed", qml, relative)
-            self.assertIn("Keys.onSpacePressed", qml, relative)
+            self.assertNotIn("Keys.onReturnPressed", qml, relative)
+            self.assertNotIn("Keys.onEnterPressed", qml, relative)
+            self.assertNotIn("Keys.onSpacePressed", qml, relative)
 
 
 @unittest.skipUnless(HAVE_SESSION, "needs a quickshell binary and a Wayland session")
@@ -131,7 +163,7 @@ ShellRoot {{
         self.assertEqual(row["filtered"], ["Middle"])
         self.assertEqual(row["recent"], ["Middle", "Alpha", "Zulu"])
 
-    def test_shared_icon_button_exposes_focus_and_accessibility_contract(self):
+    def test_shared_icon_button_exposes_pointer_first_accessibility_contract(self):
         qml = f"""
 import Quickshell
 import QtQuick
@@ -143,7 +175,6 @@ ShellRoot {{
   Component.onCompleted: {{
     var component = Qt.createComponent("{qml_url('lacuna.menu/components/LacunaIconButton.qml')}")
     button = component.createObject(shell, {{ accessibleName: "Close settings", icon: "x" }})
-    button.forceActiveFocus()
     console.log("BEHAVE " + JSON.stringify({{
       name: button.Accessible.name,
       focusable: button.Accessible.focusable,
@@ -159,8 +190,8 @@ ShellRoot {{
         require_no_qml_errors(output)
         row = parse_behave(output)[0]
         self.assertEqual(row["name"], "Close settings")
-        self.assertTrue(row["focusable"])
-        self.assertTrue(row["tab"])
+        self.assertFalse(row["focusable"])
+        self.assertFalse(row["tab"])
 
 
 if __name__ == "__main__":

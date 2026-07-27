@@ -8,8 +8,9 @@ PanelWindow {
 
   default property alias content: contentLayer.data
 
-  signal focusGrabCleared()
-  signal dismissRequested()
+  signal focusGrabCleared(string reason)
+  signal dismissRequested(string reason)
+  signal focusSessionReleased(string reason, int revision)
 
   property var targetScreen: null
   property bool menuOpen: false
@@ -42,16 +43,37 @@ PanelWindow {
   property bool shortcutInhibitionActive: false
   property bool dismissActive: false
   property bool focusGrabActive: false
+  property string dismissReason: "transition"
+  property int focusSessionRevision: 0
   property bool anchorRight: false
+  readonly property bool textEditingActive: focusedItemEditsText()
   property string layerNamespace: "lacuna-menu"
   readonly property bool inputActive: panelVisible
 
+  function focusedItemEditsText() {
+    var item = root.activeFocusItem
+    if (!item) return false
+    // TextInput/TextEdit expose this combination; pointer controls do not.
+    return item.cursorPosition !== undefined
+      && item.readOnly !== undefined
+      && typeof item.select === "function"
+  }
+
+  function requestDismiss(reason) {
+    dismissReason = String(reason || "explicit-close")
+    dismissRequested(dismissReason)
+  }
+
+  function releaseFocusSession() {
+    focusGrabArmTimer.stop()
+    if (!focusGrabActive) return
+    focusGrabActive = false
+    focusSessionReleased(dismissReason, focusSessionRevision)
+  }
+
   onDismissActiveChanged: {
     if (dismissActive) focusGrabArmTimer.restart()
-    else {
-      focusGrabArmTimer.stop()
-      focusGrabActive = false
-    }
+    else releaseFocusSession()
   }
 
   Timer {
@@ -59,7 +81,10 @@ PanelWindow {
     interval: 240
     repeat: false
     onTriggered: {
-      if (root.dismissActive) root.focusGrabActive = true
+      if (root.dismissActive) {
+        root.focusSessionRevision += 1
+        root.focusGrabActive = true
+      }
     }
   }
 
@@ -67,7 +92,16 @@ PanelWindow {
     sequence: "Escape"
     context: Qt.WindowShortcut
     enabled: root.dismissActive
-    onActivated: root.dismissRequested()
+    onActivated: root.requestDismiss("escape")
+  }
+
+  Shortcut {
+    sequence: "Backspace"
+    context: Qt.WindowShortcut
+    // Text editors own Backspace. Only an otherwise unconsumed Backspace
+    // dismisses the interactive flyout.
+    enabled: root.dismissActive && !root.textEditingActive
+    onActivated: root.requestDismiss("backspace")
   }
 
   visible: panelVisible || keepMapped
@@ -131,8 +165,10 @@ PanelWindow {
     active: root.focusGrabActive
     windows: [root]
     onCleared: {
-      if (root.focusGrabActive && root.dismissActive)
-        root.focusGrabCleared()
+      if (root.focusGrabActive && root.dismissActive) {
+        root.dismissReason = "click-away"
+        root.focusGrabCleared("click-away")
+      }
     }
   }
 

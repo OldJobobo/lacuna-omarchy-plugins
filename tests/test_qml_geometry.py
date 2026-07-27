@@ -328,6 +328,8 @@ class QmlGeometryTests(unittest.TestCase):
         self.assertIn("readonly property bool effectiveConnectorVisible", host)
         self.assertIn("effectiveConnectorWidth > connectorEpsilon", host)
         self.assertIn("readonly property real flyoutMaskWidth: flyoutRenderable ? flyoutCurrentWidth : 0", host)
+        self.assertIn("readonly property real connectorMaskWidth: flyoutRenderable && effectiveConnectorVisible", host)
+        self.assertIn("readonly property real connectorMaskHeight: flyoutRenderable && effectiveConnectorVisible", host)
 
         start = interpolated_flyout_geometry(
             progress=0, from_y=80, from_width=560, from_height=620, from_connector_width=18,

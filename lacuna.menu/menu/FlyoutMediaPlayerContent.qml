@@ -634,7 +634,7 @@ Column {
             font.pixelSize: root.compact ? typeTokens.textSmall : typeTokens.textNormal
             verticalAlignment: TextInput.AlignVCenter
             clip: true
-            activeFocusOnTab: true
+            activeFocusOnTab: false
             Accessible.role: Accessible.EditableText
             Accessible.name: "Search media"
             Accessible.description: "Search configured providers or paste a YouTube URL"
@@ -772,7 +772,7 @@ Column {
               LacunaRect {
                 width: providerFilterControl.width / 3
                 height: parent.height
-                activeFocusOnTab: true
+                activeFocusOnTab: false
                 Accessible.role: Accessible.RadioButton
                 Accessible.name: "All providers"
                 Keys.onPressed: function(event) {
@@ -806,7 +806,7 @@ Column {
               LacunaRect {
                 width: providerFilterControl.width / 3
                 height: parent.height
-                activeFocusOnTab: root.youtubeAvailable
+                activeFocusOnTab: false
                 Accessible.role: Accessible.RadioButton
                 Accessible.name: "YouTube provider"
                 Keys.onPressed: function(event) {
@@ -843,7 +843,7 @@ Column {
               LacunaRect {
                 width: providerFilterControl.width - x
                 height: parent.height
-                activeFocusOnTab: root.jellyfinAvailable
+                activeFocusOnTab: false
                 Accessible.role: Accessible.RadioButton
                 Accessible.name: "Jellyfin provider"
                 Keys.onPressed: function(event) {
@@ -1053,7 +1053,7 @@ Column {
             color: "transparent"
             border.width: root.pendingClearKind === root.activeTab ? 1 : 0
             border.color: root.accent
-            activeFocusOnTab: visible
+            activeFocusOnTab: false
             Accessible.role: Accessible.Button
             Accessible.name: root.pendingClearKind === root.activeTab ? "Confirm clear " + root.activeTab : "Clear " + root.activeTab
             Keys.onReturnPressed: root.requestClear(root.activeTab)
@@ -1116,7 +1116,7 @@ Column {
               font.family: root.bodyFontFamily
               font.pixelSize: root.compact ? typeTokens.textHint : typeTokens.textSmall
               verticalAlignment: TextInput.AlignVCenter
-              activeFocusOnTab: true
+              activeFocusOnTab: false
               Accessible.role: Accessible.EditableText
               Accessible.name: "Filter favorites"
               onTextChanged: root.favoritesFilter = text
@@ -1132,7 +1132,7 @@ Column {
             width: favoritesSortLabel.width + 18
             height: parent.height
             color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.055)
-            activeFocusOnTab: true
+            activeFocusOnTab: false
             Accessible.role: Accessible.Button
             Accessible.name: "Sort favorites by " + root.favoritesSortLabel()
             Keys.onReturnPressed: root.cycleFavoritesSort()
@@ -1398,7 +1398,7 @@ Column {
               border.width: root.selectedResultIndex === index ? 1 : root.designTokens.lacuna ? 0 : 1
               border.color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, 0.22)
               clip: true
-              activeFocusOnTab: true
+              activeFocusOnTab: false
               Accessible.role: Accessible.ListItem
               Accessible.name: String(modelData.title || "Untitled media")
               Keys.onReturnPressed: root.service.playNow(modelData)
@@ -1666,7 +1666,7 @@ Column {
               border.width: root.designTokens.lacuna ? 0 : 1
               border.color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, 0.22)
               clip: true
-              activeFocusOnTab: true
+              activeFocusOnTab: false
               Accessible.role: Accessible.ListItem
               Accessible.name: (index + 1) + ". " + String(modelData.title || "Untitled media")
               Accessible.description: "Press Enter to play, Alt Up or Alt Down to reorder, Delete to remove"
@@ -1924,7 +1924,7 @@ Column {
                 width: queueSearchLabel.width + 16
                 height: root.compact ? 26 : 28
                 color: "transparent"
-                activeFocusOnTab: true
+                activeFocusOnTab: false
                 Accessible.role: Accessible.Button
                 Accessible.name: "Search for media"
                 Keys.onReturnPressed: {
@@ -1986,7 +1986,7 @@ Column {
               border.width: root.designTokens.lacuna ? 0 : 1
               border.color: Qt.rgba(rowAccent.r, rowAccent.g, rowAccent.b, 0.22)
               clip: true
-              activeFocusOnTab: true
+              activeFocusOnTab: false
               Accessible.role: Accessible.ListItem
               Accessible.name: String(modelData.title || "Untitled media")
               Accessible.description: "Press Enter to play, Space to add to queue, or Delete to remove from favorites"

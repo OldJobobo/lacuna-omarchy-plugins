@@ -95,6 +95,14 @@ LacunaRect {
   clip: true
   opacity: reorderActive ? 0.76 : 1
 
+  Accessible.role: root.header ? Accessible.StaticText
+    : root.switchVisible ? Accessible.CheckBox : Accessible.Button
+  Accessible.name: root.label
+  Accessible.description: root.hint
+  Accessible.focusable: false
+  Accessible.checked: root.switchVisible && root.switchChecked
+  Accessible.onPressAction: if (!root.header && !root.optionControl) root.triggered()
+
   Behavior on contentLeftMargin {
     LacunaAnim { motion: "fast"; motionTokens: root.motionTokens }
   }

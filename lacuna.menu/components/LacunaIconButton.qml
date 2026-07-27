@@ -38,31 +38,16 @@ LacunaRect {
   y: growsOnHover ? -stateLayer.reveal * 2 : 0
   scale: visualScale
   transformOrigin: Item.Center
-  activeFocusOnTab: !disabled
+  activeFocusOnTab: false
 
   Accessible.role: Accessible.Button
   Accessible.name: accessibleName
   Accessible.description: accessibleDescription
-  Accessible.focusable: !disabled
+  Accessible.focusable: false
   Accessible.onPressAction: root.activate()
 
   function activate() {
     if (!disabled) triggered()
-  }
-
-  Keys.onReturnPressed: function(event) {
-    root.activate()
-    event.accepted = true
-  }
-
-  Keys.onEnterPressed: function(event) {
-    root.activate()
-    event.accepted = true
-  }
-
-  Keys.onSpacePressed: function(event) {
-    root.activate()
-    event.accepted = true
   }
 
   Behavior on y {
@@ -119,10 +104,7 @@ LacunaRect {
     stateColor: root.hoverAccent
     hoverOpacity: root.hoverOpacity
     pressOpacity: root.pressOpacity
-    onTriggered: {
-      root.forceActiveFocus()
-      root.activate()
-    }
+    onTriggered: root.activate()
     onSecondaryClicked: root.secondaryTriggered()
   }
 

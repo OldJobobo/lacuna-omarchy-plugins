@@ -67,8 +67,8 @@ QtObject {
   readonly property real connectorY: effectiveFlyoutY - effectiveConnectorWidth
   readonly property real connectorMaskX: connectorX
   readonly property real connectorMaskY: connectorY
-  readonly property real connectorMaskWidth: effectiveConnectorVisible ? effectiveConnectorWidth : 0
-  readonly property real connectorMaskHeight: effectiveConnectorVisible
+  readonly property real connectorMaskWidth: flyoutRenderable && effectiveConnectorVisible ? effectiveConnectorWidth : 0
+  readonly property real connectorMaskHeight: flyoutRenderable && effectiveConnectorVisible
     ? effectiveFlyoutHeight + effectiveConnectorWidth * 2 : 0
 
   readonly property real flyoutCurrentWidth: Math.max(0, effectiveFlyoutWidth * clampedFlyoutProgress)

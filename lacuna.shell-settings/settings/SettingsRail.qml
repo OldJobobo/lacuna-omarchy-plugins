@@ -36,13 +36,10 @@ Column {
       border.width: active && root.designTokens && !root.designTokens.lacuna ? 1 : 0
       border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.35)
       clip: true
-      activeFocusOnTab: true
+      activeFocusOnTab: false
       Accessible.role: Accessible.Button
       Accessible.name: String(modelData.label || sectionId)
       Accessible.selected: active
-      Keys.onReturnPressed: root.sectionSelected(sectionId)
-      Keys.onEnterPressed: root.sectionSelected(sectionId)
-      Keys.onSpacePressed: root.sectionSelected(sectionId)
 
       LacunaRect {
         visible: active

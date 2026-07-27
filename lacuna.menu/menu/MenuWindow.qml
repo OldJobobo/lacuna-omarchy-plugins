@@ -180,6 +180,7 @@ Item {
   readonly property real topBarPanelShadowHeight: Math.max(10, Math.round(barEdgeCasterSize * 0.62))
   readonly property real frameOverlayProgress: !lacunaEnabled ? 0 : frameMode === "fullframe" ? 1 : panelController.menuProgress
   property string pendingFlyoutFocus: ""
+  property string focusDismissReason: "transition"
   // Semantic debounce for settings activation; deliberately independent of
   // reduced-motion and animation-speed preferences.
   readonly property int flyoutActivationFocusGuardMs: 900
@@ -313,6 +314,7 @@ Item {
 
   onLacunaEnabledChanged: {
     if (!lacunaEnabled) {
+      focusDismissReason = "shell-rescan"
       pendingFlyoutFocus = ""
       panelController.closeMenu()
     } else {
@@ -686,13 +688,18 @@ Item {
   }
 
   function close() {
+    focusDismissReason = "explicit-close"
     pendingFlyoutFocus = ""
     panelController.closeMenu()
   }
 
-  function closeFlyouts() {
-    traceSurface("focusGrabCleared")
-    if (flyoutFocusClearHold.running) return
+  function closeFlyouts(reason) {
+    var nextReason = String(reason || "explicit-close")
+    traceSurface("dismiss:" + nextReason)
+    // Settings activation can transiently clear focus. Suppress only that
+    // click-away path; explicit keyboard and close-button intent always wins.
+    if (flyoutFocusClearHold.running && nextReason === "click-away") return
+    focusDismissReason = nextReason
     pendingFlyoutFocus = ""
     panelController.closeActiveFlyout()
   }
@@ -740,6 +747,7 @@ Item {
     if (!sidebarSettingsLoaded()) return false
 
     var mode = sidebarDefaultMode()
+    focusDismissReason = "explicit-close"
     pendingFlyoutFocus = ""
     panelController.closeActiveFlyout()
     if (menuState) {
@@ -927,15 +935,14 @@ Item {
     var next = lacunaSettings.normalize(lacunaSettings.data)
     next.preferredApps[role] = String(id || "system").trim() || "system"
     lacunaSettings.save(next)
-    panelController.closeFlyout("appPicker")
+    closeFlyouts("explicit-close")
   }
 
   function openCustomQuickLaunchPicker() {
     if (!lacunaEnabled) return
 
     if (appPickerOpen && appPickerMode === "customQuickLaunchApp") {
-      pendingFlyoutFocus = ""
-      panelController.closeFlyout("appPicker")
+      closeFlyouts("explicit-close")
       return
     }
 
@@ -971,11 +978,13 @@ Item {
 
   function toggleSettingsPanel() {
     if (!lacunaEnabled) return
-    panelController.toggleFlyout("settings")
     if (settingsPanelOpen) {
-      if (!menuState.open) panelController.openMenu()
-      requestFlyoutFocus("settings")
+      closeFlyouts("explicit-close")
+      return
     }
+    panelController.openFlyout("settings")
+    if (!menuState.open) panelController.openMenu()
+    requestFlyoutFocus("settings")
   }
 
   function openSettingsSection(sectionId) {
@@ -983,7 +992,7 @@ Item {
 
     var nextSection = String(sectionId || "overview")
     if (settingsPanelOpen && settingsSection === nextSection) {
-      panelController.closeFlyout("settings")
+      closeFlyouts("explicit-close")
       return
     }
 
@@ -1016,7 +1025,7 @@ Item {
 
     var nextSection = String(sectionId || "apps")
     if (shellSettingsPanelOpen && shellSettingsSection === nextSection) {
-      panelController.closeFlyout("shellSettings")
+      closeFlyouts("explicit-close")
       return
     }
 
@@ -1028,7 +1037,13 @@ Item {
   function requestFlyoutFocus(id) {
     if (!lacunaEnabled) return
 
-    pendingFlyoutFocus = String(id || "")
+    var target = String(id || "")
+    if (target !== "appPicker" && target !== "mediaPlayer"
+        && target !== "settings" && target !== "shellSettings") {
+      pendingFlyoutFocus = ""
+      return
+    }
+    pendingFlyoutFocus = target
     Qt.callLater(applyPendingFlyoutFocus)
   }
 
@@ -1631,6 +1646,7 @@ Item {
 
   function confirmSystemRestart() {
     pendingSystemRestartConfirmation = false
+    focusDismissReason = "explicit-close"
     panelController.closeActiveFlyout()
     commands.run("omarchy system reboot")
     applySidebarDefaultState()
@@ -1641,6 +1657,12 @@ Item {
   }
 
   function handleSidebarAction(entry) {
+    if (entry.action === "retry-settings-save") {
+      if (lacunaSettings && typeof lacunaSettings.retryPersistence === "function")
+        lacunaSettings.retryPersistence()
+      return true
+    }
+
     if (entry.action === "toggle-sidebar-mode") {
       sidebarState.setExclusive(desiredChecked(entry, !sidebarState.exclusive))
       return true
@@ -2030,13 +2052,13 @@ Item {
 
     if (entry.view) {
       if (sidebarState.collapsed) sidebarState.expand()
-      panelController.closeActiveFlyout()
+      closeFlyouts("explicit-close")
       menuState.push(entry.view)
       return
     }
 
     if (entry.command) {
-      panelController.closeActiveFlyout()
+      closeFlyouts("explicit-close")
       commands.run(entry.command)
       applySidebarDefaultState()
     }
@@ -2047,6 +2069,13 @@ Item {
     versionFile.reload()
     applyInitialSidebarDefault()
     refreshHyprWorkspaceState()
+  }
+
+  Component.onDestruction: {
+    // Destroying HyprlandFocusGrab releases the compositor grab and restores
+    // the client focused before the flyout session.
+    focusDismissReason = "shell-rescan"
+    pendingFlyoutFocus = ""
   }
 
   LacunaMenuState {
@@ -2219,6 +2248,10 @@ Item {
     customQuickLaunchApps: lacunaSettings.data && lacunaSettings.data.customQuickLaunchApps ? lacunaSettings.data.customQuickLaunchApps : []
     customQuickLaunchNames: lacunaSettings.data && lacunaSettings.data.customQuickLaunchNames ? lacunaSettings.data.customQuickLaunchNames : ({})
     preferredApps: lacunaSettings.data && lacunaSettings.data.preferredApps ? lacunaSettings.data.preferredApps : ({})
+    settingsPersistenceState: lacunaSettings ? String(lacunaSettings.persistenceState || "idle") : "idle"
+    settingsPersistenceError: lacunaSettings ? String(lacunaSettings.persistenceError || "") : ""
+    settingsRequestedRevision: lacunaSettings ? Number(lacunaSettings.requestedSaveRevision || 0) : 0
+    settingsConfirmedRevision: lacunaSettings ? Number(lacunaSettings.confirmedSaveRevision || 0) : 0
   }
 
   MotionTokens {
@@ -2277,9 +2310,12 @@ Item {
     keepMapped: root.lacunaEnabled && (root.frameMode !== "off" || root.topBarPanelShadowVisible)
     flyoutOpen: root.lacunaEnabled && root.flyoutOpenOnScreen(modelData)
     flyoutInteractive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)
-    keyboardInputActive: root.lacunaEnabled && root.activeFlyoutMediaPlayer && root.flyoutInteractiveOnScreen(modelData)
+    keyboardInputActive: root.lacunaEnabled
+      && ((root.activeFlyoutMediaPlayer || root.activeFlyoutAppPicker) && root.flyoutInteractiveOnScreen(modelData)
+        || menuContent.quickLaunchRenameOpen)
     shortcutInhibitionActive: menuWindow.keyboardInputActive && mediaPlayerContent.searchInputFocused
     dismissActive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)
+    dismissReason: root.focusDismissReason
     exclusive: sidebarState.exclusive
     panelWidth: root.panelWidth
     surfaceRightInset: Math.max(panelHost.effectiveConnectorWidth, root.frameMoldingPieces ? root.frameRadius : 0)
@@ -2302,8 +2338,8 @@ Item {
     flyoutMaskY: panelHost.flyoutMaskY
     flyoutMaskWidth: panelHost.flyoutMaskWidth
     flyoutMaskHeight: panelHost.flyoutMaskHeight
-    onFocusGrabCleared: root.closeFlyouts()
-    onDismissRequested: root.closeFlyouts()
+    onFocusGrabCleared: function(reason) { root.closeFlyouts(reason) }
+    onDismissRequested: function(reason) { root.closeFlyouts(reason) }
 
     LacunaPanelHost {
       id: panelHost
@@ -2457,6 +2493,8 @@ Item {
       backgroundVisible: true
 
       MenuContent {
+        id: menuContent
+
         visible: menuWindow.sidebarRenderable && !sidebarState.collapsed
         motionTokens: root.menuMotionTokensRef
         anchors.fill: parent
@@ -2601,9 +2639,8 @@ Item {
         onActivated: function(entry) {
           root.holdFlyoutAfterSettingsActivation()
           root.activate(entry)
-          root.requestFlyoutFocus("settings")
         }
-        onCloseRequested: root.menuPanelControllerRef.closeFlyout("settings")
+        onCloseRequested: root.closeFlyouts("explicit-close")
 
         Component.onCompleted: root.registerFlyoutContent(modelData, "settings", settingsPanel)
         Component.onDestruction: root.unregisterFlyoutContent(modelData, "settings", settingsPanel)
@@ -2648,9 +2685,8 @@ Item {
             onActivated: function(entry) {
               root.holdFlyoutAfterSettingsActivation()
               root.activate(entry)
-              root.requestFlyoutFocus("shellSettings")
             }
-            onCloseRequested: root.menuPanelControllerRef.closeFlyout("shellSettings")
+            onCloseRequested: root.closeFlyouts("explicit-close")
           }
         }
       }
@@ -2674,7 +2710,7 @@ Item {
         background: root.background
         accent: root.accent
         muted: root.muted
-        onCloseRequested: root.menuPanelControllerRef.closeFlyout("appPicker")
+        onCloseRequested: root.closeFlyouts("explicit-close")
         onSystemSelected: root.setPreferredApp(root.preferredAppPickerRole, "system")
         onAppSelected: function(appId) {
           if (root.appPickerMode === "preferredApp") root.setPreferredApp(root.preferredAppPickerRole, appId)
@@ -2702,7 +2738,7 @@ Item {
         providerYoutube: root.providerYoutube
         providerJellyfin: root.providerJellyfin
         bodyFontFamily: root.bodyFontFamily
-        onCloseRequested: root.menuPanelControllerRef.closeFlyout("mediaPlayer")
+        onCloseRequested: root.closeFlyouts("explicit-close")
 
         Component.onCompleted: root.registerFlyoutContent(modelData, "mediaPlayer", mediaPlayerContent)
         Component.onDestruction: root.unregisterFlyoutContent(modelData, "mediaPlayer", mediaPlayerContent)

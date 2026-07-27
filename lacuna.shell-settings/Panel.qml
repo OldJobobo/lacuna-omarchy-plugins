@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Window
 import Quickshell
 import qs.Commons
 import qs.Ui
@@ -48,6 +49,12 @@ Item {
     if (payload.section) settingsPanel.currentSection = String(payload.section)
     closingFromHost = false
     window.visible = true
+    Qt.callLater(root.activateSettingsWindow)
+  }
+
+  function activateSettingsWindow() {
+    if (!window.visible) return
+    window.requestActivate()
     settingsPanel.forceActiveFocus()
   }
 
@@ -164,19 +171,27 @@ Item {
     shellConfig: root.shellConfig
   }
 
-  FloatingWindow {
+  Window {
     id: window
 
     title: "Lacuna Shell Settings"
     color: "transparent"
     visible: false
-    implicitWidth: Style.space(500)
-    implicitHeight: Style.space(620)
-    minimumSize: Qt.size(Style.space(430), Style.space(460))
+    width: 500
+    height: 620
+    minimumWidth: 430
+    minimumHeight: 460
 
     onVisibleChanged: {
-      if (!visible && !root.closingFromHost && root.shell && typeof root.shell.hide === "function")
+      if (visible) Qt.callLater(root.activateSettingsWindow)
+      else if (!root.closingFromHost && root.shell && typeof root.shell.hide === "function")
         root.shell.hide(root.pluginId)
+    }
+
+    Shortcut {
+      sequence: "Escape"
+      context: Qt.WindowShortcut
+      onActivated: root.close()
     }
 
     Rectangle {
