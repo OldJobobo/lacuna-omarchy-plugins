@@ -176,6 +176,29 @@ PROFILE_LABELS = {
     "system": "System/status helpers",
 }
 
+# Gum ships decorative foreground/background defaults. Lacuna's installer must
+# inherit the terminal palette instead of painting a second hard-coded theme.
+GUM_TERMINAL_STYLE = {
+    "choose": [
+        "--cursor.foreground=",
+        "--cursor.background=",
+        "--header.foreground=",
+        "--header.background=",
+        "--item.foreground=",
+        "--item.background=",
+        "--selected.foreground=",
+        "--selected.background=",
+    ],
+    "confirm": [
+        "--prompt.foreground=",
+        "--prompt.background=",
+        "--selected.foreground=",
+        "--selected.background=",
+        "--unselected.foreground=",
+        "--unselected.background=",
+    ],
+}
+
 
 @dataclass(frozen=True)
 class Plugin:
@@ -362,10 +385,17 @@ def has_gum() -> bool:
     return shutil.which("gum") is not None and sys.stdin.isatty() and sys.stdout.isatty()
 
 
+def gum_command(args: list[str]) -> list[str]:
+    if not args:
+        return ["gum"]
+    command, *rest = args
+    return ["gum", command, *GUM_TERMINAL_STYLE.get(command, []), *rest]
+
+
 def run_gum(args: list[str], input_text: str | None = None) -> str | None:
     try:
         result = subprocess.run(
-            ["gum", *args],
+            gum_command(args),
             input=input_text,
             text=True,
             stdout=subprocess.PIPE,
@@ -417,7 +447,7 @@ def confirm(prompt: str, assume_yes: bool) -> bool:
         return True
     if has_gum():
         print(f"\nWaiting for confirmation: {prompt}", flush=True)
-        return subprocess.run(["gum", "confirm", prompt], check=False).returncode == 0
+        return run_gum(["confirm", prompt]) is not None
     if not sys.stdin.isatty():
         return False
     return input(f"{prompt} [y/N] ").strip().lower().startswith("y")

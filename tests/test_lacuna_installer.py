@@ -527,6 +527,26 @@ with module.installer_transaction_lock():
             )
 
         self.assertIsNone(run.call_args.kwargs["stderr"])
+        command = run.call_args.args[0]
+        self.assertEqual(command[:2], ["gum", "choose"])
+        self.assertIn("--cursor.foreground=", command)
+        self.assertIn("--cursor.background=", command)
+        self.assertIn("--header.foreground=", command)
+        self.assertIn("--selected.background=", command)
+
+    def test_gum_confirm_inherits_terminal_foreground_and_background(self):
+        module = load_installer_module()
+
+        command = module.gum_command(["confirm", "Continue?"])
+
+        self.assertEqual(command[:2], ["gum", "confirm"])
+        self.assertIn("--prompt.foreground=", command)
+        self.assertIn("--prompt.background=", command)
+        self.assertIn("--selected.foreground=", command)
+        self.assertIn("--selected.background=", command)
+        self.assertIn("--unselected.foreground=", command)
+        self.assertIn("--unselected.background=", command)
+        self.assertEqual(command[-1], "Continue?")
 
     def test_default_source_url_prefers_local_checkout(self):
         module = load_installer_module()
