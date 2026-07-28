@@ -7,7 +7,7 @@ on 2026-07-11. This is an execution specification, not an exploratory design
 document. Follow the decisions below without redesigning the surface system.
 
 This plan does **not** concern the desktop ambience plugins or the reverted
-[`lacuna-animation-pipeline-plan.md`](./lacuna-animation-pipeline-plan.md).
+[`lacuna-animation-pipeline-plan.md`](../archive/lacuna-animation-pipeline-plan.md).
 Its scope is only the interactive `lacuna.menu` surface pipeline.
 
 ## 1. Required Outcome

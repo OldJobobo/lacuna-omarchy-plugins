@@ -56,7 +56,7 @@ Optional visual-surface changes are tracked separately and do not block this
 roadmap. Existing surfaces remain protected by their current contracts while
 the core shell is stabilized.
 
-- The proposed [Clock And Calendar Flyout](plans/lacuna-clock-calendar-flyout-plan.md)
+- The completed [Clock And Calendar Flyout](plans/completed/lacuna-clock-calendar-flyout-plan.md)
   upgrades `lacuna.clock` with an adaptive time/date face and a read-only visual
   month calendar. It is not a beta or RC gate and does not include events or an
   external calendar backend.
@@ -108,7 +108,7 @@ Deliverables:
 - installer preflight, staging, rollback, and stock-bar recovery
 - core shell smoke matrix on current Quattro
 
-Plan: [P0 Core Foundation](plans/quattro-p0-core-foundation-plan.md)
+Plan: [P0 Core Foundation](plans/completed/quattro-p0-core-foundation-plan.md)
 
 ### P1 — Product integration
 
@@ -128,7 +128,7 @@ Deliverables:
 - one designed omakase default with safe customization and reset behavior
 - menu and settings maintenance boundaries
 
-Plan: [P1 Product Integration](plans/quattro-p1-product-integration-plan.md)
+Plan: [P1 Product Integration](plans/active/quattro-p1-product-integration-plan.md)
 
 ### P2 — Release and evolution
 
@@ -145,7 +145,7 @@ Deliverables:
 - optional bundle curation and upgrade notes
 - carefully bounded structural cleanup after behavior is covered
 
-Plan: [P2 Release And Evolution](plans/quattro-p2-release-and-evolution-plan.md)
+Plan: [P2 Release And Evolution](plans/active/quattro-p2-release-and-evolution-plan.md)
 
 ## `0.1.0-beta.1` Acceptance Gates
 
@@ -211,9 +211,9 @@ true:
 | Decision | Canonical document |
 | --- | --- |
 | Product priorities | This roadmap |
-| Core execution | [P0 plan](plans/quattro-p0-core-foundation-plan.md) |
-| Product integration | [P1 plan](plans/quattro-p1-product-integration-plan.md) |
-| Release and maintenance | [P2 plan](plans/quattro-p2-release-and-evolution-plan.md) |
+| Core execution | [P0 plan](plans/completed/quattro-p0-core-foundation-plan.md) |
+| Product integration | [P1 plan](plans/active/quattro-p1-product-integration-plan.md) |
+| Release and maintenance | [P2 plan](plans/active/quattro-p2-release-and-evolution-plan.md) |
 | Runtime boundaries | [Architecture overview](architecture/overview.md) |
 | Plugin contracts | [Plugin contracts](architecture/plugin-contracts.md) |
 | Omarchy services | [Omarchy integration](architecture/omarchy-integration.md) |

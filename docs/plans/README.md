@@ -1,97 +1,94 @@
 # Lacuna Plan Index
 
-Status: current planning ledger (reviewed 2026-07-17)
+Status: current planning ledger (reviewed 2026-07-28)
 
-This is the meta index for every document in `docs/plans/`. It records which
-plans are proposed, complete, implemented, reverted, or superseded. The
-canonical project priority queue remains the [Quattro roadmap](../roadmap.md);
-an entry here does not make a historical plan active again.
+This index covers every document under `docs/plans/`. The canonical project
+priority queue remains the [Quattro roadmap](../roadmap.md); placement here
+records lifecycle, not priority.
 
-## Active Release Tracks
+## Directory Layout
 
-| Plan | State | Role and next boundary |
+| Directory | Meaning |
+| --- | --- |
+| [`active/`](./active/) | Work that is in progress or waiting on a release gate. |
+| [`proposed/`](./proposed/) | Approved proposals and drafts that are not on the beta/RC critical path. |
+| [`completed/`](./completed/) | Implemented or validated records retained for rationale and acceptance evidence. |
+| [`archive/`](./archive/) | Reverted or superseded plans that are no longer authoritative. |
+
+Use only lifecycle for directory placement. Product area, release phase, and
+feature type belong in the index description rather than additional folder
+axes.
+
+## Active
+
+| Plan | State | Next boundary |
 | --- | --- | --- |
-| [Sidebar And Settings Flyout Stability](./sidebar-settings-flyout-stability-plan.md) | Completed and user-verified | Keeps the shared layer-shell surface at a fixed width so settings flyouts cannot squeeze or redraw the persistent sidebar. |
-| [Quattro P1 — Product Integration](./quattro-p1-product-integration-plan.md) | In progress; beta product readiness | Capability-aware Codex/Claude usage states are implemented and live-verified. Remaining work closes the full native ownership matrix, settings, sidebar focus safety, media recovery, and canonical omakase setup. General keyboard navigation is excluded; interactive flyouts may take bounded focus for click-away, Escape, unconsumed Backspace, explicit-close dismissal, and intentional text entry. |
-| [Quattro P2 — Release And Evolution](./quattro-p2-release-and-evolution-plan.md) | In progress alongside P1 | The r1333 compatibility baseline is accepted, including multi-monitor widget broadcast parity. Remaining work closes the multi-target support declaration, diagnostics, migration, documentation, beta, and RC gates. |
-| [AUR Publication Readiness](./aur-publication-readiness-plan.md) | Readiness tooling implemented; beta publication pending | Deterministic release/package tooling and maintainer gates pass; the approved beta publishes to GitHub first and then to the shared beta/RC/stable AUR package after lifecycle validation. |
+| [Quattro P1 — Product Integration](./active/quattro-p1-product-integration-plan.md) | In progress | Close native ownership, settings, focus safety, media recovery, and canonical omakase behavior. |
+| [Quattro P1 Closeout Execution](./active/quattro-p1-closeout-execution-plan.md) | Ready after decision checkpoint | Execute the ordered P1 closeout with review, live deployment, and packaged Beta Exit evidence. |
+| [Quattro P2 — Release And Evolution](./active/quattro-p2-release-and-evolution-plan.md) | In progress alongside P1 | Complete support declarations, diagnostics, migration, documentation, beta, and RC gates. |
+| [Reliability And Optimization](./active/lacuna-reliability-and-optimization-plan.md) | Phases 0–6 complete; Phase 7 next | Perform bounded structural cleanup without replacing the Quattro roadmap. |
+| [AUR Publication Readiness](./active/aur-publication-readiness-plan.md) | Tooling validated; beta publication pending | Publish only after the immutable GitHub artifact and lifecycle gates pass. |
 
-P1 execution is sequenced in the
-[Quattro P1 Closeout Execution Plan](./quattro-p1-closeout-execution-plan.md),
-which requires pi subagent planning, one writer per phase, fresh review,
-independent validation, live deployment, and a packaged Beta Exit rehearsal.
+## Proposed And Draft
 
-## Separate Non-Blocking Proposals
+These plans do not block beta or RC.
 
-These documents are not part of the beta or RC critical path.
-
-| Plan | State | Role and boundary |
+| Plan | State | Boundary |
 | --- | --- | --- |
-| [Surface Transition Pipeline Repair](./lacuna-surface-transition-pipeline-plan.md) | Proposed; ready for implementation | Optional interaction/transition work tracked separately from release readiness. |
-| [Portrait Split Bar](./lacuna-portrait-split-bar-plan.md) | Proposed; ready for implementation | Restores standalone Lacuna's portrait-only opposite-edge companion bar while preserving one canonical Omarchy `shell.json` layout. |
-| [Shell Layout Presets And Agent Orchestration](./lacuna-shell-layout-presets-agent-orchestration-plan.md) | Proposed feature | Built-in per-monitor/workspace layout presets and the first Agent Orchestration shell mode. Not yet represented in runtime settings or QML. |
-| [Issue Creation](./lacuna-issue-creation-plan.md) | Draft operations plan | A prepared GitHub issue-creation batch. It is not an implementation phase and should be revalidated before creating external issues. |
+| [Surface Transition Pipeline Repair](./proposed/lacuna-surface-transition-pipeline-plan.md) | Proposed; ready | Optional interaction and transition repair. |
+| [Portrait Split Bar](./proposed/lacuna-portrait-split-bar-plan.md) | Proposed; ready | Portrait-only companion bar using the canonical Omarchy layout. |
+| [Shell Layout Presets And Agent Orchestration](./proposed/lacuna-shell-layout-presets-agent-orchestration-plan.md) | Proposed | Per-monitor/workspace presets and Agent Orchestration mode. |
+| [Issue Creation](./proposed/lacuna-issue-creation-plan.md) | Draft | Revalidate and authorize before creating external issues. |
 
-## Implemented Or Complete Work
+## Completed
 
 | Plan | State | Current authority |
 | --- | --- | --- |
-| [Weather Flyout](./lacuna-weather-flyout-plan.md) | Implemented and live-verified 2026-07-13 | Current conditions, three future days, resilient shared data state, popout coordination, and four-edge molded geometry. |
-| [Clock And Calendar Flyout](./lacuna-clock-calendar-flyout-plan.md) | Implemented and live-verified 2026-07-13 | Adaptive date/time face, read-only month grid, popout coordination, and four-edge molded geometry; calendar providers remain excluded. |
-| [Quattro P0 — Core Foundation](./quattro-p0-core-foundation-plan.md) | Complete; validated 2026-07-10, compatibility refreshed 2026-07-15 | Foundation checkpoint for settings, geometry, installation, recovery, and the accepted Omarchy r1054 baseline. |
-| [Lacuna Bar Refactor](./lacuna-bar-refactor-plan.md) | Complete | Current custom bar-host composition; living behavior is in source and architecture docs. |
-| [Bar Size Mode](./lacuna-bar-size-mode-plan.md) | Implemented | Retained as design notes and a manual smoke checklist. |
-| [Fake Fullscreen Frame](./lacuna-fake-fullscreen-frame-plan.md) | Complete | Frame implementation record; current geometry and stacking rules live in architecture/design-system docs. |
-| [Layer Stacking](./lacuna-layer-stacking-plan.md) | Complete and live-verified | Historical execution record; [layer-stacking policy](../architecture/layer-stacking.md) is authoritative. |
-| [Media Player Rebrand](./lacuna-media-player-rebrand-plan.md) | Implemented | Compatibility and validation record for the canonical Media Player IDs, state migration, and provider settings. |
-| [Panel Control Refactor](./lacuna-panel-control-refactor-plan.md) | Complete; superseded | Implemented controller work folded into the later Lacuna Bar architecture. |
-| [Panel UI Overhaul](./lacuna-panel-ui-overhaul-plan.md) | Complete; superseded | Implemented transition/host work folded into later refactors. |
-| [Settings Panel](./lacuna-settings-panel-plan.md) | Done | Dedicated settings surface is implemented. |
-| [Theme Preloader](./lacuna-theme-preloader-plan.md) | Done | Service plugin, scripts, manifests, and tests exist. |
-| [Visual Regression Tests](./lacuna-visual-regression-test-plan.md) | Executed | Runtime QML behavior, geometry, and opt-in live visual test layers now exist. |
-| [Workspaces Plugin](./lacuna-workspaces-plugin-plan.md) | Done | Lacuna workspace bar widget is implemented. |
-| [Background Video Transitions](./lacuna-youtube-video-transition-plan.md) | Implemented | Readiness-gated source swaps, cache/prefetch, failure recovery, and watchdog behavior are present and tested. |
+| [Quattro P0 — Core Foundation](./completed/quattro-p0-core-foundation-plan.md) | Complete; validated | Foundation checkpoint; current behavior lives in architecture and runtime docs. |
+| [Sidebar And Settings Flyout Stability](./completed/sidebar-settings-flyout-stability-plan.md) | Completed and user-verified | Fixed-width shared layer-shell surface contract. |
+| [Lacuna Bar Refactor](./completed/lacuna-bar-refactor-plan.md) | Complete | Current custom bar-host composition. |
+| [Bar Size Mode](./completed/lacuna-bar-size-mode-plan.md) | Implemented | Design notes and manual smoke checklist. |
+| [Clock And Calendar Flyout](./completed/lacuna-clock-calendar-flyout-plan.md) | Implemented and live-verified 2026-07-13 | Adaptive face and read-only calendar behavior. |
+| [Fake Fullscreen Frame](./completed/lacuna-fake-fullscreen-frame-plan.md) | Complete | Geometry history; use the current geometry and stacking specifications. |
+| [Layer Stacking](./completed/lacuna-layer-stacking-plan.md) | Complete and live-verified | Use the [layer-stacking policy](../architecture/layer-stacking.md) for current behavior. |
+| [Media Player Rebrand](./completed/lacuna-media-player-rebrand-plan.md) | Implemented | Canonical IDs, migration, and provider-settings record. |
+| [Settings Panel](./completed/lacuna-settings-panel-plan.md) | Done | Dedicated settings surface. |
+| [Theme Preloader](./completed/lacuna-theme-preloader-plan.md) | Done | Service, scripts, manifests, and tests. |
+| [Visual Regression Tests](./completed/lacuna-visual-regression-test-plan.md) | Executed | Runtime behavior, geometry, and opt-in live visual coverage. |
+| [Weather Flyout](./completed/lacuna-weather-flyout-plan.md) | Implemented and live-verified 2026-07-13 | Conditions, forecast, shared state, and attached geometry. |
+| [Workspaces Plugin](./completed/lacuna-workspaces-plugin-plan.md) | Done | Lacuna workspace bar widget. |
+| [Background Video Transitions](./completed/lacuna-youtube-video-transition-plan.md) | Implemented | Source-swap, cache, recovery, and watchdog lifecycle record. |
 
-## Reverted Or Superseded Records
+## Archive
 
-| Plan | State | Why it remains |
+These files explain past decisions but are not current implementation authority.
+
+| Plan | State | Why retained |
 | --- | --- | --- |
-| [Animation Pipeline](./lacuna-animation-pipeline-plan.md) | Fully reverted | Records the rolled-back ambience optimization/consolidation experiment; it is not active work. |
-| [Unified Menu Color Model](./lacuna-menu-unified-color-model.md) | Superseded | Canonical color rules moved to the [design-system color specification](../lacuna-design-system/01-color.md). |
-| [Noctalia-Inspired Refactor](./lacuna-noctalia-inspired-refactor-plan.md) | Superseded | Its completed checkpoint fed the panel/control and bar refactors. |
-| [Suite Improvement Plan](./lacuna-suite-improvement-plan.md) | Superseded historical tracker | Replaced as project control by the roadmap and Quattro phase plans. |
-| [Omarchy Shell Refactor](./omarchy-shell-refactor-plan.md) | Superseded | Historical migration from standalone Lacuna to the current plugin-suite architecture. |
+| [Animation Pipeline](./archive/lacuna-animation-pipeline-plan.md) | Fully reverted | Records the rolled-back ambience optimization experiment. |
+| [Unified Menu Color Model](./archive/lacuna-menu-unified-color-model.md) | Superseded | Canonical rules moved to the [color specification](../lacuna-design-system/01-color.md). |
+| [Noctalia-Inspired Refactor](./archive/lacuna-noctalia-inspired-refactor-plan.md) | Superseded | Fed later panel, control, and bar work. |
+| [Panel Control Refactor](./archive/lacuna-panel-control-refactor-plan.md) | Complete; superseded | Folded into the Lacuna Bar architecture. |
+| [Panel UI Overhaul](./archive/lacuna-panel-ui-overhaul-plan.md) | Complete; superseded | Folded into later refactors. |
+| [Suite Improvement Plan](./archive/lacuna-suite-improvement-plan.md) | Superseded tracker | Replaced by the roadmap and Quattro plans. |
+| [Omarchy Shell Refactor](./archive/omarchy-shell-refactor-plan.md) | Superseded | Historical migration into the current plugin suite. |
 
 ## Status Rules
 
-- **Proposed:** decision-complete enough to implement, but its feature is not
-  present in the current source.
-- **Draft:** requires review or authorization before its external or
-  implementation actions are taken.
-- **Implemented/complete:** the planned repository behavior exists; live
-  deployment must still be repeated after later changes that affect the shell.
-- **Superseded:** retained for rationale and history, but not a current source
-  of truth.
-- **Reverted:** the attempted implementation was deliberately removed and must
-  not be inferred as current behavior.
+- **Active:** implementation or release-gate work remains.
+- **Proposed:** decision-complete enough to consider, but not current priority.
+- **Draft:** requires review or authorization before action.
+- **Completed:** planned behavior exists; current contracts may live elsewhere.
+- **Archived:** reverted or superseded and never a current source of truth.
+
+When a plan changes lifecycle, move it, update this index and inbound links, and
+run `python3 -m pytest tests/test_docs_contracts.py` plus `git diff --check`.
 
 ## Current Reference Set
 
-- [Roadmap](../roadmap.md): priority order and Quattro delivery phases.
-- [Architecture overview](../architecture/overview.md): runtime ownership and
-  plugin composition.
-- [Plugin contracts](../architecture/plugin-contracts.md): Omarchy entry-point
-  and injection contracts.
-- [Omarchy integration](../architecture/omarchy-integration.md): native service
-  policy.
-- [Layer stacking](../architecture/layer-stacking.md): layer-shell mapping and
-  stacking rules.
-- [Geometry](../lacuna-design-system/02-geometry.md): frame, seam, connector,
-  and attached-flyout rules.
-
-## Release Planning Rule
-
-The suite is already versioned `0.1.0`. The active sequence is
-`0.1.0-beta.N` to `0.1.0-rc.N` to `0.1.0`. P1 and P2 are parallel readiness
-tracks; neither optional visual work nor unrelated proposed features block
-that sequence.
+- [Roadmap](../roadmap.md): project priorities and release sequence.
+- [Architecture overview](../architecture/overview.md): runtime ownership.
+- [Plugin contracts](../architecture/plugin-contracts.md): entry points and injection.
+- [Omarchy integration](../architecture/omarchy-integration.md): native service policy.
+- [Layer stacking](../architecture/layer-stacking.md): layer-shell mapping rules.
+- [Geometry](../lacuna-design-system/02-geometry.md): frame, seam, and connector rules.

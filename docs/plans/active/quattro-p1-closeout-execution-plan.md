@@ -167,8 +167,8 @@ consistency.
 
 ### Likely files
 
-- `docs/plans/quattro-p1-product-integration-plan.md`
-- `docs/plans/quattro-p1-closeout-execution-plan.md`
+- `docs/plans/active/quattro-p1-product-integration-plan.md`
+- `docs/plans/active/quattro-p1-closeout-execution-plan.md`
 - `docs/roadmap.md`
 - `docs/plans/README.md`
 - `docs/install.md`
@@ -667,7 +667,7 @@ The parent stops execution and asks for a decision when:
 
 ```text
 Execute the accepted Quattro P1 closeout plan in
-`docs/plans/quattro-p1-closeout-execution-plan.md` using pi subagents.
+`docs/plans/active/quattro-p1-closeout-execution-plan.md` using pi subagents.
 
 You are the parent orchestrator. Do not implement broad phases yourself. Before
 execution, read AGENTS.md, the P1 product plan, roadmap, this execution plan,

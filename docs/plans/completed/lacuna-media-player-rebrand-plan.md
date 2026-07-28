@@ -381,8 +381,8 @@ CLAUDE.md
 docs/
 docs/plugins/
 docs/architecture/layer-stacking.md
-docs/plans/lacuna-youtube-video-transition-plan.md
-docs/plans/lacuna-visual-regression-test-plan.md
+docs/plans/completed/lacuna-youtube-video-transition-plan.md
+docs/plans/completed/lacuna-visual-regression-test-plan.md
 ```
 
 The transition-plan docs may still explain YouTube-backed implementation

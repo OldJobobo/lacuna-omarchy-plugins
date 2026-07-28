@@ -4,6 +4,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+PLANS = ROOT / "docs" / "plans"
 
 
 class DocsContractTests(unittest.TestCase):
@@ -69,14 +70,19 @@ class DocsContractTests(unittest.TestCase):
         root_plan_docs = sorted((ROOT / "docs").glob("*plan*.md"))
         self.assertEqual([], root_plan_docs)
 
-        plan_docs = sorted((ROOT / "docs" / "plans").glob("*.md"))
+        plan_docs = sorted(path for path in PLANS.rglob("*.md") if path.name != "README.md")
         self.assertTrue(plan_docs, "docs/plans should contain implementation plans")
         for path in plan_docs:
             head = "\n".join(path.read_text(encoding="utf-8").splitlines()[:8])
             self.assertIn("Status:", head, str(path.relative_to(ROOT)))
 
+        index = (PLANS / "README.md").read_text(encoding="utf-8")
+        for path in plan_docs:
+            relative = path.relative_to(PLANS).as_posix()
+            self.assertEqual(1, index.count(f"(./{relative})"), relative)
+
     def test_lacuna_bar_refactor_plan_tracks_current_architecture_decisions(self):
-        plan = (ROOT / "docs" / "plans" / "lacuna-bar-refactor-plan.md").read_text(encoding="utf-8")
+        plan = (PLANS / "completed" / "lacuna-bar-refactor-plan.md").read_text(encoding="utf-8")
 
         self.assertIn("Status: complete", plan)
         self.assertIn("Keep `lacuna.bar` as the Lacuna Bar plugin ID", plan)
@@ -116,9 +122,9 @@ class DocsContractTests(unittest.TestCase):
 
     def test_completed_panel_and_frame_plans_are_not_left_active(self):
         for path in [
-            ROOT / "docs" / "plans" / "lacuna-panel-ui-overhaul-plan.md",
-            ROOT / "docs" / "plans" / "lacuna-panel-control-refactor-plan.md",
-            ROOT / "docs" / "plans" / "lacuna-fake-fullscreen-frame-plan.md",
+            PLANS / "archive" / "lacuna-panel-ui-overhaul-plan.md",
+            PLANS / "archive" / "lacuna-panel-control-refactor-plan.md",
+            PLANS / "completed" / "lacuna-fake-fullscreen-frame-plan.md",
         ]:
             text = path.read_text(encoding="utf-8")
             head = "\n".join(text.splitlines()[:8])
@@ -127,8 +133,8 @@ class DocsContractTests(unittest.TestCase):
 
     def test_quattro_roadmap_and_phase_plans_are_canonical(self):
         roadmap = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
-        plans_index = (ROOT / "docs" / "plans" / "README.md").read_text(encoding="utf-8")
-        historical_tracker = (ROOT / "docs" / "plans" / "lacuna-suite-improvement-plan.md").read_text(encoding="utf-8")
+        plans_index = (PLANS / "README.md").read_text(encoding="utf-8")
+        historical_tracker = (PLANS / "archive" / "lacuna-suite-improvement-plan.md").read_text(encoding="utf-8")
 
         self.assertIn("Status: active project control (updated 2026-07-16)", roadmap)
         self.assertIn("`lacuna.bar` is the intentional custom bar host", roadmap)
@@ -146,25 +152,34 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("provider-capability-aware usage widgets", roadmap)
         self.assertIn("Codex currently reports a weekly-only quota window", roadmap)
         self.assertNotIn("`core`, `native`, and `advanced` profiles have documented boundaries", roadmap)
-        self.assertIn("## Active Release Tracks", plans_index)
-        self.assertIn("## Separate Non-Blocking Proposals", plans_index)
+        self.assertIn("## Active", plans_index)
+        self.assertIn("## Proposed And Draft", plans_index)
+        self.assertIn("## Completed", plans_index)
+        self.assertIn("## Archive", plans_index)
+        self.assertIn("lacuna-reliability-and-optimization-plan.md", plans_index)
         self.assertIn("lacuna-clock-calendar-flyout-plan.md", plans_index)
         self.assertIn("lacuna-weather-flyout-plan.md", plans_index)
         self.assertIn("Implemented and live-verified 2026-07-13", plans_index)
         self.assertIn("Clock And Calendar Flyout", roadmap)
 
-        for name in [
-            "sidebar-settings-flyout-stability-plan.md",
-            "quattro-p0-core-foundation-plan.md",
-            "quattro-p1-product-integration-plan.md",
-            "quattro-p2-release-and-evolution-plan.md",
-            "lacuna-clock-calendar-flyout-plan.md",
-            "lacuna-weather-flyout-plan.md",
-        ]:
-            self.assertIn(name, plans_index)
-            self.assertTrue((ROOT / "docs" / "plans" / name).exists(), name)
+        expected_plans = {
+            "completed": [
+                "sidebar-settings-flyout-stability-plan.md",
+                "quattro-p0-core-foundation-plan.md",
+                "lacuna-clock-calendar-flyout-plan.md",
+                "lacuna-weather-flyout-plan.md",
+            ],
+            "active": [
+                "quattro-p1-product-integration-plan.md",
+                "quattro-p2-release-and-evolution-plan.md",
+            ],
+        }
+        for category, names in expected_plans.items():
+            for name in names:
+                self.assertIn(name, plans_index)
+                self.assertTrue((PLANS / category / name).exists(), name)
 
-        stability_plan = (ROOT / "docs" / "plans" / "sidebar-settings-flyout-stability-plan.md").read_text(encoding="utf-8")
+        stability_plan = (PLANS / "completed" / "sidebar-settings-flyout-stability-plan.md").read_text(encoding="utf-8")
         self.assertIn("Status: completed and user-verified", stability_plan)
         self.assertIn("flyoutLaneWidthFor(screen)", stability_plan)
         self.assertIn("the user visually confirmed", stability_plan)
@@ -172,14 +187,14 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("LACUNA_LIVE_VISUAL=1", stability_plan)
 
         self.assertIn("Status: superseded historical tracker (2026-07-10)", historical_tracker)
-        self.assertIn("Use [`../roadmap.md`](../roadmap.md)", historical_tracker)
+        self.assertIn("Use [`../../roadmap.md`](../../roadmap.md)", historical_tracker)
 
-        p1 = (ROOT / "docs" / "plans" / "quattro-p1-product-integration-plan.md").read_text(encoding="utf-8")
-        p2 = (ROOT / "docs" / "plans" / "quattro-p2-release-and-evolution-plan.md").read_text(encoding="utf-8")
+        p1 = (PLANS / "active" / "quattro-p1-product-integration-plan.md").read_text(encoding="utf-8")
+        p2 = (PLANS / "active" / "quattro-p2-release-and-evolution-plan.md").read_text(encoding="utf-8")
         release = (ROOT / "docs" / "development" / "release.md").read_text(encoding="utf-8")
         self.assertIn("Status: in progress; beta product-readiness track", p1)
         self.assertIn("quattro-p1-closeout-execution-plan.md", p1)
-        closeout = (ROOT / "docs" / "plans" / "quattro-p1-closeout-execution-plan.md").read_text(encoding="utf-8")
+        closeout = (PLANS / "active" / "quattro-p1-closeout-execution-plan.md").read_text(encoding="utf-8")
         self.assertIn("The execution must use pi subagents.", closeout)
         self.assertIn("## Reusable Parent-Orchestrator Prompt", closeout)
         self.assertIn("Delivered Checkpoint — 2026-07-16", p1)

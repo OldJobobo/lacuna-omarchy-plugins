@@ -4,12 +4,12 @@ Status: superseded historical tracker (2026-07-10)
 
 This document is retained as an implementation history for the earlier broad
 repository improvement pass. It is no longer the current project control
-surface. Use [`../roadmap.md`](../roadmap.md) and the three Quattro phase plans
+surface. Use [`../../roadmap.md`](../../roadmap.md) and the three Quattro phase plans
 instead:
 
-- [`quattro-p0-core-foundation-plan.md`](quattro-p0-core-foundation-plan.md)
-- [`quattro-p1-product-integration-plan.md`](quattro-p1-product-integration-plan.md)
-- [`quattro-p2-release-and-evolution-plan.md`](quattro-p2-release-and-evolution-plan.md)
+- [`quattro-p0-core-foundation-plan.md`](../completed/quattro-p0-core-foundation-plan.md)
+- [`quattro-p1-product-integration-plan.md`](../active/quattro-p1-product-integration-plan.md)
+- [`quattro-p2-release-and-evolution-plan.md`](../active/quattro-p2-release-and-evolution-plan.md)
 
 Current validation baseline:
 
@@ -336,7 +336,7 @@ Backlog:
 - Name or document magic timing constants where local context does not explain
   what the delay synchronizes with.
 - Keep the BarSizeMode live-theme rewrite contract documented in
-  `docs/plans/lacuna-bar-size-mode-plan.md` or README as the implementation evolves.
+  `docs/plans/completed/lacuna-bar-size-mode-plan.md` or README as the implementation evolves.
 
 ## Phase 5: Distribution, Versioning, Docs
 

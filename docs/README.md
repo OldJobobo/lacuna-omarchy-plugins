@@ -59,6 +59,6 @@ For historical context:
 
 ## Plans And Trackers
 
-Use `plans/README.md` as the index for implementation plans and historical
-architecture notes. Do not add new `*-plan.md` files to the root `docs/`
-directory.
+Use `plans/README.md` as the complete lifecycle index. Store plans under
+`plans/active/`, `plans/proposed/`, `plans/completed/`, or `plans/archive/`;
+do not add `*-plan.md` files directly to `docs/` or `docs/plans/`.

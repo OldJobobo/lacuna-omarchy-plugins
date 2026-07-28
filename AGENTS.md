@@ -5,7 +5,7 @@
 This repository is the Omarchy plugin target for Lacuna, with the standalone Lacuna project treated as the source reference. The current structure is intentionally small:
 
 - `docs/`: current project documentation, design-system specs, screenshots, and reference docs.
-- `docs/plans/`: implementation plans, migration notes, historical trackers, and superseded design notes.
+- `docs/plans/`: lifecycle-organized planning records. Put current work in `active/`, non-blocking ideas and drafts in `proposed/`, finished records in `completed/`, and reverted or superseded history in `archive/`; keep `docs/plans/README.md` synchronized.
 - `lacuna.*/`: one top-level Omarchy plugin directory per Lacuna surface or widget. This flattened layout is required for `omarchy plugin source add` repo installs.
 - `lacuna.menu/`: menu/sidebar plugin, with `menu/`, `components/`, `services/`, and `assets/`.
 - `config/`: example configuration should live here, such as `settings.example.json`.

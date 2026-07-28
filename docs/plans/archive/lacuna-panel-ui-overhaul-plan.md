@@ -1,6 +1,6 @@
 # Lacuna Panel UI Overhaul Plan
 
-Status: complete; superseded by `docs/plans/lacuna-noctalia-inspired-refactor-plan.md` and `docs/plans/lacuna-bar-refactor-plan.md`
+Status: complete; superseded by `docs/plans/archive/lacuna-noctalia-inspired-refactor-plan.md` and `docs/plans/completed/lacuna-bar-refactor-plan.md`
 
 Completion note 2026-06-14: the current implementation has controller-owned
 menu/flyout lifecycle, host-owned mask geometry, a single attached flyout host,
