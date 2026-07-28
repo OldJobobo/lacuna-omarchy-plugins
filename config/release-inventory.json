@@ -1012,6 +1012,7 @@
         "LacunaGeometry.qml",
         "LacunaTokens.qml",
         "MotionTokens.qml",
+        "Service.qml",
         "TelemetryFlyout.qml",
         "Widget.qml",
         "assets/tabler/assembly-filled.svg",

@@ -72,7 +72,16 @@ and compositor input masks all read the same interpolated
 currently painted geometry before targeting the new key. Effective values are
 pixel-snapped once at the transaction boundary so paint, shadow, border,
 offsets, and compositor masks cannot narrow fractional values differently. The
-mapped flyout lane counterbalances the effective connector width and reserves
+frame border consumes the exact interpolated frame hole record used by frame
+fill; it must never reconstruct hole bounds from discrete occupancy flags.
+When an attached flyout interrupts a vertical border edge, the gap splits only
+the straight segment: each resumed segment must first reach the canonical
+corner tangent before entering its cubic arc. The attached-panel outline uses
+the same half-stroke inset, color, and width around flyout edges and both
+connector molding curves. Its lower connector endpoint is one full connector
+radius below the flyout bottom; stopping at the flyout bottom reverses the
+cubic and visibly drops the lower-left molding edge.
+The mapped flyout lane counterbalances the effective connector width and reserves
 one rounding-safety pixel, so it stays constant without clipping independently
 snapped odd-width transitions. Connector visibility is derived from
 the effective width crossing a small epsilon, so disabling it cannot leave a

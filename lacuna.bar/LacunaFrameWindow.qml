@@ -363,33 +363,34 @@ PanelWindow {
           radiusX: root.isRenderable ? root.holeRadius : 0
           radiusY: root.isRenderable ? root.holeRadius : 0
           direction: PathArc.Clockwise
-            }
-          }
         }
       }
     }
-  }
 
-  // Compose border paint in the Top frame surface so it never allocates a
-  // second Overlay layer-shell surface or remaps above sidebar/panel UI.
-  LacunaFrameBorderWindow {
-    anchors.fill: parent
-    z: 2
-    active: root.active && root.borderEnabled
-    barPosition: root.hasGeometryRecord ? String(root.geometryRecord.barPosition || "top") : root.barPosition
-    barSize: root.effectiveBarSize
-    frameThickness: root.t
-    frameRadius: root.r
-    moldingPieces: root.effectiveMoldingPieces
-    borderColor: root.borderColor
-    topEdgeOccupied: root.effectiveTopEdgeOccupied
-    bottomEdgeOccupied: root.effectiveBottomEdgeOccupied
-    leftEdgeOccupied: root.effectiveLeftEdgeOccupied
-    rightEdgeOccupied: root.effectiveRightEdgeOccupied
-    leftOccupiedWidth: root.leftOcclusion
-    rightOccupiedWidth: root.rightOcclusion
-    attachedFlyoutVisible: root.attachedFlyoutVisible
-    attachedFlyoutY: root.attachedFlyoutY
-    attachedFlyoutHeight: root.attachedFlyoutHeight
+        // Compose border paint inside the same authoritative outer clip as the
+        // frame fill. The translated item restores monitor-local coordinates.
+        LacunaFrameBorderWindow {
+          anchors.fill: parent
+          z: 2
+          active: root.active && root.borderEnabled
+          geometryRecord: root.geometryRecord
+          barPosition: root.hasGeometryRecord ? String(root.geometryRecord.barPosition || "top") : root.barPosition
+          barSize: root.effectiveBarSize
+          frameThickness: root.t
+          frameRadius: root.r
+          moldingPieces: root.effectiveMoldingPieces
+          borderColor: root.borderColor
+          topEdgeOccupied: root.effectiveTopEdgeOccupied
+          bottomEdgeOccupied: root.effectiveBottomEdgeOccupied
+          leftEdgeOccupied: root.effectiveLeftEdgeOccupied
+          rightEdgeOccupied: root.effectiveRightEdgeOccupied
+          leftOccupiedWidth: root.leftOcclusion
+          rightOccupiedWidth: root.rightOcclusion
+          attachedFlyoutVisible: root.attachedFlyoutVisible
+          attachedFlyoutY: root.attachedFlyoutY
+          attachedFlyoutHeight: root.attachedFlyoutHeight
+        }
+      }
+    }
   }
 }

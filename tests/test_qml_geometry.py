@@ -151,8 +151,8 @@ def frame_border_geometry(
     border_radius = max(0.01, base["holeRadius"] - border_inset)
     left_gap_visible = left_occupied > 0 and attached_flyout_visible and attached_flyout_height > 0
     right_gap_visible = right_occupied > 0 and attached_flyout_visible and attached_flyout_height > 0
-    gap_top = max(border_top + border_radius, attached_flyout_y - border_inset)
-    gap_bottom = min(border_bottom - border_radius, attached_flyout_y + attached_flyout_height + border_inset)
+    gap_top = max(border_top + border_radius, attached_flyout_y + border_inset)
+    gap_bottom = min(border_bottom - border_radius, attached_flyout_y + attached_flyout_height - border_inset)
     gap_renderable = gap_bottom > gap_top + border_width
     return {
         "leftAttachmentGapVisible": left_gap_visible,

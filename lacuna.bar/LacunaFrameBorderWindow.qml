@@ -8,6 +8,7 @@ Item {
   id: root
 
   property bool active: false
+  property var geometryRecord: null
   property string barPosition: "top"
   property int barSize: 0
   property int frameThickness: 8
@@ -25,42 +26,53 @@ Item {
   property real attachedFlyoutY: 0
   property real attachedFlyoutHeight: 0
 
-  readonly property int t: Math.max(1, frameThickness)
-  readonly property int r: Math.max(0, frameRadius)
-  readonly property real leftOcclusion: leftEdgeOccupied ? Math.max(0, leftOccupiedWidth) : 0
-  readonly property real rightOcclusion: rightEdgeOccupied ? Math.max(0, rightOccupiedWidth) : 0
-  readonly property bool topBar: barPosition === "top"
-  readonly property bool bottomBar: barPosition === "bottom"
-  readonly property bool leftBar: barPosition === "left"
-  readonly property bool rightBar: barPosition === "right"
-  readonly property int topInset: topBar || topEdgeOccupied ? Math.max(0, barSize) : t
-  readonly property int bottomInset: bottomBar || bottomEdgeOccupied ? Math.max(0, barSize) : t
-  readonly property int leftInset: leftBar ? Math.max(0, barSize) : t
-  readonly property int rightInset: rightBar ? Math.max(0, barSize) : t
-  readonly property real holeX: Math.max(0, leftEdgeOccupied ? leftOcclusion : leftInset)
-  readonly property real holeY: Math.max(0, topInset)
-  readonly property real holeRight: Math.max(holeX + 1, width - (rightEdgeOccupied ? rightOcclusion : rightInset))
-  readonly property real holeBottom: Math.max(holeY + 1, height - bottomInset)
-  readonly property real holeWidth: Math.max(1, holeRight - holeX)
-  readonly property real holeHeight: Math.max(1, holeBottom - holeY)
+  readonly property bool hasGeometryRecord: geometryRecord && typeof geometryRecord === "object"
+  readonly property int t: hasGeometryRecord ? Math.max(1, Number(geometryRecord.thickness) || 1) : Math.max(1, frameThickness)
+  readonly property int r: hasGeometryRecord ? Math.max(0, Number(geometryRecord.contentRadius) || 0) : Math.max(0, frameRadius)
+  readonly property bool effectiveTopEdgeOccupied: hasGeometryRecord ? geometryRecord.topEdgeOccupied === true : topEdgeOccupied
+  readonly property bool effectiveBottomEdgeOccupied: hasGeometryRecord ? geometryRecord.bottomEdgeOccupied === true : bottomEdgeOccupied
+  readonly property bool effectiveLeftEdgeOccupied: hasGeometryRecord ? geometryRecord.leftEdgeOccupied === true : leftEdgeOccupied
+  readonly property bool effectiveRightEdgeOccupied: hasGeometryRecord ? geometryRecord.rightEdgeOccupied === true : rightEdgeOccupied
+  readonly property real leftOcclusion: hasGeometryRecord ? Math.max(0, Number(geometryRecord.leftOccupiedWidth) || 0) : (effectiveLeftEdgeOccupied ? Math.max(0, leftOccupiedWidth) : 0)
+  readonly property real rightOcclusion: hasGeometryRecord ? Math.max(0, Number(geometryRecord.rightOccupiedWidth) || 0) : (effectiveRightEdgeOccupied ? Math.max(0, rightOccupiedWidth) : 0)
+  readonly property string effectiveBarPosition: hasGeometryRecord ? String(geometryRecord.barPosition || "top") : barPosition
+  readonly property bool topBar: effectiveBarPosition === "top"
+  readonly property bool bottomBar: effectiveBarPosition === "bottom"
+  readonly property bool leftBar: effectiveBarPosition === "left"
+  readonly property bool rightBar: effectiveBarPosition === "right"
+  readonly property int effectiveBarSize: hasGeometryRecord ? Math.max(0, Number(geometryRecord.barSize) || 0) : Math.max(0, barSize)
+  readonly property int topInset: topBar || effectiveTopEdgeOccupied ? effectiveBarSize : t
+  readonly property int bottomInset: bottomBar || effectiveBottomEdgeOccupied ? effectiveBarSize : t
+  readonly property int leftInset: leftBar ? effectiveBarSize : t
+  readonly property int rightInset: rightBar ? effectiveBarSize : t
+  readonly property real holeX: hasGeometryRecord ? Number(geometryRecord.holeX) : Math.max(0, effectiveLeftEdgeOccupied ? leftOcclusion : leftInset)
+  readonly property real holeY: hasGeometryRecord ? Number(geometryRecord.holeY) : Math.max(0, topInset)
+  readonly property real holeRight: hasGeometryRecord ? Number(geometryRecord.holeRight) : Math.max(holeX, width - (effectiveRightEdgeOccupied ? rightOcclusion : rightInset))
+  readonly property real holeBottom: hasGeometryRecord ? Number(geometryRecord.holeBottom) : Math.max(holeY, height - bottomInset)
+  readonly property real holeWidth: Math.max(0, holeRight - holeX)
+  readonly property real holeHeight: Math.max(0, holeBottom - holeY)
   readonly property real minArcRadius: 0.01
-  readonly property real holeRadius: moldingPieces ? Math.max(minArcRadius, Math.min(r, holeWidth / 2, holeHeight / 2)) : minArcRadius
+  readonly property bool effectiveMoldingPieces: hasGeometryRecord ? r > 0 : moldingPieces
+  readonly property real holeRadius: effectiveMoldingPieces ? Math.max(minArcRadius, Math.min(r, holeWidth / 2, holeHeight / 2)) : minArcRadius
   readonly property real borderInset: Math.max(0, borderWidth / 2)
   readonly property real borderLeft: holeX + borderInset
   readonly property real borderTop: holeY + borderInset
   readonly property real borderRight: holeRight - borderInset
   readonly property real borderBottom: holeBottom - borderInset
   readonly property real borderRadius: Math.max(minArcRadius, holeRadius - borderInset)
-  readonly property bool leftAttachmentGapVisible: leftEdgeOccupied && attachedFlyoutVisible && attachedFlyoutHeight > 0
-  readonly property bool rightAttachmentGapVisible: rightEdgeOccupied && attachedFlyoutVisible && attachedFlyoutHeight > 0
-  readonly property real attachmentGapTop: Math.max(borderTop + borderRadius, attachedFlyoutY - borderInset)
-  readonly property real attachmentGapBottom: Math.min(borderBottom - borderRadius, attachedFlyoutY + attachedFlyoutHeight + borderInset)
+  readonly property bool leftAttachmentGapVisible: effectiveLeftEdgeOccupied && attachedFlyoutVisible && attachedFlyoutHeight > 0
+  readonly property bool rightAttachmentGapVisible: effectiveRightEdgeOccupied && attachedFlyoutVisible && attachedFlyoutHeight > 0
+  readonly property real attachmentGapTop: Math.max(borderTop + borderRadius, attachedFlyoutY + borderInset)
+  readonly property real attachmentGapBottom: Math.min(borderBottom - borderRadius, attachedFlyoutY + attachedFlyoutHeight - borderInset)
   readonly property bool attachmentGapRenderable: attachmentGapBottom > attachmentGapTop + borderWidth
   readonly property real rightVerticalUpperEndY: rightAttachmentGapVisible && attachmentGapRenderable ? attachmentGapTop : borderBottom - borderRadius
   readonly property real rightVerticalLowerStartY: rightAttachmentGapVisible && attachmentGapRenderable ? attachmentGapBottom : borderBottom - borderRadius
   readonly property real leftVerticalLowerEndY: leftAttachmentGapVisible && attachmentGapRenderable ? attachmentGapBottom : borderTop + borderRadius
   readonly property real leftVerticalUpperStartY: leftAttachmentGapVisible && attachmentGapRenderable ? attachmentGapTop : borderTop + borderRadius
-  readonly property bool isRenderable: active && width > 0 && height > 0 && holeWidth > 0 && holeHeight > 0
+  readonly property bool isRenderable: active
+    && (!hasGeometryRecord || geometryRecord.framed === true)
+    && width > 0 && height > 0
+    && borderRight > borderLeft && borderBottom > borderTop
   readonly property real curveKappa: lacunaGeometry.curveKappa
 
   LacunaGeometry { id: lacunaGeometry }
@@ -105,6 +117,10 @@ Item {
         x: root.borderRight
         y: root.rightVerticalLowerStartY
       }
+      PathLine {
+        x: root.borderRight
+        y: root.borderBottom - root.borderRadius
+      }
       PathCubic {
         x: root.borderRight - root.borderRadius
         y: root.borderBottom
@@ -132,6 +148,10 @@ Item {
       PathMove {
         x: root.borderLeft
         y: root.leftVerticalUpperStartY
+      }
+      PathLine {
+        x: root.borderLeft
+        y: root.borderTop + root.borderRadius
       }
       PathCubic {
         x: root.borderLeft + root.borderRadius

@@ -85,8 +85,8 @@ Item {
   readonly property real borderRadius: moldingPieces ? Math.max(0.01, Math.min(moldingSize, (borderRight - borderLeft) / 2, (borderBottom - borderTop) / 2) - borderInset) : 0.01
   readonly property bool leftAttachmentGapVisible: leftEdgeOccupied && flyoutVisible && flyoutHeight > 0
   readonly property bool rightAttachmentGapVisible: rightEdgeOccupied && flyoutVisible && flyoutHeight > 0
-  readonly property real attachmentGapTop: Math.max(strokeTop + borderRadius, flyoutY - borderInset)
-  readonly property real attachmentGapBottom: Math.min(strokeBottom - borderRadius, flyoutY + flyoutHeight + borderInset)
+  readonly property real attachmentGapTop: Math.max(strokeTop + borderRadius, flyoutY + borderInset)
+  readonly property real attachmentGapBottom: Math.min(strokeBottom - borderRadius, flyoutY + flyoutHeight - borderInset)
   readonly property bool attachmentGapRenderable: attachmentGapBottom > attachmentGapTop + borderWidth
   readonly property real rightVerticalUpperEndY: rightAttachmentGapVisible && attachmentGapRenderable ? attachmentGapTop : strokeBottom - borderRadius
   readonly property real rightVerticalLowerStartY: rightAttachmentGapVisible && attachmentGapRenderable ? attachmentGapBottom : strokeBottom - borderRadius
@@ -395,6 +395,10 @@ Item {
         x: root.strokeRight
         y: root.rightVerticalLowerStartY
       }
+      PathLine {
+        x: root.strokeRight
+        y: root.strokeBottom - root.borderRadius
+      }
       PathCubic {
         x: root.strokeRight - root.borderRadius
         y: root.strokeBottom
@@ -422,6 +426,10 @@ Item {
       PathMove {
         x: root.strokeLeft
         y: root.leftVerticalUpperStartY
+      }
+      PathLine {
+        x: root.strokeLeft
+        y: root.strokeTop + root.borderRadius
       }
       PathCubic {
         x: root.strokeLeft + root.borderRadius
