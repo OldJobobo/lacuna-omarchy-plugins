@@ -36,6 +36,9 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
   supported Omarchy and Quickshell versions are not yet declared.
 
 ### Fixed
+- Safe reset preserves mirrored Media Player preferences as well as
+  `media-player.json`, preventing shell restart from overwriting user media
+  state with reset defaults.
 - Settings service no longer shadows its `loaded()` signal; the signal fires
   and the pending-save replay runs (`lacuna.state`, `lacuna.menu`).
 - Corrupt `settings.json` is backed up to `settings.json.bak` and flagged via

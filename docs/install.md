@@ -139,8 +139,11 @@ outside this safe-reset scope. Reset owns
 `bar.id`, `bar.layout`, `bar.centerAnchor`, `bar.transparent`, canonical Lacuna
 plugin activation, and the presentation/runtime branches listed in
 `config/omakase-profile.json`. It preserves credentials, provider settings,
-favorites, queue/history, auth and reminder files, preferred/custom apps,
-unrelated plugin entries, other bar keys, and unknown JSON-safe fields. Reset
+media-player preferences, favorites, queue/history, auth and reminder files,
+preferred/custom apps, unrelated plugin entries, other bar keys, and unknown
+JSON-safe fields. Media-player preferences remain preserved because they are
+mirrored into `media-player.json`; resetting only the settings copy would let
+shell shutdown overwrite otherwise preserved media state. Reset
 never changes installed plugin copies and deliberately has no purge mode.
 
 ## Uninstall

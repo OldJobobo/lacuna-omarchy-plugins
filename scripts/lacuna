@@ -38,7 +38,6 @@ RESET_OWNED_SETTINGS_KEYS = [
     "controlsLayout",
     "power",
     "shellSettings",
-    "mediaPlayer",
     "sidebar",
     "backgroundEffects",
     "backgroundVignette",
@@ -50,6 +49,7 @@ RESET_PRESERVED_SETTINGS_KEYS = [
     "customQuickLaunchNames",
     "preferredApps",
     "mediaProviders",
+    "mediaPlayer",
 ]
 BACKUPS_TO_KEEP = 2
 RUNTIME_BACKUPS_TO_KEEP = 8

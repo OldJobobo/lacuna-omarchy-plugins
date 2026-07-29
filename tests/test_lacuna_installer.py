@@ -1116,6 +1116,7 @@ with module.installer_transaction_lock():
                 "customQuickLaunchNames": {"secret-app": "Secret"},
                 "preferredApps": {"files": "private-file-manager"},
                 "mediaProviders": {"jellyfin": {"enabled": True, "apiKey": "credential", "serverUrl": "https://private"}},
+                "mediaPlayer": {"presentationMode": "background", "videoQuality": "stable", "providerFilter": "jellyfin", "futurePlayer": {"keep": True}},
                 "sidebar": {"defaultMode": "expanded", "futureNested": {"keep": True}},
                 "power": {"instantRestart": True, "futurePower": "keep"},
                 "futureTop": {"keep": [1, 2, 3]},
@@ -1123,7 +1124,7 @@ with module.installer_transaction_lock():
             settings_path.write_text(json.dumps(protected) + "\n", encoding="utf-8")
 
             external = {
-                "media-player.json": b'{"favorites":["fav"],"queue":["queued"],"history":["played"]}\n',
+                "media-player.json": b'{"favorites":["fav"],"queue":["queued"],"history":["played"],"presentationMode":"background","videoQuality":"stable","providerFilter":"jellyfin"}\n',
                 "youtube/cookies.txt": b'auth-cookie-secret\n',
                 "reminders.json": b'{"reminders":["keep"]}\n',
             }

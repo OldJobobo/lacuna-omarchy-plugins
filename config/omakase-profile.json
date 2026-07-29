@@ -268,7 +268,6 @@
       "controlsLayout",
       "power",
       "shellSettings",
-      "mediaPlayer",
       "sidebar",
       "backgroundEffects",
       "backgroundVignette",
@@ -279,7 +278,8 @@
       "customQuickLaunchApps",
       "customQuickLaunchNames",
       "preferredApps",
-      "mediaProviders"
+      "mediaProviders",
+      "mediaPlayer"
     ],
     "preserveUnknownJsonSafeFields": true,
     "untouchedExternalState": [

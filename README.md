@@ -144,9 +144,9 @@ and shell configuration are restored.
 
 Safely restore canonical Lacuna activation, bar layout, and approved
 presentation/runtime settings without replacing plugin copies or deleting
-credentials, provider configuration, favorites, queue/history, auth files,
-reminders, preferred/custom apps, unrelated Omarchy entries, or unknown JSON
-fields:
+credentials, provider configuration, media-player preferences, favorites,
+queue/history, auth files, reminders, preferred/custom apps, unrelated Omarchy
+entries, or unknown JSON fields:
 
 ```bash
 ./scripts/lacuna reset --dry-run

@@ -91,6 +91,11 @@ class OmakaseProfileContractTests(unittest.TestCase):
         self.assertNotIn("lacuna.script-pill", activation_ids)
         self.assertNotIn("lacuna.compact-pill", profile["installRoots"])
 
+        settings_contract = profile["settings"]
+        self.assertNotIn("mediaPlayer", settings_contract["ownedKeys"])
+        self.assertIn("mediaPlayer", settings_contract["preservedKeys"])
+        self.assertIn("media-player.json", settings_contract["untouchedExternalState"])
+
 
 if __name__ == "__main__":
     unittest.main()
