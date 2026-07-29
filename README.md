@@ -40,7 +40,8 @@ system or starting a second shell.
 ## Requirements
 
 - A working, up-to-date [Omarchy](https://omarchy.org/) installation.
-- Git for installing from this repository.
+- Git only when installing directly from this repository instead of the AUR
+  package.
 - ImageMagick is optional; the desktop clock uses it for adaptive wallpaper
   contrast and falls back to theme colors when it is unavailable.
 
@@ -65,15 +66,18 @@ development, recovery, and manual customization. Browse the
 
 ## Install
 
-Clone the repository and start the guided installer:
+### Omarchy + AUR (recommended)
+
+Install the package through Omarchy's AUR package workflow, then start the
+guided installer:
 
 ```bash
-git clone https://github.com/OldJobobo/lacuna-shell.git "$HOME/lacuna-shell"
-cd "$HOME/lacuna-shell"
-./scripts/lacuna
+omarchy pkg aur add lacuna-shell
+lacuna-shell
 ```
 
-Choose **Full Lacuna install** for the canonical omakase setup. The installer
+Choose **Full Lacuna install** for the canonical omakase setup. The package
+installs the versioned Lacuna payload and command; the guided installer then
 previews its checked plan, snapshots your current shell and Lacuna state,
 stages and verifies the plugins, applies the canonical layout, and reloads the
 Omarchy shell.
@@ -81,16 +85,30 @@ Omarchy shell.
 To inspect the normal installation without changing anything:
 
 ```bash
-./scripts/lacuna install --dry-run
+lacuna-shell install --dry-run
 ```
 
 Scripted installs are also available:
 
 ```bash
-./scripts/lacuna install --profile full
-./scripts/lacuna install --profile core
-./scripts/lacuna install --profile ambience --activate
+lacuna-shell install --profile full
+lacuna-shell install --profile core
+lacuna-shell install --profile ambience --activate
 ```
+
+### Install from source
+
+Alternatively, clone the repository and start the same guided installer from
+the checkout:
+
+```bash
+git clone https://github.com/OldJobobo/lacuna-shell.git "$HOME/lacuna-shell"
+cd "$HOME/lacuna-shell"
+./scripts/lacuna
+```
+
+When following the source workflow, replace `lacuna-shell` in the examples
+above with `./scripts/lacuna`.
 
 See [Install and update](docs/install.md) for custom selection, manual source
 installation, package behavior, and advanced recovery details.
@@ -128,7 +146,15 @@ From Lacuna Settings you can also:
 
 ## Update
 
-From the cloned repository:
+For an AUR installation, use Omarchy's normal system update and then stage the
+updated Lacuna payload into the shell:
+
+```bash
+omarchy update
+lacuna-shell update --yes
+```
+
+From a cloned repository instead:
 
 ```bash
 cd "$HOME/lacuna-shell"
@@ -136,9 +162,10 @@ git pull --ff-only
 ./scripts/lacuna update --yes
 ```
 
-Preview an update first with `./scripts/lacuna update --dry-run`. Updates are
-transactional: if verification or shell reload fails, the touched plugin copies
-and shell configuration are restored.
+Preview an update first with `lacuna-shell update --dry-run` (or
+`./scripts/lacuna update --dry-run` from a checkout). Updates are transactional:
+if verification or shell reload fails, the touched plugin copies and shell
+configuration are restored.
 
 ## Reset, Uninstall, And Recovery
 

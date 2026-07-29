@@ -72,12 +72,16 @@ The repository maintains the `lacuna-shell` AUR recipe in
 same AUR package after their immutable GitHub release exists and the package
 lifecycle gate passes. Upstream `0.1.0-beta.1` maps to Arch
 `0.1.0beta.1`, which correctly upgrades through RC versions to stable `0.1.0`.
-Install it with an AUR helper or build its `PKGBUILD` in a clean Arch
-environment. The package requires `omarchy` and `quickshell` providers, Python,
-and Qt Multimedia, places
-the versioned payload under `/usr/share/lacuna-shell` and provides
-the `lacuna-shell` command; package installation itself never edits a user's
-Omarchy configuration.
+Install it through Omarchy's AUR package workflow:
+
+```bash
+omarchy pkg aur add lacuna-shell
+```
+
+The package requires `omarchy` and `quickshell` providers, Python, and Qt
+Multimedia, places the versioned payload under `/usr/share/lacuna-shell`, and
+provides the `lacuna-shell` command; package installation itself never edits a
+user's Omarchy configuration.
 
 Choose a profile after installing the package:
 
@@ -85,10 +89,11 @@ Choose a profile after installing the package:
 lacuna-shell install --profile full
 ```
 
-After a package upgrade, explicitly copy the new payload into the active
-Omarchy plugin installation:
+After updating packages through Omarchy, explicitly copy the new payload into
+the active Omarchy plugin installation:
 
 ```bash
+omarchy update
 lacuna-shell update --yes
 ```
 
