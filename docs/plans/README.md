@@ -36,6 +36,7 @@ These plans do not block beta or RC.
 | Plan | State | Boundary |
 | --- | --- | --- |
 | [Surface Transition Pipeline Repair](./proposed/lacuna-surface-transition-pipeline-plan.md) | Proposed; ready | Optional interaction and transition repair. |
+| [Lacuna-Wide Theme Token System](./proposed/lacuna-wide-theme-token-system-plan.md) | Proposed; architecture decision required | Versioned `lacuna.toml` contract, Lacuna runtime service, plugin-local adapters, and THPM transport hook. |
 | [Portrait Split Bar](./proposed/lacuna-portrait-split-bar-plan.md) | Proposed; ready | Portrait-only companion bar using the canonical Omarchy layout. |
 | [Shell Layout Presets And Agent Orchestration](./proposed/lacuna-shell-layout-presets-agent-orchestration-plan.md) | Proposed | Per-monitor/workspace presets and Agent Orchestration mode. |
 | [Issue Creation](./proposed/lacuna-issue-creation-plan.md) | Draft | Revalidate and authorize before creating external issues. |
