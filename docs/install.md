@@ -70,8 +70,8 @@ Stage a full install without enabling it:
 The repository maintains the `lacuna-shell` AUR recipe in
 `packaging/aur/`. Approved beta, RC, and stable releases are published to the
 same AUR package after their immutable GitHub release exists and the package
-lifecycle gate passes. Upstream `0.1.0-beta.2` maps to Arch
-`0.1.0beta.2`, which correctly upgrades through RC versions to stable `0.1.0`.
+lifecycle gate passes. Upstream `0.1.0-beta.3` maps to Arch
+`0.1.0beta.3`, which correctly upgrades through RC versions to stable `0.1.0`.
 Install it through Omarchy's AUR package workflow:
 
 ```bash

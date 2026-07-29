@@ -7,9 +7,13 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
 
 ## [Unreleased]
 
+## [0.1.0-beta.3] - 2026-07-29
+
 ### Fixed
 - Background-video renderer retries now force a fresh provider resolution
   instead of reusing the media worker's cached failed stream URL.
+- Cancelled provider resolutions can no longer repopulate an invalidated media
+  worker cache entry with a stale stream URL.
 
 ## [0.1.0-beta.2] - 2026-07-29
 
@@ -114,6 +118,7 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
   single-root release archives, local `makepkg`/`namcap` rehearsal, strict AUR
   publication gates, and a clean-chroot submission runbook.
 
-[Unreleased]: https://github.com/OldJobobo/lacuna-shell/compare/v0.1.0-beta.2...HEAD
+[Unreleased]: https://github.com/OldJobobo/lacuna-shell/compare/v0.1.0-beta.3...HEAD
+[0.1.0-beta.3]: https://github.com/OldJobobo/lacuna-shell/releases/tag/v0.1.0-beta.3
 [0.1.0-beta.2]: https://github.com/OldJobobo/lacuna-shell/releases/tag/v0.1.0-beta.2
 [0.1.0-beta.1]: https://github.com/OldJobobo/lacuna-shell/releases/tag/v0.1.0-beta.1
