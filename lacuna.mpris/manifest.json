@@ -66,6 +66,7 @@
       "components/MotionTokens.qml"
     ],
     "requires": [],
-    "recommends": []
+    "recommends": [],
+    "stability": "beta"
   }
 }

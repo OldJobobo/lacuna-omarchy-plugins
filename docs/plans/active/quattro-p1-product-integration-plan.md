@@ -24,6 +24,38 @@ workflow is defined in the
 [Quattro P1 Closeout Execution Plan](quattro-p1-closeout-execution-plan.md).
 This document remains the product and acceptance authority.
 
+## Approved Phase 0 / Phase 6 Product Decisions
+
+These decisions are frozen for the beta line and encoded machine-readably in
+[`../../../config/omakase-profile.json`](../../../config/omakase-profile.json).
+They record the checkpoint only; no P1 workstream is complete by this record.
+
+1. **Omakase membership:** normal install uses the exact checked 46-root list:
+   every supported manifest including experimental plugins, but excluding
+   deprecated/migration-only `lacuna.compact-pill`. It activates `lacuna.bar`
+   and all applicable menu, persistent/service, and overlay entries. Bar
+   widgets are limited to the exact canonical 23-entry `LACUNA_BAR_LAYOUT`;
+   empty script-pill and other optional widgets are not placed automatically.
+2. **Media scope:** `lacuna.media-player` and
+   `lacuna.media-player-video` are installed and enabled by default. Missing
+   provider credentials degrade to disabled/unavailable providers without
+   breaking the shell.
+3. **Reset boundary:** `lacuna reset` is safe-only, has no purge mode, and owns
+   only the canonical Lacuna activation, `bar.id`, `bar.layout`,
+   `bar.centerAnchor`, `bar.transparent`, and the settings keys enumerated by
+   the profile with defaults from `config/settings.example.json`. It preserves
+   provider credentials/config, favorites, queue/history, auth/reminder files,
+   preferred/custom apps, unrelated Omarchy state, other bar keys, and unknown
+   JSON-safe fields.
+4. **Stability vocabulary:** current manifests use exactly `beta`,
+   `experimental`, or `deprecated`; all supported manifests are `beta` except
+   `lacuna.script-pill=experimental` and
+   `lacuna.compact-pill=deprecated`. `stable` is reserved and never inferred.
+5. **Release rehearsal:** destructive rehearsal is approved only for the
+   current user and machine after automatic backups, verified restoration
+   capability, and a fresh explicit confirmation immediately before destructive
+   steps. This records authorization; no destructive rehearsal was run here.
+
 ## Progress Summary
 
 | Workstream | Status | Current evidence | Remaining beta boundary |

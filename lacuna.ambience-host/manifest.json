@@ -19,6 +19,7 @@
     "standalone": false,
     "bundle": "ambience",
     "requires": [],
-    "recommends": []
+    "recommends": [],
+    "stability": "beta"
   }
 }

@@ -34,7 +34,9 @@ from the repository's existing `0.1.0` version.
    `VERSION`, manifests, `PKGBUILD`, and `.SRCINFO` together. Arch `pkgver`
    removes the supported beta/RC prerelease hyphen.
 5. Regenerate `config/release-inventory.json` with `scripts/release-inventory`
-   and confirm installer profiles match `docs/plugins/README.md`.
+   and confirm the exact `config/omakase-profile.json` membership, activation,
+   media inclusion, canonical layout, and beta-line stability vocabulary match
+   `docs/plugins/README.md`.
 6. Confirm user-visible changes have current screenshots when useful.
 
 ## Validate The Tree
@@ -60,13 +62,21 @@ the current command result.
 
 ## Rehearse The Artifact
 
+Destructive rehearsal is approved only on the current user and machine after
+all three safeguards: automatic backups, verified restoration capability, and
+a fresh explicit confirmation immediately before destructive steps. Earlier
+planning approval is not that immediate confirmation. Record the backup and
+restore proof with the rehearsal. This contract does not authorize unattended
+execution, and no destructive rehearsal was run when it was recorded.
+
 Build from committed source, not an arbitrary dirty working tree. Run
 `scripts/build-release-archive --check-reproducible` to create a deterministic,
 single-root archive, checksum, and machine-readable file inventory. Then run
 `scripts/rehearse-aur-package` and test the extracted artifact in a clean install
 path:
 
-1. Install and activate the core profile.
+1. Install and activate the exact canonical omakase profile, including both
+   media plugins, and verify credential-free degradation.
 2. Rescan/restart the shell and smoke the bar, menu, state, and settings.
 3. Change and round-trip representative settings.
 4. Inject or reproduce an update failure and verify rollback.

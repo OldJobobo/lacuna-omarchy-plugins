@@ -9,6 +9,17 @@ users. The machine-readable release/package inventory is generated from these
 manifests at `config/release-inventory.json`; maintainers verify it with
 `scripts/release-inventory --check` before building an artifact.
 
+## Canonical Omakase Membership
+
+`config/omakase-profile.json` is authoritative: the normal install contains all
+46 supported plugin roots, including `lacuna.script-pill`,
+`lacuna.media-player`, and `lacuna.media-player-video`, and excludes only the
+deprecated migration plugin `lacuna.compact-pill`. Installation does not imply
+bar placement: only the profile's exact 23-widget layout is placed, while
+applicable menu, service, and overlay entries are activated separately. Adding
+a manifest cannot silently add it to the normal install; the checked profile
+and manifest set must be updated together.
+
 ## Plugin Areas
 
 - [Bar Plugins](bar.md)
@@ -23,6 +34,7 @@ These plugins can be installed individually from the Lacuna source:
 - `lacuna.audio`
 - `lacuna.aurora-drift`
 - `lacuna.background-vignette`
+- `lacuna.bar-seam`
 - `lacuna.bar-size-pill`
 - `lacuna.bluetooth`
 - `lacuna.cinematic-light-overlay`
@@ -31,14 +43,20 @@ These plugins can be installed individually from the Lacuna source:
 - `lacuna.codex-usage`
 - `lacuna.crt-overlay`
 - `lacuna.desktop-clock`
+- `lacuna.dust-motes-overlay`
+- `lacuna.film-grain-overlay`
+- `lacuna.god-rays-overlay`
 - `lacuna.idle-inhibitor`
 - `lacuna.indicators`
+- `lacuna.media-player`
+- `lacuna.media-player-video`
 - `lacuna.mpris`
 - `lacuna.network`
 - `lacuna.nightlight`
 - `lacuna.notifications`
 - `lacuna.power`
 - `lacuna.rainfall-overlay`
+- `lacuna.reminders`
 - `lacuna.screen-recording`
 - `lacuna.script-pill`
 - `lacuna.settings-persistence`
@@ -100,7 +118,7 @@ Every plugin manifest includes:
 - `lacuna.bundle`: one of `standalone`, `core`, `theme`, `ambience`, or `legacy`.
 - `lacuna.requires`: companion plugins required for the advertised workflow.
 - `lacuna.recommends`: optional companions that improve the workflow.
-- `lacuna.stability` (optional, default `stable`): see below.
+- `lacuna.stability` (required): see below.
 - `lacuna.vendorExclude` (optional): plugin-relative paths whose vendored copy
   intentionally diverges from the canonical source, so `scripts/sync-vendored`
   skips them.
@@ -110,12 +128,16 @@ when validating or installing plugins.
 
 ## Stability Tiers
 
-`lacuna.stability` marks how settled a plugin is. Absent means `stable`. The
-installer appends a `[tier]` marker to non-stable plugins in its menus.
+The beta-line vocabulary is exactly `beta`, `experimental`, and `deprecated`.
+Every manifest must declare one explicitly; the installer and release inventory
+reject missing, invalid, or reserved values. `stable` is reserved for a future
+release line and must not be inferred or used as current manifest metadata.
+The installer displays every plugin's declared tier.
 
-- `stable` (default): supported; safe to depend on.
-- `experimental`: a proving ground that may change or be promoted/removed.
-  Currently: `lacuna.script-pill` (the script-backed widget experiment path).
-- `deprecated`: kept for compatibility, slated for removal. Currently:
-  `lacuna.compact-pill` (superseded by `lacuna.bar-size-pill`); planned for
-  removal in the `0.2.0` release.
+- `beta`: supported beta scope. Every supported plugin except the experiment
+  below uses this tier.
+- `experimental`: supported in omakase but still a proving ground. Currently:
+  `lacuna.script-pill`.
+- `deprecated`: compatibility/migration only and excluded from omakase.
+  Currently: `lacuna.compact-pill` (superseded by
+  `lacuna.bar-size-pill`), planned for removal in `0.2.0`.

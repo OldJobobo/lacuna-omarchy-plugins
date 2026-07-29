@@ -11,6 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "config/release-inventory.json"
+ALLOWED_STABILITIES = {"beta", "experimental", "deprecated"}
 
 
 def payload_files(path: Path) -> list[str]:
@@ -22,8 +23,10 @@ def payload_files(path: Path) -> list[str]:
         stdout=subprocess.PIPE,
     )
     files = [str((ROOT / item).relative_to(path)) for item in result.stdout.splitlines() if item]
-    if path == ROOT / "config" and "release-inventory.json" not in files:
-        files.append("release-inventory.json")
+    if path == ROOT / "config":
+        for required in ("omakase-profile.json", "release-inventory.json"):
+            if (path / required).is_file() and required not in files:
+                files.append(required)
     return sorted(files)
 
 
@@ -32,12 +35,19 @@ def generate() -> dict:
     for manifest_path in sorted(ROOT.glob("lacuna.*/manifest.json")):
         data = json.loads(manifest_path.read_text(encoding="utf-8"))
         meta = data.get("lacuna", {})
+        stability = meta.get("stability")
+        if stability not in ALLOWED_STABILITIES:
+            allowed = ", ".join(sorted(ALLOWED_STABILITIES))
+            raise SystemExit(
+                f"{manifest_path}: lacuna.stability must be explicit and one of {allowed}; "
+                f"got {stability!r}. 'stable' is reserved."
+            )
         plugin_dir = manifest_path.parent
         plugins.append(
             {
                 "id": data["id"],
                 "kinds": data.get("kinds", []),
-                "stability": meta.get("stability", "stable"),
+                "stability": stability,
                 "bundle": meta.get("bundle", "standalone"),
                 "standalone": bool(meta.get("standalone", False)),
                 "requires": meta.get("requires", []),

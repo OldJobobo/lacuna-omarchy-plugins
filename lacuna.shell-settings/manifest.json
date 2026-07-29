@@ -27,6 +27,7 @@
     "recommends": [
       "lacuna.menu",
       "lacuna.theme-preloader"
-    ]
+    ],
+    "stability": "beta"
   }
 }

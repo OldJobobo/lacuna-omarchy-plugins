@@ -20,6 +20,7 @@
     "recommends": [
       "lacuna.menu",
       "lacuna.shell-settings"
-    ]
+    ],
+    "stability": "beta"
   }
 }

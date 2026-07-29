@@ -72,6 +72,7 @@
     "requires": [],
     "recommends": [
       "lacuna.ambience-host"
-    ]
+    ],
+    "stability": "beta"
   }
 }

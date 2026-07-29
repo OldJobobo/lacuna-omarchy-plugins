@@ -22,27 +22,32 @@ The first screen offers:
 
 - Full Lacuna install
 - Custom install
+- Update installed Lacuna plugins
+- Reset Lacuna to omakase defaults
 - Uninstall Lacuna
 - Status
 
-Full install stages and activates the Lacuna Bar setup, including the native
-Lacuna bar-widget replacements used by the Lacuna layout. Custom install lets
-you pick groups or individual standalone plugins, then automatically includes
-required companions such as `lacuna.state` and `lacuna.shell-settings`.
+Full install is the canonical omakase path. Its checked inventory contains all
+46 supported roots, including experimental plugins and both media plugins, and
+excludes deprecated `lacuna.compact-pill`. It activates the Lacuna bar plus all
+applicable menu, persistent service, and overlay entries, while the exact
+canonical layout places only its curated bar widgets. Providers without
+credentials remain disabled or visibly unavailable rather than breaking media
+or the shell. Custom profiles remain an advanced development/recovery path.
 
 ## Scripted Installs
 
 ```bash
-./scripts/lacuna install --profile full
+./scripts/lacuna install
 ./scripts/lacuna install --profile core
 ./scripts/lacuna install --profile native --activate
 ./scripts/lacuna install --plugin lacuna.clock,lacuna.weather
 ```
 
-Preview any install without changing the system:
+Preview the normal omakase install without changing the system:
 
 ```bash
-./scripts/lacuna install --profile full --dry-run
+./scripts/lacuna install --dry-run
 ```
 
 The installer performs a dependency preflight before staging. A non-dry-run
@@ -113,6 +118,30 @@ Update already-installed Lacuna plugins from this checkout:
 Updates are transactional at the plugin-batch level. A failed rescan restores
 all plugins touched by that update, while the state snapshots remain available
 for manual recovery.
+
+## Safe Reset
+
+```bash
+./scripts/lacuna reset --dry-run
+./scripts/lacuna reset
+```
+
+Reset first requires all 46 canonical omakase plugin roots to be present in the
+installed plugin directory; dry-run enforces the same preflight. If roots are
+missing, install the complete profile with `./scripts/lacuna install --yes`
+before resetting. Reset then snapshots `shell.json` and `settings.json`,
+validates the checked profile and both inputs, atomically replaces each file,
+and reloads exactly once. It is
+transactional for handled write and reload failures: either failure restores
+exact prior bytes and modes. An abrupt process or power loss between the two
+file replacements can leave only one file updated; cross-file journaling is
+outside this safe-reset scope. Reset owns
+`bar.id`, `bar.layout`, `bar.centerAnchor`, `bar.transparent`, canonical Lacuna
+plugin activation, and the presentation/runtime branches listed in
+`config/omakase-profile.json`. It preserves credentials, provider settings,
+favorites, queue/history, auth and reminder files, preferred/custom apps,
+unrelated plugin entries, other bar keys, and unknown JSON-safe fields. Reset
+never changes installed plugin copies and deliberately has no purge mode.
 
 ## Uninstall
 

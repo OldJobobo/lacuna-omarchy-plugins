@@ -22,6 +22,7 @@
       "qml/simple-bar/MotionTokens.qml"
     ],
     "configFiles": [
+      "omakase-profile.json",
       "quattro-compatibility.json",
       "release-inventory.json",
       "settings.example.json",
@@ -36,7 +37,7 @@
       "kinds": [
         "overlay"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "ambience",
       "standalone": false,
       "requires": [],
@@ -64,7 +65,7 @@
         "service",
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -91,7 +92,7 @@
       "kinds": [
         "overlay"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -111,7 +112,7 @@
       "kinds": [
         "overlay"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -130,7 +131,7 @@
       "kinds": [
         "bar"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "core",
       "standalone": false,
       "requires": [
@@ -171,7 +172,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -191,7 +192,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -216,7 +217,7 @@
         "service",
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -243,7 +244,7 @@
       "kinds": [
         "overlay"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -263,7 +264,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -290,7 +291,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -317,7 +318,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -371,7 +372,7 @@
       "kinds": [
         "overlay"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -391,7 +392,7 @@
       "kinds": [
         "overlay"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -411,7 +412,7 @@
       "kinds": [
         "overlay"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -431,7 +432,7 @@
       "kinds": [
         "overlay"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -451,7 +452,7 @@
       "kinds": [
         "overlay"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -471,7 +472,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -492,7 +493,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -567,7 +568,7 @@
       "kinds": [
         "menu"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "core",
       "standalone": false,
       "requires": [
@@ -668,7 +669,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "core",
       "standalone": false,
       "requires": [
@@ -693,7 +694,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -717,7 +718,7 @@
         "service",
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -744,7 +745,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -765,7 +766,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -790,7 +791,7 @@
         "service",
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -817,7 +818,7 @@
       "kinds": [
         "overlay"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -837,7 +838,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -856,7 +857,7 @@
         "service",
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -901,7 +902,7 @@
         "service",
         "panel"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -922,7 +923,7 @@
         "service",
         "panel"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "core",
       "standalone": false,
       "requires": [
@@ -973,7 +974,7 @@
       "kinds": [
         "service"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "core",
       "standalone": false,
       "requires": [],
@@ -995,7 +996,7 @@
         "service",
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -1028,7 +1029,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -1049,7 +1050,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -1077,7 +1078,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -1105,7 +1106,7 @@
       "kinds": [
         "service"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "theme",
       "standalone": false,
       "requires": [],
@@ -1128,7 +1129,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -1146,7 +1147,7 @@
       "kinds": [
         "overlay"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -1167,7 +1168,7 @@
         "service",
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -1190,7 +1191,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -1218,7 +1219,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],
@@ -1245,7 +1246,7 @@
       "kinds": [
         "bar-widget"
       ],
-      "stability": "stable",
+      "stability": "beta",
       "bundle": "standalone",
       "standalone": true,
       "requires": [],

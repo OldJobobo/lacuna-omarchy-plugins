@@ -45,26 +45,23 @@ system or starting a second shell.
   contrast and falls back to theme colors when it is unavailable.
 
 The current beta candidate is reviewed against Omarchy
-`4.0.0.r1333.ga466dcc-1` and Quickshell `0.3.0.r18.g10b439f-3`. See the
+`4.0.0.r1438.g9b693cc-1` and Quickshell `0.3.0.r18.g10b439f-3`. See the
 [compatibility ledger](docs/architecture/quattro-compatibility.md) for the
 latest validated host versions.
 
-## Choose Your Setup
+## Omakase Setup
 
-**Full** is the recommended experience. It installs the Lacuna bar, frame,
-sidebar, settings, widgets, theme workflow, and visual surfaces with the
-recommended layout.
+The normal installation is one checked omakase experience. It installs all 46
+supported plugin roots—including experimental surfaces and both media
+plugins—while excluding the deprecated migration-only `lacuna.compact-pill`.
+It activates the Lacuna bar and applicable menu, service, and overlay entries,
+but places only the curated widgets in the canonical bar layout. Media is ready
+by default and degrades to unavailable/disabled providers when credentials are
+not configured.
 
-Other supported setups are:
-
-- **Core:** bar, frame, sidebar, state, and settings foundation.
-- **Native replacements:** Lacuna-styled versions of common Omarchy bar
-  widgets without the complete desktop composition.
-- **Ambience:** desktop clock, vignette, and ordered background effects.
-- **A la carte:** individual standalone widgets such as Weather, Workspaces,
-  Codex Usage, Claude Usage, or Desktop Clock.
-
-Browse the [plugin catalog](docs/plugins/README.md) for the complete list.
+Advanced selective profiles and a-la-carte installs remain available for
+development, recovery, and manual customization. Browse the
+[plugin catalog](docs/plugins/README.md) for the complete list.
 
 ## Install
 
@@ -76,15 +73,15 @@ cd "$HOME/lacuna"
 ./scripts/lacuna
 ```
 
-Choose **Full Lacuna install** unless you specifically want a smaller setup.
-The installer previews its plan, snapshots your current shell and Lacuna state,
-stages and verifies the plugins, applies the recommended layout, and reloads
-the Omarchy shell.
+Choose **Full Lacuna install** for the canonical omakase setup. The installer
+previews its checked plan, snapshots your current shell and Lacuna state,
+stages and verifies the plugins, applies the canonical layout, and reloads the
+Omarchy shell.
 
-To inspect the full installation without changing anything:
+To inspect the normal installation without changing anything:
 
 ```bash
-./scripts/lacuna install --profile full --dry-run
+./scripts/lacuna install --dry-run
 ```
 
 Scripted installs are also available:
@@ -143,9 +140,21 @@ Preview an update first with `./scripts/lacuna update --dry-run`. Updates are
 transactional: if verification or shell reload fails, the touched plugin copies
 and shell configuration are restored.
 
-## Uninstall And Recovery
+## Reset, Uninstall, And Recovery
 
-Remove all Lacuna plugins while retaining your Lacuna preferences:
+Safely restore canonical Lacuna activation, bar layout, and approved
+presentation/runtime settings without replacing plugin copies or deleting
+credentials, provider configuration, favorites, queue/history, auth files,
+reminders, preferred/custom apps, unrelated Omarchy entries, or unknown JSON
+fields:
+
+```bash
+./scripts/lacuna reset --dry-run
+./scripts/lacuna reset
+```
+
+Reset has no purge mode. Remove all Lacuna plugins while retaining your Lacuna
+preferences:
 
 ```bash
 ./scripts/lacuna uninstall --all

@@ -1,7 +1,12 @@
+import importlib.machinery
+import importlib.util
 import json
 import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,7 +30,34 @@ class ReleaseInventoryTests(unittest.TestCase):
         }
         inventory_ids = {plugin["id"] for plugin in data["plugins"]}
         self.assertEqual(manifest_ids, inventory_ids)
+        manifest_stability = {
+            json.loads(path.read_text(encoding="utf-8"))["id"]: json.loads(path.read_text(encoding="utf-8"))["lacuna"]["stability"]
+            for path in ROOT.glob("lacuna.*/manifest.json")
+        }
+        inventory_stability = {plugin["id"]: plugin["stability"] for plugin in data["plugins"]}
+        self.assertEqual(manifest_stability, inventory_stability)
+        self.assertTrue(set(inventory_stability.values()) <= {"beta", "experimental", "deprecated"})
         self.assertEqual(data["package"]["requiredPackages"], ["omarchy", "python", "qt6-multimedia"])
+        self.assertIn("omakase-profile.json", data["package"]["configFiles"])
+
+    def test_generator_rejects_missing_invalid_and_reserved_stability(self):
+        loader = importlib.machinery.SourceFileLoader("release_inventory_test", str(ROOT / "scripts/release-inventory"))
+        spec = importlib.util.spec_from_loader("release_inventory_test", loader)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        loader.exec_module(module)
+        for stability in (None, "stable", "preview"):
+            with self.subTest(stability=stability), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                plugin_dir = root / "lacuna.fake"
+                plugin_dir.mkdir()
+                manifest = {"id": "lacuna.fake", "lacuna": {}}
+                if stability is not None:
+                    manifest["lacuna"]["stability"] = stability
+                (plugin_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+                with mock.patch.object(module, "ROOT", root):
+                    with self.assertRaises(SystemExit):
+                        module.generate()
 
     def test_inventory_entry_points_and_files_exist(self):
         data = json.loads(INVENTORY.read_text(encoding="utf-8"))

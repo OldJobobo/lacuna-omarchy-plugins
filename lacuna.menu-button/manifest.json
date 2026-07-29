@@ -47,6 +47,7 @@
     "requires": [
       "lacuna.menu"
     ],
-    "recommends": []
+    "recommends": [],
+    "stability": "beta"
   }
 }

@@ -77,6 +77,7 @@
     "requires": [],
     "recommends": [
       "lacuna.voxtype"
-    ]
+    ],
+    "stability": "beta"
   }
 }

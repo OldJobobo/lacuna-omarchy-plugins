@@ -13,6 +13,7 @@ ENTRY_POINT_BY_KIND = {
     "service": "service",
 }
 LACUNA_BUNDLES = {"standalone", "core", "theme", "ambience", "legacy"}
+LACUNA_STABILITIES = {"beta", "experimental", "deprecated"}
 SUITE_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
 
@@ -56,6 +57,18 @@ class ManifestContractTests(unittest.TestCase):
                 self.assertIsInstance(meta.get(key), list, f"{path}: lacuna.{key}")
                 for plugin_id in meta[key]:
                     self.assertIn(plugin_id, plugin_ids, f"{path}: unknown lacuna.{key} {plugin_id}")
+
+    def test_manifest_stability_is_explicit_and_uses_beta_line_vocabulary(self):
+        for path in manifest_paths():
+            manifest = read_json(path)
+            stability = manifest.get("lacuna", {}).get("stability")
+            self.assertIn(stability, LACUNA_STABILITIES, str(path))
+            expected = (
+                "experimental" if manifest["id"] == "lacuna.script-pill"
+                else "deprecated" if manifest["id"] == "lacuna.compact-pill"
+                else "beta"
+            )
+            self.assertEqual(stability, expected, str(path))
 
     def test_manifest_versions_match_suite_version(self):
         self.assertRegex(SUITE_VERSION, r"^\d+\.\d+\.\d+(?:-(?:beta|rc)\.\d+)?$")

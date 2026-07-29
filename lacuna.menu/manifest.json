@@ -34,6 +34,7 @@
       "lacuna.theme-preloader",
       "lacuna.tray",
       "lacuna.vhs-overlay"
-    ]
+    ],
+    "stability": "beta"
   }
 }

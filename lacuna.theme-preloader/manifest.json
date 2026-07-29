@@ -20,6 +20,7 @@
     "recommends": [
       "lacuna.theme",
       "lacuna.wallpaper"
-    ]
+    ],
+    "stability": "beta"
   }
 }

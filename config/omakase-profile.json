@@ -1,0 +1,315 @@
+{
+  "schemaVersion": 1,
+  "profileId": "omakase",
+  "installRoots": [
+    "lacuna.ambience-host",
+    "lacuna.audio",
+    "lacuna.aurora-drift",
+    "lacuna.background-vignette",
+    "lacuna.bar",
+    "lacuna.bar-seam",
+    "lacuna.bar-size-pill",
+    "lacuna.bluetooth",
+    "lacuna.cinematic-light-overlay",
+    "lacuna.claude-usage",
+    "lacuna.clock",
+    "lacuna.codex-usage",
+    "lacuna.crt-overlay",
+    "lacuna.desktop-clock",
+    "lacuna.dust-motes-overlay",
+    "lacuna.film-grain-overlay",
+    "lacuna.god-rays-overlay",
+    "lacuna.idle-inhibitor",
+    "lacuna.indicators",
+    "lacuna.media-player",
+    "lacuna.media-player-video",
+    "lacuna.menu",
+    "lacuna.menu-button",
+    "lacuna.mpris",
+    "lacuna.network",
+    "lacuna.nightlight",
+    "lacuna.notifications",
+    "lacuna.power",
+    "lacuna.rainfall-overlay",
+    "lacuna.reminders",
+    "lacuna.screen-recording",
+    "lacuna.script-pill",
+    "lacuna.settings-persistence",
+    "lacuna.shell-settings",
+    "lacuna.state",
+    "lacuna.system-stats",
+    "lacuna.system-update",
+    "lacuna.temperature",
+    "lacuna.theme",
+    "lacuna.theme-preloader",
+    "lacuna.tray",
+    "lacuna.vhs-overlay",
+    "lacuna.voxtype",
+    "lacuna.wallpaper",
+    "lacuna.weather",
+    "lacuna.workspaces"
+  ],
+  "excludedRoots": {
+    "deprecated": [
+      "lacuna.compact-pill"
+    ],
+    "reason": "Migration-only compatibility plugin; never part of the canonical install."
+  },
+  "media": {
+    "installRoots": [
+      "lacuna.media-player",
+      "lacuna.media-player-video"
+    ],
+    "activationEntries": [
+      {
+        "id": "lacuna.media-player"
+      },
+      {
+        "id": "lacuna.media-player-video"
+      }
+    ],
+    "credentialsRequired": false,
+    "missingCredentialsBehavior": "Providers remain disabled or unavailable without breaking the shell."
+  },
+  "shell": {
+    "ownedBarKeys": [
+      "id",
+      "layout",
+      "centerAnchor",
+      "transparent"
+    ],
+    "bar": {
+      "id": "lacuna.bar",
+      "layout": {
+        "left": [
+          {
+            "id": "lacuna.menu-button"
+          },
+          {
+            "id": "lacuna.workspaces",
+            "workspaceCount": 7
+          },
+          {
+            "id": "lacuna.codex-usage"
+          },
+          {
+            "id": "lacuna.claude-usage"
+          },
+          {
+            "id": "lacuna.mpris"
+          }
+        ],
+        "center": [
+          {
+            "id": "lacuna.voxtype"
+          },
+          {
+            "id": "lacuna.clock",
+            "format": "ddd d h:mm AP",
+            "dateFormat": "ddd d",
+            "timeFormat": "h:mm AP",
+            "verticalFormat": "HH\n-\nmm"
+          },
+          {
+            "id": "lacuna.weather"
+          },
+          {
+            "id": "lacuna.system-update"
+          },
+          {
+            "id": "lacuna.notifications"
+          },
+          {
+            "id": "lacuna.nightlight"
+          },
+          {
+            "id": "lacuna.idle-inhibitor"
+          },
+          {
+            "id": "lacuna.screen-recording"
+          }
+        ],
+        "right": [
+          {
+            "id": "lacuna.tray"
+          },
+          {
+            "id": "lacuna.theme"
+          },
+          {
+            "id": "lacuna.wallpaper"
+          },
+          {
+            "id": "lacuna.bluetooth"
+          },
+          {
+            "id": "lacuna.network"
+          },
+          {
+            "id": "lacuna.audio"
+          },
+          {
+            "id": "lacuna.power"
+          },
+          {
+            "id": "lacuna.system-stats"
+          },
+          {
+            "id": "lacuna.temperature"
+          },
+          {
+            "id": "lacuna.bar-size-pill"
+          }
+        ]
+      },
+      "centerAnchor": "lacuna.clock",
+      "transparent": false
+    },
+    "activationEntries": [
+      {
+        "id": "lacuna.ambience-host"
+      },
+      {
+        "id": "lacuna.audio"
+      },
+      {
+        "id": "lacuna.aurora-drift"
+      },
+      {
+        "id": "lacuna.background-vignette"
+      },
+      {
+        "id": "lacuna.bluetooth"
+      },
+      {
+        "id": "lacuna.cinematic-light-overlay"
+      },
+      {
+        "id": "lacuna.crt-overlay"
+      },
+      {
+        "id": "lacuna.desktop-clock"
+      },
+      {
+        "id": "lacuna.dust-motes-overlay"
+      },
+      {
+        "id": "lacuna.film-grain-overlay"
+      },
+      {
+        "id": "lacuna.god-rays-overlay"
+      },
+      {
+        "id": "lacuna.media-player"
+      },
+      {
+        "id": "lacuna.media-player-video"
+      },
+      {
+        "id": "lacuna.menu"
+      },
+      {
+        "id": "lacuna.network"
+      },
+      {
+        "id": "lacuna.power"
+      },
+      {
+        "id": "lacuna.rainfall-overlay"
+      },
+      {
+        "id": "lacuna.screen-recording"
+      },
+      {
+        "id": "lacuna.settings-persistence"
+      },
+      {
+        "id": "lacuna.shell-settings"
+      },
+      {
+        "id": "lacuna.state"
+      },
+      {
+        "id": "lacuna.system-stats"
+      },
+      {
+        "id": "lacuna.theme-preloader"
+      },
+      {
+        "id": "lacuna.vhs-overlay"
+      },
+      {
+        "id": "lacuna.voxtype"
+      }
+    ],
+    "preserve": {
+      "barKeysExcept": [
+        "id",
+        "layout",
+        "centerAnchor",
+        "transparent"
+      ],
+      "unrelatedPluginEntries": true,
+      "unknownTopLevelFields": true
+    }
+  },
+  "settings": {
+    "defaults": "settings.example.json",
+    "ownedKeys": [
+      "version",
+      "designStyle",
+      "designStyles",
+      "colorProfile",
+      "compact",
+      "barSizeMode",
+      "quickLaunchLayout",
+      "dailyLaunchLayout",
+      "shortcutsLayout",
+      "controlsLayout",
+      "power",
+      "shellSettings",
+      "mediaPlayer",
+      "sidebar",
+      "backgroundEffects",
+      "backgroundVignette",
+      "frame",
+      "barPresentation"
+    ],
+    "preservedKeys": [
+      "customQuickLaunchApps",
+      "customQuickLaunchNames",
+      "preferredApps",
+      "mediaProviders"
+    ],
+    "preserveUnknownJsonSafeFields": true,
+    "untouchedExternalState": [
+      "media-player.json",
+      "youtube-music.json",
+      "youtube/",
+      "reminders.json"
+    ]
+  },
+  "reset": {
+    "mode": "safe-only",
+    "purgeSupported": false,
+    "reloadCommand": [
+      "omarchy",
+      "restart",
+      "shell"
+    ],
+    "reloadCount": 1,
+    "atomicFileWrites": true,
+    "rollbackExactBytesAndModeOnReloadFailure": true
+  },
+  "releaseRehearsal": {
+    "target": "current-user-current-machine",
+    "approved": true,
+    "destructive": true,
+    "prerequisites": [
+      "automatic-backups",
+      "verified-restoration-capability",
+      "fresh-explicit-confirmation-immediately-before-destructive-steps"
+    ],
+    "runNow": false
+  }
+}

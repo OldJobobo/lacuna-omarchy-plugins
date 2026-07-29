@@ -57,29 +57,35 @@ The implementation may use the scoped keyboard-focus mode required for
 intentional text input. It must not infer that compositor focus implies general
 keyboard navigation.
 
-## Product Decisions Required Before Writers Start
+## Approved Phase 0 / Phase 6 Product Decisions
 
-Phase 0 must record explicit answers for these items. An implementation worker
-must stop rather than guess.
+The answers are frozen below and encoded in
+[`../../../config/omakase-profile.json`](../../../config/omakase-profile.json).
+No P1 workstream is complete by this checkpoint.
 
-1. **Omakase membership:** exact plugin root IDs, exact bar layout, and which
-   provider-dependent or ambience plugins are enabled by default,
-   installed-but-disabled, a-la-carte, or excluded.
-2. **Media scope:** whether `lacuna.media-player` and
-   `lacuna.media-player-video` are part of the normal beta setup or an optional
-   beta component.
-3. **Reset boundary:** exact `shell.json` entries and Lacuna settings branches
-   owned by canonical reset. Provider credentials, unrelated plugins, unknown
-   JSON-safe fields, and separate media queue/history state should be preserved
-   unless explicitly approved otherwise.
-4. **Stability vocabulary:** whether `stable`, `beta`, `experimental`, and
-   `deprecated` are all supported manifest values and how each relates to
-   omakase membership.
-5. **Rehearsal target:** disposable user/session or explicitly approved current
-   user, plus the release-tested Omarchy and Quickshell pair.
-
-Record the answers in the P1 plan or a checked configuration artifact before
-Phase 1. Do not mark workstreams complete at this checkpoint.
+1. **Omakase membership:** normal install uses the exact checked 46 supported
+   roots, including experimental plugins, and excludes deprecated/migration-only
+   `lacuna.compact-pill`. It activates the Lacuna bar and all applicable menu,
+   persistent/service, and overlay entries. Bar placement is exactly the
+   canonical 23-entry `LACUNA_BAR_LAYOUT`, not empty script-pill or every
+   optional widget.
+2. **Media scope:** `lacuna.media-player` and
+   `lacuna.media-player-video` are installed and enabled by default; absent
+   provider credentials degrade safely to disabled/unavailable providers.
+3. **Reset boundary:** `lacuna reset` is safe-only with no purge mode. Its exact
+   four owned bar keys, activation entries, and settings branches are listed in
+   the checked profile and default from `settings.example.json`. Credentials,
+   provider configuration, favorites, queue/history, auth/reminder files,
+   preferred/custom apps, unrelated Omarchy state, other bar keys, and unknown
+   JSON-safe fields are preserved.
+4. **Stability vocabulary:** exactly `beta`, `experimental`, and `deprecated`
+   are valid for this beta line. Supported manifests are `beta` except
+   `lacuna.script-pill=experimental`; `lacuna.compact-pill=deprecated`.
+   `stable` is reserved, neither accepted nor inferred.
+5. **Rehearsal target:** destructive release rehearsal is approved only on the
+   current user/machine after automatic backups, verified restoration
+   capability, and a fresh explicit confirmation immediately before destructive
+   steps. The contract is recorded now; destructive rehearsal is not run now.
 
 ## Subagent Execution Protocol
 
@@ -519,8 +525,10 @@ reviewers validate it.
 - keep selective/profile installs under advanced, development, or recovery
   documentation;
 - ensure adding a new manifest cannot silently change omakase membership;
-- implement reset and reset dry-run with snapshot, validation, atomic merge,
-  one reload, and rollback;
+- implement reset and reset dry-run with snapshot, validation, atomic
+  replacement per file, one reload, and transactional rollback for handled
+  write/reload failures; abrupt loss between replacements remains a documented
+  limitation rather than adding a journal in this scope;
 - preserve unrelated plugins, unknown fields, credentials, and media data
   according to the approved reset boundary;
 - reconcile README, install docs, examples, catalog, stability vocabulary, and

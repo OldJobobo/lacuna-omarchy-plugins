@@ -212,8 +212,36 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("Status: in progress; beta/RC release-readiness track", p2)
         self.assertIn("P2 runs alongside P1", p2)
         self.assertIn("Current development target accepted", p2)
-        self.assertIn("Accepted Omarchy `4.0.0.r1333.ga466dcc-1`", p2)
+        self.assertIn("Accepted Omarchy `4.0.0.r1438.g9b693cc-1`", p2)
         self.assertIn("0.1.0-beta.N -> 0.1.0-rc.N -> 0.1.0", release)
+
+    def test_omakase_decisions_are_recorded_without_p1_completion_claim(self):
+        p1 = (PLANS / "active" / "quattro-p1-product-integration-plan.md").read_text(encoding="utf-8")
+        closeout = (PLANS / "active" / "quattro-p1-closeout-execution-plan.md").read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs/roadmap.md").read_text(encoding="utf-8")
+        install = (ROOT / "docs/install.md").read_text(encoding="utf-8")
+        catalog = (ROOT / "docs/plugins/README.md").read_text(encoding="utf-8")
+        release = (ROOT / "docs/development/release.md").read_text(encoding="utf-8")
+
+        for document in (p1, closeout):
+            self.assertIn("exact checked 46", document)
+            self.assertIn("lacuna.media-player-video", document)
+            self.assertIn("safe-only", document)
+            self.assertIn("`stable` is reserved", document)
+            self.assertIn("fresh explicit confirmation", document)
+            self.assertNotRegex(document, r"(?m)^P1 workstream is complete\b")
+        self.assertIn("no P1 workstream is complete by this record.", p1)
+        self.assertIn("No P1 workstream is complete by this checkpoint.", closeout)
+        self.assertIn("checked 46-root omakase profile", roadmap)
+        self.assertIn("reset\nnever changes installed plugin copies", install.lower())
+        self.assertIn("Adding\na manifest cannot silently add it", catalog)
+        self.assertIn("automatic backups, verified restoration capability", release)
+        self.assertIn("no destructive rehearsal was run", release)
+        self.assertIn("all 46 canonical omakase plugin roots", install)
+        self.assertIn("./scripts/lacuna install --yes", install)
+        self.assertIn("atomically replaces each file", install)
+        self.assertIn("abrupt process or power loss between the two", install)
+        self.assertNotIn("atomically merges only reset-owned state", install)
 
     def test_quattro_compatibility_docs_match_reviewed_baseline(self):
         compatibility = json.loads((ROOT / "config" / "quattro-compatibility.json").read_text(encoding="utf-8"))
@@ -233,6 +261,9 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("r1193 to r1333 review", ledger)
         self.assertIn("`moduleWidgets(pluginId)`", ledger)
         self.assertIn("`AppLibrary`", ledger)
+        self.assertIn("r1333 to r1438 review", ledger)
+        self.assertIn("`pickDrawnSlot()`", ledger)
+        self.assertIn("`openPanelIndicatorWidth`", ledger)
 
     def test_distribution_scaffolding_exists(self):
         for name in [

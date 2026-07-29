@@ -60,6 +60,7 @@
     "requires": [],
     "recommends": [
       "lacuna.theme-preloader"
-    ]
+    ],
+    "stability": "beta"
   }
 }

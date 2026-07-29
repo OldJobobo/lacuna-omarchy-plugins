@@ -130,6 +130,13 @@ Deliverables:
 
 Plan: [P1 Product Integration](plans/active/quattro-p1-product-integration-plan.md)
 
+The Phase 0/Phase 6 decision checkpoint is frozen without closing P1: the
+checked 46-root omakase profile includes media and experimental plugins,
+excludes deprecated compact-pill, uses safe-only preservation-first reset, and
+requires explicit beta-line stability metadata. Destructive rehearsal is
+approved only on the current user/machine after backups, restoration proof, and
+a fresh immediate confirmation; it has not been run for this checkpoint.
+
 ### P2 — Release and evolution
 
 Status: in progress; beta/RC release-readiness track
@@ -231,12 +238,12 @@ true:
 - Validation on 2026-07-16 reports 305 passing tests and 3 environment skips.
   Treat this as a dated observation, not a pinned expected count.
 - `scripts/quattro-compatibility --check` reports compatibility with Omarchy
-  `4.0.0.r1333.ga466dcc-1` and Quickshell `0.3.0.r18.g10b439f-3` on the current machine.
-- The r1333 review is accepted. The r1180 portion exposed one breaking host change: upstream
-  removed `omarchy-hyprland-launch` and `Util.hyprExecCommand()`. Lacuna's bar
-  command runner uses the replacement `Util.execDetached()` API. The r1333
-  portion adds multi-monitor widget broadcast lookup, now mirrored by Lacuna's
-  custom host, plus an additive stock-menu `AppLibrary` service Lacuna does not consume.
+  `4.0.0.r1438.g9b693cc-1` and Quickshell `0.3.0.r18.g10b439f-3` on the current machine.
+- The r1438 review is accepted. Earlier reviews ported `Util.execDetached()` and
+  multi-monitor widget broadcast lookup. The r1438 delta adds drawn-slot panel
+  routing, hidden center-list lifecycle guards, and optional panel-indicator
+  extent hints, now mirrored by Lacuna; host-owned asynchronous component-load
+  deduplication requires no Lacuna copy.
 - Codex currently reports a weekly-only quota window, so its 5-hour readout is
   suppressed in the bar and dimmed in the flyout. Claude currently reports both
   session and weekly windows through its authenticated usage endpoint. Both

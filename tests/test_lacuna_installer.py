@@ -1,4 +1,5 @@
 import fcntl
+import json
 import os
 import shutil
 import subprocess
@@ -48,6 +49,61 @@ def run_lacuna_unchecked(args, config_home=None):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+
+
+OMAKASE_PLUGIN_IDS = {
+    "lacuna.ambience-host",
+    "lacuna.audio",
+    "lacuna.aurora-drift",
+    "lacuna.background-vignette",
+    "lacuna.bar",
+    "lacuna.bar-seam",
+    "lacuna.bar-size-pill",
+    "lacuna.bluetooth",
+    "lacuna.cinematic-light-overlay",
+    "lacuna.claude-usage",
+    "lacuna.clock",
+    "lacuna.codex-usage",
+    "lacuna.crt-overlay",
+    "lacuna.desktop-clock",
+    "lacuna.dust-motes-overlay",
+    "lacuna.film-grain-overlay",
+    "lacuna.god-rays-overlay",
+    "lacuna.idle-inhibitor",
+    "lacuna.indicators",
+    "lacuna.media-player",
+    "lacuna.media-player-video",
+    "lacuna.menu",
+    "lacuna.menu-button",
+    "lacuna.mpris",
+    "lacuna.network",
+    "lacuna.nightlight",
+    "lacuna.notifications",
+    "lacuna.power",
+    "lacuna.rainfall-overlay",
+    "lacuna.reminders",
+    "lacuna.screen-recording",
+    "lacuna.script-pill",
+    "lacuna.settings-persistence",
+    "lacuna.shell-settings",
+    "lacuna.state",
+    "lacuna.system-stats",
+    "lacuna.system-update",
+    "lacuna.temperature",
+    "lacuna.theme",
+    "lacuna.theme-preloader",
+    "lacuna.tray",
+    "lacuna.vhs-overlay",
+    "lacuna.voxtype",
+    "lacuna.wallpaper",
+    "lacuna.weather",
+    "lacuna.workspaces",
+}
+
+
+def install_omakase_roots(config_home, plugin_ids=OMAKASE_PLUGIN_IDS):
+    for plugin_id in plugin_ids:
+        (config_home / "omarchy" / "plugins" / plugin_id).mkdir(parents=True, exist_ok=True)
 
 
 def load_installer_module():
@@ -163,6 +219,57 @@ with module.installer_transaction_lock():
         self.assertEqual(result.stdout.count("omarchy restart shell"), 1)
         self.assertEqual(result.stdout.count("omarchy plugin rescan"), 0)
         self.assertNotIn("lacuna.compact-pill", result.stdout)
+
+    def test_omakase_profile_is_exact_checked_set_with_canonical_layout(self):
+        module = load_installer_module()
+        plugins = module.load_plugins()
+        profile = module.load_omakase_profile(plugins)
+
+        self.assertEqual(len(OMAKASE_PLUGIN_IDS), 46)
+        self.assertEqual(set(profile["installRoots"]), OMAKASE_PLUGIN_IDS)
+        self.assertNotIn("lacuna.compact-pill", profile["installRoots"])
+        self.assertEqual(profile["shell"]["bar"]["layout"], module.LACUNA_BAR_LAYOUT)
+        layout_ids = {
+            entry["id"]
+            for entries in profile["shell"]["bar"]["layout"].values()
+            for entry in entries
+        }
+        self.assertNotIn("lacuna.script-pill", layout_ids)
+        self.assertNotIn("lacuna.reminders", layout_ids)
+        self.assertNotIn("lacuna.bar-seam", layout_ids)
+        self.assertEqual(profile["reset"]["mode"], "safe-only")
+        self.assertEqual(profile["reset"]["reloadCount"], 1)
+        self.assertIs(profile["reset"]["atomicFileWrites"], True)
+        self.assertNotIn("atomicMerge", profile["reset"])
+        self.assertIs(profile["reset"]["purgeSupported"], False)
+        self.assertIn("youtube/", profile["settings"]["untouchedExternalState"])
+        self.assertNotIn("youtube-auth/", profile["settings"]["untouchedExternalState"])
+        self.assertEqual(profile["releaseRehearsal"]["target"], "current-user-current-machine")
+        self.assertIs(profile["releaseRehearsal"]["runNow"], False)
+        self.assertEqual(
+            profile["releaseRehearsal"]["prerequisites"],
+            [
+                "automatic-backups",
+                "verified-restoration-capability",
+                "fresh-explicit-confirmation-immediately-before-destructive-steps",
+            ],
+        )
+
+    def test_omakase_media_is_installed_and_activated_without_credentials(self):
+        module = load_installer_module()
+        profile = module.load_omakase_profile(module.load_plugins())
+        activation_ids = {entry["id"] for entry in profile["shell"]["activationEntries"]}
+
+        self.assertEqual(
+            profile["media"]["installRoots"],
+            ["lacuna.media-player", "lacuna.media-player-video"],
+        )
+        self.assertTrue(set(profile["media"]["installRoots"]) <= set(profile["installRoots"]))
+        self.assertTrue(set(profile["media"]["installRoots"]) <= activation_ids)
+        self.assertIs(profile["media"]["credentialsRequired"], False)
+        defaults = json.loads((ROOT / "config/settings.example.json").read_text(encoding="utf-8"))
+        self.assertIs(defaults["mediaProviders"]["youtube"]["enabled"], False)
+        self.assertIs(defaults["mediaProviders"]["jellyfin"]["enabled"], False)
 
     def test_ambience_profile_stages_host_first_and_every_fallback(self):
         result = run_lacuna(["install", "--profile", "ambience", "--activate", "--dry-run", "--yes"])
@@ -634,16 +741,36 @@ with module.installer_transaction_lock():
 
         self.assertEqual(plugins["lacuna.script-pill"].stability, "experimental")
         self.assertEqual(plugins["lacuna.compact-pill"].stability, "deprecated")
-        self.assertEqual(plugins["lacuna.menu"].stability, "stable")
+        self.assertEqual(plugins["lacuna.menu"].stability, "beta")
 
         self.assertIn("[experimental]", module.label(plugins["lacuna.script-pill"]))
         self.assertIn("[deprecated]", module.label(plugins["lacuna.compact-pill"]))
-        # Stable plugins carry no marker, and id parsing still round-trips.
-        self.assertNotIn("[", module.label(plugins["lacuna.menu"]))
+        self.assertIn("[beta]", module.label(plugins["lacuna.menu"]))
+        # Tier markers do not interfere with id parsing.
         self.assertEqual(
             module.id_from_label(module.label(plugins["lacuna.script-pill"])),
             "lacuna.script-pill",
         )
+
+    def test_installer_rejects_missing_invalid_and_reserved_manifest_stability(self):
+        module = load_installer_module()
+        for stability in (None, "stable", "preview"):
+            with self.subTest(stability=stability), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                plugin_dir = root / "lacuna.fake"
+                plugin_dir.mkdir()
+                manifest = {
+                    "id": "lacuna.fake",
+                    "name": "Fake",
+                    "kinds": [],
+                    "lacuna": {"standalone": True, "bundle": "standalone", "requires": [], "recommends": []},
+                }
+                if stability is not None:
+                    manifest["lacuna"]["stability"] = stability
+                (plugin_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+                with mock.patch.object(module, "ROOT", root):
+                    with self.assertRaises(SystemExit):
+                        module.load_plugins()
 
     def test_activation_selects_bar_options_with_bar_id(self):
         module = load_installer_module()
@@ -904,6 +1031,319 @@ with module.installer_transaction_lock():
             ],
             entries,
         )
+
+    def test_reset_preflight_refuses_zero_installed_roots_without_mutation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            shell_path = config_home / "omarchy/shell.json"
+            settings_path = config_home / "omarchy/lacuna/settings.json"
+            shell_path.parent.mkdir(parents=True, exist_ok=True)
+            settings_path.parent.mkdir(parents=True)
+            shell_path.write_bytes(b'{"keep":"shell"}\n')
+            settings_path.write_bytes(b'{"keep":"settings"}\n')
+            original = (shell_path.read_bytes(), settings_path.read_bytes())
+
+            result = run_lacuna_unchecked(["reset", "--yes"], config_home=config_home)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("Reset refused", result.stderr)
+            self.assertIn("lacuna.media-player", result.stderr)
+            self.assertIn("lacuna.script-pill", result.stderr)
+            self.assertIn("Recovery: ./scripts/lacuna install --yes", result.stderr)
+            self.assertEqual((shell_path.read_bytes(), settings_path.read_bytes()), original)
+            self.assertFalse((settings_path.parent / "installer-status.json").exists())
+            self.assertFalse((settings_path.parent / "backups").exists())
+            self.assertFalse((config_home / "omarchy/lacuna-installer.lock").exists())
+
+    def test_reset_preflight_refuses_partial_installed_roots_with_exact_missing_list(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            missing = "lacuna.media-player-video"
+            install_omakase_roots(config_home, OMAKASE_PLUGIN_IDS - {missing})
+
+            result = run_lacuna_unchecked(["reset", "--dry-run", "--yes"], config_home=config_home)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertIn(f"  - {missing}", result.stderr)
+            self.assertNotIn("  - lacuna.script-pill", result.stderr)
+            self.assertIn("Recovery: ./scripts/lacuna install --yes", result.stderr)
+
+    def test_reset_preflight_allows_all_roots_for_dry_run_and_reset(self):
+        module = load_installer_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            install_omakase_roots(config_home)
+
+            dry_run = run_lacuna(["reset", "--dry-run", "--yes"], config_home=config_home)
+            self.assertIn("Omakase reset plan", dry_run.stdout)
+
+            args = module.argparse.Namespace(dry_run=False, yes=True)
+            env = {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}
+            with mock.patch.dict(module.os.environ, env), mock.patch.object(module, "run_command", return_value=0):
+                self.assertEqual(module.reset(args), 0)
+
+    def test_reset_preserves_protected_state_plugin_copies_and_is_idempotent(self):
+        module = load_installer_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            install_omakase_roots(config_home)
+            shell_path = config_home / "omarchy/shell.json"
+            settings_path = config_home / "omarchy/lacuna/settings.json"
+            shell_path.parent.mkdir(parents=True, exist_ok=True)
+            settings_path.parent.mkdir(parents=True)
+            shell_path.write_text(json.dumps({
+                "version": 7,
+                "futureShell": {"keep": True},
+                "bar": {
+                    "id": "other.bar",
+                    "position": "bottom",
+                    "futureBar": 9,
+                    "layout": {"left": [{"id": "other.widget"}], "center": [], "right": [{"id": "lacuna.script-pill", "command": "keep-out"}]},
+                },
+                "plugins": [
+                    {"id": "other.overlay", "custom": 1},
+                    {"id": "lacuna.compact-pill"},
+                    {"id": "lacuna.crt-overlay", "intensity": 0.99},
+                ],
+            }) + "\n", encoding="utf-8")
+            protected = {
+                "customQuickLaunchApps": ["secret-app"],
+                "customQuickLaunchNames": {"secret-app": "Secret"},
+                "preferredApps": {"files": "private-file-manager"},
+                "mediaProviders": {"jellyfin": {"enabled": True, "apiKey": "credential", "serverUrl": "https://private"}},
+                "sidebar": {"defaultMode": "expanded", "futureNested": {"keep": True}},
+                "power": {"instantRestart": True, "futurePower": "keep"},
+                "futureTop": {"keep": [1, 2, 3]},
+            }
+            settings_path.write_text(json.dumps(protected) + "\n", encoding="utf-8")
+
+            external = {
+                "media-player.json": b'{"favorites":["fav"],"queue":["queued"],"history":["played"]}\n',
+                "youtube/cookies.txt": b'auth-cookie-secret\n',
+                "reminders.json": b'{"reminders":["keep"]}\n',
+            }
+            for relative, payload in external.items():
+                path = settings_path.parent / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(payload)
+            plugin_sentinel = config_home / "omarchy/plugins/lacuna.media-player/user-copy"
+            plugin_sentinel.parent.mkdir(parents=True, exist_ok=True)
+            plugin_sentinel.write_bytes(b"do-not-touch\n")
+
+            args = module.argparse.Namespace(dry_run=False, yes=True)
+            env = {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}
+            with mock.patch.dict(module.os.environ, env), mock.patch.object(module, "run_command", return_value=0) as reload_command:
+                self.assertEqual(module.reset(args), 0)
+                first_shell = shell_path.read_bytes()
+                first_settings = settings_path.read_bytes()
+                self.assertEqual(module.reset(args), 0)
+
+            shell = json.loads(shell_path.read_text(encoding="utf-8"))
+            settings = json.loads(settings_path.read_text(encoding="utf-8"))
+            profile = module.load_omakase_profile(module.load_plugins())
+            self.assertEqual(shell_path.read_bytes(), first_shell)
+            self.assertEqual(settings_path.read_bytes(), first_settings)
+            self.assertEqual(reload_command.call_count, 2)
+            self.assertEqual(shell["bar"]["position"], "bottom")
+            self.assertEqual(shell["bar"]["futureBar"], 9)
+            self.assertEqual(shell["bar"]["layout"], profile["shell"]["bar"]["layout"])
+            self.assertEqual(shell["plugins"][0], {"id": "other.overlay", "custom": 1})
+            self.assertEqual(shell["plugins"][1:], profile["shell"]["activationEntries"])
+            self.assertEqual(shell["futureShell"], {"keep": True})
+            for key in module.RESET_PRESERVED_SETTINGS_KEYS:
+                self.assertEqual(settings[key], protected[key])
+            self.assertEqual(settings["version"], 2)
+            self.assertEqual(settings["sidebar"]["defaultMode"], "off")
+            self.assertEqual(settings["sidebar"]["futureNested"], {"keep": True})
+            self.assertIs(settings["power"]["instantRestart"], False)
+            self.assertEqual(settings["power"]["futurePower"], "keep")
+            self.assertEqual(settings["futureTop"], protected["futureTop"])
+            for relative, payload in external.items():
+                self.assertEqual((settings_path.parent / relative).read_bytes(), payload)
+            self.assertEqual(plugin_sentinel.read_bytes(), b"do-not-touch\n")
+            self.assertGreaterEqual(len(list((settings_path.parent / "backups").glob("*.bak"))), 4)
+
+    def test_reset_reloads_latest_state_after_interactive_confirmation(self):
+        module = load_installer_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            install_omakase_roots(config_home)
+            shell_path = config_home / "omarchy/shell.json"
+            settings_path = config_home / "omarchy/lacuna/settings.json"
+            shell_path.parent.mkdir(parents=True, exist_ok=True)
+            settings_path.parent.mkdir(parents=True)
+            shell_path.write_text('{"bar":{"layout":{"left":[],"center":[],"right":[]}},"plugins":[]}\n', encoding="utf-8")
+            settings_path.write_text(
+                '{"mediaProviders":{"jellyfin":{"apiKey":"old"}},"futureDuringConfirm":"old"}\n',
+                encoding="utf-8",
+            )
+
+            def confirm_and_mutate(_prompt, _assume_yes):
+                settings_path.write_text(
+                    '{"mediaProviders":{"jellyfin":{"apiKey":"latest-secret"}},"futureDuringConfirm":{"keep":true}}\n',
+                    encoding="utf-8",
+                )
+                return True
+
+            args = module.argparse.Namespace(dry_run=False, yes=False)
+            env = {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}
+            with mock.patch.dict(module.os.environ, env), \
+                mock.patch.object(module, "confirm", side_effect=confirm_and_mutate), \
+                mock.patch.object(module, "run_command", return_value=0):
+                self.assertEqual(module.reset(args), 0)
+
+            settings = json.loads(settings_path.read_text(encoding="utf-8"))
+            self.assertEqual(settings["mediaProviders"]["jellyfin"]["apiKey"], "latest-secret")
+            self.assertEqual(settings["futureDuringConfirm"], {"keep": True})
+
+    def test_reset_dry_run_validates_without_confirmation_or_mutation(self):
+        module = load_installer_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            install_omakase_roots(config_home)
+            shell_path = config_home / "omarchy/shell.json"
+            settings_path = config_home / "omarchy/lacuna/settings.json"
+            shell_path.parent.mkdir(parents=True, exist_ok=True)
+            settings_path.parent.mkdir(parents=True)
+            shell_path.write_bytes(b'{"bar":{"layout":{"left":[],"center":[],"right":[]}},"plugins":[]}\n')
+            settings_path.write_bytes(b'{"mediaProviders":{"jellyfin":{"apiKey":"keep"}}}\n')
+            original = (shell_path.read_bytes(), settings_path.read_bytes())
+            args = module.argparse.Namespace(dry_run=True, yes=False)
+            env = {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}
+            with mock.patch.dict(module.os.environ, env), mock.patch.object(module, "confirm", side_effect=AssertionError), mock.patch.object(module, "run_command") as run_command:
+                self.assertEqual(module.reset(args), 0)
+            self.assertEqual((shell_path.read_bytes(), settings_path.read_bytes()), original)
+            run_command.assert_not_called()
+
+    def test_reset_rejects_malformed_input_without_mutation(self):
+        module = load_installer_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            install_omakase_roots(config_home)
+            shell_path = config_home / "omarchy/shell.json"
+            settings_path = config_home / "omarchy/lacuna/settings.json"
+            shell_path.parent.mkdir(parents=True, exist_ok=True)
+            settings_path.parent.mkdir(parents=True)
+            shell_path.write_bytes(b"{malformed\n")
+            settings_path.write_bytes(b'{"keep":true}\n')
+            original = (shell_path.read_bytes(), settings_path.read_bytes())
+            args = module.argparse.Namespace(dry_run=False, yes=True)
+            env = {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}
+            with mock.patch.dict(module.os.environ, env), mock.patch.object(module, "run_command") as run_command:
+                with self.assertRaises(SystemExit):
+                    module.reset(args)
+            self.assertEqual((shell_path.read_bytes(), settings_path.read_bytes()), original)
+            run_command.assert_not_called()
+
+    def test_reset_rejects_invalid_shell_shape_without_mutation(self):
+        module = load_installer_module()
+        for malformed_shell in (
+            {"bar": "invalid", "plugins": []},
+            {"bar": {"layout": []}, "plugins": []},
+            {"bar": {"layout": {"left": [], "center": [], "right": []}}, "plugins": {}},
+        ):
+            with self.subTest(shell=malformed_shell), tempfile.TemporaryDirectory() as tmp:
+                config_home = Path(tmp) / "config"
+                install_omakase_roots(config_home)
+                shell_path = config_home / "omarchy/shell.json"
+                settings_path = config_home / "omarchy/lacuna/settings.json"
+                shell_path.parent.mkdir(parents=True, exist_ok=True)
+                settings_path.parent.mkdir(parents=True)
+                shell_path.write_text(json.dumps(malformed_shell) + "\n", encoding="utf-8")
+                settings_path.write_text('{"keep":true}\n', encoding="utf-8")
+                original = (shell_path.read_bytes(), settings_path.read_bytes())
+                args = module.argparse.Namespace(dry_run=False, yes=True)
+                env = {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}
+                with mock.patch.dict(module.os.environ, env), mock.patch.object(module, "run_command") as run_command:
+                    with self.assertRaises(SystemExit):
+                        module.reset(args)
+                self.assertEqual((shell_path.read_bytes(), settings_path.read_bytes()), original)
+                run_command.assert_not_called()
+
+    def test_reset_preserves_absent_unowned_shell_version(self):
+        module = load_installer_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            install_omakase_roots(config_home)
+            shell_path = config_home / "omarchy/shell.json"
+            shell_path.parent.mkdir(parents=True, exist_ok=True)
+            shell_path.write_text(
+                '{"future":{"exact":[1,2]},"bar":{"position":"bottom","layout":{"left":[],"center":[],"right":[]}},"plugins":[]}\n',
+                encoding="utf-8",
+            )
+            args = module.argparse.Namespace(dry_run=False, yes=True)
+            env = {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}
+            with mock.patch.dict(module.os.environ, env), mock.patch.object(module, "run_command", return_value=0):
+                self.assertEqual(module.reset(args), 0)
+
+            shell = json.loads(shell_path.read_text(encoding="utf-8"))
+            self.assertNotIn("version", shell)
+            self.assertEqual(shell["future"], {"exact": [1, 2]})
+            self.assertEqual(shell["bar"]["position"], "bottom")
+
+    def test_reset_reload_failure_restores_exact_bytes_and_modes(self):
+        module = load_installer_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            install_omakase_roots(config_home)
+            shell_path = config_home / "omarchy/shell.json"
+            settings_path = config_home / "omarchy/lacuna/settings.json"
+            shell_path.parent.mkdir(parents=True, exist_ok=True)
+            settings_path.parent.mkdir(parents=True)
+            shell_path.write_bytes(b'{"future":1,"bar":{"layout":{"left":[],"center":[],"right":[]}},"plugins":[]}\n')
+            settings_path.write_bytes(b'{"mediaProviders":{"youtube":{"cookiesFile":"secret"}}}\n')
+            shell_path.chmod(0o640)
+            settings_path.chmod(0o600)
+            original = (shell_path.read_bytes(), shell_path.stat().st_mode & 0o7777, settings_path.read_bytes(), settings_path.stat().st_mode & 0o7777)
+            args = module.argparse.Namespace(dry_run=False, yes=True)
+            env = {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}
+            with mock.patch.dict(module.os.environ, env), mock.patch.object(module, "run_command", return_value=19) as run_command:
+                self.assertEqual(module.reset(args), 19)
+            restored = (shell_path.read_bytes(), shell_path.stat().st_mode & 0o7777, settings_path.read_bytes(), settings_path.stat().st_mode & 0o7777)
+            self.assertEqual(restored, original)
+            self.assertEqual(run_command.call_count, 1)
+
+    def test_reset_reload_oserror_restores_exact_bytes_and_modes(self):
+        module = load_installer_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            install_omakase_roots(config_home)
+            shell_path = config_home / "omarchy/shell.json"
+            settings_path = config_home / "omarchy/lacuna/settings.json"
+            shell_path.parent.mkdir(parents=True, exist_ok=True)
+            settings_path.parent.mkdir(parents=True)
+            shell_path.write_bytes(b'{"future":2,"bar":{"layout":{"left":[],"center":[],"right":[]}},"plugins":[]}\n')
+            settings_path.write_bytes(b'{"mediaProviders":{"youtube":{"cookiesFile":"secret"}},"future":true}\n')
+            shell_path.chmod(0o640)
+            settings_path.chmod(0o600)
+            original = (shell_path.read_bytes(), shell_path.stat().st_mode & 0o7777, settings_path.read_bytes(), settings_path.stat().st_mode & 0o7777)
+            args = module.argparse.Namespace(dry_run=False, yes=True)
+            env = {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}
+            with mock.patch.dict(module.os.environ, env), \
+                mock.patch.object(module, "run_command", side_effect=FileNotFoundError("omarchy")) as run_command:
+                self.assertEqual(module.reset(args), 1)
+            restored = (shell_path.read_bytes(), shell_path.stat().st_mode & 0o7777, settings_path.read_bytes(), settings_path.stat().st_mode & 0o7777)
+            self.assertEqual(restored, original)
+            self.assertEqual(run_command.call_count, 1)
+
+    def test_reset_requires_confirmation_and_has_no_purge_option(self):
+        module = load_installer_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            install_omakase_roots(config_home)
+            shell_path = config_home / "omarchy/shell.json"
+            shell_path.parent.mkdir(parents=True, exist_ok=True)
+            shell_path.write_bytes(b'{"bar":{"layout":{"left":[],"center":[],"right":[]}},"plugins":[]}\n')
+            original = shell_path.read_bytes()
+            args = module.argparse.Namespace(dry_run=False, yes=False)
+            env = {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}
+            with mock.patch.dict(module.os.environ, env), mock.patch.object(module, "confirm", return_value=False) as confirm, mock.patch.object(module, "run_command") as run_command:
+                self.assertEqual(module.reset(args), 1)
+            self.assertEqual(shell_path.read_bytes(), original)
+            confirm.assert_called_once()
+            run_command.assert_not_called()
+            with self.assertRaises(SystemExit):
+                module.parser().parse_args(["reset", "--purge"])
 
     def test_status_reports_staged_vs_enabled_plugins(self):
         with tempfile.TemporaryDirectory() as tmp:
