@@ -520,7 +520,7 @@ ShellRoot {{
             f"marker={str(marker)!r}\n"
             "count=0; [ ! -f \"$marker\" ] || count=$(cat \"$marker\")\n"
             "count=$((count + 1)); printf %s \"$count\" > \"$marker\"\n"
-            "if [ \"$count\" -eq 1 ]; then sleep 0.35; else sleep 0.03; fi\n"
+            "if [ \"$count\" -eq 1 ]; then sleep 2; else sleep 0.03; fi\n"
             "printf '{\"url\":\"https://cdn.example.test/preview-%s.mp4\"}\\n' \"$count\"\n",
             encoding="utf-8",
         )
@@ -553,7 +553,7 @@ ShellRoot {{
     }}
   }}
   Timer {{
-    id: replay; interval: 90
+    id: replay; interval: 500
     onTriggered: {{
       svc.stop()
       svc.currentTrack = root.track
