@@ -30,11 +30,11 @@ if [[ $upstream_version != "$version" || $pkgver != "$expected_pkgver" ]]; then
   exit 1
 fi
 
-if ! grep -Fq "depends = omarchy" "$srcinfo" || ! grep -Fq "depends = python" "$srcinfo" || ! grep -Fq "depends = qt6-multimedia" "$srcinfo"; then
-  printf 'AUR metadata must require omarchy, python, and qt6-multimedia\n' >&2
+if ! grep -Fq "depends = omarchy" "$srcinfo" || ! grep -Fq "depends = quickshell" "$srcinfo" || ! grep -Fq "depends = python" "$srcinfo" || ! grep -Fq "depends = qt6-multimedia" "$srcinfo"; then
+  printf 'AUR metadata must require omarchy, quickshell, python, and qt6-multimedia\n' >&2
   exit 1
 fi
-if [[ $source_spec != *"/releases/download/v${version}/lacuna-omarchy-plugins-${version}.tar.gz" ]]; then
+if [[ $source_spec != *"/releases/download/v${version}/lacuna-shell-${version}.tar.gz" ]]; then
   printf 'AUR source is not the versioned GitHub release archive\n' >&2
   exit 1
 fi

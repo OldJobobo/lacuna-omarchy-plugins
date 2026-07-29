@@ -1,7 +1,7 @@
 # AUR Submission Runbook
 
 This runbook covers beta, RC, and stable publication through the single
-`lacuna-omarchy-plugins` AUR package. A release reaches AUR only after its
+`lacuna-shell` AUR package. A release reaches AUR only after its
 matching immutable GitHub release and full package lifecycle evidence exist.
 
 ## Preconditions
@@ -21,12 +21,12 @@ Stop unless all of these are true:
 
 1. Configure an AUR account and SSH key according to the current AUR account
    documentation.
-2. Confirm `lacuna-omarchy-plugins` is available and is not an existing package
+2. Confirm `lacuna-shell` is available and is not an existing package
    that requires a merge, orphan adoption, or maintainer discussion.
 3. Clone the dedicated repository:
 
    ```bash
-   git clone ssh://aur@aur.archlinux.org/lacuna-omarchy-plugins.git
+   git clone ssh://aur@aur.archlinux.org/lacuna-shell.git
    ```
 
 4. Copy only `packaging/aur/PKGBUILD` and `packaging/aur/.SRCINFO` into it.
@@ -40,13 +40,13 @@ From the dedicated AUR checkout:
 ```bash
 makepkg --verifysource
 makepkg --cleanbuild --syncdeps
-namcap PKGBUILD lacuna-omarchy-plugins-*.pkg.tar.zst
-pacman -Qlp lacuna-omarchy-plugins-*.pkg.tar.zst
+namcap PKGBUILD lacuna-shell-*.pkg.tar.zst
+pacman -Qlp lacuna-shell-*.pkg.tar.zst
 ```
 
 Also build with the current Arch clean-chroot tooling (`extra-x86_64-build` or
 its documented successor). Install that exact package on the approved Omarchy
-host, run `lacuna-omarchy install --profile full`, restart the shell, and repeat
+host, run `lacuna-shell install --profile full`, restart the shell, and repeat
 the release smoke, update rollback, uninstall, and stock-bar recovery checks.
 
 Record the project commit/tag, release archive SHA-256, package SHA-256,

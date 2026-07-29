@@ -67,28 +67,29 @@ Stage a full install without enabling it:
 
 ## Arch Linux And AUR Packages
 
-The repository maintains the `lacuna-omarchy-plugins` AUR recipe in
+The repository maintains the `lacuna-shell` AUR recipe in
 `packaging/aur/`. Approved beta, RC, and stable releases are published to the
 same AUR package after their immutable GitHub release exists and the package
 lifecycle gate passes. Upstream `0.1.0-beta.1` maps to Arch
 `0.1.0beta.1`, which correctly upgrades through RC versions to stable `0.1.0`.
 Install it with an AUR helper or build its `PKGBUILD` in a clean Arch
-environment. The package requires an `omarchy` provider, Python, and Qt Multimedia, places
-the versioned payload under `/usr/share/lacuna-omarchy-plugins` and provides
-the `lacuna-omarchy` command; package installation itself never edits a user's
+environment. The package requires `omarchy` and `quickshell` providers, Python,
+and Qt Multimedia, places
+the versioned payload under `/usr/share/lacuna-shell` and provides
+the `lacuna-shell` command; package installation itself never edits a user's
 Omarchy configuration.
 
 Choose a profile after installing the package:
 
 ```bash
-lacuna-omarchy install --profile full
+lacuna-shell install --profile full
 ```
 
 After a package upgrade, explicitly copy the new payload into the active
 Omarchy plugin installation:
 
 ```bash
-lacuna-omarchy update --yes
+lacuna-shell update --yes
 ```
 
 This explicit step preserves the installer's snapshots, validation, and
@@ -98,7 +99,7 @@ See `packaging/aur/README.md` for the maintainer publication procedure.
 ## Diagnostics
 
 ```bash
-lacuna-omarchy status
+lacuna-shell status
 ```
 
 Status reports Omarchy and Quickshell host versions, host/runtime paths, shell

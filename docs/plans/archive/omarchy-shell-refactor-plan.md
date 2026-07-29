@@ -382,7 +382,7 @@ read it.
 Create a new repository outside this Lacuna folder, for example:
 
 ```text
-lacuna-omarchy-plugins/
+lacuna-shell/
   README.md
   lacuna.script-pill/
     manifest.json

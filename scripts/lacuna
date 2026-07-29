@@ -22,7 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = "lacuna"
-OFFICIAL_SOURCE_URL = "https://github.com/OldJobobo/lacuna-omarchy-plugins.git"
+OFFICIAL_SOURCE_URL = "https://github.com/OldJobobo/lacuna-shell.git"
 LEGACY_PLUGIN = "lacuna.compact-pill"
 OMAKASE_PROFILE_PATH = ROOT / "config" / "omakase-profile.json"
 ALLOWED_STABILITIES = {"beta", "experimental", "deprecated"}
@@ -1969,7 +1969,7 @@ def write_installer_status(operation: str, phase: str, exit_code: int | None = N
         "phase": phase,
         "exitCode": exit_code,
         "updatedAt": datetime.now(timezone.utc).isoformat(),
-        "recovery": "lacuna-omarchy status; omarchy plugin rescan; omarchy restart shell",
+        "recovery": "lacuna-shell status; omarchy plugin rescan; omarchy restart shell",
     }
     temporary: Path | None = None
     try:

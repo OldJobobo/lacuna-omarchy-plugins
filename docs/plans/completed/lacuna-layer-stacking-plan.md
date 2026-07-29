@@ -9,7 +9,7 @@ plan explains why it exists and what was changed.
 
 ## REPO CONTEXT
 
-- Repo: lacuna-omarchy-plugins (Omarchy/Quickshell plugins; every window is a
+- Repo: lacuna-shell (Omarchy/Quickshell plugins; every window is a
   wlr-layer-shell surface).
 - Key files:
   - `lacuna.bar/Bar.qml` — bar host; creates frame surfaces, bar adapter, hosted menu

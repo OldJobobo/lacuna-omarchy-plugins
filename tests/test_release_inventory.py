@@ -37,7 +37,7 @@ class ReleaseInventoryTests(unittest.TestCase):
         inventory_stability = {plugin["id"]: plugin["stability"] for plugin in data["plugins"]}
         self.assertEqual(manifest_stability, inventory_stability)
         self.assertTrue(set(inventory_stability.values()) <= {"beta", "experimental", "deprecated"})
-        self.assertEqual(data["package"]["requiredPackages"], ["omarchy", "python", "qt6-multimedia"])
+        self.assertEqual(data["package"]["requiredPackages"], ["omarchy", "quickshell", "python", "qt6-multimedia"])
         self.assertIn("omakase-profile.json", data["package"]["configFiles"])
 
     def test_generator_rejects_missing_invalid_and_reserved_stability(self):

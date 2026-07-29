@@ -93,11 +93,11 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
 - Test coverage for the ambience overlays, desktop clock,
   settings-persistence, script pill, and `desktop-app-catalog.py`; CI now
   installs pytest and reports coverage.
-- AUR packaging scaffold for `lacuna-omarchy-plugins`, including synchronized
+- AUR packaging scaffold for `lacuna-shell`, including synchronized
   `.SRCINFO`, package validation, system payload layout, and maintainer docs.
 - Prerelease-aware version tooling, a generated plugin inventory, deterministic
   single-root release archives, local `makepkg`/`namcap` rehearsal, strict AUR
   publication gates, and a clean-chroot submission runbook.
 
-[Unreleased]: https://github.com/OldJobobo/lacuna-omarchy-plugins/compare/v0.1.0-beta.1...HEAD
-[0.1.0-beta.1]: https://github.com/OldJobobo/lacuna-omarchy-plugins/releases/tag/v0.1.0-beta.1
+[Unreleased]: https://github.com/OldJobobo/lacuna-shell/compare/v0.1.0-beta.1...HEAD
+[0.1.0-beta.1]: https://github.com/OldJobobo/lacuna-shell/releases/tag/v0.1.0-beta.1

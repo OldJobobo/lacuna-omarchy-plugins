@@ -11,19 +11,20 @@ submission before the corresponding beta, RC, or stable candidate is approved.
 ## Policy
 
 - Publish each approved beta, RC, and stable artifact through both GitHub and
-  the single `lacuna-omarchy-plugins` AUR package. AUR publication follows the
+  the single `lacuna-shell` AUR package. AUR publication follows the
   immutable GitHub release and full package lifecycle gate.
 - Convert supported SemVer versions by removing the prerelease hyphen:
   `0.1.0-beta.1` → `0.1.0beta.1`. Arch `vercmp` must prove
   `beta < rc < stable`.
-- Require `omarchy`, `python`, and `qt6-multimedia`; `omarchy-dev` satisfies
-  the host requirement through `provides=('omarchy')`.
+- Require `omarchy`, `quickshell`, `python`, and `qt6-multimedia`;
+  `omarchy-dev` and `quickshell-git` satisfy the host/runtime requirements
+  through their respective `provides` metadata.
 - Every published AUR recipe consumes its matching immutable, deterministic
   GitHub release archive and a real SHA-256. `SKIP` is allowed only before
   publication preparation and must fail the publish gate.
 - Package transactions install an immutable payload under
-  `/usr/share/lacuna-omarchy-plugins`; they never edit user configuration.
-  Activation and payload refresh remain explicit `lacuna-omarchy` operations.
+  `/usr/share/lacuna-shell`; they never edit user configuration.
+  Activation and payload refresh remain explicit `lacuna-shell` operations.
 
 ## Execution Phases
 

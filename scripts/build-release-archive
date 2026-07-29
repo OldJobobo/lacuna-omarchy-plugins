@@ -71,7 +71,7 @@ def committed_entries() -> list[tuple[str, int, bytes, str | None]]:
 
 
 def build(entries: list[tuple[str, int, bytes, str | None]], version: str) -> tuple[bytes, list[dict]]:
-    prefix = f"lacuna-omarchy-plugins-{version}"
+    prefix = f"lacuna-shell-{version}"
     raw = io.BytesIO()
     inventory = []
     with tarfile.open(fileobj=raw, mode="w", format=tarfile.GNU_FORMAT) as archive:
@@ -129,7 +129,7 @@ def main() -> int:
 
     output_dir = ROOT / args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
-    name = f"lacuna-omarchy-plugins-{version}.tar.gz"
+    name = f"lacuna-shell-{version}.tar.gz"
     archive_path = output_dir / name
     archive_path.write_bytes(payload)
     digest = hashlib.sha256(payload).hexdigest()

@@ -1,9 +1,10 @@
 {
   "schemaVersion": 1,
   "package": {
-    "name": "lacuna-omarchy-plugins",
+    "name": "lacuna-shell",
     "requiredPackages": [
       "omarchy",
+      "quickshell",
       "python",
       "qt6-multimedia"
     ],
@@ -12,8 +13,8 @@
       "mpv",
       "yt-dlp"
     ],
-    "payloadRoot": "/usr/share/lacuna-omarchy-plugins",
-    "command": "/usr/bin/lacuna-omarchy",
+    "payloadRoot": "/usr/share/lacuna-shell",
+    "command": "/usr/bin/lacuna-shell",
     "sharedFiles": [
       "qml/LacunaGeometry.qml",
       "qml/LacunaTokens.qml",

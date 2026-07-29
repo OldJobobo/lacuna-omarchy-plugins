@@ -120,10 +120,10 @@ def main() -> int:
             print(f"forbidden package paths: {(outside_usr + forbidden)[:5]}", file=sys.stderr)
             return 1
         required_paths = {
-            "usr/bin/lacuna-omarchy",
-            "usr/share/lacuna-omarchy-plugins/VERSION",
-            "usr/share/lacuna-omarchy-plugins/scripts/lacuna",
-            "usr/share/licenses/lacuna-omarchy-plugins/LICENSE",
+            "usr/bin/lacuna-shell",
+            "usr/share/lacuna-shell/VERSION",
+            "usr/share/lacuna-shell/scripts/lacuna",
+            "usr/share/licenses/lacuna-shell/LICENSE",
         }
         missing_paths = sorted(required_paths - set(names))
         if missing_paths:
@@ -133,9 +133,9 @@ def main() -> int:
         extract = temp / "root"
         extract.mkdir()
         subprocess.run(["bsdtar", "-xf", str(package), "-C", str(extract)], check=True)
-        payload_root = extract / "usr/share/lacuna-omarchy-plugins"
-        command_link = extract / "usr/bin/lacuna-omarchy"
-        if not command_link.is_symlink() or os.readlink(command_link) != "/usr/share/lacuna-omarchy-plugins/scripts/lacuna":
+        payload_root = extract / "usr/share/lacuna-shell"
+        command_link = extract / "usr/bin/lacuna-shell"
+        if not command_link.is_symlink() or os.readlink(command_link) != "/usr/share/lacuna-shell/scripts/lacuna":
             print("packaged command symlink is incorrect", file=sys.stderr)
             return 1
         command_path = payload_root / "scripts/lacuna"

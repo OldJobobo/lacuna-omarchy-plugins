@@ -41,13 +41,14 @@ class AurPackagingTests(unittest.TestCase):
     def test_package_requires_host_and_installs_only_system_payload(self):
         pkgbuild = PKGBUILD.read_text(encoding="utf-8")
         srcinfo = SRCINFO.read_text(encoding="utf-8")
-        self.assertIn("depends=('omarchy' 'python' 'qt6-multimedia')", pkgbuild)
+        self.assertIn("depends=('omarchy' 'quickshell' 'python' 'qt6-multimedia')", pkgbuild)
         self.assertIn("\tdepends = omarchy", srcinfo)
+        self.assertIn("\tdepends = quickshell", srcinfo)
         self.assertIn("\tdepends = python", srcinfo)
         self.assertIn("\tdepends = qt6-multimedia", srcinfo)
         self.assertIn('/usr/share/$pkgname', pkgbuild)
         self.assertIn('cp -a lacuna.* shared config "$appdir/"', pkgbuild)
-        self.assertIn('/usr/bin/lacuna-omarchy', pkgbuild)
+        self.assertIn('/usr/bin/lacuna-shell', pkgbuild)
         self.assertNotIn("$HOME", pkgbuild)
         self.assertNotIn(".config/omarchy", pkgbuild)
 
@@ -69,7 +70,7 @@ class AurPackagingTests(unittest.TestCase):
         self.assertIn(f"ref: {revision}", check_workflow)
         self.assertIn(f"ref: {revision}", release_workflow)
 
-    def test_package_rehearsal_reviews_host_provided_quickshell_warning(self):
+    def test_package_rehearsal_reviews_qml_dependency_warnings(self):
         rehearsal = (ROOT / "scripts" / "rehearse-aur-package").read_text(encoding="utf-8")
         self.assertIn("Dependency quickshell-git detected and implicitly satisfied", rehearsal)
         self.assertIn("Referenced QML module 'qs.Commons'", rehearsal)

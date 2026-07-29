@@ -28,7 +28,7 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("0.1.0beta.1", release)
         self.assertIn("0.1.0beta.1", install)
         self.assertIn("single", submission)
-        self.assertIn("`lacuna-omarchy-plugins` AUR package", submission)
+        self.assertIn("`lacuna-shell` AUR package", submission)
         self.assertNotIn("GitHub prereleases only", package)
         self.assertNotIn("Do not submit beta or RC", release)
 

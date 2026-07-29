@@ -687,7 +687,7 @@ with module.installer_transaction_lock():
             mock.patch.object(module, "ROOT", Path(tmp)):
             self.assertEqual(
                 module.default_source_url(),
-                "https://github.com/OldJobobo/lacuna-omarchy-plugins.git",
+                "https://github.com/OldJobobo/lacuna-shell.git",
             )
 
     def test_stale_source_catalog_reports_repair_commands(self):

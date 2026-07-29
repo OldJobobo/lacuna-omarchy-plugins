@@ -59,11 +59,11 @@ def generate() -> dict:
     return {
         "schemaVersion": 1,
         "package": {
-            "name": "lacuna-omarchy-plugins",
-            "requiredPackages": ["omarchy", "python", "qt6-multimedia"],
+            "name": "lacuna-shell",
+            "requiredPackages": ["omarchy", "quickshell", "python", "qt6-multimedia"],
             "optionalPackages": ["imagemagick", "mpv", "yt-dlp"],
-            "payloadRoot": "/usr/share/lacuna-omarchy-plugins",
-            "command": "/usr/bin/lacuna-omarchy",
+            "payloadRoot": "/usr/share/lacuna-shell",
+            "command": "/usr/bin/lacuna-shell",
             "sharedFiles": payload_files(ROOT / "shared"),
             "configFiles": payload_files(ROOT / "config"),
         },

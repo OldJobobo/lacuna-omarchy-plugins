@@ -7,7 +7,7 @@ Executable plan for an LLM or developer. Diagnosis was performed and measured on
 
 ## REPO CONTEXT
 
-- Repo: lacuna-omarchy-plugins (Omarchy/Quickshell plugins, QML + Python/shell scripts)
+- Repo: lacuna-shell (Omarchy/Quickshell plugins, QML + Python/shell scripts)
 - Key files:
   - `lacuna.media-player/Service.qml` — playback service (state, yt-dlp resolution procs)
   - `lacuna.media-player/scripts/media-player-background` — resolves background stream URL (yt-dlp)

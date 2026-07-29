@@ -39,7 +39,7 @@ class ReleaseArchiveTests(unittest.TestCase):
             with tarfile.open(archive, "r:gz") as payload:
                 names = payload.getnames()
             roots = {name.split("/", 1)[0] for name in names}
-            self.assertEqual(roots, {f"lacuna-omarchy-plugins-{inventory['version']}"})
+            self.assertEqual(roots, {f"lacuna-shell-{inventory['version']}"})
             archived_files = {
                 name.split("/", 1)[1]
                 for name in names

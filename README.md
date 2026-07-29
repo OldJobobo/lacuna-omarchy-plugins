@@ -68,8 +68,8 @@ development, recovery, and manual customization. Browse the
 Clone the repository and start the guided installer:
 
 ```bash
-git clone https://github.com/OldJobobo/lacuna-omarchy-plugins.git "$HOME/lacuna"
-cd "$HOME/lacuna"
+git clone https://github.com/OldJobobo/lacuna-shell.git "$HOME/lacuna-shell"
+cd "$HOME/lacuna-shell"
 ./scripts/lacuna
 ```
 
@@ -131,7 +131,7 @@ From Lacuna Settings you can also:
 From the cloned repository:
 
 ```bash
-cd "$HOME/lacuna"
+cd "$HOME/lacuna-shell"
 git pull --ff-only
 ./scripts/lacuna update --yes
 ```
@@ -186,7 +186,7 @@ appear or a runtime action fails.
 Lacuna is preparing for its first public beta. Repository checks, live
 multi-monitor validation, rollback behavior, and release packaging are actively
 maintained. Approved beta, RC, and stable releases are published through GitHub
-and the `lacuna-omarchy-plugins` AUR package.
+and the `lacuna-shell` AUR package.
 
 Follow the [roadmap](docs/roadmap.md) for current priorities. Historical design
 and implementation records live in the [planning ledger](docs/plans/README.md).

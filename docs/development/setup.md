@@ -6,7 +6,7 @@ This repository is developed as an Omarchy plugin source. Work from the
 repository root:
 
 ```bash
-cd ~/Projects/lacuna-omarchy-plugins
+cd ~/Projects/lacuna-shell
 ```
 
 Useful local commands:

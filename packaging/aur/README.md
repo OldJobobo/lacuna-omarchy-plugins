@@ -1,24 +1,24 @@
 # AUR packaging
 
 This directory contains the publication scaffold for the
-`lacuna-omarchy-plugins` AUR package. Approved beta, RC, and stable versions are
+`lacuna-shell` AUR package. Approved beta, RC, and stable versions are
 published to the same package after the matching immutable GitHub release and
 full package lifecycle gate pass.
 
 The package installs an immutable payload under
-`/usr/share/lacuna-omarchy-plugins` and exposes `/usr/bin/lacuna-omarchy`.
+`/usr/share/lacuna-shell` and exposes `/usr/bin/lacuna-shell`.
 Neither `makepkg` nor package installation writes to a user's home directory.
 Users activate the payload explicitly:
 
 ```bash
-lacuna-omarchy install --profile full
+lacuna-shell install --profile full
 ```
 
 Package upgrades refresh `/usr/share` only. Apply an upgraded payload through
 the transactional installer:
 
 ```bash
-lacuna-omarchy update --yes
+lacuna-shell update --yes
 ```
 
 ## Package policy

@@ -7,7 +7,7 @@ Status: draft
 Once execution is requested, create one GitHub issue per fixable behavior using `gh issue create`:
 
 ```bash
-gh issue create --repo OldJobobo/lacuna-omarchy-plugins --title "<title>" --label bug --body-file "<temp-body-file>"
+gh issue create --repo OldJobobo/lacuna-shell --title "<title>" --label bug --body-file "<temp-body-file>"
 ```
 
 Use one unique temporary body file per issue, for example:
@@ -301,7 +301,7 @@ This issue also covers the related static-validation finding where the same root
 4. Create each issue with:
 
    ```bash
-   gh issue create --repo OldJobobo/lacuna-omarchy-plugins --title "<title>" --label bug --body-file "<temp-body-file>"
+   gh issue create --repo OldJobobo/lacuna-shell --title "<title>" --label bug --body-file "<temp-body-file>"
    ```
 
 5. Capture every created issue URL.
