@@ -37,6 +37,24 @@ Detailed execution:
 [`docs/plans/active/quattro-p2-release-and-evolution-plan.md`](docs/plans/active/quattro-p2-release-and-evolution-plan.md),
 and [`docs/plans/active/aur-publication-readiness-plan.md`](docs/plans/active/aur-publication-readiness-plan.md).
 
+## A La Carte Plugin Experience
+
+- [ ] Make a la carte plugin installation and management streamlined,
+      functional, and easy to understand:
+  - [ ] provide one clear workflow to browse, install, enable, disable, update,
+        reset, and remove individual plugins;
+  - [ ] show plugin purpose, stability, dependencies, companions, install state,
+        enabled state, and available recovery actions in one consistent view;
+  - [ ] resolve dependencies automatically while preventing unsafe removals;
+  - [ ] make status output distinguish available, installed, enabled, disabled,
+        stale, failed, and missing plugins;
+  - [ ] preserve user configuration during routine updates and removals, with
+        explicit reset and purge actions;
+  - [ ] align the CLI, guided installer, plugin catalog, and documentation so
+        they expose the same capabilities and terminology;
+  - [ ] add deterministic lifecycle tests for mixed a la carte selections,
+        dependency changes, failures, rollback, and uninstall.
+
 ## Open Issue Batch
 
 - [ ] [#9](https://github.com/OldJobobo/lacuna-omarchy-plugins/issues/9) Add regression contracts for bar slot measurement and settings normalization.
