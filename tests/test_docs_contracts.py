@@ -265,6 +265,45 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("`pickDrawnSlot()`", ledger)
         self.assertIn("`openPanelIndicatorWidth`", ledger)
 
+    def test_current_docs_use_r1438_bar_commands(self):
+        documents = {
+            "README.md": ROOT / "README.md",
+            "docs/install.md": ROOT / "docs/install.md",
+            "docs/architecture/quattro-compatibility.md": ROOT / "docs/architecture/quattro-compatibility.md",
+            "docs/plugins/README.md": ROOT / "docs/plugins/README.md",
+            "docs/plugins/bar.md": ROOT / "docs/plugins/bar.md",
+            "docs/plans/proposed/lacuna-portrait-split-bar-plan.md": PLANS / "proposed" / "lacuna-portrait-split-bar-plan.md",
+        }
+        contents = {name: path.read_text(encoding="utf-8") for name, path in documents.items()}
+        for name, text in contents.items():
+            self.assertNotIn("omarchy plugin bar", text, name)
+
+        for name in (
+            "README.md",
+            "docs/install.md",
+            "docs/architecture/quattro-compatibility.md",
+            "docs/plans/proposed/lacuna-portrait-split-bar-plan.md",
+        ):
+            self.assertIn("omarchy bar reset", contents[name], name)
+        self.assertIn("omarchy bar plugin add <id>", contents["docs/install.md"])
+        self.assertIn("omarchy bar use lacuna.bar", contents["docs/install.md"])
+        self.assertIn("omarchy bar use lacuna.bar", contents["docs/plugins/README.md"])
+        self.assertIn("omarchy bar use lacuna.bar", contents["docs/plugins/bar.md"])
+        for name in ("README.md", "docs/install.md", "docs/architecture/quattro-compatibility.md"):
+            self.assertIn("omarchy bar defaults", contents[name], name)
+
+    def test_beta_candidate_changelog_is_honest_and_scoped(self):
+        changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn("## [Unreleased]\n\n## [0.1.0-beta.1] - 2026-07-29", changelog)
+        self.assertIn("### Beta scope", changelog)
+        self.assertIn("### Migration", changelog)
+        self.assertIn("### Known limitations", changelog)
+        self.assertIn("`beta`,\n  `experimental`, `deprecated`", changelog)
+        self.assertIn("this is not a declaration of minimum supported", changelog)
+        self.assertIn("P1 completion and destructive lifecycle rehearsal are separate", changelog)
+        self.assertIn("compare/v0.1.0-beta.1...HEAD", changelog)
+        self.assertNotIn("(`stable`,\n  `experimental`, `deprecated`)", changelog)
+
     def test_distribution_scaffolding_exists(self):
         for name in [
             "CHANGELOG.md",

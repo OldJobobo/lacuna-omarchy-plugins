@@ -12,8 +12,9 @@ The current release line is:
 0.1.0-beta.N -> 0.1.0-rc.N -> 0.1.0
 ```
 
-Do not publish `0.0.1-beta` from the current tree; that would move backward
-from the repository's existing `0.1.0` version.
+Do not publish `0.0.1-beta`; the repository established the `0.1.0` release
+line before preparing the current `0.1.0-beta.1` candidate, so that version
+would move backward.
 
 ## Release Classes
 

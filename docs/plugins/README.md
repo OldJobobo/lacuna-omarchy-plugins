@@ -78,7 +78,7 @@ theme/background workflow.
 ## Bar Option Plugins
 
 - `lacuna.bar`: Lacuna's primary Omarchy bar host. It is selected through
-  `bar.id` with `omarchy plugin bar use lacuna.bar`, not placed in
+  `bar.id` with `omarchy bar use lacuna.bar`, not placed in
   `bar.layout`. The Lacuna installer treats it as the owner of the bar layout
   and strips stock `omarchy.*` bar widgets when applying the Lacuna host layout.
 

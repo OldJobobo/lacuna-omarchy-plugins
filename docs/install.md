@@ -166,7 +166,7 @@ omarchy plugin available
 omarchy plugin add lacuna.clock --from lacuna --enable --yes
 ```
 
-Bar widgets are placed in `bar.layout`; use `omarchy plugin bar add <id>` or
+Bar widgets are placed in `bar.layout`; use `omarchy bar plugin add <id>` or
 copy `config/shell.lacuna-native-replacements.example.json` into
 `~/.config/omarchy/shell.json` as a starting point.
 
@@ -174,14 +174,17 @@ copy `config/shell.lacuna-native-replacements.example.json` into
 with:
 
 ```bash
-omarchy plugin bar use lacuna.bar
+omarchy bar use lacuna.bar
 ```
 
-Reset to the stock Omarchy bar with:
+Reset only the active bar host to Omarchy's stock bar with:
 
 ```bash
-omarchy plugin bar reset
+omarchy bar reset
 ```
+
+That command preserves the current bar layout. Use `omarchy bar defaults` only
+when you intentionally want the broader packaged default layout too.
 
 For a live checkout deploy during development, use the same verified workflow:
 

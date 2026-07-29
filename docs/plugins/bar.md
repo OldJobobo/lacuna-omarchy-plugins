@@ -10,7 +10,7 @@ matters because Omarchy activates them through different configuration paths.
 `lacuna.bar` is selected through `bar.id`:
 
 ```bash
-omarchy plugin bar use lacuna.bar
+omarchy bar use lacuna.bar
 ```
 
 It owns the Lacuna frame/sidebar choreography and applies a Lacuna module layout

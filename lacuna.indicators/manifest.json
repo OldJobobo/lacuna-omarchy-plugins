@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "lacuna.indicators",
   "name": "Lacuna Indicators",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "author": "Lacuna",
   "description": "Lacuna-styled manual state indicators for the Omarchy bar.",
   "kinds": [
@@ -19,8 +19,8 @@
     "allowMultiple": false,
     "defaults": {
       "items": [
-      "Dnd",
-      "Reminder",
+        "Dnd",
+        "Reminder",
         "NightLight",
         "StayAwake",
         "ScreenRecording",

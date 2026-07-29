@@ -78,8 +78,9 @@ the core shell is stabilized.
 
 ## Release Sequence
 
-The repository is already versioned as `0.1.0`. Prereleases therefore use
-SemVer prerelease identifiers instead of moving backward to `0.0.1`:
+The repository originally established the `0.1.0` line before preparing this
+`0.1.0-beta.1` candidate. Prereleases therefore use SemVer prerelease
+identifiers instead of moving backward to `0.0.1`:
 
 1. `0.1.0-beta.1` proves the supported product scope in real installs.
 2. Additional `0.1.0-beta.N` builds close defects found during beta.
@@ -248,5 +249,6 @@ true:
   suppressed in the bar and dimmed in the flyout. Claude currently reports both
   session and weekly windows through its authenticated usage endpoint. Both
   widgets restore a provider window automatically if it reappears.
-- The suite and all manifests currently report `0.1.0`; the next publishable
-  artifact is `0.1.0-beta.1`, not `0.0.1-beta`.
+- The suite and all manifests currently report the `0.1.0-beta.1` candidate;
+  it is not publishable until the remaining beta gates and destructive artifact
+  rehearsal pass. The release line does not move backward to `0.0.1-beta`.

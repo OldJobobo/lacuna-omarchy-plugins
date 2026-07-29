@@ -144,7 +144,7 @@ Tasks:
 - Preserve the prior `shell.json` and Lacuna settings state before updates.
 - Verify `lacuna.bar`, required core plugins, and the intended layout as one
   operation.
-- Keep `omarchy plugin bar reset` as a documented emergency path.
+- Keep `omarchy bar reset` as a documented emergency path.
 
 Primary files:
 

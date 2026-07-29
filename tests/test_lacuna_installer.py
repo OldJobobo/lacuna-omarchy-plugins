@@ -816,6 +816,7 @@ with module.installer_transaction_lock():
 {
   "version": 1,
   "bar": {
+    "id": "omarchy.stock-override",
     "position": "top",
     "centerAnchor": "omarchy.clock",
     "layout": {
@@ -839,10 +840,12 @@ with module.installer_transaction_lock():
     "id": "lacuna.bar",
     "position": "bottom",
     "transparent": true,
+    "futureBarKey": { "keep": true },
     "centerAnchor": "lacuna.clock",
     "layout": { "left": [], "center": [], "right": [] }
   },
-  "plugins": [{ "id": "lacuna.state" }]
+  "plugins": [{ "id": "lacuna.state" }, { "id": "other.service", "settings": { "keep": true } }],
+  "futureTop": ["keep"]
 }
 """,
                 encoding="utf-8",
@@ -858,11 +861,13 @@ with module.installer_transaction_lock():
         self.assertNotIn("id", data["bar"])
         self.assertEqual("bottom", data["bar"]["position"])
         self.assertIs(data["bar"]["transparent"], True)
+        self.assertEqual({"keep": True}, data["bar"]["futureBarKey"])
         self.assertEqual("omarchy.clock", data["bar"]["centerAnchor"])
         self.assertEqual([{"id": "omarchy.menu"}, {"id": "omarchy.workspaces"}], data["bar"]["layout"]["left"])
         self.assertEqual([{"id": "omarchy.clock", "format": "dddd HH:mm"}], data["bar"]["layout"]["center"])
         self.assertEqual([{"id": "omarchy.tray"}, {"id": "omarchy.audio"}], data["bar"]["layout"]["right"])
-        self.assertEqual([], data["plugins"])
+        self.assertEqual([{"id": "other.service", "settings": {"keep": True}}], data["plugins"])
+        self.assertEqual(["keep"], data["futureTop"])
 
     def test_lacuna_bar_layout_omits_bar_seam_by_default(self):
         module = load_installer_module()

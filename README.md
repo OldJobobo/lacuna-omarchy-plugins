@@ -161,11 +161,15 @@ preferences:
 ```
 
 Add `--purge-state` only when you also want to delete Lacuna's saved settings.
-Return to Omarchy's stock bar at any time with:
+Return to Omarchy's stock bar host at any time with:
 
 ```bash
-omarchy plugin bar reset
+omarchy bar reset
 ```
+
+This clears the custom bar choice while preserving the current layout. Use the
+broader `omarchy bar defaults` only when you intentionally want Omarchy's full
+default bar layout as well.
 
 For a quick health report or shell restart:
 

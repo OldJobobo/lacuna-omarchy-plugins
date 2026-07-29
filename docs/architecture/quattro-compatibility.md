@@ -171,11 +171,12 @@ checks; it requires a live Wayland/Omarchy session.
 The stock recovery path remains:
 
 ```bash
-omarchy plugin bar reset
+omarchy bar reset
 ```
 
-This resets the active bar choice while leaving Lacuna runtime state in
-`~/.config/omarchy/lacuna/settings.json`.
+This resets only the active bar choice while leaving the current layout and
+Lacuna runtime state in `~/.config/omarchy/lacuna/settings.json`. The broader
+`omarchy bar defaults` command also restores Omarchy's packaged default layout.
 
 ## Multi-monitor policy
 

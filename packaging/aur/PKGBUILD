@@ -1,6 +1,6 @@
 # Maintainer: OldJobobo <oldjobobo@users.noreply.github.com>
 pkgname=lacuna-omarchy-plugins
-_upstream_version=0.1.0
+_upstream_version=0.1.0-beta.1
 _source_sha256=SKIP
 pkgver=${_upstream_version//-/}
 pkgrel=1

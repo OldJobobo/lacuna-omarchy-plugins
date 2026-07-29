@@ -344,7 +344,7 @@ setting and bar position in cleanup.
   restore the current single-bar behavior without changing `shell.json`.
 - Code rollback: remove the companion composition and dual-edge geometry while
   retaining additive settings data as an ignored, preserved key.
-- Host recovery remains `omarchy plugin bar reset`.
+- Host recovery remains `omarchy bar reset`.
 - If live geometry fails, deploy the previous `lacuna.bar` and restart Omarchy
   shell; no layout migration or destructive config rewrite should need undoing.
 

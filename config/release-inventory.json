@@ -162,6 +162,7 @@
         "LacunaGeometry.qml",
         "OmarchyBar.qml",
         "OmarchyBarAdapter.qml",
+        "PanelIndicatorModel.js",
         "PortraitBarModel.js",
         "ScreenModel.js",
         "manifest.json"

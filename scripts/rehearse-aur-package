@@ -166,7 +166,7 @@ def main() -> int:
         env = os.environ.copy()
         env.update({"HOME": str(temp / "home"), "XDG_CONFIG_HOME": str(temp / "config")})
         result = run([sys.executable, str(command_path), "--help"], cwd=extract, env=env)
-        if result.returncode != 0 or "Install, uninstall, and inspect" not in result.stdout:
+        if result.returncode != 0 or "Install, safely reset, uninstall, and inspect" not in result.stdout:
             print(result.stdout, file=sys.stderr)
             print("packaged installer help smoke failed", file=sys.stderr)
             return 1

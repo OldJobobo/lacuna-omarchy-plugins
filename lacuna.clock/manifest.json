@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "lacuna.clock",
   "name": "Lacuna Clock",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "author": "Lacuna",
   "description": "Lacuna-styled clock for the Omarchy bar.",
   "kinds": [
@@ -21,7 +21,7 @@
       "format": "ddd d h:mm AP",
       "dateFormat": "ddd d",
       "timeFormat": "h:mm AP",
-      "verticalFormat": "HH\n\u2014\nmm",
+      "verticalFormat": "HH\n—\nmm",
       "colorProfile": "semantic"
     },
     "schema": [
@@ -47,7 +47,7 @@
         "key": "verticalFormat",
         "type": "string",
         "label": "Vertical format",
-        "defaultValue": "HH\n\u2014\nmm"
+        "defaultValue": "HH\n—\nmm"
       },
       {
         "key": "colorProfile",
