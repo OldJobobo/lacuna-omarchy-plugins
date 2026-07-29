@@ -390,12 +390,16 @@ class MediaWorker:
         key: tuple[Any, ...],
         entry: tuple[Any, ...],
         maximum: int,
-    ) -> None:
+        cancelled: threading.Event | None = None,
+    ) -> bool:
         with self.cache_lock:
+            if cancelled is not None and cancelled.is_set():
+                return False
             cache[key] = entry
             while len(cache) > maximum:
                 oldest = min(cache, key=lambda candidate: float(cache[candidate][0]))
                 cache.pop(oldest, None)
+        return True
 
     def secrets(self) -> list[str]:
         settings = self.settings()
@@ -1298,7 +1302,11 @@ class MediaWorker:
                 url = str(track.get("url") or "")
                 identity = str(track.get("providerId") or track.get("id") or url)
                 cache_key = (provider, identity, self.settings_revision())
-                cached = self._cache_get(self.video_cache, cache_key, VIDEO_CACHE_TTL)
+                bypass_cache = message.get("bypassCache") is True
+                if bypass_cache:
+                    with self.cache_lock:
+                        self.video_cache.pop(cache_key, None)
+                cached = None if bypass_cache else self._cache_get(self.video_cache, cache_key, VIDEO_CACHE_TTL)
                 from_cache = cached is not None
                 if from_cache:
                     candidates = dict(cached[1])
@@ -1310,13 +1318,14 @@ class MediaWorker:
                     candidates = self._resolve_youtube_video(url, cancelled)
                 if cancelled.is_set():
                     return
-                if not from_cache:
-                    self._cache_put(
-                        self.video_cache,
-                        cache_key,
-                        (time.monotonic(), dict(candidates)),
-                        VIDEO_CACHE_MAX_ENTRIES,
-                    )
+                if not from_cache and not self._cache_put(
+                    self.video_cache,
+                    cache_key,
+                    (time.monotonic(), dict(candidates)),
+                    VIDEO_CACHE_MAX_ENTRIES,
+                    cancelled,
+                ):
+                    return
                 self.emit({
                     "type": "video-candidates",
                     "requestId": request_id,

@@ -10,6 +10,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 import urllib.parse
@@ -606,21 +607,51 @@ class MediaPlayerWorkerTests(unittest.TestCase):
                 for event in worker.events + later
             ))
 
-    def test_resolve_video_returns_public_adaptive_and_stable_candidates(self):
+    def test_cancelled_cache_commit_cannot_repopulate_invalidated_entry(self):
+        loader = importlib.machinery.SourceFileLoader("lacuna_media_worker_cache_test", str(WORKER))
+        spec = importlib.util.spec_from_loader(loader.name, loader)
+        self.assertIsNotNone(spec)
+        module = importlib.util.module_from_spec(spec)
+        loader.exec_module(module)
+        worker = object.__new__(module.MediaWorker)
+        worker.cache_lock = threading.Lock()
+        cache = {}
+        cancelled = threading.Event()
+        stored = []
+
+        worker.cache_lock.acquire()
+        commit = threading.Thread(target=lambda: stored.append(worker._cache_put(
+            cache, ("youtube", "demo"), (time.monotonic(), {"adaptiveUrl": "stale"}), 4, cancelled
+        )))
+        commit.start()
+        cancelled.set()
+        worker.cache_lock.release()
+        commit.join(timeout=2)
+
+        self.assertFalse(commit.is_alive())
+        self.assertEqual(stored, [False])
+        self.assertEqual(cache, {})
+
+    def test_resolve_video_caches_candidates_and_supports_forced_refresh(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
             bin_dir.mkdir()
             argv_path = tmp / "yt-dlp-argv.json"
+            count_path = tmp / "yt-dlp-count"
             write_exec(
                 bin_dir / "yt-dlp",
                 f"#!{sys.executable}\n"
                 "import json, pathlib, sys\n"
-                f"pathlib.Path({str(argv_path)!r}).write_text(json.dumps(sys.argv))\n"
+                f"argv_path = pathlib.Path({str(argv_path)!r})\n"
+                f"count_path = pathlib.Path({str(count_path)!r})\n"
+                "argv_path.write_text(json.dumps(sys.argv))\n"
+                "count = int(count_path.read_text()) + 1 if count_path.exists() else 1\n"
+                "count_path.write_text(str(count))\n"
                 "print(json.dumps({'thumbnail':'cover.jpg','formats':[\n"
-                " {'format_id':'18','url':'https://video.example/360.mp4','height':360,'ext':'mp4','protocol':'https','vcodec':'h264','acodec':'aac'},\n"
-                " {'format_id':'95','url':'https://video.example/720.m3u8','height':720,'ext':'mp4','protocol':'m3u8_native','vcodec':'h264','acodec':'aac'},\n"
-                " {'format_id':'96','url':'https://video.example/1080.m3u8','height':1080,'ext':'mp4','protocol':'m3u8_native','vcodec':'h264','acodec':'aac'}\n"
+                " {'format_id':'18','url':f'https://video.example/360-{count}.mp4','height':360,'ext':'mp4','protocol':'https','vcodec':'h264','acodec':'aac'},\n"
+                " {'format_id':'95','url':f'https://video.example/720-{count}.m3u8','height':720,'ext':'mp4','protocol':'m3u8_native','vcodec':'h264','acodec':'aac'},\n"
+                " {'format_id':'96','url':f'https://video.example/1080-{count}.m3u8','height':1080,'ext':'mp4','protocol':'m3u8_native','vcodec':'h264','acodec':'aac'}\n"
                 "]}))\n",
             )
             settings = tmp / "settings.json"
@@ -646,14 +677,48 @@ class MediaPlayerWorkerTests(unittest.TestCase):
                 result = worker.wait_for(
                     lambda event: event.get("type") == "video-candidates" and event.get("requestId") == 7
                 )
+                worker.send({
+                    "type": "resolve-video",
+                    "requestId": 8,
+                    "revision": 3,
+                    "track": {
+                        "id": "yt-demo",
+                        "provider": "youtube",
+                        "url": "https://www.youtube.com/watch?v=yt-demo",
+                    },
+                })
+                cached_result = worker.wait_for(
+                    lambda event: event.get("type") == "video-candidates" and event.get("requestId") == 8
+                )
+                worker.send({
+                    "type": "resolve-video",
+                    "requestId": 9,
+                    "revision": 3,
+                    "bypassCache": True,
+                    "track": {
+                        "id": "yt-demo",
+                        "provider": "youtube",
+                        "url": "https://www.youtube.com/watch?v=yt-demo",
+                    },
+                })
+                refreshed_result = worker.wait_for(
+                    lambda event: event.get("type") == "video-candidates" and event.get("requestId") == 9
+                )
             finally:
                 worker.close()
 
             self.assertEqual(result["revision"], 3)
-            self.assertEqual(result["adaptiveUrl"], "https://video.example/720.m3u8")
-            self.assertEqual(result["progressiveUrl"], "https://video.example/360.mp4")
+            self.assertEqual(result["adaptiveUrl"], "https://video.example/720-1.m3u8")
+            self.assertEqual(result["progressiveUrl"], "https://video.example/360-1.mp4")
             self.assertEqual(result["thumbnail"], "cover.jpg")
             self.assertEqual(result["error"], "")
+            self.assertFalse(result["cached"])
+            self.assertEqual(cached_result["adaptiveUrl"], result["adaptiveUrl"])
+            self.assertTrue(cached_result["cached"])
+            self.assertEqual(refreshed_result["adaptiveUrl"], "https://video.example/720-2.m3u8")
+            self.assertEqual(refreshed_result["progressiveUrl"], "https://video.example/360-2.mp4")
+            self.assertFalse(refreshed_result["cached"])
+            self.assertEqual(count_path.read_text(encoding="utf-8"), "2")
             argv = json.loads(argv_path.read_text(encoding="utf-8"))
             self.assertNotIn("--cookies", argv)
             self.assertNotIn("--extractor-args", argv)

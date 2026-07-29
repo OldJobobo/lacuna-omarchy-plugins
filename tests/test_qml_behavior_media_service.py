@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -91,6 +92,95 @@ ShellRoot {{
         self.assertEqual(final["titles"], ["Remote", "Local"])
         self.assertEqual(final["youtubeCount"], 1)
         self.assertEqual(final["jellyfinCount"], 1)
+
+    def test_background_refresh_forces_worker_cache_bypass(self):
+        source_owner, source = make_media_player_source("{}")
+        messages = source / "worker-messages.jsonl"
+        worker = source / "scripts" / "media-player-worker"
+        worker.write_text(
+            "#!/usr/bin/env python3\n"
+            "import json, pathlib, sys\n"
+            f"messages = pathlib.Path({str(messages)!r})\n"
+            "def emit(value):\n"
+            "    print(json.dumps(value), flush=True)\n"
+            "emit({'type': 'ready', 'mpv': True, 'ytdlp': True})\n"
+            "for raw in sys.stdin:\n"
+            "    message = json.loads(raw)\n"
+            "    with messages.open('a', encoding='utf-8') as handle:\n"
+            "        handle.write(json.dumps(message) + '\\n')\n"
+            "    kind = message.get('type')\n"
+            "    if kind == 'configure': emit({'type': 'configured'})\n"
+            "    elif kind == 'resolve-video':\n"
+            "        emit({'type': 'video-candidates', 'requestId': message['requestId'], 'revision': message['revision'], 'adaptiveUrl': '', 'progressiveUrl': 'https://video.example/fresh.mp4', 'error': ''})\n"
+            "    elif kind == 'shutdown': break\n",
+            encoding="utf-8",
+        )
+        worker.chmod(0o755)
+        with source_owner, tempfile.TemporaryDirectory() as cfg:
+            qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var svc: null
+  property var track: null
+  property int phase: 0
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.media-player/Service.qml')}", Component.PreferSynchronous)
+    svc = component.createObject(root, {{ manifest: {{ __sourceDir: "{source}" }} }})
+  }}
+  Timer {{
+    interval: 20
+    repeat: true
+    running: true
+    onTriggered: {{
+      if (!svc || !svc.workerOperational || !svc.stateLoaded) return
+      if (root.phase === 0) {{
+        root.phase = 1
+        root.track = svc.normalizeTrack({{ id: "refresh", provider: "youtube", url: "https://example.test/refresh", mediaType: "video" }})
+        svc.currentTrack = root.track
+        svc.playing = true
+        svc.presentationMode = "background"
+        svc.resolveBackground(root.track)
+        return
+      }}
+      if (root.phase === 1 && svc.backgroundStreamUrl !== "") {{
+        root.phase = 2
+        svc.refreshBackgroundStream()
+        return
+      }}
+      if (root.phase === 2 && svc.backgroundStreamUrl !== "" && !svc.resolvingBackground) {{
+        stop()
+        finish.start()
+      }}
+    }}
+  }}
+  Timer {{
+    id: finish
+    interval: 80
+    onTriggered: {{
+      console.log("BEHAVE " + JSON.stringify({{ phase: root.phase, background: svc.backgroundStreamUrl }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+            output = run_quickshell(qml, config_home=Path(cfg), timeout=8)
+            posted = [
+                json.loads(line)
+                for line in messages.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+
+        require_no_qml_errors(output)
+        final = parse_behave(output)[-1]
+        self.assertEqual(final["phase"], 2, output[-2000:])
+        self.assertEqual(final["background"], "https://video.example/fresh.mp4", output[-2000:])
+        resolves = [row for row in posted if row.get("type") == "resolve-video"]
+        self.assertEqual(len(resolves), 2, posted)
+        self.assertFalse(resolves[0].get("bypassCache"), posted)
+        self.assertTrue(resolves[1].get("bypassCache"), posted)
 
     def test_presentation_handoff_and_smoothed_clock(self):
         source_owner, source = make_media_player_source("{}")

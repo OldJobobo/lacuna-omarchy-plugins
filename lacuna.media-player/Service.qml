@@ -1064,11 +1064,12 @@ Item {
     previewStartTimer.restart()
   }
 
-  function resolveBackground(track) {
+  function resolveBackground(track, bypassCache) {
     var url = trackUrl(track)
     if (url === "" || !itemHasVideo(track)) return
+    var forceRefresh = bypassCache === true
     if (workerReady) {
-      if (resolvingBackground && backgroundRequestUrl === url && activeVideoResolveRevision >= 0) return
+      if (!forceRefresh && resolvingBackground && backgroundRequestUrl === url && activeVideoResolveRevision >= 0) return
       backgroundRequestUrl = url
       backgroundStreamUrl = ""
       adaptiveBackgroundStreamUrl = ""
@@ -1076,7 +1077,8 @@ Item {
       backgroundResolveFailed = false
       resolvingBackground = true
       backgroundRequestRevision += 1
-      if (workerConfigured && !(resolvingPreview && previewRequestUrl === url && activeVideoResolveRevision >= 0)) requestWorkerVideoCandidates(track)
+      if (workerConfigured && (forceRefresh || !(resolvingPreview && previewRequestUrl === url && activeVideoResolveRevision >= 0)))
+        requestWorkerVideoCandidates(track, forceRefresh)
       return
     }
     if (providerFor(track) === "jellyfin") {
@@ -1113,7 +1115,7 @@ Item {
     backgroundStartTimer.restart()
   }
 
-  function requestWorkerVideoCandidates(track) {
+  function requestWorkerVideoCandidates(track, bypassCache) {
     if (!workerOperational || !track) return false
     videoResolveRevision += 1
     activeVideoResolveRevision = videoResolveRevision
@@ -1123,6 +1125,7 @@ Item {
       revision: playbackSessionRevision,
       track: normalizeTrack(track),
       quality: videoQuality,
+      bypassCache: bypassCache === true,
       settingsFile: lacunaSettingsFile
     })
   }
@@ -1170,7 +1173,7 @@ Item {
     backgroundStreamUrl = ""
     adaptiveBackgroundStreamUrl = ""
     progressiveBackgroundStreamUrl = ""
-    resolveBackground(currentTrack)
+    resolveBackground(currentTrack, true)
     reconcilePresentationState()
   }
 

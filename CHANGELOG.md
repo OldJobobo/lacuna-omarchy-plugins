@@ -7,6 +7,10 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
 
 ## [Unreleased]
 
+### Fixed
+- Background-video renderer retries now force a fresh provider resolution
+  instead of reusing the media worker's cached failed stream URL.
+
 ## [0.1.0-beta.2] - 2026-07-29
 
 ### Fixed
