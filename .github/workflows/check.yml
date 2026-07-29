@@ -20,6 +20,9 @@ jobs:
       OMARCHY_PATH: ${{ github.workspace }}/.ci/omarchy
       XDG_RUNTIME_DIR: /tmp/xdg-runtime
       WAYLAND_DISPLAY: wayland-ci
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      QSG_RHI_BACKEND: software
+      QT_QUICK_BACKEND: software
     steps:
       - name: Install tools
         run: |
@@ -34,6 +37,7 @@ jobs:
             qt6-declarative \
             qt6-multimedia \
             shellcheck \
+            ttf-hack-nerd \
             weston
       - uses: actions/checkout@v7
       - uses: actions/checkout@v7

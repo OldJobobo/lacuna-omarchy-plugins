@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -296,6 +297,7 @@ ShellRoot {{
                 persisted = Path(cfg, "omarchy/lacuna/settings.json").read_text(encoding="utf-8")
                 self.assertIn('"winner": 3', persisted)
 
+    @unittest.skipIf(os.geteuid() == 0, "root bypasses the permission failure this test exercises")
     def test_failed_save_is_visible_and_retryable(self):
         with tempfile.TemporaryDirectory() as cfg:
             settings_dir = Path(cfg, "omarchy/lacuna")

@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -88,7 +89,7 @@ class Phase6PerformanceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "sample.json"
             subprocess.run(
-                [str(ROOT / "scripts/lacuna-performance-benchmark"), "--quick", "--output", str(output)],
+                [str(ROOT / "scripts/lacuna-performance-benchmark"), "--quick", "--pid", str(os.getpid()), "--output", str(output)],
                 check=True,
                 timeout=20,
                 capture_output=True,
