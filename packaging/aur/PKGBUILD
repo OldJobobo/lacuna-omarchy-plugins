@@ -8,7 +8,7 @@ pkgdesc="Cohesive Lacuna desktop plugins for the Omarchy shell"
 arch=('any')
 url="https://github.com/OldJobobo/lacuna-omarchy-plugins"
 license=('MIT')
-depends=('omarchy' 'python' 'qt6-multimedia')
+depends=('omarchy' 'quickshell' 'python' 'qt6-multimedia')
 optdepends=(
   'mpv: media-player playback'
   'yt-dlp: YouTube media search and playback'

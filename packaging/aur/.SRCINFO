@@ -6,6 +6,7 @@ pkgbase = lacuna-omarchy-plugins
 	arch = any
 	license = MIT
 	depends = omarchy
+	depends = quickshell
 	depends = python
 	depends = qt6-multimedia
 	optdepends = mpv: media-player playback
