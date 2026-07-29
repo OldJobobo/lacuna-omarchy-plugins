@@ -138,8 +138,10 @@ file replacements can leave only one file updated; cross-file journaling is
 outside this safe-reset scope. Reset owns
 `bar.id`, `bar.layout`, `bar.centerAnchor`, `bar.transparent`, canonical Lacuna
 plugin activation, and the presentation/runtime branches listed in
-`config/omakase-profile.json`. It preserves credentials, provider settings,
-media-player preferences, favorites, queue/history, auth and reminder files,
+`config/omakase-profile.json`. Direct external state files are captured before
+reload and restored byte-for-byte if shell shutdown or startup rewrites them.
+It preserves credentials, provider settings, media-player preferences,
+favorites, queue/history, auth and reminder files,
 preferred/custom apps, unrelated plugin entries, other bar keys, and unknown
 JSON-safe fields. Media-player preferences remain preserved because they are
 mirrored into `media-player.json`; resetting only the settings copy would let

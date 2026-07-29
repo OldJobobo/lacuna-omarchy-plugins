@@ -1158,7 +1158,12 @@ with module.installer_transaction_lock():
 
             args = module.argparse.Namespace(dry_run=False, yes=True)
             env = {"XDG_CONFIG_HOME": str(config_home), "LACUNA_OMARCHY_CONFIG_HOME": str(config_home)}
-            with mock.patch.dict(module.os.environ, env), mock.patch.object(module, "run_command", return_value=0) as reload_command:
+
+            def reload_and_mutate_media_state(*_args, **_kwargs):
+                (settings_path.parent / "media-player.json").write_bytes(b'{"favorites":[],"providerFilter":"all"}\n')
+                return 0
+
+            with mock.patch.dict(module.os.environ, env), mock.patch.object(module, "run_command", side_effect=reload_and_mutate_media_state) as reload_command:
                 self.assertEqual(module.reset(args), 0)
                 first_shell = shell_path.read_bytes()
                 first_settings = settings_path.read_bytes()
