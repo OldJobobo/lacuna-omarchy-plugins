@@ -1396,7 +1396,7 @@ class MediaPlayerScriptTests(unittest.TestCase):
 
         self.assertEqual(killed, [])
 
-    def test_preview_prefers_direct_mp4_format(self):
+    def test_preview_prefers_public_direct_mp4_format(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
@@ -1415,14 +1415,14 @@ class MediaPlayerScriptTests(unittest.TestCase):
             argv = json.loads((tmp / "argv.json").read_text())
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("--extractor-args", argv)
-        self.assertIn("youtube:player_client=web_embedded", argv)
+        self.assertNotIn("--extractor-args", argv)
+        self.assertNotIn("--cookies", argv)
         self.assertIn("18/best[ext=mp4][vcodec!=none][acodec!=none]", " ".join(argv))
         payload = json.loads(result.stdout)
         self.assertEqual(payload["url"], "https://video.example/preview.mp4")
         self.assertEqual(payload["error"], "")
 
-    def test_preview_retries_without_embedded_client_on_failure(self):
+    def test_preview_retries_with_auth_only_after_public_resolution_fails(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
@@ -1433,24 +1433,26 @@ class MediaPlayerScriptTests(unittest.TestCase):
                 "import json, pathlib, sys\n"
                 f"calls = pathlib.Path({str(tmp / 'calls.jsonl')!r})\n"
                 "calls.write_text(calls.read_text() + json.dumps(sys.argv) + '\\n' if calls.exists() else json.dumps(sys.argv) + '\\n')\n"
-                "if any('player_client=web_embedded' in arg for arg in sys.argv):\n"
-                "    print('embedded rejected', file=sys.stderr)\n"
+                "if '--cookies' not in sys.argv:\n"
+                "    print('public resolution rejected', file=sys.stderr)\n"
                 "    raise SystemExit(1)\n"
                 "print('https://video.example/fallback.mp4')\n",
             )
+            config = json.dumps({"enabled": True, "cookiesFile": str(tmp / "cookies.txt")})
             result = run(
-                [sys.executable, str(self.PREVIEW_SCRIPT), "https://www.youtube.com/watch?v=abc123"],
+                [sys.executable, str(self.PREVIEW_SCRIPT), "--config-json", config,
+                 "https://www.youtube.com/watch?v=abc123"],
                 {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
             )
             calls = [json.loads(line) for line in (tmp / "calls.jsonl").read_text().splitlines()]
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(len(calls), 2)
-        self.assertTrue(any("player_client=web_embedded" in " ".join(call) for call in calls[:1]))
-        self.assertFalse(any("player_client=web_embedded" in arg for arg in calls[1]))
+        self.assertNotIn("--cookies", calls[0])
+        self.assertIn("--cookies", calls[1])
         self.assertEqual(json.loads(result.stdout)["url"], "https://video.example/fallback.mp4")
 
-    def test_background_resolver_uses_youtube_embedded_client(self):
+    def test_background_resolver_prefers_public_youtube_client(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
@@ -1469,14 +1471,14 @@ class MediaPlayerScriptTests(unittest.TestCase):
             argv = json.loads((tmp / "argv.json").read_text())
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("--extractor-args", argv)
-        self.assertIn("youtube:player_client=web_embedded", argv)
+        self.assertNotIn("--extractor-args", argv)
+        self.assertNotIn("--cookies", argv)
         self.assertIn("18/best[ext=mp4][vcodec!=none][acodec!=none]", " ".join(argv))
         payload = json.loads(result.stdout)
         self.assertEqual(payload["url"], "https://video.example/background.mp4")
         self.assertEqual(payload["error"], "")
 
-    def test_background_resolver_retries_without_embedded_client_on_failure(self):
+    def test_background_resolver_retries_with_auth_only_after_public_resolution_fails(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
@@ -1487,21 +1489,23 @@ class MediaPlayerScriptTests(unittest.TestCase):
                 "import json, pathlib, sys\n"
                 f"calls = pathlib.Path({str(tmp / 'calls.jsonl')!r})\n"
                 "calls.write_text(calls.read_text() + json.dumps(sys.argv) + '\\n' if calls.exists() else json.dumps(sys.argv) + '\\n')\n"
-                "if any('player_client=web_embedded' in arg for arg in sys.argv):\n"
-                "    print('embedded rejected', file=sys.stderr)\n"
+                "if '--cookies' not in sys.argv:\n"
+                "    print('public resolution rejected', file=sys.stderr)\n"
                 "    raise SystemExit(1)\n"
                 "print('https://video.example/background-fallback.mp4')\n",
             )
+            config = json.dumps({"enabled": True, "cookiesFile": str(tmp / "cookies.txt")})
             result = run(
-                [sys.executable, str(ROOT / "lacuna.media-player" / "scripts" / "media-player-background"), "https://www.youtube.com/watch?v=abc123"],
+                [sys.executable, str(ROOT / "lacuna.media-player" / "scripts" / "media-player-background"),
+                 "--config-json", config, "https://www.youtube.com/watch?v=abc123"],
                 {"PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
             )
             calls = [json.loads(line) for line in (tmp / "calls.jsonl").read_text().splitlines()]
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(len(calls), 2)
-        self.assertTrue(any("player_client=web_embedded" in " ".join(call) for call in calls[:1]))
-        self.assertFalse(any("player_client=web_embedded" in arg for arg in calls[1]))
+        self.assertNotIn("--cookies", calls[0])
+        self.assertIn("--cookies", calls[1])
         self.assertEqual(json.loads(result.stdout)["url"], "https://video.example/background-fallback.mp4")
 
     def test_control_command_reports_missing_socket_without_crashing(self):
@@ -1527,8 +1531,9 @@ class MediaPlayerScriptTests(unittest.TestCase):
 
     def test_control_start_uses_audio_cache_flags(self):
         text = self.CONTROL_SCRIPT.read_text(encoding="utf-8")
-        self.assertIn('YOUTUBE_PLAYER_CLIENT = "web_embedded"', text)
-        self.assertIn("extractor-args=youtube:player_client={YOUTUBE_PLAYER_CLIENT}", text)
+        self.assertNotIn("player_client=web_embedded", text)
+        self.assertIn("def ytdl_raw_options(args):", text)
+        self.assertIn('return ""', text)
         self.assertIn("--ytdl-format=18/best[height<=360][ext=mp4]/bestaudio[ext=m4a]/best", text)
         self.assertIn("--keep-open=yes", text)
         self.assertIn("--cache=yes", text)

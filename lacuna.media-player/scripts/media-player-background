@@ -5,7 +5,6 @@ import shutil
 import subprocess
 import sys
 
-YOUTUBE_PLAYER_CLIENT = "web_embedded"
 BACKGROUND_FORMAT = "18/best[ext=mp4][vcodec!=none][acodec!=none]"
 
 
@@ -29,8 +28,8 @@ def ytdlp_auth_args(config):
     return []
 
 
-def build_cmd(ytdlp, config, url, embedded_client):
-    cmd = [
+def build_cmd(ytdlp, config, url):
+    return [
         ytdlp,
         *ytdlp_auth_args(config),
         "--no-warnings",
@@ -40,15 +39,12 @@ def build_cmd(ytdlp, config, url, embedded_client):
         BACKGROUND_FORMAT,
         url,
     ]
-    if embedded_client:
-        cmd[1:1] = ["--extractor-args", f"youtube:player_client={YOUTUBE_PLAYER_CLIENT}"]
-    return cmd
 
 
-def run_ytdlp(ytdlp, config, url, embedded_client):
+def run_ytdlp(ytdlp, config, url):
     try:
         return subprocess.run(
-            build_cmd(ytdlp, config, url, embedded_client),
+            build_cmd(ytdlp, config, url),
             capture_output=True,
             text=True,
             timeout=18,
@@ -80,9 +76,12 @@ def main(argv=None):
         print(json.dumps({"url": "", "error": "yt-dlp is not installed"}))
         return 1
 
-    result = run_ytdlp(ytdlp, config, argv[0], True)
-    if result is None or result.returncode != 0:
-        fallback_result = run_ytdlp(ytdlp, config, argv[0], False)
+    # Public-first resolution avoids signed authenticated/embedded URLs that
+    # googlevideo later rejects with HTTP 403. Keep authentication as a
+    # fallback for media that cannot be resolved publicly.
+    result = run_ytdlp(ytdlp, {}, argv[0])
+    if (result is None or result.returncode != 0) and ytdlp_auth_args(config):
+        fallback_result = run_ytdlp(ytdlp, config, argv[0])
         if fallback_result is not None and fallback_result.returncode == 0:
             result = fallback_result
 

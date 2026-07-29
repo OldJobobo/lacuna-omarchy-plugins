@@ -7,7 +7,7 @@ ambience—all inside the Omarchy shell you already use.
 ![Lacuna desktop with its custom bar, frame, sidebar, and desktop clock](docs/screenshots/readme/lacuna-desktop.webp)
 
 > [!IMPORTANT]
-> Lacuna is prerelease software preparing for `0.1.0-beta.1`. The current build
+> Lacuna is prerelease software on the `0.1.0-beta.2` line. The current build
 > is usable and transactionally installed, but expect changes before the stable
 > `0.1.0` release.
 

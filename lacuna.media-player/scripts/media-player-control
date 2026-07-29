@@ -7,9 +7,6 @@ import subprocess
 import sys
 import time
 
-YOUTUBE_PLAYER_CLIENT = "web_embedded"
-
-
 def send(socket_path, payload):
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
         client.settimeout(1.5)
@@ -130,12 +127,9 @@ def cleanup_socket(socket_path):
 
 
 def ytdl_raw_options(args):
-    options = [f"extractor-args=youtube:player_client={YOUTUBE_PLAYER_CLIENT}"]
-    if args.cookies_from_browser:
-        options.append(f"cookies-from-browser={args.cookies_from_browser}")
-    if args.cookies_file:
-        options.append(f"cookies={args.cookies_file}")
-    return ",".join(options)
+    # Public-first playback avoids signed authenticated/embedded stream URLs
+    # that resolve successfully but are rejected by googlevideo with HTTP 403.
+    return ""
 
 
 def start(args):

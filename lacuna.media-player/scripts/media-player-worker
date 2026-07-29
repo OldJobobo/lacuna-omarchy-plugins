@@ -28,7 +28,6 @@ from pathlib import Path
 from typing import Any, Callable
 
 
-YOUTUBE_PLAYER_CLIENT = "web_embedded"
 OBSERVED_PROPERTIES = (
     "time-pos",
     "duration",
@@ -632,15 +631,11 @@ class MediaWorker:
         return ["--cookies-from-browser", cookies_browser] if cookies_browser else []
 
     def _mpv_ytdl_options(self) -> str:
-        config = provider_config(self.settings(), "youtube")
-        options = [f"extractor-args=youtube:player_client={YOUTUBE_PLAYER_CLIENT}"]
-        cookies_file = str(config.get("cookiesFile") or "").strip()
-        cookies_browser = str(config.get("cookiesFromBrowser") or "").strip()
-        if config.get("enabled") is True and cookies_file:
-            options.append(f"cookies={os.path.expanduser(cookies_file)}")
-        elif config.get("enabled") is True and cookies_browser:
-            options.append(f"cookies-from-browser={cookies_browser}")
-        return ",".join(options)
+        # Resolve ordinary playback anonymously first. YouTube can bind signed
+        # googlevideo URLs to an authenticated/embedded client and then reject
+        # mpv's fetch with HTTP 403 even though yt-dlp resolution succeeded.
+        # Provider search and login still use the configured cookies.
+        return ""
 
     def _launch_mpv(self) -> None:
         executable = shutil.which("mpv")
@@ -1204,22 +1199,26 @@ class MediaWorker:
         if not ytdlp:
             raise RuntimeError("yt-dlp is not installed")
         config = provider_config(self.settings(), "youtube")
-        command = [
-            ytdlp,
-            *self._youtube_auth_args(config),
-            "--extractor-args",
-            f"youtube:player_client={YOUTUBE_PLAYER_CLIENT}",
-            "--no-warnings",
-            "--no-playlist",
-            "--dump-single-json",
-            url,
-        ]
-        try:
-            return_code, stdout, stderr = self._run_provider(command, 18, cancelled)
-        except TimeoutError as exc:
-            raise RuntimeError("video stream resolution timed out") from exc
-        if cancelled.is_set():
-            return {}
+        auth_args = self._youtube_auth_args(config)
+        attempts = [[], auth_args] if auth_args else [[]]
+        return_code, stdout, stderr = 1, "", ""
+        for attempt_args in attempts:
+            command = [
+                ytdlp,
+                *attempt_args,
+                "--no-warnings",
+                "--no-playlist",
+                "--dump-single-json",
+                url,
+            ]
+            try:
+                return_code, stdout, stderr = self._run_provider(command, 18, cancelled)
+            except TimeoutError:
+                return_code, stdout, stderr = 1, "", "video stream resolution timed out"
+            if cancelled.is_set():
+                return {}
+            if return_code == 0:
+                break
         if return_code != 0:
             message = (stderr or stdout or "video stream resolution failed").strip().splitlines()
             raise RuntimeError(message[-1] if message else "video stream resolution failed")

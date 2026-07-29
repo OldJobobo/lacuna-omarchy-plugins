@@ -13,7 +13,7 @@ The current release line is:
 ```
 
 Do not publish `0.0.1-beta`; the repository established the `0.1.0` release
-line before preparing the current `0.1.0-beta.1` candidate, so that version
+line before preparing the current `0.1.0-beta.2` candidate, so that version
 would move backward.
 
 ## Release Classes
@@ -100,8 +100,8 @@ private project knowledge.
    `lacuna-shell` AUR package. For every release, replace the
    scaffold's `SKIP` with that release archive's real checksum, regenerate
    `.SRCINFO`, and run `scripts/check-aur-package --publish-check`. Arch
-   `pkgver` removes the SemVer prerelease hyphen, so `0.1.0-beta.1` becomes
-   `0.1.0beta.1` and sorts before RC and stable versions.
+   `pkgver` removes the SemVer prerelease hyphen, so `0.1.0-beta.2` becomes
+   `0.1.0beta.2` and sorts before RC and stable versions.
 6. Follow `packaging/aur/SUBMISSION.md`, including the clean-chroot build, exact
    package inspection, dedicated AUR repository, and post-publication smoke.
 7. Install the published artifact once; do not treat workflow success alone as

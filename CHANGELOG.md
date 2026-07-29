@@ -7,6 +7,17 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
 
 ## [Unreleased]
 
+## [0.1.0-beta.2] - 2026-07-29
+
+### Fixed
+- YouTube playback and wallpaper video now resolve public streams before using
+  stored login cookies. This avoids signed embedded-client URLs that resolve
+  successfully but are rejected by `googlevideo` with HTTP 403.
+- The persistent media worker, legacy mpv controller, inline preview resolver,
+  and background-video resolver now share the same public-first policy, with
+  configured authentication retained as a fallback when public extraction
+  fails.
+
 ## [0.1.0-beta.1] - 2026-07-29
 
 ### Beta scope
@@ -99,5 +110,6 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
   single-root release archives, local `makepkg`/`namcap` rehearsal, strict AUR
   publication gates, and a clean-chroot submission runbook.
 
-[Unreleased]: https://github.com/OldJobobo/lacuna-shell/compare/v0.1.0-beta.1...HEAD
+[Unreleased]: https://github.com/OldJobobo/lacuna-shell/compare/v0.1.0-beta.2...HEAD
+[0.1.0-beta.2]: https://github.com/OldJobobo/lacuna-shell/releases/tag/v0.1.0-beta.2
 [0.1.0-beta.1]: https://github.com/OldJobobo/lacuna-shell/releases/tag/v0.1.0-beta.1

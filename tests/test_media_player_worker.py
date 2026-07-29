@@ -606,23 +606,33 @@ class MediaPlayerWorkerTests(unittest.TestCase):
                 for event in worker.events + later
             ))
 
-    def test_resolve_video_returns_adaptive_and_stable_candidates(self):
+    def test_resolve_video_returns_public_adaptive_and_stable_candidates(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             bin_dir = tmp / "bin"
             bin_dir.mkdir()
+            argv_path = tmp / "yt-dlp-argv.json"
             write_exec(
                 bin_dir / "yt-dlp",
                 f"#!{sys.executable}\n"
-                "import json\n"
+                "import json, pathlib, sys\n"
+                f"pathlib.Path({str(argv_path)!r}).write_text(json.dumps(sys.argv))\n"
                 "print(json.dumps({'thumbnail':'cover.jpg','formats':[\n"
                 " {'format_id':'18','url':'https://video.example/360.mp4','height':360,'ext':'mp4','protocol':'https','vcodec':'h264','acodec':'aac'},\n"
                 " {'format_id':'95','url':'https://video.example/720.m3u8','height':720,'ext':'mp4','protocol':'m3u8_native','vcodec':'h264','acodec':'aac'},\n"
                 " {'format_id':'96','url':'https://video.example/1080.m3u8','height':1080,'ext':'mp4','protocol':'m3u8_native','vcodec':'h264','acodec':'aac'}\n"
                 "]}))\n",
             )
+            settings = tmp / "settings.json"
+            settings.write_text(json.dumps({
+                "mediaProviders": {
+                    "youtube": {"enabled": True, "cookiesFile": str(tmp / "cookies.txt")}
+                }
+            }), encoding="utf-8")
             worker = WorkerProcess(tmp, path=f"{bin_dir}:{os.environ.get('PATH', '')}")
             try:
+                worker.send({"type": "configure", "settingsFile": str(settings)})
+                worker.wait_for(lambda event: event.get("type") == "configured")
                 worker.send({
                     "type": "resolve-video",
                     "requestId": 7,
@@ -644,6 +654,9 @@ class MediaPlayerWorkerTests(unittest.TestCase):
             self.assertEqual(result["progressiveUrl"], "https://video.example/360.mp4")
             self.assertEqual(result["thumbnail"], "cover.jpg")
             self.assertEqual(result["error"], "")
+            argv = json.loads(argv_path.read_text(encoding="utf-8"))
+            self.assertNotIn("--cookies", argv)
+            self.assertNotIn("--extractor-args", argv)
 
     def test_play_starts_idle_mpv_then_sends_authenticated_url_over_ipc(self):
         with tempfile.TemporaryDirectory() as tmpdir:
