@@ -660,6 +660,70 @@ ShellRoot {{
         self.assertFalse(final["resolving"], output[-2000:])
         self.assertEqual(final["request"], "https://example.test/same", output[-2000:])
 
+    def test_temporary_provider_unavailability_preserves_selected_filter(self):
+        source_owner, source = make_media_player_source("{}")
+        with source_owner, tempfile.TemporaryDirectory() as cfg:
+            qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var svc: null
+  property string youtubeFilter: ""
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.media-player/Service.qml')}", Component.PreferSynchronous)
+    svc = component.createObject(root, {{ manifest: {{ __sourceDir: "{source}" }} }})
+  }}
+  Timer {{
+    interval: 20
+    repeat: true
+    running: true
+    onTriggered: {{
+      if (!svc || !svc.stateLoaded) return
+      stop()
+      svc.ytdlpAvailable = true
+      svc.setProviderFilter("youtube")
+      svc.ytdlpAvailable = false
+      root.youtubeFilter = svc.providerFilter
+      svc.lacunaSettings = {{ mediaProviders: {{ jellyfin: {{ enabled: true, serverUrl: "https://example.test", apiKey: "secret" }} }} }}
+      jellyfinReady.start()
+    }}
+  }}
+  Timer {{
+    id: jellyfinReady
+    interval: 20
+    repeat: true
+    onTriggered: {{
+      if (!svc.jellyfinConfigured) return
+      stop()
+      svc.setProviderFilter("jellyfin")
+      svc.lacunaSettings = {{ mediaProviders: {{}} }}
+      finish.start()
+    }}
+  }}
+  Timer {{
+    id: finish
+    interval: 40
+    onTriggered: {{
+      console.log("BEHAVE " + JSON.stringify({{
+        youtubeFilter: root.youtubeFilter,
+        jellyfinConfigured: svc.jellyfinConfigured,
+        jellyfinFilter: svc.providerFilter
+      }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+            output = run_quickshell(qml, config_home=Path(cfg), timeout=8)
+
+        require_no_qml_errors(output)
+        final = parse_behave(output)[-1]
+        self.assertEqual(final["youtubeFilter"], "youtube", output[-2000:])
+        self.assertFalse(final["jellyfinConfigured"], output[-2000:])
+        self.assertEqual(final["jellyfinFilter"], "jellyfin", output[-2000:])
+
     def test_v3_state_migrates_to_v4_defaults_without_losing_queue(self):
         source_owner, source = make_media_player_source("{}")
         with source_owner, tempfile.TemporaryDirectory() as cfg:

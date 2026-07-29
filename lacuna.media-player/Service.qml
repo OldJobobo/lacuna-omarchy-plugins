@@ -2281,12 +2281,13 @@ Item {
       handoffPhase = "source-ready"
   }
   onJellyfinConfiguredChanged: {
-    if (!jellyfinConfigured && providerFilter === "jellyfin") setProviderFilter("all")
+    // Provider availability is runtime state, not user preference. Keep the
+    // selected filter so a temporary outage does not rewrite persisted media
+    // state or safe-reset preservation boundaries.
     if (pendingDefaultSuggestions && (ytdlpAvailable || jellyfinConfigured)) loadDefaultSuggestions()
     status = available ? "ready" : "unavailable"
   }
   onYtdlpAvailableChanged: {
-    if (!ytdlpAvailable && providerFilter === "youtube") setProviderFilter("all")
     if (pendingDefaultSuggestions && (ytdlpAvailable || jellyfinConfigured)) loadDefaultSuggestions()
     status = available ? "ready" : "unavailable"
   }
