@@ -3034,6 +3034,26 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("live_gaps_enabled = any(value and value > 0 for value in [gaps_in, gaps_out])", state_script)
         self.assertIn("Use the active theme's tiled-window gap size", settings_window)
 
+    def test_window_corner_control_supports_square_rounded_and_theme_modes(self):
+        service = read("lacuna.shell-settings/Service.qml")
+        state_script = read("lacuna.shell-settings/scripts/omarchy-shell-settings-state.py")
+        settings_window = read("lacuna.shell-settings/settings/OmarchyShellSettingsWindow.qml")
+
+        self.assertIn('option("square", "Square"', service)
+        self.assertIn('option("rounded", "Rounded"', service)
+        self.assertIn('option("theme", "Theme"', service)
+        self.assertIn("function setWindowRoundingMode(value)", service)
+        self.assertIn('if (mode === "theme")', service)
+        self.assertIn('if [ -f " + quote(stockNoGapsFile)', service)
+        self.assertIn('rm -f " + quote(file) + " " + quote(stockNoGapsFile)', service)
+        self.assertIn("Preserve disabled gaps without overriding theme borders or corner rounding", service)
+        self.assertIn('elif stock_no_gaps_flag:', state_script)
+        self.assertIn('window_rounding_mode = "theme"', state_script)
+        self.assertIn('"windowRoundingMode": window_rounding_mode', state_script)
+        self.assertIn('selectRow("corners", "Window Corners"', settings_window)
+        self.assertIn('"window-rounding-mode"', settings_window)
+        self.assertNotIn('toggleRow("corners", "Rounded Windows"', settings_window)
+
     def test_shell_settings_service_load_has_timeout_watchdog(self):
         # A hung state subprocess must not wedge the service. A watchdog
         # terminates it, a single resolver clears `loading` exactly once

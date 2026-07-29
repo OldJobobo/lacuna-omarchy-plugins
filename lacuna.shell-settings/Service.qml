@@ -40,6 +40,7 @@ Item {
   readonly property string currentEditor: stringAt(state, ["defaults", "editor"])
   readonly property string currentFont: stringAt(state, ["font"])
   readonly property string currentPowerProfile: stringAt(state, ["powerProfile"])
+  readonly property string windowRoundingMode: stringAt(state, ["hypr", "windowRoundingMode"]) || "theme"
   readonly property string focusedMonitorName: stringAt(state, ["monitor", "name"])
   readonly property string focusedMonitorScale: stringAt(state, ["monitor", "scale"])
   readonly property int idleScreensaver: positiveInt(shellConfig && shellConfig.idle ? shellConfig.idle.screensaver : undefined, 150)
@@ -62,6 +63,7 @@ Item {
       powerAvailable: false,
       hypr: {
         windowGapsEnabled: null,
+        windowRoundingMode: "theme",
         roundedWindows: null,
         singleWindowAspect: null,
         gapsIn: -1,
@@ -180,6 +182,14 @@ Item {
       option("2", "2", "200%", true),
       option("3", "3", "300%", true),
       option("4", "4", "400%", true)
+    ]
+  }
+
+  function windowRoundingOptions() {
+    return [
+      option("square", "Square", "Force application windows to use square corners", true),
+      option("rounded", "Rounded", "Force application windows to use rounded corners", true),
+      option("theme", "Theme", "Follow the active theme's window corner setting", true)
     ]
   }
 
@@ -419,13 +429,39 @@ Item {
       + "; hyprctl eval " + quote(liveConfig) + " >/dev/null", ["hypr"])
   }
 
-  function setRoundedWindows(enabled) {
-    var want = enabled === true
+  function setWindowRoundingMode(value) {
+    var mode = String(value || "").toLowerCase()
+    if (mode !== "square" && mode !== "rounded" && mode !== "theme") return
+
     var file = homeDir + "/.local/state/omarchy/toggles/hypr/zz-lacuna-window-rounded.lua"
     var dir = homeDir + "/.local/state/omarchy/toggles/hypr"
-    var radius = want ? root.roundedWindowRadius : 0
-    setOptimisticHypr("roundedWindows", want, { rounding: radius })
-    var body = "-- Lacuna: Own Hyprland window corner rounding explicitly.\n"
+    var stockNoGapsFile = dir + "/window-no-gaps.lua"
+    var lacunaGapsFile = dir + "/zz-lacuna-window-gaps.lua"
+    var next = copyState()
+    if (!next.hypr || typeof next.hypr !== "object") next.hypr = {}
+    next.hypr.windowRoundingMode = mode
+
+    if (mode === "theme") {
+      state = next
+      var gapsOnlyBody = "-- Lacuna: Preserve disabled gaps without overriding theme borders or corner rounding.\n"
+        + "hl.config({\n"
+        + "  general = {\n"
+        + "    gaps_out = 0,\n"
+        + "    gaps_in = 0,\n"
+        + "  },\n"
+        + "})\n"
+      run("mkdir -p " + quote(dir)
+        + "; if [ -f " + quote(stockNoGapsFile) + " ]; then printf %s " + quote(gapsOnlyBody) + " > " + quote(lacunaGapsFile) + "; fi"
+        + "; rm -f " + quote(file) + " " + quote(stockNoGapsFile)
+        + "; hyprctl reload >/dev/null", ["hypr"])
+      return
+    }
+
+    var radius = mode === "rounded" ? root.roundedWindowRadius : 0
+    next.hypr.roundedWindows = mode === "rounded"
+    next.hypr.rounding = radius
+    state = next
+    var body = "-- Lacuna: Override the active theme's Hyprland window corner rounding.\n"
       + "hl.config({\n"
       + "  decoration = {\n"
       + "    rounding = " + radius + ",\n"
@@ -436,6 +472,10 @@ Item {
       + "; printf %s " + quote(body) + " > " + quote(file)
       + "; hyprctl reload >/dev/null"
       + "; hyprctl eval " + quote(liveConfig) + " >/dev/null", ["hypr"])
+  }
+
+  function setRoundedWindows(enabled) {
+    setWindowRoundingMode(enabled === true ? "rounded" : "square")
   }
 
   function setToggle(name, desired) {

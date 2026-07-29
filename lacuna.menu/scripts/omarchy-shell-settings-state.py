@@ -251,9 +251,13 @@ def hypr_state(toggles_dir):
     gaps_enabled = live_gaps_enabled
 
   if rounded_text:
-    rounded_windows = "rounding = 0" not in rounded_text
+    rounded_override = first_int(rounded_text, "rounding =")
+    window_rounding_mode = "square" if rounded_override == 0 else "rounded"
+  elif stock_no_gaps_flag:
+    window_rounding_mode = "square"
   else:
-    rounded_windows = rounding is not None and rounding > 0
+    window_rounding_mode = "theme"
+  rounded_windows = rounding is not None and rounding > 0
 
   if lacuna_aspect_text:
     single_aspect = "{ 1, 1 }" in lacuna_aspect_text
@@ -262,6 +266,7 @@ def hypr_state(toggles_dir):
 
   return {
     "windowGapsEnabled": gaps_enabled,
+    "windowRoundingMode": window_rounding_mode,
     "roundedWindows": rounded_windows,
     "singleWindowAspect": single_aspect,
     "gapsIn": -1 if gaps_in is None else gaps_in,

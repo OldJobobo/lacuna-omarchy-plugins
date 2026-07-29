@@ -121,6 +121,40 @@ class StateScriptTests(unittest.TestCase):
         self.assertIn("isinstance(parsed.get(\"enabled\"), bool)", script)
         self.assertIn("int(match.group(0)) < 6000", script)
 
+    def test_shell_settings_state_reports_window_rounding_override_mode(self):
+        module = load_module(SHELL_SETTINGS_STATE, "shell_settings_state_rounding_mode_test")
+        option_values = {
+            "general:gaps_in": "css gap data: 4",
+            "general:gaps_out": "css gap data: 8",
+            "general:border_size": "int: 2",
+            "decoration:rounding": "int: 9",
+            "layout:single_window_aspect_ratio": "vec2: 0 0",
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            toggles_dir = Path(tmp)
+            hypr_dir = toggles_dir / "hypr"
+            hypr_dir.mkdir()
+            with mock.patch.object(module, "hypr_option", side_effect=lambda name: option_values[name]):
+                themed = module.hypr_state(str(toggles_dir))
+                self.assertEqual("theme", themed["windowRoundingMode"])
+                self.assertTrue(themed["roundedWindows"])
+
+                stock_no_gaps = hypr_dir / "window-no-gaps.lua"
+                stock_no_gaps.write_text("hl.config({ decoration = { rounding = 0 } })\n", encoding="utf-8")
+                stock_square = module.hypr_state(str(toggles_dir))
+                self.assertEqual("square", stock_square["windowRoundingMode"])
+                stock_no_gaps.unlink()
+
+                override = hypr_dir / "zz-lacuna-window-rounded.lua"
+                override.write_text("hl.config({\n  decoration = {\n    rounding = 0,\n  },\n})\n", encoding="utf-8")
+                square = module.hypr_state(str(toggles_dir))
+                self.assertEqual("square", square["windowRoundingMode"])
+
+                override.write_text("hl.config({\n  decoration = {\n    rounding = 12,\n  },\n})\n", encoding="utf-8")
+                rounded = module.hypr_state(str(toggles_dir))
+                self.assertEqual("rounded", rounded["windowRoundingMode"])
+
     def test_shell_settings_state_lock_is_global_single_flight(self):
         module = load_module(SHELL_SETTINGS_STATE, "shell_settings_state_lock_test")
         with tempfile.TemporaryDirectory() as tmp:
