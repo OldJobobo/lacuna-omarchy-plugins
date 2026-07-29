@@ -41,6 +41,8 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
   state with reset defaults.
 - Temporary YouTube or Jellyfin unavailability no longer rewrites the selected
   provider filter or its persisted media state.
+- Installer reloads tolerate Omarchy's short restart-helper timeout only when a
+  new shell process appears and subsequently answers its health ping.
 - Settings service no longer shadows its `loaded()` signal; the signal fires
   and the pending-save replay runs (`lacuna.state`, `lacuna.menu`).
 - Corrupt `settings.json` is backed up to `settings.json.bak` and flagged via

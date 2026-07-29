@@ -119,6 +119,26 @@ def load_installer_module():
 
 
 class LacunaInstallerTests(unittest.TestCase):
+    def test_restart_timeout_is_accepted_only_for_a_new_healthy_shell(self):
+        module = load_installer_module()
+        command = ["omarchy", "restart", "shell"]
+        with mock.patch.object(module, "omarchy_shell_process_ids", side_effect=[{101}, {202}]), \
+            mock.patch.object(module, "run_command", return_value=1) as run_command, \
+            mock.patch.object(module, "shell_ping_ready", side_effect=[False, True]) as ping, \
+            mock.patch.object(module.time, "sleep"):
+            self.assertEqual(module.run_reload_command(command, dry_run=False), 0)
+        run_command.assert_called_once_with(command, False)
+        self.assertEqual(ping.call_count, 2)
+
+    def test_restart_failure_is_not_masked_when_no_new_shell_started(self):
+        module = load_installer_module()
+        command = ["omarchy", "restart", "shell"]
+        with mock.patch.object(module, "omarchy_shell_process_ids", side_effect=[{101}, {101}]), \
+            mock.patch.object(module, "run_command", return_value=1), \
+            mock.patch.object(module, "shell_ping_ready") as ping:
+            self.assertEqual(module.run_reload_command(command, dry_run=False), 1)
+        ping.assert_not_called()
+
     def test_omarchy_host_paths_ignore_custom_xdg_config_home(self):
         module = load_installer_module()
 

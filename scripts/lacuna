@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -1155,7 +1156,7 @@ def activate_plugins(
                 apply_layout_to_config(config, selected)
         write_shell_config(config)
         print(f"  updated {shell_config_path()}", flush=True)
-        code = run_command(activation_reload_command(selected), dry_run)
+        code = run_reload_command(activation_reload_command(selected), dry_run)
         if code == 0:
             return 0
         print("  activation reload failed; restoring the previous shell.json", flush=True)
@@ -1242,6 +1243,54 @@ def run_command(command: list[str], dry_run: bool, timeout_seconds: int = 60) ->
     except subprocess.TimeoutExpired:
         print(f"Command timed out after {timeout_seconds}s: {' '.join(command)}")
         return 124
+
+
+def omarchy_shell_process_ids() -> set[int]:
+    """Return Omarchy Quickshell PIDs without matching unrelated configs."""
+    shell_dir = str(Path(os.environ.get("OMARCHY_PATH", "/usr/share/omarchy")) / "shell")
+    pids: set[int] = set()
+    for proc in Path("/proc").glob("[0-9]*"):
+        try:
+            argv = (proc / "cmdline").read_bytes().split(b"\0")
+        except OSError:
+            continue
+        decoded = [part.decode(errors="replace") for part in argv if part]
+        if not decoded or Path(decoded[0]).name not in {"quickshell", "qs"}:
+            continue
+        if any(decoded[index] == "-p" and index + 1 < len(decoded) and decoded[index + 1] == shell_dir for index in range(len(decoded))):
+            pids.add(int(proc.name))
+    return pids
+
+
+def shell_ping_ready() -> bool:
+    try:
+        result = subprocess.run(
+            ["omarchy-shell", "shell", "ping"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=1,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
+def run_reload_command(command: list[str], dry_run: bool) -> int:
+    """Accept a host restart timeout only when a new shell becomes healthy."""
+    before = omarchy_shell_process_ids() if not dry_run and command == ["omarchy", "restart", "shell"] else set()
+    code = run_command(command, dry_run)
+    if code == 0 or dry_run or command != ["omarchy", "restart", "shell"]:
+        return code
+    new_pids = omarchy_shell_process_ids() - before
+    if not new_pids:
+        return code
+    for _attempt in range(30):
+        if shell_ping_ready():
+            print("  Omarchy shell became ready after the restart helper timed out.", flush=True)
+            return 0
+        time.sleep(0.1)
+    return code
 
 
 def run_commands(commands: list[list[str]], dry_run: bool) -> int:
@@ -1357,7 +1406,7 @@ def rollback_staged_changes(changes: list[tuple[Path, Path | None]]) -> None:
 def reload_after_rollback(selected: set[str] | None = None) -> int:
     command = activation_reload_command(selected or set())
     print(f"  recovery: {' '.join(command)}", flush=True)
-    return run_command(command, dry_run=False)
+    return run_reload_command(command, dry_run=False)
 
 
 def stage_plugins(
@@ -1421,7 +1470,7 @@ def uninstall_plugins(ids: list[str], dry_run: bool) -> int:
         if code != 0:
             return code
     if ids:
-        code = run_command(uninstall_reload_command(ids), dry_run)
+        code = run_reload_command(uninstall_reload_command(ids), dry_run)
         if code != 0 and not dry_run:
             print("  uninstall reload failed; restoring the previous plugin and shell state", flush=True)
             restore_path_state(shell_path, shell_state)
@@ -1831,7 +1880,7 @@ def reset(args: argparse.Namespace) -> int:
         return 1
 
     try:
-        code = run_command(profile["reset"]["reloadCommand"], dry_run=False)
+        code = run_reload_command(profile["reset"]["reloadCommand"], dry_run=False)
     except OSError as error:
         restore_path_state(shell_path, shell_state)
         restore_path_state(settings_path, settings_state)
