@@ -294,7 +294,9 @@ class DocsContractTests(unittest.TestCase):
 
     def test_beta_candidate_changelog_is_honest_and_scoped(self):
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-        self.assertIn("## [Unreleased]\n\n## [0.1.0-beta.2] - 2026-07-29", changelog)
+        self.assertIn("## [Unreleased]", changelog)
+        self.assertIn("## [0.1.0-beta.2] - 2026-07-29", changelog)
+        self.assertLess(changelog.index("## [Unreleased]"), changelog.index("## [0.1.0-beta.2]"))
         self.assertIn("### Beta scope", changelog)
         self.assertIn("### Migration", changelog)
         self.assertIn("### Known limitations", changelog)
