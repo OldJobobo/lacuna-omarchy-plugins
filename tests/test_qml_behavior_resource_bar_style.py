@@ -69,6 +69,17 @@ ShellRoot {{
     id: settle
     interval: 500
     onTriggered: {{
+      // Exercise the post-construction binding path before measuring. Headless
+      // compositors may defer the first implicit-size polish for unattached items.
+      temperature.parseTemperature(JSON.stringify({{ primary: {{ fahrenheit: 9 }} }}))
+      measure.restart()
+    }}
+  }}
+
+  Timer {{
+    id: measure
+    interval: 100
+    onTriggered: {{
       root.widthBeforeHistory = stats.implicitWidth
       root.statsWidthAtMinimum = stats.implicitWidth
       root.temperatureWidthAtMinimum = temperature.implicitWidth
