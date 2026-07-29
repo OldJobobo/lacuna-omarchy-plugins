@@ -28,6 +28,7 @@ jobs:
             nodejs \
             python \
             python-pytest \
+            quickshell \
             qt6-declarative \
             qt6-multimedia \
             shellcheck
