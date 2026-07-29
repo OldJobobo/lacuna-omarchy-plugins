@@ -15,6 +15,8 @@ jobs:
     container: archlinux:latest
     env:
       OMARCHY_PATH: ${{ github.workspace }}/.ci/omarchy
+      XDG_RUNTIME_DIR: /tmp/xdg-runtime
+      WAYLAND_DISPLAY: wayland-ci
     steps:
       - name: Install tools
         run: |
@@ -28,7 +30,8 @@ jobs:
             quickshell \
             qt6-declarative \
             qt6-multimedia \
-            shellcheck
+            shellcheck \
+            weston
 
       - uses: actions/checkout@v7
       - uses: actions/checkout@v7
@@ -42,6 +45,16 @@ jobs:
           git config --global --add safe.directory "$OMARCHY_PATH"
       - name: Configure Qt tools
         run: echo "/usr/lib/qt6/bin" >> "$GITHUB_PATH"
+      - name: Start headless Wayland compositor
+        run: |
+          install -dm700 "$XDG_RUNTIME_DIR"
+          weston --backend=headless-backend.so --socket="$WAYLAND_DISPLAY" --idle-time=0 > /tmp/weston.log 2>&1 &
+          for attempt in $(seq 1 50); do
+            test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" && exit 0
+            sleep 0.1
+          done
+          cat /tmp/weston.log
+          exit 1
 
       - name: Run release checks
         run: ./scripts/check.sh
