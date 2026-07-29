@@ -25,10 +25,10 @@ release rehearsal should not wait for all product work to finish.
 
 | Workstream | Status | Current evidence | Remaining release boundary |
 | --- | --- | --- | --- |
-| Compatibility | Current development target accepted | The r1333 delta was reviewed; multi-monitor widget broadcast lookup is mirrored by Lacuna, and the additive stock `AppLibrary` does not affect Lacuna's menu. The executable ledger, hashes, vendored parity, plugin checks, and live compatibility pass. | Declare minimum and release-tested targets, then record beta/RC results. |
+| Compatibility | Current development target accepted | The r1438 delta was reviewed; drawn-slot panel routing, hidden-list lifecycle, and panel-indicator hints are mirrored by Lacuna, while host-owned async component deduplication requires no port. The executable ledger, hashes, vendored parity, plugin checks, and live compatibility pass. | Declare minimum and release-tested targets, then record beta/RC results. |
 | Diagnostics | In progress | `scripts/lacuna status` distinguishes staged/enabled versions. | Add core health, active host, migration, monitor policy, failures, and recovery actions. |
 | Release and migration | In progress | Version tooling, generated inventory, deterministic archives, local AUR rehearsal, dependency-safe uninstall, changelog, rollback-capable installer, and tag workflow exist. | Complete the packaged beta/RC live matrix, migration notes, and release evidence record. |
-| Documentation consistency | In progress | Canonical roadmap/index, phase status, current r1333 baseline, and docs contracts agree. | Continue removing drift and validate release claims, links, and commands. |
+| Documentation consistency | In progress | Canonical roadmap/index, phase status, current r1438 baseline, and docs contracts agree. | Continue removing drift and validate release claims, links, and commands. |
 | Structural evolution | Deferred | Existing behavior tests permit later bounded cleanup. | Not a beta/RC gate unless required to fix a blocker. |
 | P2 validation | Pending | Local checks and compatibility pass. | Run beta and RC artifact rehearsals. |
 
@@ -214,6 +214,20 @@ back, and understood without relying on private project knowledge.
   Lacuna's application catalog and shell injection contracts remain unchanged.
 - Updated CI and release host pins to immutable commit
   `a466dcc04f937a41c820aaa990a31f36ecaed543`.
+
+## Delivered Checkpoint — 2026-07-28
+
+- Accepted Omarchy `4.0.0.r1438.g9b693cc-1` with Quickshell
+  `0.3.0.r18.g10b439f-3` after reviewing the r1333-to-r1438 tracked host delta.
+- Ported the upstream drawn-slot selector so panel commands cannot target an
+  anchored placeholder, and deactivated hidden center module lists so widgets,
+  timers, and IPC handlers are not instantiated twice.
+- Added support for upstream's optional open-panel indicator extent hints while
+  retaining Lacuna's screen-local placement offset.
+- Confirmed the `shell.qml` asynchronous component-load deduplication is
+  host-owned and `Ui/BarWidget.qml` is unchanged.
+- Updated CI and release host pins to immutable commit
+  `9b693cca63d111fc3faba16aea149d226881b427`.
 
 ## Promotion Gates
 

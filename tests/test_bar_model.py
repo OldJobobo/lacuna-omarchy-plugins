@@ -90,6 +90,36 @@ class BarModelTests(unittest.TestCase):
         self.assertEqual(["lacuna.menu-button", "omarchy.tray"], data["beforeClock"])
         self.assertEqual(["omarchy.tray", "lacuna.clock"], data["afterMenu"])
 
+    def test_panel_routing_prefers_the_drawn_slot(self):
+        script = textwrap.dedent(
+            """
+            const model = require("./lacuna.bar/BarModel.js");
+            const placeholder = { id: "placeholder", visible: false, width: 0, height: 0 };
+            const hiddenSized = { id: "hidden", visible: false, width: 40, height: 24 };
+            const drawn = { id: "drawn", visible: true, width: 40, height: 24 };
+            const cases = {
+              drawnRecognized: model.isDrawnSlot(drawn),
+              hiddenRejected: model.isDrawnSlot(hiddenSized),
+              zeroSizeRejected: model.isDrawnSlot({ visible: true, width: 0, height: 24 }),
+              drawnPreferred: model.pickDrawnSlot([placeholder, drawn]).id,
+              orderIndependent: model.pickDrawnSlot([drawn, placeholder]).id,
+              placeholderFallback: model.pickDrawnSlot([placeholder, hiddenSized]).id,
+              empty: model.pickDrawnSlot([])
+            };
+            console.log(JSON.stringify(cases));
+            """
+        )
+
+        data = run_bar_model_script(script)
+
+        self.assertTrue(data["drawnRecognized"])
+        self.assertFalse(data["hiddenRejected"])
+        self.assertFalse(data["zeroSizeRejected"])
+        self.assertEqual("drawn", data["drawnPreferred"])
+        self.assertEqual("drawn", data["orderIndependent"])
+        self.assertEqual("placeholder", data["placeholderFallback"])
+        self.assertIsNone(data["empty"])
+
     def test_custom_module_helpers_keep_paths_bounded(self):
         script = textwrap.dedent(
             """

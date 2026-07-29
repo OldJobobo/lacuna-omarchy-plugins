@@ -108,6 +108,31 @@ def check_layers(
     return failures
 
 
+def check_bar_geometry(geometry: list[dict]) -> list[str]:
+    failures: list[str] = []
+    seen: set[tuple[str, str, str, str, str]] = set()
+    for entry in geometry:
+        if not isinstance(entry, dict):
+            continue
+        plugin_id = str(entry.get("id") or "")
+        if not plugin_id:
+            continue
+        key = (
+            plugin_id,
+            str(entry.get("section") or ""),
+            str(entry.get("band") or ""),
+            str(entry.get("screenName") or ""),
+            str(entry.get("barPosition") or ""),
+        )
+        if key in seen:
+            failures.append(
+                "duplicate live bar slot: "
+                + "/".join((key[3], key[4], key[2], key[1], key[0]))
+            )
+        seen.add(key)
+    return failures
+
+
 def load_lacuna_settings() -> dict:
     config_home = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
     path = config_home / "omarchy" / "lacuna" / "settings.json"
@@ -152,6 +177,7 @@ def main() -> int:
         for plugin_id in sorted(CORE_BAR_IDS):
             if plugin_id not in geometry_ids:
                 failures.append(f"bar geometry has no registered slot for {plugin_id}")
+        failures.extend(check_bar_geometry(geometry))
         print(f"Bar geometry: {len(geometry)} live slot records")
     except RuntimeError as error:
         failures.append(str(error))

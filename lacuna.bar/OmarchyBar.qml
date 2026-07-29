@@ -6,6 +6,7 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
 import "BarModel.js" as BarModel
+import "PanelIndicatorModel.js" as PanelIndicatorModel
 import "PortraitBarModel.js" as PortraitBarModel
 import "ScreenModel.js" as ScreenModel
 
@@ -215,14 +216,16 @@ Item {
   function findPanelWidget(pluginId) {
     var id = String(pluginId || "")
     if (!id) return null
+    var candidates = []
     for (var i = 0; i < debugModuleSlots.length; i++) {
       var slot = debugModuleSlots[i]
       if (!slot || slot.moduleName !== id || !slot.activeItem) continue
       var item = slot.activeItem
       if (typeof item.open !== "function" || typeof item.close !== "function" || item.opened === undefined) continue
-      return item
+      candidates.push(slot)
     }
-    return null
+    var chosen = BarModel.pickDrawnSlot(candidates)
+    return chosen ? chosen.activeItem : null
   }
 
   function summonBarWidget(pluginId) {
@@ -1500,6 +1503,8 @@ Item {
     property int overflowSerial: 0
 
     visible: entries.length > 0
+    // Hidden center arrangements must not instantiate duplicate widgets or IPC handlers.
+    active: visible && entries.length > 0
     sourceComponent: moduleListRoot.surfaceVertical ? verticalModuleList : horizontalModuleList
     width: item ? item.implicitWidth : 0
     height: item ? item.implicitHeight : 0
@@ -1658,6 +1663,13 @@ Item {
     readonly property bool hovered: moduleHover.hovered
     readonly property bool dragSource: root.barDragSource === slot
     readonly property bool panelOpen: root.activePopout === slot.activeItem
+    readonly property real panelIndicatorExtent: PanelIndicatorModel.extent(
+      slot.surfaceVertical,
+      activeItem,
+      slot.width,
+      slot.height,
+      Style.space(10)
+    )
     readonly property real openIndicatorInlineOffset: {
       var item = slot.activeItem
       if (!item || !("openIndicatorInlineOffset" in item)) return 0
@@ -1745,8 +1757,8 @@ Item {
       opacity: slot.panelOpen && !slot.dragSource ? 0.9 : 0
       color: Color.accent
       radius: Math.min(width, height) / 2
-      width: slot.surfaceVertical ? Style.space(2) : Math.max(Style.space(10), Math.round(parent.width * 0.55))
-      height: slot.surfaceVertical ? Math.max(Style.space(10), Math.round(parent.height * 0.55)) : Style.space(2)
+      width: slot.surfaceVertical ? Style.space(2) : slot.panelIndicatorExtent
+      height: slot.surfaceVertical ? slot.panelIndicatorExtent : Style.space(2)
       x: slot.surfaceVertical
         ? (slot.surfaceContext.position === "left" ? parent.width - width - inset : inset)
         : (slot.openIndicatorInlineOffset === 0 ? Math.round((parent.width - width) / 2) : (parent.width - width) / 2 + slot.openIndicatorInlineOffset)

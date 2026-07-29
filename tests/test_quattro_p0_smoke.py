@@ -20,6 +20,23 @@ class QuattroP0SmokePolicyTests(unittest.TestCase):
     def setUpClass(cls):
         cls.smoke = load_smoke_module()
 
+    def test_bar_geometry_rejects_duplicate_live_slots(self):
+        base = {
+            "id": "lacuna.clock",
+            "section": "center",
+            "band": "primary",
+            "screenName": "DP-1",
+            "barPosition": "top",
+        }
+        unique = [base, {**base, "screenName": "DP-2"}, {**base, "id": ""}]
+        self.assertEqual([], self.smoke.check_bar_geometry(unique))
+
+        failures = self.smoke.check_bar_geometry([base, dict(base)])
+        self.assertEqual(
+            ["duplicate live bar slot: DP-1/top/primary/center/lacuna.clock"],
+            failures,
+        )
+
     def test_current_layer_policy_handles_landscape_sidebar_and_portrait_split(self):
         monitors = [
             {"name": "DP-1", "width": 2560, "height": 1440, "scale": 1, "transform": 0},
