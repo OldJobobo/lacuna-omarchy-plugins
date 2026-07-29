@@ -13,6 +13,6 @@ pkgbase = lacuna-shell
 	optdepends = yt-dlp: YouTube media search and playback
 	optdepends = imagemagick: adaptive desktop-clock contrast sampling
 	source = lacuna-shell-0.1.0-beta.2.tar.gz::https://github.com/OldJobobo/lacuna-shell/releases/download/v0.1.0-beta.2/lacuna-shell-0.1.0-beta.2.tar.gz
-	sha256sums = SKIP
+	sha256sums = 7f09b6e01fbed15523abcaba9eb86bce3ad1f4e428130f947fc7fd341501975d
 
 pkgname = lacuna-shell
