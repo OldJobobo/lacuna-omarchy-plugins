@@ -67,7 +67,7 @@ ShellRoot {{
 
   Timer {{
     id: settle
-    interval: 150
+    interval: 500
     onTriggered: {{
       root.widthBeforeHistory = stats.implicitWidth
       root.statsWidthAtMinimum = stats.implicitWidth
@@ -85,7 +85,7 @@ ShellRoot {{
 
   Timer {{
     id: finish
-    interval: 30
+    interval: 100
     onTriggered: {{
       console.log("BEHAVE " + JSON.stringify({{
         statsIconSize: stats.topbarIconSize,

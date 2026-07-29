@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -89,11 +90,12 @@ class Phase6PerformanceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "sample.json"
             subprocess.run(
-                [str(ROOT / "scripts/lacuna-performance-benchmark"), "--quick", "--pid", str(os.getpid()), "--output", str(output)],
+                [sys.executable, str(ROOT / "scripts/lacuna-performance-benchmark"), "--quick", "--pid", str(os.getpid()), "--output", str(output)],
                 check=True,
                 timeout=20,
                 capture_output=True,
                 text=True,
+                env={**os.environ, "PATH": temp},
             )
             payload = json.loads(output.read_text(encoding="utf-8"))
             self.assertFalse(payload["promotable"])

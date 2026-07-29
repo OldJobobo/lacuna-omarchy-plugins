@@ -43,6 +43,14 @@ def read_json_command(command: list[str], fallback):
         return fallback
 
 
+def command_version(command: list[str]) -> str:
+    try:
+        result = subprocess.run(command, text=True, capture_output=True, timeout=5, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return "not detected"
+    return result.stdout.strip() if result.returncode == 0 and result.stdout.strip() else "not detected"
+
+
 def find_shell_pid(explicit: int | None) -> int:
     if explicit:
         return explicit
@@ -174,8 +182,8 @@ def main() -> int:
             "kernel": platform.release(),
             "python": platform.python_version(),
             "pid": pid,
-            "omarchyVersion": subprocess.run(["omarchy", "version"], text=True, capture_output=True).stdout.strip(),
-            "quickshellVersion": subprocess.run(["quickshell", "--version"], text=True, capture_output=True).stdout.strip(),
+            "omarchyVersion": command_version(["omarchy", "version"]),
+            "quickshellVersion": command_version(["quickshell", "--version"]),
             "monitors": monitors,
             "outputCount": len(monitors),
             "settings": [file_fingerprint(shell_config), file_fingerprint(lacuna_settings)],
