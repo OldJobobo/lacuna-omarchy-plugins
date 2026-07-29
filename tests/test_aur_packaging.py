@@ -22,7 +22,8 @@ class AurPackagingTests(unittest.TestCase):
 
     def test_package_uses_release_archive_and_publish_checksum_gate(self):
         pkgbuild = PKGBUILD.read_text(encoding="utf-8")
-        self.assertIn("_source_sha256=SKIP", pkgbuild)
+        checksum = re.search(r"^_source_sha256=(SKIP|[0-9a-f]{64})$", pkgbuild, re.MULTILINE)
+        self.assertIsNotNone(checksum)
         self.assertIn('pkgver=${_upstream_version//-/}', pkgbuild)
         self.assertIn('/releases/download/v${_upstream_version}/', pkgbuild)
         self.assertIn('sha256sums=("${_source_sha256}")', pkgbuild)
