@@ -1029,6 +1029,7 @@
     {
       "id": "lacuna.system-update",
       "kinds": [
+        "service",
         "bar-widget"
       ],
       "stability": "beta",
@@ -1037,6 +1038,7 @@
       "requires": [],
       "recommends": [],
       "entryPoints": {
+        "service": "Service.qml",
         "barWidget": "Widget.qml"
       },
       "files": [

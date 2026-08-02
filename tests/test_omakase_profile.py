@@ -79,7 +79,7 @@ class OmakaseProfileContractTests(unittest.TestCase):
             if set(manifests[plugin_id].get("kinds", [])) & {"service", "menu", "overlay"}
         }
         activation_ids = [entry["id"] for entry in profile["shell"]["activationEntries"]]
-        self.assertEqual(len(expected_activation), 25)
+        self.assertEqual(len(expected_activation), 26)
         self.assertEqual(activation_ids, sorted(expected_activation))
 
         self.assertTrue({"lacuna.media-player", "lacuna.media-player-video", "lacuna.script-pill"} <= supported)

@@ -8,10 +8,12 @@ Item {
   property var bar: null
   property string moduleName: "lacuna.system-update"
   property var settings: ({})
-  property bool updateAvailable: false
+  property var systemUpdateService: null
+  property bool fallbackUpdateAvailable: false
 
   readonly property int barSize: bar ? bar.barSize : 26
   readonly property color foreground: bar ? bar.foreground : "#d8dee9"
+  readonly property bool updateAvailable: systemUpdateService ? systemUpdateService.updateAvailable : fallbackUpdateAvailable
   readonly property color moduleColor: colorProfile.statusColor(updateAvailable ? "active" : "normal", "system-update")
   readonly property int intervalMs: Math.max(60000, Number(setting("interval", 21600000)))
   readonly property int topbarIconSize: barSize >= 30 ? 15 : 13
@@ -26,7 +28,35 @@ Item {
     return value === undefined || value === null ? fallback : value
   }
 
+  function resolveService() {
+    if (systemUpdateService) return
+    if (bar && bar.shell && typeof bar.shell.ensureService === "function") {
+      var ensured = bar.shell.ensureService("lacuna.system-update")
+      if (ensured) {
+        systemUpdateService = ensured
+        configureService()
+        return
+      }
+    }
+    if (bar && bar.shell && typeof bar.shell.serviceFor === "function") {
+      var existing = bar.shell.serviceFor("lacuna.system-update")
+      if (existing) {
+        systemUpdateService = existing
+        configureService()
+      }
+    }
+  }
+
+  function configureService() {
+    if (systemUpdateService && typeof systemUpdateService.setIntervalMs === "function")
+      systemUpdateService.setIntervalMs(intervalMs)
+  }
+
   function refresh() {
+    if (systemUpdateService && typeof systemUpdateService.refresh === "function") {
+      systemUpdateService.refresh()
+      return
+    }
     if (!updateProc.running) updateProc.running = true
   }
 
@@ -48,11 +78,23 @@ Item {
     animationDisabled: colorProfile.reduceMotion
   }
 
-  Component.onCompleted: refresh()
+  Component.onCompleted: {
+    resolveService()
+    refresh()
+  }
+  onBarChanged: resolveService()
+  onIntervalMsChanged: configureService()
+
+  Timer {
+    interval: 500
+    running: root.systemUpdateService === null
+    repeat: true
+    onTriggered: root.resolveService()
+  }
 
   Timer {
     interval: root.intervalMs
-    running: true
+    running: root.systemUpdateService === null
     repeat: true
     onTriggered: root.refresh()
   }
@@ -60,7 +102,7 @@ Item {
   Process {
     id: updateProc
     command: ["omarchy", "update", "available"]
-    onExited: function(exitCode) { root.updateAvailable = exitCode === 0 }
+    onExited: function(exitCode) { root.fallbackUpdateAvailable = exitCode === 0 }
   }
 
   Item {

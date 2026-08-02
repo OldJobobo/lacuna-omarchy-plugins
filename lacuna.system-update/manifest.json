@@ -6,10 +6,14 @@
   "author": "Lacuna",
   "description": "Lacuna-styled system update indicator for the Omarchy bar.",
   "kinds": [
+    "service",
     "bar-widget"
   ],
   "activation": "on-demand",
+  "persistent": true,
+  "keepLoaded": true,
   "entryPoints": {
+    "service": "Service.qml",
     "barWidget": "Widget.qml"
   },
   "barWidget": {
