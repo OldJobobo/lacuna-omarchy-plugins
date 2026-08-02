@@ -158,6 +158,7 @@
         "Bar.qml",
         "BarConfigPanel.qml",
         "BarModel.js",
+        "BarResponsiveModel.js",
         "LacunaFrameBorderWindow.qml",
         "LacunaFrameWindow.qml",
         "LacunaGeometry.qml",
@@ -1045,6 +1046,7 @@
         "BarHoverSeam.qml",
         "ColorProfile.qml",
         "MotionTokens.qml",
+        "Service.qml",
         "Widget.qml",
         "manifest.json"
       ]

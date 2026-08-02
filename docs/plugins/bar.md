@@ -40,6 +40,20 @@ Settings; there is no second persisted layout. Flyouts, tooltips, indicators,
 and menu payloads receive the actual edge and screen of the band that invoked
 them.
 
+## Responsive Scaling
+
+Compact and full are density choices; they do not directly decide which
+modules are visible. Each horizontal bar instead uses the output's logical
+width after Hyprland monitor scaling. Lacuna keeps the center anchor at the
+exact output midpoint, gives the left and right sections equal non-overlapping
+corridors, and hides lower-priority whole modules whenever their measured
+widths exceed a corridor. Full mode uses the same protection as compact mode.
+
+The width classes exposed to widgets and live diagnostics are `wide` (1680+),
+`standard` (1200–1679), `constrained` (800–1199), and `minimal` (below 800)
+logical pixels. Display scale is never applied a second time inside the bar.
+Vertical bars retain their existing flow behavior.
+
 ## Bar Widgets
 
 Bar widgets are placed in `bar.layout` and receive `bar`, `moduleName`, and

@@ -111,6 +111,7 @@ def check_layers(
 def check_bar_geometry(geometry: list[dict]) -> list[str]:
     failures: list[str] = []
     seen: set[tuple[str, str, str, str, str]] = set()
+    surfaces: dict[tuple[str, str, str], dict[str, list[tuple[float, float]]]] = {}
     for entry in geometry:
         if not isinstance(entry, dict):
             continue
@@ -130,6 +131,41 @@ def check_bar_geometry(geometry: list[dict]) -> list[str]:
                 + "/".join((key[3], key[4], key[2], key[1], key[0]))
             )
         seen.add(key)
+
+        if entry.get("visible") is not True or key[1] not in {"left", "center", "right"}:
+            continue
+        if key[4] not in {"top", "bottom"}:
+            continue
+        try:
+            start = float(entry.get("x", 0))
+            length = max(0.0, float(entry.get("width", 0)))
+        except (TypeError, ValueError):
+            continue
+        surface_key = (key[3], key[4], key[2])
+        sections = surfaces.setdefault(surface_key, {"left": [], "center": [], "right": []})
+        sections[key[1]].append((start, start + length))
+
+    # Rounded debug coordinates may differ by one pixel at a fractional scale.
+    # Anything beyond that tolerance means two responsive corridors intersect.
+    tolerance = 1.0
+    for surface_key, sections in surfaces.items():
+        bounds = {
+            name: (min(item[0] for item in values), max(item[1] for item in values))
+            for name, values in sections.items()
+            if values
+        }
+        pairs = [("left", "center"), ("center", "right")]
+        if "center" not in bounds:
+            pairs.append(("left", "right"))
+        for before, after in pairs:
+            if before not in bounds or after not in bounds:
+                continue
+            if bounds[before][1] > bounds[after][0] + tolerance:
+                failures.append(
+                    "overlapping live bar sections: "
+                    + "/".join(surface_key)
+                    + f"/{before}-{after} ({bounds[before][1]:g}>{bounds[after][0]:g})"
+                )
     return failures
 
 

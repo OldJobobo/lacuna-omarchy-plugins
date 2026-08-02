@@ -37,6 +37,57 @@ class QuattroP0SmokePolicyTests(unittest.TestCase):
             failures,
         )
 
+    def test_bar_geometry_rejects_cross_section_overlap(self):
+        def slot(plugin_id, section, x, width):
+            return {
+                "id": plugin_id,
+                "section": section,
+                "band": "primary",
+                "screenName": "DP-1",
+                "barPosition": "top",
+                "visible": True,
+                "x": x,
+                "width": width,
+            }
+
+        fitting = [
+            slot("lacuna.menu-button", "left", 0, 100),
+            slot("lacuna.clock", "center", 120, 80),
+            slot("lacuna.power", "right", 220, 100),
+        ]
+        self.assertEqual([], self.smoke.check_bar_geometry(fitting))
+
+        overlapping = [*fitting[:2], slot("lacuna.power", "right", 198, 100)]
+        self.assertEqual(
+            ["overlapping live bar sections: DP-1/top/primary/center-right (200>198)"],
+            self.smoke.check_bar_geometry(overlapping),
+        )
+
+    def test_bar_geometry_leaves_vertical_flow_outside_horizontal_policy(self):
+        vertical = [
+            {
+                "id": "lacuna.menu-button",
+                "section": "left",
+                "band": "primary",
+                "screenName": "DP-1",
+                "barPosition": "left",
+                "visible": True,
+                "y": 0,
+                "height": 100,
+            },
+            {
+                "id": "lacuna.clock",
+                "section": "center",
+                "band": "primary",
+                "screenName": "DP-1",
+                "barPosition": "left",
+                "visible": True,
+                "y": 50,
+                "height": 100,
+            },
+        ]
+        self.assertEqual([], self.smoke.check_bar_geometry(vertical))
+
     def test_current_layer_policy_handles_landscape_sidebar_and_portrait_split(self):
         monitors = [
             {"name": "DP-1", "width": 2560, "height": 1440, "scale": 1, "transform": 0},

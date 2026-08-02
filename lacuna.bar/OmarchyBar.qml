@@ -6,6 +6,7 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
 import "BarModel.js" as BarModel
+import "BarResponsiveModel.js" as BarResponsiveModel
 import "PanelIndicatorModel.js" as PanelIndicatorModel
 import "PortraitBarModel.js" as PortraitBarModel
 import "ScreenModel.js" as ScreenModel
@@ -286,6 +287,14 @@ Item {
         itemVisible: slot.activeItem.visible === true,
         itemWidth: Math.round(slot.activeItem.implicitWidth || 0),
         itemHeight: Math.round(slot.activeItem.implicitHeight || 0),
+        naturalWidth: Number(slot.naturalWidth || 0),
+        availableLength: slot.moduleList ? Number(slot.moduleList.availableLength || 0) : 0,
+        overflowVisible: slot.overflowVisible === true,
+        priority: root.responsivePriority(slot.moduleName, slot.region),
+        compactBar: root.compactBar,
+        widthClass: slot.surfaceContext ? slot.surfaceContext.widthClass : "",
+        logicalWidth: slot.surfaceContext ? slot.surfaceContext.logicalWidth : 0,
+        outputScale: slot.surfaceContext ? slot.surfaceContext.outputScale : 1,
         recording: "recording" in slot.activeItem ? slot.activeItem.recording === true : undefined,
         polledRecording: "polledRecording" in slot.activeItem ? slot.activeItem.polledRecording === true : undefined,
         recordingServiceResolved: "recordingService" in slot.activeItem ? slot.activeItem.recordingService !== null : undefined
@@ -324,6 +333,10 @@ Item {
     tooltipTarget = null
     tooltipText = ""
     tooltipShown = false
+  }
+
+  function prepareSlotForResponsiveHide(slot) {
+    BarResponsiveModel.prepareSlotForHide(root, slot)
   }
 
   function clearBarDrag() {
@@ -543,26 +556,27 @@ Item {
     return Util.canonicalWidgetId(name)
   }
 
-  function compactPriority(name, region) {
+  function responsivePriority(name, region) {
     var id = canonicalWidgetId(name)
-    if (id === "lacuna.bar-size-pill") return 1000
-    if (id === "lacuna.menu-button") return 980
-    if (id === "lacuna.clock" || id === "omarchy.clock") return 960
-    if (id === "lacuna.workspaces" || id === "omarchy.workspaces") return 940
-    if (id === "lacuna.power" || id === "omarchy.power") return 920
-    if (id === "lacuna.audio" || id === "omarchy.audio") return 900
-    if (id === "lacuna.network" || id === "omarchy.network") return 880
-    if (id === "lacuna.codex-usage" || id === "lacuna.claude-usage") return 840
-    if (id === "lacuna.tray" || id === "omarchy.tray") return 820
-    if (id === "lacuna.weather") return 760
-    if (id === "lacuna.notifications" || id === "omarchy.notifications") return 740
-    if (id === "lacuna.system-update") return 720
-    if (id === "lacuna.bluetooth" || id === "omarchy.bluetooth") return 700
-    if (id === "lacuna.temperature") return 620
-    if (id === "lacuna.system-stats") return 600
-    if (id === "lacuna.mpris" || id === "omarchy.mpris") return 560
+    if (id === "lacuna.menu-button") return 1000
+    if (id === "lacuna.clock" || id === "omarchy.clock") return 980
+    if (id === "lacuna.workspaces" || id === "omarchy.workspaces") return 960
+    if (id === "lacuna.bar-size-pill") return 950
+    if (id === "lacuna.screen-recording") return 940
+    if (id === "lacuna.system-update") return 920
+    if (id === "lacuna.notifications" || id === "omarchy.notifications") return 900
+    if (id === "lacuna.power" || id === "omarchy.power") return 880
+    if (id === "lacuna.audio" || id === "omarchy.audio") return 860
+    if (id === "lacuna.network" || id === "omarchy.network") return 840
+    if (id === "lacuna.bluetooth" || id === "omarchy.bluetooth") return 820
+    if (id === "lacuna.tray" || id === "omarchy.tray") return 800
+    if (id === "lacuna.codex-usage" || id === "lacuna.claude-usage") return 700
+    if (id === "lacuna.weather") return 680
+    if (id === "lacuna.temperature") return 640
+    if (id === "lacuna.system-stats") return 620
+    if (id === "lacuna.mpris" || id === "omarchy.mpris") return 600
     if (id === "lacuna.theme" || id === "lacuna.wallpaper") return 440
-    if (id === "lacuna.nightlight" || id === "lacuna.idle-inhibitor" || id === "lacuna.screen-recording") return 420
+    if (id === "lacuna.nightlight" || id === "lacuna.idle-inhibitor") return 420
     if (id === "lacuna.voxtype") return 400
     if (id === "lacuna.bar-seam") return 80
     return region === "center" ? 300 : 500
@@ -932,6 +946,11 @@ Item {
     readonly property string position: surfacePosition
     readonly property bool vertical: position === "left" || position === "right"
     readonly property int barSize: root.barSize
+    readonly property bool compactBar: root.compactBar
+    readonly property real logicalWidth: owningScreen ? Number(owningScreen.width || 0) : 0
+    readonly property real logicalHeight: owningScreen ? Number(owningScreen.height || 0) : 0
+    readonly property real outputScale: owningScreen ? Number(owningScreen.devicePixelRatio || 1) : 1
+    readonly property string widthClass: BarResponsiveModel.widthClass(logicalWidth)
     readonly property color foreground: root.foreground
     readonly property color barForeground: root.barForeground
     readonly property color background: root.background
@@ -1092,10 +1111,18 @@ Item {
         id: horizontalRoot
         anchors.fill: parent
 
-        readonly property int centerReserve: root.compactBar ? Math.max(104, Math.round(width * 0.11)) : Math.max(180, Math.round(width * 0.16))
-        readonly property int sideBudget: Math.max(root.barSize, Math.floor((width - root.outerMargin * 2 - centerReserve - root.sectionGap * 2) / 2))
+        readonly property var responsivePlan: BarResponsiveModel.horizontalPlan(
+          width,
+          root.outerMargin,
+          root.sectionGap,
+          centerModules.anchorNaturalLength,
+          root.barSize
+        )
+        readonly property int centerBudget: responsivePlan.centerLength
+        readonly property int sideBudget: responsivePlan.sideLength
 
         CenterModules {
+          id: centerModules
           anchors.fill: parent
           entries: barWindow.surfaceLayout.center
           surfaceContext: surfaceBarContext
@@ -1104,6 +1131,7 @@ Item {
           centerAnchorEnabled: barWindow.centerAnchorEnabled
           surfaceVertical: barWindow.surfaceVertical
           surfaceScreenName: barWindow.surfaceScreenName
+          availableLength: horizontalRoot.centerBudget
         }
 
         LeftModules {
@@ -1117,9 +1145,11 @@ Item {
           surfaceVertical: barWindow.surfaceVertical
           surfaceScreenName: barWindow.surfaceScreenName
           availableLength: horizontalRoot.sideBudget
+          overflowEnabled: true
         }
 
         RightModules {
+          flowAlignment: "end"
           anchors.right: parent.right
           anchors.rightMargin: root.outerMargin
           anchors.verticalCenter: parent.verticalCenter
@@ -1130,6 +1160,7 @@ Item {
           surfaceVertical: barWindow.surfaceVertical
           surfaceScreenName: barWindow.surfaceScreenName
           availableLength: horizontalRoot.sideBudget
+          overflowEnabled: true
         }
       }
     }
@@ -1254,11 +1285,14 @@ Item {
     required property bool centerAnchorEnabled
     required property bool surfaceVertical
     required property string surfaceScreenName
+    property real availableLength: 0
     readonly property bool hasAnchor: centerAnchorEnabled && root.entryIndex(entries, root.centerAnchor) !== -1
     readonly property int anchorIndex: root.entryIndex(entries, root.centerAnchor)
     readonly property var anchorEntry: anchorIndex === -1 ? null : entries[anchorIndex]
+    readonly property real anchorNaturalLength: centerLoader.item ? Number(centerLoader.item.anchorNaturalLength || 0) : 0
 
     Loader {
+      id: centerLoader
       anchors.fill: parent
       sourceComponent: centerRoot.surfaceVertical ? verticalCenterModules : horizontalCenterModules
     }
@@ -1267,7 +1301,16 @@ Item {
       id: horizontalCenterModules
 
       Item {
-        anchors.fill: parent
+        id: horizontalCenterLayout
+        anchors.centerIn: parent
+        width: centerRoot.availableLength
+        height: parent.height
+        clip: true
+        readonly property real anchorNaturalLength: centerRoot.hasAnchor ? centerAnchorModule.naturalWidth : 0
+        readonly property real satelliteAvailableLength: Math.max(
+          0,
+          Math.floor((centerRoot.availableLength - anchorNaturalLength) / 2)
+        )
 
         HoverHandler {
           onHoveredChanged: root.setCenterSectionHovered(hovered)
@@ -1282,12 +1325,14 @@ Item {
           dragEnabled: centerRoot.dragEnabled
           surfaceVertical: centerRoot.surfaceVertical
           surfaceScreenName: centerRoot.surfaceScreenName
+          flowAlignment: "center"
           anchors.centerIn: parent
-          availableLength: root.compactBar ? Math.max(root.barSize, Math.round(parent.width * 0.18)) : 0
+          availableLength: centerRoot.availableLength
+          overflowEnabled: true
         }
 
         ModuleList {
-          visible: centerRoot.hasAnchor && !root.compactBar
+          visible: centerRoot.hasAnchor
           entries: root.entriesBefore(centerRoot.entries, root.centerAnchor)
           region: "center"
           surfaceContext: centerRoot.surfaceContext
@@ -1295,8 +1340,11 @@ Item {
           dragEnabled: centerRoot.dragEnabled
           surfaceVertical: centerRoot.surfaceVertical
           surfaceScreenName: centerRoot.surfaceScreenName
+          flowAlignment: "end"
           anchors.right: centerConfigControl.visible ? centerConfigControl.left : centerAnchorModule.left
           anchors.verticalCenter: centerAnchorModule.verticalCenter
+          availableLength: Math.max(0, horizontalCenterLayout.satelliteAvailableLength - (centerConfigControl.visible ? centerConfigControl.width : 0))
+          overflowEnabled: true
         }
 
         ModuleSlot {
@@ -1310,12 +1358,14 @@ Item {
           surfaceVertical: centerRoot.surfaceVertical
           surfaceScreenName: centerRoot.surfaceScreenName
           anchors.centerIn: parent
+          width: Math.min(implicitWidth, centerRoot.availableLength)
+          clip: width < implicitWidth
         }
 
         BarConfigControl {
           id: centerConfigControl
 
-          visible: centerRoot.hasAnchor && centerAnchorModule.moduleName === "omarchy.clock"
+          visible: centerRoot.hasAnchor && centerAnchorModule.moduleName === "omarchy.clock" && horizontalCenterLayout.satelliteAvailableLength >= implicitWidth
           clockHovered: centerAnchorModule.hovered
           centerHovered: root.centerSectionRevealHeld && !root.centerHoverRevealSuppressed
           anchors.right: centerAnchorModule.left
@@ -1323,7 +1373,7 @@ Item {
         }
 
         ModuleList {
-          visible: centerRoot.hasAnchor && !root.compactBar
+          visible: centerRoot.hasAnchor
           entries: root.entriesAfter(centerRoot.entries, root.centerAnchor)
           region: "center"
           surfaceContext: centerRoot.surfaceContext
@@ -1333,6 +1383,8 @@ Item {
           surfaceScreenName: centerRoot.surfaceScreenName
           anchors.left: centerAnchorModule.right
           anchors.verticalCenter: centerAnchorModule.verticalCenter
+          availableLength: horizontalCenterLayout.satelliteAvailableLength
+          overflowEnabled: true
         }
       }
     }
@@ -1342,6 +1394,7 @@ Item {
 
       Item {
         anchors.fill: parent
+        readonly property real anchorNaturalLength: 0
 
         HoverHandler {
           onHoveredChanged: root.setCenterSectionHovered(hovered)
@@ -1500,17 +1553,23 @@ Item {
     property bool surfaceVertical: root.vertical
     property string surfaceScreenName: ""
     property real availableLength: 0
+    property bool overflowEnabled: false
+    property string flowAlignment: "start"
     property int overflowSerial: 0
 
     visible: entries.length > 0
     // Hidden center arrangements must not instantiate duplicate widgets or IPC handlers.
     active: visible && entries.length > 0
     sourceComponent: moduleListRoot.surfaceVertical ? verticalModuleList : horizontalModuleList
-    width: item ? item.implicitWidth : 0
+    width: overflowEnabled && !surfaceVertical ? Math.max(0, availableLength) : (item ? item.implicitWidth : 0)
     height: item ? item.implicitHeight : 0
 
     onEntriesChanged: scheduleOverflowUpdate()
-    onAvailableLengthChanged: scheduleOverflowUpdate()
+    onAvailableLengthChanged: {
+      updateOverflow()
+      scheduleOverflowUpdate()
+    }
+    onOverflowEnabledChanged: scheduleOverflowUpdate()
     onItemChanged: scheduleOverflowUpdate()
 
     function scheduleOverflowUpdate() {
@@ -1524,76 +1583,75 @@ Item {
       if (!repeater) return
 
       var slots = []
-      var total = 0
       for (var i = 0; i < repeater.count; i++) {
         var slot = repeater.itemAt(i)
         if (!slot) continue
 
         var natural = moduleListRoot.surfaceVertical ? Math.ceil(slot.naturalHeight) : Math.ceil(slot.naturalWidth)
         if (!slot.contentVisible || natural <= 0) {
+          if (slot.overflowVisible) root.prepareSlotForResponsiveHide(slot)
           slot.overflowVisible = false
           continue
         }
 
-        total += natural
         slots.push({
           slot: slot,
-          width: natural,
-          priority: root.compactPriority(slot.moduleName, moduleListRoot.region),
+          length: natural,
+          priority: root.responsivePriority(slot.moduleName, moduleListRoot.region),
           index: i
         })
       }
 
-      var limit = Math.floor(Number(availableLength || 0))
-      if (moduleListRoot.surfaceVertical || !root.compactBar || limit <= 0 || total <= limit) {
+      if (moduleListRoot.surfaceVertical || !moduleListRoot.overflowEnabled) {
         for (var showIndex = 0; showIndex < slots.length; showIndex++) slots[showIndex].slot.overflowVisible = true
         return
       }
 
-      slots.sort(function(left, right) {
-        if (right.priority !== left.priority) return right.priority - left.priority
-        return left.index - right.index
-      })
-
-      var used = 0
-      var keep = {}
-      for (var keepIndex = 0; keepIndex < slots.length; keepIndex++) {
-        var candidate = slots[keepIndex]
-        if (used + candidate.width <= limit || used === 0) {
-          keep[candidate.index] = true
-          used += candidate.width
-        }
-      }
-
+      var result = BarResponsiveModel.fit(slots, availableLength)
       if (serial !== overflowSerial) return
       for (var slotIndex = 0; slotIndex < slots.length; slotIndex++) {
-        slots[slotIndex].slot.overflowVisible = keep[slots[slotIndex].index] === true
+        var nextVisible = result.visible[slotIndex] === true
+        if (slots[slotIndex].slot.overflowVisible && !nextVisible)
+          root.prepareSlotForResponsiveHide(slots[slotIndex].slot)
+        slots[slotIndex].slot.overflowVisible = nextVisible
       }
     }
 
     Component {
       id: horizontalModuleList
 
-      Row {
+      Item {
         property alias slotRepeater: moduleRepeater
-        spacing: 0
+        implicitWidth: moduleRow.implicitWidth
+        implicitHeight: moduleRow.implicitHeight
+        clip: moduleListRoot.overflowEnabled
 
-        Repeater {
-          id: moduleRepeater
-          model: moduleListRoot.entries
-          onItemAdded: moduleListRoot.scheduleOverflowUpdate()
-          onItemRemoved: moduleListRoot.scheduleOverflowUpdate()
+        Row {
+          id: moduleRow
+          width: implicitWidth
+          height: implicitHeight
+          x: moduleListRoot.flowAlignment === "end"
+            ? parent.width - width
+            : (moduleListRoot.flowAlignment === "center" ? (parent.width - width) / 2 : 0)
+          spacing: 0
 
-          ModuleSlot {
-            required property var modelData
-            entry: modelData
-            region: moduleListRoot.region
-            moduleList: moduleListRoot
-            surfaceContext: moduleListRoot.surfaceContext
-            band: moduleListRoot.band
-            dragEnabled: moduleListRoot.dragEnabled
-            surfaceVertical: moduleListRoot.surfaceVertical
-            surfaceScreenName: moduleListRoot.surfaceScreenName
+          Repeater {
+            id: moduleRepeater
+            model: moduleListRoot.entries
+            onItemAdded: moduleListRoot.scheduleOverflowUpdate()
+            onItemRemoved: moduleListRoot.scheduleOverflowUpdate()
+
+            ModuleSlot {
+              required property var modelData
+              entry: modelData
+              region: moduleListRoot.region
+              moduleList: moduleListRoot
+              surfaceContext: moduleListRoot.surfaceContext
+              band: moduleListRoot.band
+              dragEnabled: moduleListRoot.dragEnabled
+              surfaceVertical: moduleListRoot.surfaceVertical
+              surfaceScreenName: moduleListRoot.surfaceScreenName
+            }
           }
         }
       }
