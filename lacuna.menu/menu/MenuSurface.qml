@@ -23,7 +23,11 @@ Item {
   property bool fullFrame: false
   property bool backgroundVisible: true
   property int frameThickness: 8
+  property string barPosition: "top"
   property bool frameMoldingPieces: true
+  property bool frameBorder: false
+  property color frameBorderColor: Qt.rgba(1, 1, 1, 0.18)
+  property real frameBorderWidth: 1
   property bool openFromRight: false
   property color panelColor: "#101315"
   property color foreground: "#d8dee9"
@@ -35,6 +39,11 @@ Item {
   readonly property int bottomJoinTop: Math.max(0, surface.height - frameThickness - bodyRightInset)
   readonly property color solidPanelColor: Qt.rgba(panelColor.r, panelColor.g, panelColor.b, 1)
   readonly property real curveKappa: lacunaGeometry.curveKappa
+  readonly property real frameBorderInset: Math.max(0, frameBorderWidth / 2)
+  readonly property real frameBorderRadius: Math.max(0.01, bodyRightInset - frameBorderInset)
+  readonly property bool bottomFrameJoinVisible: backgroundVisible && fullFrame
+    && barPosition !== "bottom" && frameMoldingPieces && bodyRightInset > 0
+  readonly property bool bottomFrameJoinBorderVisible: bottomFrameJoinVisible && frameBorder
 
   LacunaGeometry { id: lacunaGeometry }
 
@@ -106,7 +115,7 @@ Item {
     Shape {
       id: bottomFrameJoinShape
 
-      visible: root.backgroundVisible && root.fullFrame && root.frameMoldingPieces && root.bodyRightInset > 0
+      visible: root.bottomFrameJoinVisible
       width: root.bodyRightInset
       height: root.bodyRightInset
       x: root.panelWidth
@@ -136,6 +145,39 @@ Item {
         PathLine {
           x: 0
           y: root.bodyRightInset
+        }
+      }
+    }
+
+    // The bar-owned frame border sits below this Overlay surface. Repaint the
+    // exposed lower molding curve here so the opaque join fill cannot cover it.
+    Shape {
+      id: bottomFrameJoinBorderShape
+
+      visible: root.bottomFrameJoinBorderVisible
+      width: root.bodyRightInset
+      height: root.bodyRightInset
+      x: root.panelWidth
+      y: root.bottomJoinTop
+      asynchronous: false
+      antialiasing: true
+      preferredRendererType: Shape.CurveRenderer
+
+      ShapePath {
+        fillColor: "transparent"
+        strokeColor: root.frameBorderColor
+        strokeWidth: root.frameBorderWidth
+        capStyle: ShapePath.FlatCap
+        startX: root.bodyRightInset
+        startY: root.frameBorderRadius
+
+        PathCubic {
+          x: root.frameBorderInset
+          y: 0
+          control1X: root.frameBorderInset + root.frameBorderRadius * (1 - root.curveKappa)
+          control1Y: root.frameBorderRadius
+          control2X: root.frameBorderInset
+          control2Y: root.frameBorderRadius * root.curveKappa
         }
       }
     }

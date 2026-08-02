@@ -2479,7 +2479,10 @@ Item {
       bodyRightInset: root.frameMoldingPieces ? root.frameRadius : 0
       fullFrame: root.frameMode === "fullframe"
       frameThickness: root.frameThickness
+      barPosition: root.barPosition
       frameMoldingPieces: root.frameMoldingPieces
+      frameBorder: root.frameBorder
+      frameBorderColor: root.menuThemeRef.seam
       openFromRight: root.panelOnRight
       panelColor: root.panelColor
       foreground: root.foreground
