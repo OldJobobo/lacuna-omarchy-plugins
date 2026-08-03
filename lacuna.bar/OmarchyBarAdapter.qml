@@ -15,6 +15,7 @@ Item {
   property bool barOutlineEnabled: false
   property var barOutlineInsetsProvider: null
   property var popoutAvoidanceInsetsProvider: null
+  property var fullscreenSuppressionProvider: null
   property color frameBorderColor: "transparent"
   readonly property var barItem: omarchyBar
 
@@ -52,6 +53,7 @@ Item {
     barOutlineEnabled: root.barOutlineEnabled
     barOutlineInsetsProvider: root.barOutlineInsetsProvider
     popoutAvoidanceInsetsProvider: root.popoutAvoidanceInsetsProvider
+    fullscreenSuppressionProvider: root.fullscreenSuppressionProvider
     frameBorderColor: root.frameBorderColor
   }
 }

@@ -56,6 +56,10 @@ def vendored_pairs() -> list[tuple[Path, Path]]:
     for target in sorted(ROOT.glob("lacuna.*/**/LacunaGeometry.qml")):
         append_pair(geometry_source, target)
 
+    fullscreen_guard_source = ROOT / "shared/qml/FullscreenGuard.qml"
+    for target in sorted(ROOT.glob("lacuna.*/FullscreenGuard.qml")):
+        append_pair(fullscreen_guard_source, target)
+
     tokens_source = ROOT / "shared/qml/LacunaTokens.qml"
     append_pair(tokens_source, ROOT / "lacuna.menu/components/LacunaTokens.qml")
     append_pair(tokens_source, ROOT / "lacuna.shell-settings/components/LacunaTokens.qml")

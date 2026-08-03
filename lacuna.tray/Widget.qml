@@ -15,6 +15,7 @@ BarWidget {
   property var activeTrayItem: null
   property var activeTrayAnchor: null
   readonly property bool expanded: drawerHovered || trayMenuOpen
+  readonly property bool fullscreenSuppressed: bar && bar.fullscreenSuppressed === true
   readonly property color foreground: bar ? bar.foreground : Color.foreground
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
   readonly property var pinnedIds: Array.isArray(settings.pinned) ? settings.pinned : []
@@ -39,6 +40,8 @@ BarWidget {
     activeTrayItem = null
     activeTrayAnchor = null
   }
+
+  onFullscreenSuppressedChanged: if (fullscreenSuppressed) close()
 
   function openTrayMenu(item, anchorItem, mouse) {
     if (!item || !anchorItem) return
@@ -324,6 +327,9 @@ BarWidget {
     }
   }
 
+  Loader {
+    active: !root.fullscreenSuppressed
+    sourceComponent: Component {
   PopupCard {
     id: managePopup
     anchorItem: root
@@ -449,12 +455,17 @@ BarWidget {
       }
     }
   }
+    }
+  }
 
   QsMenuOpener {
     id: trayMenuOpener
     menu: root.activeTrayItem ? root.activeTrayItem.menu : null
   }
 
+  Loader {
+    active: !root.fullscreenSuppressed
+    sourceComponent: Component {
   PopupCard {
     id: trayMenuPopup
     anchorItem: root.activeTrayAnchor || root
@@ -587,6 +598,8 @@ BarWidget {
           }
         }
       }
+    }
+  }
     }
   }
 

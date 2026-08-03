@@ -70,6 +70,7 @@ Item {
   property bool barOutlineEnabled: false
   property var barOutlineInsetsProvider: null
   property var popoutAvoidanceInsetsProvider: null
+  property var fullscreenSuppressionProvider: null
   property color frameBorderColor: Color.popups.border
   // Theme accent, exposed to bar widgets (e.g. lacuna.bar-seam breathing glow,
   // active-state accents). Theme-derived; mirrors the menu's accent role.
@@ -970,6 +971,25 @@ Item {
     return value && typeof value === "object" ? value : ({ left: 0, right: 0, top: 0, bottom: 0 })
   }
 
+  function fullscreenSuppressedFor(screen) {
+    return typeof root.fullscreenSuppressionProvider === "function"
+      && root.fullscreenSuppressionProvider(screen) === true
+  }
+
+  function dismissTransientUiForScreen(screen) {
+    var name = root.screenName(screen)
+    if (name !== "" && root.activeInteractionScreenName === name) {
+      if (root.activePopout && typeof root.activePopout.close === "function")
+        root.activePopout.close()
+      root.activePopout = null
+      root.activePopoutBorderGap = ({})
+      root.activePopupContext = ({})
+    }
+    root.clearTooltip()
+    if (root.barDragScreen && root.screenName(root.barDragScreen) === name)
+      root.clearBarDrag()
+  }
+
   component SurfaceBarContext: QtObject {
     required property string surfacePosition
     property var owningScreen: null
@@ -998,6 +1018,7 @@ Item {
     readonly property bool lacunaFrameHost: root.lacunaFrameHost
     readonly property var layout: root.layoutConfig
     readonly property var popupAvoidanceInsets: root.popoutAvoidanceInsetsFor(owningScreen, position)
+    readonly property bool fullscreenSuppressed: root.fullscreenSuppressedFor(owningScreen)
 
     function popupContext(anchorItem, moduleId) {
       return root.popupContextFor(position, anchorItem, moduleId, owningScreen)
@@ -1040,8 +1061,12 @@ Item {
     property bool dragEnabled: true
     property bool centerAnchorEnabled: true
     readonly property bool surfaceVertical: surfacePosition === "left" || surfacePosition === "right"
-    readonly property bool surfaceActive: band === "primary" ? !root.barHidden : splitActive && !root.barHidden
+    readonly property bool fullscreenSuppressed: root.fullscreenSuppressedFor(screen)
+    readonly property bool configuredSurfaceActive: band === "primary" ? !root.barHidden : splitActive && !root.barHidden
+    readonly property bool surfaceActive: configuredSurfaceActive && !fullscreenSuppressed
     readonly property string surfaceScreenName: root.screenName(screen)
+
+    onFullscreenSuppressedChanged: if (fullscreenSuppressed) root.dismissTransientUiForScreen(screen)
     readonly property var outlineInsets: typeof root.barOutlineInsetsProvider === "function"
       ? root.barOutlineInsetsProvider(screen, surfacePosition) : ({ left: 0, right: 0, top: 0, bottom: 0 })
     readonly property real outlineLeftInset: Math.max(0, Number(outlineInsets.left || 0))
@@ -1335,6 +1360,7 @@ Item {
     readonly property bool screenMatches: root.barDragScreen === ghostScreen ||
       (root.barDragScreen && ghostScreen && root.barDragScreen.name && ghostScreen.name && root.barDragScreen.name === ghostScreen.name)
     readonly property bool active: root.barDragSource && root.barDragScreen && screenMatches
+      && !root.fullscreenSuppressedFor(ghostScreen)
     readonly property var sourceItem: root.barDragSource ? root.barDragSource.activeItem : null
     readonly property int ghostPadding: Style.space(1)
     readonly property int ghostWidth: sourceItem ? Math.max(1, Math.ceil(sourceItem.width)) : 1
@@ -1482,6 +1508,7 @@ Item {
         BarConfigControl {
           id: centerConfigControl
 
+          surfaceContext: centerRoot.surfaceContext
           visible: centerRoot.hasAnchor && centerAnchorModule.moduleName === "omarchy.clock" && horizontalCenterLayout.satelliteAvailableLength >= implicitWidth
           clockHovered: centerAnchorModule.hovered
           centerHovered: root.centerSectionRevealHeld && !root.centerHoverRevealSuppressed
@@ -1559,6 +1586,7 @@ Item {
         BarConfigControl {
           id: centerConfigControl
 
+          surfaceContext: centerRoot.surfaceContext
           visible: centerRoot.hasAnchor && centerAnchorModule.moduleName === "omarchy.clock"
           clockHovered: centerAnchorModule.hovered
           centerHovered: root.centerSectionRevealHeld && !root.centerHoverRevealSuppressed
@@ -1585,6 +1613,7 @@ Item {
   component BarConfigControl: Item {
     id: configControl
 
+    required property var surfaceContext
     property bool clockHovered: false
     property bool centerHovered: false
     property bool openWhenReady: false
@@ -1647,7 +1676,9 @@ Item {
     Loader {
       id: configPanelLoader
 
-      active: true
+      // Destroy the Overlay KeyboardPanel immediately when fullscreen starts;
+      // close animations must never retain paint or a full-screen input mask.
+      active: configControl.surfaceContext && !configControl.surfaceContext.fullscreenSuppressed
       source: Qt.resolvedUrl("BarConfigPanel.qml")
       onLoaded: {
         configControl.configurePanel(item)
@@ -1889,7 +1920,7 @@ Item {
 
     Loader {
       id: componentLoader
-      active: !slot.qmlCustom && !slot.registered
+      active: !slot.surfaceContext.fullscreenSuppressed && !slot.qmlCustom && !slot.registered
       sourceComponent: slot.commandCustom ? customCommandModuleComponent : emptyModuleComponent
       anchors.fill: parent
       opacity: slot.dragSource ? 0.22 : 1.0
@@ -1901,7 +1932,7 @@ Item {
 
     Loader {
       id: registryLoader
-      active: slot.registered
+      active: !slot.surfaceContext.fullscreenSuppressed && slot.registered
       sourceComponent: slot.registered ? slot.registryComponent : null
       anchors.fill: parent
       opacity: slot.dragSource ? 0.22 : 1.0
@@ -1913,7 +1944,7 @@ Item {
 
     Loader {
       id: qmlLoader
-      active: slot.qmlCustom
+      active: !slot.surfaceContext.fullscreenSuppressed && slot.qmlCustom
       source: slot.qmlCustom ? root.customModuleSource(slot.entry) : ""
       anchors.fill: parent
       opacity: slot.dragSource ? 0.22 : 1.0

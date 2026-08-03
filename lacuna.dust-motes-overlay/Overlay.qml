@@ -369,6 +369,8 @@ Item {
     }
   }
 
+  FullscreenGuard { id: fullscreenGuard }
+
   Variants {
     model: Quickshell.screens
 
@@ -380,6 +382,8 @@ Item {
       readonly property real screenOriginY: root.screenOrigin(modelData, "y")
       readonly property real cursorLocalX: root.cursorX - screenOriginX
       readonly property real cursorLocalY: root.cursorY - screenOriginY
+      readonly property bool fullscreenSuppressed: root.foregroundOverlay
+        && fullscreenGuard.activeOnScreen(modelData)
 
       screen: modelData
       visible: root.effectVisible
@@ -403,6 +407,7 @@ Item {
         id: dustLayer
 
         anchors.fill: parent
+        visible: !dustWindow.fullscreenSuppressed
         enabled: false
         opacity: root.effectiveIntensity
 

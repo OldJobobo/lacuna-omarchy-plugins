@@ -77,6 +77,8 @@ Item {
     }
   }
 
+  FullscreenGuard { id: fullscreenGuard }
+
   AmbienceStack {
     id: orderProbe
     visible: false
@@ -128,6 +130,7 @@ Item {
     PanelWindow {
       id: overlayWindow
       required property var modelData
+      readonly property bool fullscreenSuppressed: fullscreenGuard.activeOnScreen(modelData)
 
       screen: modelData
       // True foreground mode: this dynamically mapped Overlay may paint above
@@ -152,7 +155,7 @@ Item {
         shell: root.shell
         targetScreen: overlayWindow.modelData
         activeEffects: root.activeEffects
-        paintEnabled: root.mappingMode === "overlay"
+        paintEnabled: root.mappingMode === "overlay" && !overlayWindow.fullscreenSuppressed
         Component.onCompleted: root.registerProductionStack(this)
         Component.onDestruction: root.unregisterProductionStack(this)
       }

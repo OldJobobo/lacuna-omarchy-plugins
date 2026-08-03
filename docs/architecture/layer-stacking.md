@@ -43,6 +43,11 @@ toggle time). Hence the rules below.
 6. **Every `WlrLayershell.layer` assignment is pinned** by
    `test_layer_stacking_policy` in `tests/test_qml_contracts.py`. Adding a
    window or changing a layer must update the table there and this document.
+7. **A real Hyprland fullscreen window is always visually topmost.** Lacuna
+   Top paint, borders, bars, reserves, popups, and Overlay effects must suppress
+   their paint, input, and exclusive zones on that output while its active
+   workspace reports fullscreen. Persistent surfaces stay mapped and become
+   transparent where map-order stability requires it; transient surfaces close.
 
 ## Level assignments
 
@@ -50,8 +55,8 @@ toggle time). Hence the rules below.
 | --- | --- | --- |
 | background | `omarchy-background` (Omarchy), `lacuna-media-player-video`, `lacuna-background-vignette` (ignore-animations mode) | Video surfaces remain mapped to preserve reliable background-layer presentation and carry their fade cover internally. |
 | bottom | `lacuna-ambience-host-bottom` (enabled bottom mode only), fallback ambience overlays, `lacuna-desktop-clock`, `lacuna-background-vignette` (default) | Disabled ambience maps no host surface. |
-| top | `omarchy-bar`, `lacuna-bar-portrait-companion` (portrait split outputs only), `lacuna-bar-frame` (always mapped), frame/sidebar reserve windows | The frame surface owns border paint except on the hosted-sidebar screen, where its border is disabled and the existing Overlay menu window recomposes the complete border above the opaque sidebar. No additional layer surface is created. |
-| overlay | `lacuna-ambience-host-overlay` (enabled foreground mode only), `lacuna-menu` sidebar, transient panels, `omarchy-bar-drag-ghost`, non-exclusive Lacuna panels | Foreground ambience is a true foreground effect: when enabled dynamically it may paint above already-mapped Overlay UI, but its input mask is empty. |
+| top | `omarchy-bar`, `lacuna-bar-portrait-companion` (portrait split outputs only), `lacuna-bar-frame` (always mapped), frame/sidebar reserve windows | The frame surface owns border paint except on the hosted-sidebar screen, where its border is disabled and the existing Overlay menu window recomposes the complete border above the opaque sidebar. No additional layer surface is created. All Top paint and reserves suppress per output during real fullscreen. |
+| overlay | `lacuna-ambience-host-overlay` (enabled foreground mode only), `lacuna-menu` sidebar, transient panels, `omarchy-bar-drag-ghost`, non-exclusive Lacuna panels | Foreground ambience may paint above ordinary windows and existing Overlay UI, but never above a real fullscreen window. Persistent overlay hosts become transparent per output during fullscreen; transient panels close. |
 
 ## Verifying live
 
@@ -64,6 +69,9 @@ Within `Layer level 2 (top)` the current Quattro list is expected to show
 and `lacuna-bar-frame`; there is no `lacuna-bar-frame-border` namespace.
 The open `lacuna-menu` sidebar appears in Overlay. Disabled ambience has no
 host namespaces; enabled ambience has exactly one selected host per output.
+While an output has a real fullscreen window, its Lacuna bar/frame/sidebar and
+foreground ambience hosts may remain listed but must paint nothing, accept no
+input, and reserve no exclusive zone.
 The exact bar/frame order is
 host-controlled; verify that `LacunaFrameWindow.qml` still excludes the bar
 strip. Frame surfaces appear even when their paint is inactive and are
@@ -90,7 +98,8 @@ Mapped shells and heavyweight content share explicit resource lifecycles:
   already-mapped Overlay menu window receives the same frame geometry record
   and owns the complete border path; the Top copy is disabled there. There is
   no separate frame-border surface. Portrait companions exist only on
-  effective portrait split outputs.
+  effective portrait split outputs. Fullscreen suppression gates both copies,
+  the owning bar, and every frame reserve without remapping persistent paint.
 - Shared status followers such as Voxtype belong to one shell service, not to
   each monitor-local widget instance.
 

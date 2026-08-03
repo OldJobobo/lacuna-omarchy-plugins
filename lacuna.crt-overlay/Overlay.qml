@@ -240,6 +240,8 @@ Item {
     onLoadFailed: root.lacunaSettings = {}
   }
 
+  FullscreenGuard { id: fullscreenGuard }
+
   Variants {
     model: Quickshell.screens
 
@@ -247,6 +249,8 @@ Item {
       id: crtWindow
 
       required property var modelData
+      readonly property bool fullscreenSuppressed: root.foregroundOverlay
+        && fullscreenGuard.activeOnScreen(modelData)
 
       screen: modelData
       visible: root.effectVisible
@@ -270,6 +274,7 @@ Item {
         id: effect
 
         anchors.fill: parent
+        visible: !crtWindow.fullscreenSuppressed
         enabled: false
         opacity: root.effectiveIntensity
 

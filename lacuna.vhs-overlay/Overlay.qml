@@ -178,6 +178,8 @@ Item {
     onLoadFailed: root.lacunaSettings = {}
   }
 
+  FullscreenGuard { id: fullscreenGuard }
+
   Variants {
     model: Quickshell.screens
 
@@ -185,6 +187,8 @@ Item {
       id: vhsWindow
 
       required property var modelData
+      readonly property bool fullscreenSuppressed: root.foregroundOverlay
+        && fullscreenGuard.activeOnScreen(modelData)
 
       screen: modelData
       visible: root.effectVisible
@@ -208,6 +212,7 @@ Item {
         id: effect
 
         anchors.fill: parent
+        visible: !vhsWindow.fullscreenSuppressed
         enabled: false
         opacity: root.effectiveIntensity
 

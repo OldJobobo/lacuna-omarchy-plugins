@@ -16,6 +16,7 @@ Column {
   required property var registry
   property bool compact: false
   property bool open: true
+  property bool fullscreenSuppressed: false
   property color foreground: "#d8dee9"
   property color accent: "#88c0d0"
   property color shellAccent: "#88c0d0"
@@ -94,6 +95,8 @@ Column {
     tooltipX = Math.round(point.x + 8)
     tooltipY = Math.round(Math.max(8, Math.min(point.y - tooltipHeight / 2, panelWindow.height - tooltipHeight - 8)))
   }
+
+  onFullscreenSuppressedChanged: if (fullscreenSuppressed) hideTooltip(null)
 
   spacing: designTokens.railSpacing
   opacity: open ? 1 : 0
@@ -211,7 +214,7 @@ Column {
       }
     }
 
-    visible: root.tooltipVisible && root.tooltipText !== ""
+    visible: !root.fullscreenSuppressed && root.tooltipVisible && root.tooltipText !== ""
     color: "transparent"
     grabFocus: false
     implicitWidth: root.tooltipWidth

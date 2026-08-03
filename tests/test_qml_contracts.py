@@ -142,7 +142,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('if (entry.action === "toggle-frame-border")', menu_window)
         self.assertIn("frameBorder: root.frameBorder && !frameOverlay.borderOnly", menu_window)
         self.assertIn('borderOnly: root.ownsHostFrameBorderOnScreen(modelData)', menu_window)
-        self.assertIn('borderEnabled: root.lacunaEnabled && root.frameBorder && root.frameMode !== "off"', menu_window)
+        self.assertIn("borderEnabled: root.lacunaEnabled && !menuWindow.fullscreenSuppressed", menu_window)
+        self.assertIn('&& root.frameBorder && root.frameMode !== "off"', menu_window)
         self.assertIn("borderGeometryRecord: root.hostFrameGeometryFor(modelData)", menu_window)
         self.assertIn("function ownsHostFrameBorderOnScreen(screen)", menu_window)
         self.assertIn("record.holeX = Number(source.holeX) - visualLeftInset", menu_window)
@@ -272,7 +273,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("source: frameSource", overlay)
         self.assertIn("source: frameShadowCaster", frame)
         self.assertIn("shadowEnabled: root.shadowEnabled", overlay)
-        self.assertIn("shadowEnabled: root.shadowEnabled && root.width > 0 && root.height > 0", frame)
+        self.assertIn("shadowEnabled: !root.suppressed && root.shadowEnabled && root.width > 0 && root.height > 0", frame)
         self.assertNotIn("id: frameBorderSource", frame)
         self.assertIn("property var activePopoutBorderGap: ({})", omarchy_bar)
         self.assertIn("function setPopoutBorderGapFor(surfacePosition, owner, start, length, owningScreen)", omarchy_bar)
@@ -2405,10 +2406,11 @@ class QmlContractTests(unittest.TestCase):
         bar = read("lacuna.bar/Bar.qml")
         window = read("lacuna.menu/menu/MenuWindow.qml")
 
-        # Paint is gated on `active` (frame mode); the shadow is not, so the
-        # bar shadow survives frame OFF. The old active-gated form is banned.
-        self.assertIn("readonly property bool isRenderable: (hasGeometryRecord ? geometryRecord.framed === true : active)", frame)
-        self.assertIn("shadowEnabled: root.shadowEnabled && root.width > 0 && root.height > 0", frame)
+        # Paint is gated on frame mode and fullscreen suppression. The shadow
+        # survives frame OFF but never survives fullscreen suppression.
+        self.assertIn("readonly property bool isRenderable: !suppressed", frame)
+        self.assertIn("readonly property bool shadowFrameRenderable: !suppressed", frame)
+        self.assertIn("shadowEnabled: !root.suppressed && root.shadowEnabled && root.width > 0 && root.height > 0", frame)
         self.assertNotIn("shadowEnabled: root.active && root.shadowEnabled", frame)
         self.assertIn("active: geometryRecord && geometryRecord.framed === true", bar)
         self.assertIn("shadowEnabled: root.frameShadow", bar)
@@ -2443,6 +2445,89 @@ class QmlContractTests(unittest.TestCase):
             'readonly property bool topBarPanelShadowVisible: lacunaEnabled && !barOwnsLacunaFrame && frameShadow && frameMode === "off" && root.topBar',
             window,
         )
+
+    def test_real_fullscreen_suppresses_all_lacuna_top_and_overlay_paint(self):
+        canonical_guard = read("shared/qml/FullscreenGuard.qml")
+        guard_copies = sorted(ROOT.glob("lacuna.*/FullscreenGuard.qml"))
+        self.assertEqual(13, len(guard_copies))
+        for path in guard_copies:
+            self.assertEqual(canonical_guard, path.read_text(encoding="utf-8"), path)
+        self.assertIn("function activeOnScreen(screen)", canonical_guard)
+        self.assertIn('name === "fullscreen"', canonical_guard)
+        self.assertIn("Hyprland.refreshWorkspaces", canonical_guard)
+
+        bar = read("lacuna.bar/Bar.qml")
+        adapter = read("lacuna.bar/OmarchyBarAdapter.qml")
+        omarchy_bar = read("lacuna.bar/OmarchyBar.qml")
+        frame = read("lacuna.bar/LacunaFrameWindow.qml")
+        menu = read("lacuna.menu/menu/MenuWindow.qml")
+        rail = read("lacuna.menu/menu/MenuRail.qml")
+        tray = read("lacuna.tray/Widget.qml")
+        self.assertIn("function fullscreenWorkspaceOnScreen(screen)", bar)
+        self.assertIn("suppressed: root.fullscreenWorkspaceOnScreen(modelData)", bar)
+        self.assertIn("!root.fullscreenWorkspaceOnScreen(frameReserveScreen.screenData)", bar)
+        self.assertIn("fullscreenSuppressionProvider: function(screen)", bar)
+        self.assertIn("property var fullscreenSuppressionProvider: null", adapter)
+        self.assertIn("fullscreenSuppressionProvider: root.fullscreenSuppressionProvider", adapter)
+        self.assertIn("property var fullscreenSuppressionProvider: null", omarchy_bar)
+        self.assertIn("readonly property bool fullscreenSuppressed: root.fullscreenSuppressedFor(screen)", omarchy_bar)
+        self.assertIn("readonly property bool surfaceActive: configuredSurfaceActive && !fullscreenSuppressed", omarchy_bar)
+        self.assertIn("onFullscreenSuppressedChanged: if (fullscreenSuppressed) root.dismissTransientUiForScreen(screen)", omarchy_bar)
+        self.assertIn("active: configControl.surfaceContext && !configControl.surfaceContext.fullscreenSuppressed", omarchy_bar)
+        self.assertEqual(3, omarchy_bar.count("active: !slot.surfaceContext.fullscreenSuppressed"))
+        self.assertNotIn("for (var i = 0; i < root.configControls.length; i++)", omarchy_bar)
+        self.assertIn("property bool suppressed: false", frame)
+        self.assertIn("readonly property bool isRenderable: !suppressed", frame)
+        border = read("lacuna.bar/LacunaFrameBorderWindow.qml")
+        self.assertIn("property bool suppressed: false", border)
+        self.assertIn("readonly property bool isRenderable: active && !suppressed", border)
+        self.assertIn("suppressed: root.suppressed", frame)
+        self.assertIn("readonly property bool shadowFrameRenderable: !suppressed", frame)
+        self.assertIn("shadowEnabled: !root.suppressed && root.shadowEnabled", frame)
+        self.assertIn("readonly property bool fullscreenSuppressed: root.fullscreenWorkspaceOnScreen(modelData)", menu)
+        self.assertIn("function flyoutTargetsScreen(screen)", menu)
+        self.assertIn("if (fullscreenSuppressed && root.flyoutTargetsScreen(modelData))", menu)
+        self.assertEqual(6, menu.count("active: !root.fullscreenWorkspaceOnScreen(modelData)"))
+        self.assertIn("borderEnabled: root.lacunaEnabled && !menuWindow.fullscreenSuppressed", menu)
+        self.assertIn("topBarShadowEnabled: root.topBarPanelShadowVisible && !menuWindow.fullscreenSuppressed", menu)
+        self.assertIn("fullscreenSuppressed: menuWindow.fullscreenSuppressed", menu)
+        self.assertIn("visible: !root.fullscreenSuppressed && root.tooltipVisible", rail)
+        self.assertIn("readonly property bool fullscreenSuppressed: bar && bar.fullscreenSuppressed === true", tray)
+        self.assertIn("onFullscreenSuppressedChanged: if (fullscreenSuppressed) close()", tray)
+        self.assertEqual(2, tray.count("active: !root.fullscreenSuppressed"))
+
+        host = read("lacuna.ambience-host/Overlay.qml")
+        self.assertIn("readonly property bool fullscreenSuppressed: fullscreenGuard.activeOnScreen(modelData)", host)
+        self.assertIn('paintEnabled: root.mappingMode === "overlay" && !overlayWindow.fullscreenSuppressed', host)
+        foreground_overlays = [
+            "lacuna.aurora-drift/Overlay.qml",
+            "lacuna.cinematic-light-overlay/Overlay.qml",
+            "lacuna.crt-overlay/Overlay.qml",
+            "lacuna.dust-motes-overlay/Overlay.qml",
+            "lacuna.film-grain-overlay/Overlay.qml",
+            "lacuna.god-rays-overlay/Overlay.qml",
+            "lacuna.rainfall-overlay/Overlay.qml",
+            "lacuna.vhs-overlay/Overlay.qml",
+        ]
+        for path in foreground_overlays:
+            qml = read(path)
+            self.assertIn("readonly property bool fullscreenSuppressed: root.foregroundOverlay", qml, path)
+            self.assertIn("fullscreenGuard.activeOnScreen(modelData)", qml, path)
+            self.assertRegex(qml, r"visible: !\w+Window\.fullscreenSuppressed")
+
+        flyouts = sorted(ROOT.glob("lacuna.*/*Flyout.qml"))
+        guarded_flyouts = [path for path in flyouts if "bar.fullscreenSuppressed === true" in path.read_text(encoding="utf-8")]
+        self.assertEqual(13, len(guarded_flyouts))
+
+        for path in [
+            "lacuna.audio/Panel.qml",
+            "lacuna.bluetooth/Panel.qml",
+            "lacuna.network/Panel.qml",
+            "lacuna.power/Panel.qml",
+        ]:
+            qml = read(path)
+            self.assertIn("if (fullscreenGuard.activeOnScreen(window.screen)) return", qml, path)
+            self.assertIn("onFullscreenSuppressedChanged: if (fullscreenSuppressed && visible) root.close()", qml, path)
 
     def test_layer_stacking_policy(self):
         # Within a Wayland layer, stacking is map order only, so every
@@ -2487,7 +2572,8 @@ class QmlContractTests(unittest.TestCase):
         ambience_host = read("lacuna.ambience-host/Overlay.qml")
         video = read("lacuna.media-player-video/Overlay.qml")
         self.assertIn("visible: true", frame)
-        self.assertIn("readonly property bool isRenderable: (hasGeometryRecord ? geometryRecord.framed === true : active)", frame)
+        self.assertIn("readonly property bool isRenderable: !suppressed", frame)
+        self.assertIn("property bool suppressed: false", frame)
         self.assertNotIn("WlrLayershell.", border_item)
         self.assertIn('visible: root.mappingMode === "bottom"', ambience_host)
         self.assertIn('visible: root.mappingMode === "overlay"', ambience_host)
@@ -3238,8 +3324,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("dismissActive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)", window)
         self.assertIn("onDismissRequested: function(reason) { root.closeFlyouts(reason) }", window)
         self.assertIn("onFocusGrabCleared: function(reason) { root.closeFlyouts(reason) }", window)
-        self.assertIn('mode: root.lacunaEnabled && !root.barOwnsLacunaFrame ? root.frameMode : "off"', window)
-        self.assertIn('shadowEnabled: root.lacunaEnabled && !root.barOwnsLacunaFrame && root.frameShadow && root.frameMode !== "off"', window)
+        self.assertIn("mode: root.lacunaEnabled && !menuWindow.fullscreenSuppressed", window)
+        self.assertIn("shadowEnabled: root.lacunaEnabled && !menuWindow.fullscreenSuppressed", window)
         self.assertIn("readonly property bool frameReserveActive: !barOwnsLacunaFrame && lacunaEnabled", window)
         self.assertIn("readonly property int effectiveSidebarReserveExtra: frameReserveFlush ? 0 : sidebarReserveExtra", window)
         self.assertIn("readonly property bool hyprWindowGapsDisabled", window)
@@ -3903,7 +3989,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("property var shadowGeometryRecord: null", frame)
         self.assertIn("shadowGeometryRecord: root.lacunaTargetFrameGeometryRecord(modelData)", bar)
         self.assertIn('readonly property real casterHoleY: shadowFrameRenderable ? shadowRecordHoleY : (shadowBarPosition === "top" || shadowTopEdgeOccupied ? shadowBarSize : 0)', frame)
-        self.assertIn("shadowEnabled: root.shadowEnabled && root.width > 0 && root.height > 0", frame)
+        self.assertIn("shadowEnabled: !root.suppressed && root.shadowEnabled && root.width > 0 && root.height > 0", frame)
         self.assertIn("id: shadowClip", frame)
         self.assertIn("Shape {", frame)
         self.assertIn("id: frameSource", frame)

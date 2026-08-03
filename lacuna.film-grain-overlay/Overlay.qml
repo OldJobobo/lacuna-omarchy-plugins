@@ -269,6 +269,8 @@ Item {
     }
   }
 
+  FullscreenGuard { id: fullscreenGuard }
+
   Variants {
     model: Quickshell.screens
 
@@ -276,6 +278,8 @@ Item {
       id: grainWindow
 
       required property var modelData
+      readonly property bool fullscreenSuppressed: root.foregroundOverlay
+        && fullscreenGuard.activeOnScreen(modelData)
 
       screen: modelData
       visible: root.effectVisible
@@ -297,6 +301,7 @@ Item {
 
       Item {
         anchors.fill: parent
+        visible: !grainWindow.fullscreenSuppressed
         enabled: false
         opacity: root.effectiveIntensity
 

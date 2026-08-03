@@ -131,6 +131,11 @@ Item {
     return values.join(",")
   }
 
+  function fullscreenWorkspaceOnScreen(screen) {
+    return hostedMenu && typeof hostedMenu.fullscreenWorkspaceOnScreen === "function"
+      ? hostedMenu.fullscreenWorkspaceOnScreen(screen) : false
+  }
+
   function hostedSidebarOccupiesEdge(edge, screen) {
     if (!hostedSidebarVisibleOnScreen(screen)) return false
     return (edge === "left" && hostedSidebarOnLeft) || (edge === "right" && hostedSidebarOnRight)
@@ -459,6 +464,7 @@ Item {
       geometryRecord: root.lacunaFrameGeometryRecord(modelData)
       shadowGeometryRecord: root.lacunaTargetFrameGeometryRecord(modelData)
       active: geometryRecord && geometryRecord.framed === true
+      suppressed: root.fullscreenWorkspaceOnScreen(modelData)
       barPosition: root.position
       barSize: root.barSize
       frameThickness: root.frameThickness
@@ -501,6 +507,9 @@ Item {
     }
     popoutAvoidanceInsetsProvider: function(screen, barPosition) {
       return root.barFlyoutAvoidanceInsetsFor(screen, barPosition)
+    }
+    fullscreenSuppressionProvider: function(screen) {
+      return root.fullscreenWorkspaceOnScreen(screen)
     }
     frameBorderColor: barTheme.frameBorder
     menuToggleHandler: function(payloadJson, popupContext) {
@@ -553,6 +562,7 @@ Item {
           targetScreen: frameReserveScreen.screenData
           active: root.frameEnabled
             && root.frameReservesReady
+            && !root.fullscreenWorkspaceOnScreen(frameReserveScreen.screenData)
             && edgeName !== root.position
             && edgeName !== root.portraitCompanionEdge(frameReserveScreen.screenData)
             && !root.hostedSidebarOccupiesEdge(edgeName, frameReserveScreen.screenData)

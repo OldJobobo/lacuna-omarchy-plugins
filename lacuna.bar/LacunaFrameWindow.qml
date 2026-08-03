@@ -11,6 +11,7 @@ PanelWindow {
   property var geometryRecord: null
   property var shadowGeometryRecord: null
   property bool active: false
+  property bool suppressed: false
   property string barPosition: "top"
   property int barSize: 0
   property int frameThickness: 8
@@ -74,8 +75,8 @@ PanelWindow {
   // With the frame off it collapses to the bar edge alone, preserving the bar
   // shadow independently of frame and menu visibility.
   readonly property bool hasShadowGeometryRecord: shadowGeometryRecord && typeof shadowGeometryRecord === "object"
-  readonly property bool shadowFrameRenderable: hasShadowGeometryRecord
-    ? shadowGeometryRecord.framed === true : isRenderable
+  readonly property bool shadowFrameRenderable: !suppressed && (hasShadowGeometryRecord
+    ? shadowGeometryRecord.framed === true : isRenderable)
   readonly property string shadowBarPosition: hasShadowGeometryRecord
     ? String(shadowGeometryRecord.barPosition || "") : (topBar ? "top" : bottomBar ? "bottom" : leftBar ? "left" : "right")
   readonly property int shadowBarSize: hasShadowGeometryRecord
@@ -98,7 +99,9 @@ PanelWindow {
     : minArcRadius
   readonly property real minArcRadius: 0.01
   readonly property real holeRadius: effectiveMoldingPieces ? Math.max(minArcRadius, Math.min(r, holeWidth / 2, holeHeight / 2)) : minArcRadius
-  readonly property bool isRenderable: (hasGeometryRecord ? geometryRecord.framed === true : active) && width > 0 && height > 0 && holeWidth > 0 && holeHeight > 0
+  readonly property bool isRenderable: !suppressed
+    && (hasGeometryRecord ? geometryRecord.framed === true : active)
+    && width > 0 && height > 0 && holeWidth > 0 && holeHeight > 0
   readonly property real curveKappa: lacunaGeometry.curveKappa
   readonly property color effectiveFrameColor: isRenderable
     ? Qt.rgba(frameColor.r, frameColor.g, frameColor.b, 1)
@@ -226,7 +229,7 @@ PanelWindow {
 
         LacunaDropShadow {
           source: frameShadowCaster
-          shadowEnabled: root.shadowEnabled && root.width > 0 && root.height > 0
+          shadowEnabled: !root.suppressed && root.shadowEnabled && root.width > 0 && root.height > 0
           shadowOpacity: root.shadowOpacity
           shadowBlur: root.shadowBlur
           blurMax: root.shadowBlurMax
@@ -373,6 +376,7 @@ PanelWindow {
           anchors.fill: parent
           z: 2
           active: root.active && root.borderEnabled
+          suppressed: root.suppressed
           geometryRecord: root.geometryRecord
           barPosition: root.hasGeometryRecord ? String(root.geometryRecord.barPosition || "top") : root.barPosition
           barSize: root.effectiveBarSize

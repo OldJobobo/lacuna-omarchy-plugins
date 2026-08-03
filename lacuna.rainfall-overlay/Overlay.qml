@@ -255,6 +255,8 @@ Item {
     onLoadFailed: themeRetryTimer.restart()
   }
 
+  FullscreenGuard { id: fullscreenGuard }
+
   Variants {
     model: Quickshell.screens
 
@@ -262,6 +264,8 @@ Item {
       id: rainWindow
 
       required property var modelData
+      readonly property bool fullscreenSuppressed: root.foregroundOverlay
+        && fullscreenGuard.activeOnScreen(modelData)
 
       screen: modelData
       visible: root.effectVisible
@@ -285,6 +289,7 @@ Item {
         id: effect
 
         anchors.fill: parent
+        visible: !rainWindow.fullscreenSuppressed
         enabled: false
         opacity: root.effectiveIntensity
 

@@ -52,7 +52,9 @@ ShellRoot {{
     interval: 30
     onTriggered: {{
       var moldingWidthAt1x = border.moldingBorderWidth
+      var renderableBeforeSuppression = border.isRenderable
       border.outputScale = 2
+      border.suppressed = true
       console.log("BEHAVE " + JSON.stringify({{
         holeX: border.holeX,
         holeY: border.holeY,
@@ -65,7 +67,8 @@ ShellRoot {{
         moldingWidthAt1x: moldingWidthAt1x,
         moldingWidthAt2x: border.moldingBorderWidth,
         leftGap: border.leftAttachmentGapVisible,
-        renderable: border.isRenderable
+        renderableBeforeSuppression: renderableBeforeSuppression,
+        renderableWhileSuppressed: border.isRenderable
       }}))
       Qt.quit()
     }}
@@ -87,7 +90,8 @@ ShellRoot {{
         self.assertEqual(result["moldingWidthAt1x"], 1.5)
         self.assertEqual(result["moldingWidthAt2x"], 1)
         self.assertFalse(result["leftGap"])
-        self.assertTrue(result["renderable"])
+        self.assertTrue(result["renderableBeforeSuppression"])
+        self.assertFalse(result["renderableWhileSuppressed"])
 
     def test_border_only_overlay_consumes_authoritative_host_geometry(self):
         qml = f"""

@@ -104,7 +104,7 @@ PopupWindow {
 
   readonly property real contentOpacity: Math.max(0, Math.min(1, (reveal - 0.3) / 0.7))
 
-  visible: open || reveal > 0.001
+  visible: !(bar && bar.fullscreenSuppressed === true) && (open || reveal > 0.001)
   onVisibleChanged: {
     if (!visible && bar && typeof bar.clearPopoutBorderGap === "function")
       bar.clearPopoutBorderGap(coordinatorKey)

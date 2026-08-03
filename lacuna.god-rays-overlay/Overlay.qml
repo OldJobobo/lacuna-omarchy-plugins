@@ -273,6 +273,8 @@ Item {
     onLoadFailed: themeRetryTimer.restart()
   }
 
+  FullscreenGuard { id: fullscreenGuard }
+
   Variants {
     model: Quickshell.screens
 
@@ -280,6 +282,8 @@ Item {
       id: raysWindow
 
       required property var modelData
+      readonly property bool fullscreenSuppressed: root.foregroundOverlay
+        && fullscreenGuard.activeOnScreen(modelData)
 
       screen: modelData
       visible: root.effectVisible
@@ -303,6 +307,7 @@ Item {
         id: effect
 
         anchors.fill: parent
+        visible: !raysWindow.fullscreenSuppressed
         enabled: false
         opacity: root.effectiveIntensity
         property real ambientPulse: 0.7

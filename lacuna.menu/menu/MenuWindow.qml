@@ -277,6 +277,7 @@ Item {
 
   function ownsHostFrameBorderOnScreen(screen) {
     return hostManaged && hostFrameBorderEnabled && lacunaEnabled
+      && !fullscreenWorkspaceOnScreen(screen)
       && frameMode === "fullframe"
       && typeof hostFrameGeometryProvider === "function"
       && MonitorPolicy.isSidebarScreen(sidebarScreens, screen)
@@ -297,12 +298,17 @@ Item {
     return record
   }
 
-  function flyoutVisibleOnScreen(screen) {
-    if (!flyoutRenderable || !screen || !flyoutScreen || fullscreenWorkspaceOnScreen(screen)) return false
+  function flyoutTargetsScreen(screen) {
+    if (!screen || !flyoutScreen) return false
     if (flyoutScreen === screen) return true
     var targetName = MonitorPolicy.screenName(flyoutScreen)
     var screenName = MonitorPolicy.screenName(screen)
     return targetName !== "" && targetName === screenName
+  }
+
+  function flyoutVisibleOnScreen(screen) {
+    if (!flyoutRenderable || fullscreenWorkspaceOnScreen(screen)) return false
+    return flyoutTargetsScreen(screen)
   }
 
   function flyoutOpenOnScreen(screen) {
@@ -2330,7 +2336,11 @@ Item {
     LacunaPanelWindow {
       id: menuWindow
       required property var modelData
+      readonly property bool fullscreenSuppressed: root.fullscreenWorkspaceOnScreen(modelData)
       readonly property bool sidebarRenderable: root.sidebarVisibleOnScreen(modelData)
+
+    onFullscreenSuppressedChanged: if (fullscreenSuppressed && root.flyoutTargetsScreen(modelData))
+      root.closeFlyouts("fullscreen")
 
     targetScreen: modelData
     layerNamespace: root.pluginId + "-menu-" + root.screenNamespace(modelData)
@@ -2340,7 +2350,7 @@ Item {
     keepMapped: root.lacunaEnabled && (root.frameMode !== "off" || root.topBarPanelShadowVisible)
     flyoutOpen: root.lacunaEnabled && root.flyoutOpenOnScreen(modelData)
     flyoutInteractive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)
-    keyboardInputActive: root.lacunaEnabled
+    keyboardInputActive: root.lacunaEnabled && !menuWindow.fullscreenSuppressed
       && ((root.activeFlyoutMediaPlayer || root.activeFlyoutAppPicker) && root.flyoutInteractiveOnScreen(modelData)
         || menuContent.quickLaunchRenameOpen)
     shortcutInhibitionActive: menuWindow.keyboardInputActive && mediaPlayerContent.searchInputFocused
@@ -2402,11 +2412,14 @@ Item {
 
       anchors.fill: parent
       z: borderOnly ? 11 : 0
-      mode: root.lacunaEnabled && !root.barOwnsLacunaFrame ? root.frameMode : "off"
+      mode: root.lacunaEnabled && !menuWindow.fullscreenSuppressed
+        && !root.barOwnsLacunaFrame ? root.frameMode : "off"
       borderOnly: root.ownsHostFrameBorderOnScreen(modelData)
       borderGeometryRecord: root.hostFrameGeometryFor(modelData)
-      shadowEnabled: root.lacunaEnabled && !root.barOwnsLacunaFrame && root.frameShadow && root.frameMode !== "off"
-      borderEnabled: root.lacunaEnabled && root.frameBorder && root.frameMode !== "off"
+      shadowEnabled: root.lacunaEnabled && !menuWindow.fullscreenSuppressed
+        && !root.barOwnsLacunaFrame && root.frameShadow && root.frameMode !== "off"
+      borderEnabled: root.lacunaEnabled && !menuWindow.fullscreenSuppressed
+        && root.frameBorder && root.frameMode !== "off"
       barPosition: root.barPosition
       barSize: root.barControlSize
       barBottomY: root.barBottomY
@@ -2485,7 +2498,7 @@ Item {
       shadowOffsetX: root.frameShadowOffsetX
       shadowOffsetY: root.frameShadowOffsetY
       shadowBlurMax: root.panelShadowBlurMax
-      topBarShadowEnabled: root.topBarPanelShadowVisible
+      topBarShadowEnabled: root.topBarPanelShadowVisible && !menuWindow.fullscreenSuppressed
       topBarShadowX: root.topBarPanelShadowX
       topBarShadowY: root.barBottomY
       topBarShadowWidth: root.topBarPanelShadowWidth
@@ -2596,6 +2609,7 @@ Item {
         compact: root.railCompact
         designTokens: root.menuRailDesignTokensRef
         open: root.menuState.open
+        fullscreenSuppressed: menuWindow.fullscreenSuppressed
         menuState: root.menuState
         registry: root.menuRegistryRef
         foreground: root.foreground
@@ -2986,7 +3000,7 @@ Item {
       required property var modelData
 
       targetScreen: modelData
-      active: root.sidebarReserveSize > 0
+      active: !root.fullscreenWorkspaceOnScreen(modelData) && root.sidebarReserveSize > 0
       edge: root.panelOnRight ? "right" : "left"
       reserveSize: root.sidebarReserveSize
       layerNamespace: root.pluginId + "-sidebar-reserve-" + root.screenNamespace(modelData)
@@ -3000,7 +3014,7 @@ Item {
       required property var modelData
 
       targetScreen: modelData
-      active: root.frameReserveTop > 0
+      active: !root.fullscreenWorkspaceOnScreen(modelData) && root.frameReserveTop > 0
       edge: "top"
       reserveSize: root.frameReserveTop
       layerNamespace: root.pluginId + "-frame-reserve-" + root.screenNamespace(modelData)
@@ -3014,7 +3028,7 @@ Item {
       required property var modelData
 
       targetScreen: modelData
-      active: root.topBarShadowReserve > 0
+      active: !root.fullscreenWorkspaceOnScreen(modelData) && root.topBarShadowReserve > 0
       edge: "top"
       reserveSize: root.topBarShadowReserve
       layerNamespace: root.pluginId + "-topbar-shadow-reserve-" + root.screenNamespace(modelData)
@@ -3028,7 +3042,7 @@ Item {
       required property var modelData
 
       targetScreen: modelData
-      active: root.frameReserveBottom > 0
+      active: !root.fullscreenWorkspaceOnScreen(modelData) && root.frameReserveBottom > 0
       edge: "bottom"
       reserveSize: root.frameReserveBottom
       layerNamespace: root.pluginId + "-frame-reserve-" + root.screenNamespace(modelData)
@@ -3042,7 +3056,7 @@ Item {
       required property var modelData
 
       targetScreen: modelData
-      active: root.frameReserveLeft > 0
+      active: !root.fullscreenWorkspaceOnScreen(modelData) && root.frameReserveLeft > 0
       edge: "left"
       reserveSize: root.frameReserveLeft
       layerNamespace: root.pluginId + "-frame-reserve-" + root.screenNamespace(modelData)
@@ -3056,7 +3070,7 @@ Item {
       required property var modelData
 
       targetScreen: modelData
-      active: root.frameReserveRight > 0
+      active: !root.fullscreenWorkspaceOnScreen(modelData) && root.frameReserveRight > 0
       edge: "right"
       reserveSize: root.frameReserveRight
       layerNamespace: root.pluginId + "-frame-reserve-" + root.screenNamespace(modelData)

@@ -49,6 +49,7 @@ Item {
 
   function open(payloadJson) {
     resolveService()
+    if (fullscreenGuard.activeOnScreen(window.screen)) return
     closingFromHost = false
     window.visible = true
     if (activeService && typeof activeService.refresh === "function") activeService.refresh(true)
@@ -89,6 +90,8 @@ Item {
   Component.onCompleted: resolveService()
   onShellChanged: resolveService()
 
+  FullscreenGuard { id: fullscreenGuard }
+
   QtObject {
     id: fallbackService
     property string displayTitle: "Network"
@@ -113,6 +116,8 @@ Item {
   PanelWindow {
     id: window
 
+    readonly property bool fullscreenSuppressed: fullscreenGuard.activeOnScreen(screen)
+
     visible: false
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
@@ -126,6 +131,8 @@ Item {
       left: true
       right: true
     }
+
+    onFullscreenSuppressedChanged: if (fullscreenSuppressed && visible) root.close()
 
     onVisibleChanged: {
       if (!visible && !root.closingFromHost && root.shell && typeof root.shell.hide === "function")

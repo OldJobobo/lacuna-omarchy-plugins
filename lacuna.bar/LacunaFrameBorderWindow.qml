@@ -8,6 +8,7 @@ Item {
   id: root
 
   property bool active: false
+  property bool suppressed: false
   property var geometryRecord: null
   property string barPosition: "top"
   property int barSize: 0
@@ -71,7 +72,7 @@ Item {
   readonly property real rightVerticalLowerStartY: rightAttachmentGapVisible && attachmentGapRenderable ? attachmentGapBottom : borderBottom - borderRadius
   readonly property real leftVerticalLowerEndY: leftAttachmentGapVisible && attachmentGapRenderable ? attachmentGapBottom : borderTop + borderRadius
   readonly property real leftVerticalUpperStartY: leftAttachmentGapVisible && attachmentGapRenderable ? attachmentGapTop : borderTop + borderRadius
-  readonly property bool isRenderable: active
+  readonly property bool isRenderable: active && !suppressed
     && (!hasGeometryRecord || geometryRecord.framed === true)
     && width > 0 && height > 0
     && borderRight > borderLeft && borderBottom > borderTop
