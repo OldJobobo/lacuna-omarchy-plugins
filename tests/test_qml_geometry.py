@@ -408,6 +408,19 @@ class QmlGeometryTests(unittest.TestCase):
         self.assertNotIn("sidebarMoldingVisible: menuWindow.sidebarRenderable && panelHost.effectiveConnectorVisible", window)
         self.assertNotIn("frameMoldingPieces: panelHost.effectiveConnectorVisible", window)
 
+        # The top bar rail terminates at the sidebar molding tangent. Opening a
+        # wider flyout connector lower on that edge must not move the tangent.
+        bar = read("lacuna.bar/Bar.qml")
+        self.assertNotIn("surfaceInset = Math.max(surfaceInset, Number(panelGeometry.connectorWidth || 0))", bar)
+        panel_width = 340
+        frame_radius = 14
+        expected_tangent = panel_width + frame_radius - 1
+        self.assertEqual(expected_tangent, 353)
+        for connector_width in (0, 14, 18, 32):
+            top_tangent = panel_width + frame_radius - 1
+            self.assertEqual(top_tangent, expected_tangent, connector_width)
+        self.assertNotEqual(panel_width + max(frame_radius, 18) - 1, expected_tangent)
+
     def test_bar_frame_geometry_transaction_is_newest_wins_and_per_output(self):
         bar = read("lacuna.bar/Bar.qml")
         for contract in (
@@ -677,6 +690,8 @@ class QmlGeometryTests(unittest.TestCase):
             "temperature": "ThermalFlyout.qml",
             "theme": "ThemeFlyout.qml",
             "wallpaper": "WallpaperFlyout.qml",
+            "clock": "CalendarFlyout.qml",
+            "weather": "WeatherFlyout.qml",
         }
         canonical_surface = read("lacuna.clock/BarFlyoutSurface.qml")
         for plugin, flyout_name in inventory.items():
@@ -694,15 +709,33 @@ class QmlGeometryTests(unittest.TestCase):
                 self.assertEqual(4, surface.count("antialiasing: true"))
                 self.assertIn("property bool borderEnabled: bar && bar.frameBorderEnabled === true", surface)
                 self.assertIn("property color borderColor: bar && bar.frameBorderColor", surface)
+                self.assertIn("readonly property int attachmentOverlap: 1", surface)
                 self.assertIn("capStyle: ShapePath.FlatCap", surface)
+                border_section = surface.split("// Continue the frame outline", 1)[1]
+                self.assertEqual(16, border_section.count("joinRadius"))
+                self.assertEqual(16, border_section.count("PathCubic {"))
+                self.assertEqual(3, border_section.count("startX: root.fullWidth - root.borderInset"))
+                self.assertEqual(1, border_section.count("startX: root.borderInset"))
                 self.assertIn("readonly property string attachmentEdge: bar && /^(top|bottom|left|right)$/.test(bar.position)", flyout)
                 self.assertIn("bar: root.bar", flyout)
                 self.assertIn('root.attachmentEdge === "left"', flyout)
                 self.assertIn('root.attachmentEdge === "right"', flyout)
                 self.assertIn("readonly property bool horizontalReveal", flyout)
                 self.assertIn("attachmentEdge: root.attachmentEdge", flyout)
+                self.assertEqual(4, flyout.count("surface.attachmentOverlap"))
+                shadowed = plugin in {"claude-usage", "codex-usage", "system-stats", "temperature", "theme", "wallpaper", "clock", "weather"}
+                if shadowed:
+                    self.assertIn("var localY = target.height - root.shadowTopMargin - surface.attachmentOverlap", flyout)
+                    self.assertIn("localY = -(root.shadowTopMargin + surface.fullHeight) + surface.attachmentOverlap", flyout)
+                    self.assertIn("localX = target.width - root.shadowLeftMargin - surface.attachmentOverlap", flyout)
+                    self.assertIn("localX = -(root.shadowLeftMargin + surface.fullWidth) + surface.attachmentOverlap", flyout)
+                else:
+                    self.assertIn("var localY = target.height - surface.attachmentOverlap", flyout)
+                    self.assertIn("localY = -surface.fullHeight + surface.attachmentOverlap", flyout)
+                    self.assertIn("localX = target.width - surface.attachmentOverlap", flyout)
+                    self.assertIn("localX = -surface.fullWidth + surface.attachmentOverlap", flyout)
                 self.assertIn("point.y = Math.max(root.margin", flyout)
-                if plugin in {"claude-usage", "codex-usage", "system-stats", "temperature", "theme", "wallpaper"}:
+                if shadowed:
                     self.assertIn("readonly property int shadowLeftMargin", flyout)
                     self.assertIn("readonly property int shadowRightMargin", flyout)
                     self.assertIn("readonly property int shadowTopMargin", flyout)

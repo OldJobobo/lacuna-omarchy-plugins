@@ -125,7 +125,8 @@ ShellRoot {{
           enabled: surfaceLoader.item.borderEnabled,
           alpha: surfaceLoader.item.borderColor.a,
           inset: surfaceLoader.item.borderInset,
-          color: surfaceLoader.item.borderColor.toString()
+          color: surfaceLoader.item.borderColor.toString(),
+          attachmentOverlap: surfaceLoader.item.attachmentOverlap
         }}))
         Qt.quit()
       }})
@@ -144,6 +145,7 @@ ShellRoot {{
             self.assertEqual(result["alpha"], 1)
             self.assertEqual(result["inset"], 0.5)
             self.assertEqual(result["color"], "#78824b")
+            self.assertEqual(result["attachmentOverlap"], 1)
 
 
 if __name__ == "__main__":

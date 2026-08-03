@@ -15,6 +15,9 @@ Item {
   property bool borderEnabled: bar && bar.frameBorderEnabled === true
   property color borderColor: bar && bar.frameBorderColor ? bar.frameBorderColor : Color.popups.border
   property real borderWidth: 1
+  // Popup windows overlap their bar edge by one pixel so the connector fill
+  // and its outline meet the bar without a compositor-sized seam.
+  readonly property int attachmentOverlap: 1
 
   LacunaGeometry { id: lacunaGeometry }
   readonly property real curveKappa: lacunaGeometry.curveKappa
@@ -163,9 +166,9 @@ Item {
     }
   }
 
-  // The frame-border option extends over every exposed flyout edge while
-  // leaving the attachment edge open, so the flyout and frame read as one
-  // continuous outline rather than two stacked bordered surfaces.
+  // Continue the frame outline around the exposed panel edges and connector
+  // molding curves while leaving the attachment span open. The one-pixel
+  // overlap joins those curve endpoints cleanly to the bar border.
   Shape {
     anchors.fill: parent
     visible: root.borderEnabled && root.attachmentEdge === "top"

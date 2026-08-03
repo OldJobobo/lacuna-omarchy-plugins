@@ -133,14 +133,14 @@ PopupWindow {
       if (!root.anchorWindow || !root.bar) return
       var target = root.anchorItem
       var localX = target.width / 2 - (root.shadowLeftMargin + surface.fullWidth / 2)
-      var localY = target.height - root.shadowTopMargin
+      var localY = target.height - root.shadowTopMargin - surface.attachmentOverlap
       if (root.attachmentEdge === "bottom") {
-        localY = -(root.shadowTopMargin + surface.fullHeight)
+        localY = -(root.shadowTopMargin + surface.fullHeight) + surface.attachmentOverlap
       } else if (root.attachmentEdge === "left") {
-        localX = target.width - root.shadowLeftMargin
+        localX = target.width - root.shadowLeftMargin - surface.attachmentOverlap
         localY = target.height / 2 - (root.shadowTopMargin + surface.fullHeight / 2)
       } else if (root.attachmentEdge === "right") {
-        localX = -(root.shadowLeftMargin + surface.fullWidth)
+        localX = -(root.shadowLeftMargin + surface.fullWidth) + surface.attachmentOverlap
         localY = target.height / 2 - (root.shadowTopMargin + surface.fullHeight / 2)
       }
       var point = root.anchorWindow.contentItem.mapFromItem(target, localX, localY)

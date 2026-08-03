@@ -148,13 +148,10 @@ Item {
     var result = { left: 0, right: 0, top: 0, bottom: 0 }
     if (!hostedSidebarVisibleOnScreen(screen)) return result
     if (barPosition !== "top" && barPosition !== "bottom") return result
+    // The bar rail meets the sidebar's top molding tangent. A flyout connector
+    // interrupts the vertical sidebar edge farther down, so its wider radius
+    // must not move this top tangent and open a short horizontal border gap.
     var surfaceInset = root.frameMoldingPieces ? root.frameRadius : 0
-    if (hostedMenu && typeof hostedMenu.panelGeometryFor === "function") {
-      var panelGeometry = hostedMenu.panelGeometryFor(screen)
-      if (panelGeometry && panelGeometry.connectorVisible === true) {
-        surfaceInset = Math.max(surfaceInset, Number(panelGeometry.connectorWidth || 0))
-      }
-    }
     var sidebarExtent = Math.max(0, Number(hostedMenu.panelWidth || 0))
       + Math.max(0, surfaceInset)
     // One physical-pixel overlap closes the antialias seam between separate

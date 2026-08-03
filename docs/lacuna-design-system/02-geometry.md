@@ -140,16 +140,16 @@ surface. A bordered shell reads as a card; Lacuna wants a recess in space.
 
 The optional global **Frame Border** is the deliberate exception. When enabled,
 its single solid theme-border outline continues around the exposed edges and
-molding curves of both sidebar-attached and bar-attached flyouts. The edge that
-meets the sidebar or bar remains open so the flyout shares the frame outline
-instead of becoming a separately boxed card. When Full Frame is off, the same
-toggle draws only the exposed outside seam of the combined bar/sidebar shell,
-not a closed box around either surface. A bar rail is clipped at the sidebar
-molding's outer tangent; the sidebar then owns that curve and its vertical
-content edge. Neither path may continue behind the other or into content space.
-When a flyout attaches, this standalone seam uses the same outer connector
-bounds as the full-frame border and stops for the entire molding gap. This
-applies to both sidebar flyouts and plugin-owned bar flyouts on every bar edge.
+molding curves of attached flyouts. Bar flyouts overlap their bar edge by one
+pixel so the connector fill and curve outlines meet the bar without a
+compositor-sized seam. The attachment edge remains open so each flyout shares
+the frame outline instead of becoming a separately boxed card. When Full Frame is off, the same toggle
+draws only the exposed outside seam of the combined bar/sidebar shell, not a
+closed box around either surface. A bar rail is clipped at the sidebar molding's
+outer tangent; the sidebar then owns that curve and its vertical content edge.
+Neither path may continue behind the other or into content space. When a sidebar
+flyout attaches, this standalone seam uses the same outer connector bounds as
+the full-frame border and stops for the entire molding gap.
 
 ## Painted treatments (the visible metaphor)
 
