@@ -142,7 +142,9 @@ The optional global **Frame Border** is the deliberate exception. When enabled,
 its single solid theme-border outline continues around the exposed edges and
 molding curves of attached flyouts. Bar flyouts overlap their bar edge by one
 pixel so the connector fill and curve outlines meet the bar without a
-compositor-sized seam. The attachment edge remains open so each flyout shares
+compositor-sized seam. At the far endpoint, let the bar rail resume one pixel
+beneath the connector cap so half-pixel curve rasterization cannot open a gap.
+The attachment edge remains open so each flyout shares
 the frame outline instead of becoming a separately boxed card. When Full Frame is off, the same toggle
 draws only the exposed outside seam of the combined bar/sidebar shell, not a
 closed box around either surface. A bar rail is clipped at the sidebar molding's
@@ -150,6 +152,13 @@ outer tangent; the sidebar then owns that curve and its vertical content edge.
 Neither path may continue behind the other or into content space. When a sidebar
 flyout attaches, this standalone seam uses the same outer connector bounds as
 the full-frame border and stops for the entire molding gap.
+
+An expanded sidebar is also an exclusion zone for horizontal bar flyouts. If a
+flyout's preferred placement would cross the sidebar molding tangent, shift the
+complete molded surface to the first clear coordinate while preserving its bar
+attachment overlap. The collapsed rail does not trigger this displacement;
+normal screen-edge clamping remains the fallback when an output is too narrow
+to fit both surfaces.
 
 ## Painted treatments (the visible metaphor)
 

@@ -69,6 +69,68 @@ ShellRoot {{
                 self.assertEqual(13, by_edge["left"]["left"])
                 self.assertEqual(0, by_edge["right"]["left"])
 
+    def test_expanded_sidebar_displaces_horizontal_flyout_surface(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  QtObject {{
+    id: mockBar
+    property bool frameBorderEnabled: false
+    property color frameBorderColor: "#78824b"
+    property var popupAvoidanceInsets: ({{ left: 0, right: 0, top: 0, bottom: 0 }})
+  }}
+
+  Loader {{
+    id: surfaceLoader
+    source: "{qml_url('lacuna.clock/BarFlyoutSurface.qml')}"
+    onLoaded: {{
+      item.bar = mockBar
+      item.attachmentEdge = "top"
+      item.panelWidth = 300
+      item.panelHeight = 400
+      item.joinRadius = 13
+      item.cornerRadius = 14
+      measure.start()
+    }}
+  }}
+
+  Timer {{
+    id: measure
+    interval: 20
+    onTriggered: {{
+      var surface = surfaceLoader.item
+      var clear = surface.constrainedHorizontalPopupX(100, 1000, surface.fullWidth, 0, 8)
+      mockBar.popupAvoidanceInsets = {{ left: 353, right: 0, top: 0, bottom: 0 }}
+      var left = surface.constrainedHorizontalPopupX(100, 1000, surface.fullWidth, 0, 8)
+      var leftShadow = surface.constrainedHorizontalPopupX(100, 1000, surface.fullWidth + 80, 40, 8)
+      mockBar.popupAvoidanceInsets = {{ left: 0, right: 353, top: 0, bottom: 0 }}
+      var right = surface.constrainedHorizontalPopupX(500, 1000, surface.fullWidth, 0, 8)
+      var rightShadow = surface.constrainedHorizontalPopupX(500, 1000, surface.fullWidth + 80, 40, 8)
+      mockBar.popupAvoidanceInsets = {{ left: 600, right: 600, top: 0, bottom: 0 }}
+      var tooNarrow = surface.constrainedHorizontalPopupX(100, 1000, surface.fullWidth, 0, 8)
+      console.log("BEHAVE " + JSON.stringify({{
+        clear: clear, left: left, leftShadow: leftShadow,
+        right: right, rightShadow: rightShadow, tooNarrow: tooNarrow,
+        surfaceWidth: surface.fullWidth
+      }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+        output = run_quickshell(qml)
+        require_no_qml_errors(output)
+        result = parse_behave(output)[-1]
+        self.assertEqual(result["surfaceWidth"], 326)
+        self.assertEqual(result["clear"], 100)
+        self.assertEqual(result["left"], 353)
+        self.assertEqual(result["leftShadow"], 313)
+        self.assertEqual(result["right"], 321)
+        self.assertEqual(result["rightShadow"], 281)
+        self.assertEqual(result["tooNarrow"], 100)
+
     def test_bar_flyout_continues_enabled_frame_border(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             border_off = Path(temp_dir) / "bar-flyout-border-off.png"
@@ -126,7 +188,8 @@ ShellRoot {{
           alpha: surfaceLoader.item.borderColor.a,
           inset: surfaceLoader.item.borderInset,
           color: surfaceLoader.item.borderColor.toString(),
-          attachmentOverlap: surfaceLoader.item.attachmentOverlap
+          attachmentOverlap: surfaceLoader.item.attachmentOverlap,
+          borderGapLength: surfaceLoader.item.borderGapLength
         }}))
         Qt.quit()
       }})
@@ -146,6 +209,7 @@ ShellRoot {{
             self.assertEqual(result["inset"], 0.5)
             self.assertEqual(result["color"], "#78824b")
             self.assertEqual(result["attachmentOverlap"], 1)
+            self.assertEqual(result["borderGapLength"], 121)
 
 
 if __name__ == "__main__":

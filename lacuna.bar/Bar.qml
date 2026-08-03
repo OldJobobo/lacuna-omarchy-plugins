@@ -162,6 +162,12 @@ Item {
     return result
   }
 
+  function barFlyoutAvoidanceInsetsFor(screen, barPosition) {
+    var result = { left: 0, right: 0, top: 0, bottom: 0 }
+    if (!hostedMenu.sidebarState || hostedMenu.sidebarState.collapsed === true) return result
+    return barOutlineInsetsFor(screen, barPosition)
+  }
+
   function hostedFlyoutVisibleOnScreen(screen) {
     if (!hostedSidebarVisibleOnScreen(screen)) return false
     if (hostedMenu && typeof hostedMenu.frameBorderAttachedFlyoutVisibleOnScreen === "function") {
@@ -492,6 +498,9 @@ Item {
     barOutlineEnabled: root.frameBorder && !root.frameEnabled
     barOutlineInsetsProvider: function(screen, barPosition) {
       return root.barOutlineInsetsFor(screen, barPosition)
+    }
+    popoutAvoidanceInsetsProvider: function(screen, barPosition) {
+      return root.barFlyoutAvoidanceInsetsFor(screen, barPosition)
     }
     frameBorderColor: barTheme.frameBorder
     menuToggleHandler: function(payloadJson, popupContext) {

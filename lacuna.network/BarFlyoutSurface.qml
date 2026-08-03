@@ -18,6 +18,10 @@ Item {
   // Popup windows overlap their bar edge by one pixel so the connector fill
   // and its outline meet the bar without a compositor-sized seam.
   readonly property int attachmentOverlap: 1
+  // Let the bar rail resume one pixel beneath the far connector endpoint. This
+  // hides the half-pixel Shape cap at the right-hand top-bar join.
+  readonly property real borderGapLength: horizontalAttachment
+    ? Math.max(0, fullWidth - 1) : Math.max(0, fullHeight - 1)
 
   LacunaGeometry { id: lacunaGeometry }
   readonly property real curveKappa: lacunaGeometry.curveKappa
@@ -33,6 +37,24 @@ Item {
 
   implicitWidth: fullWidth
   implicitHeight: fullHeight
+
+  function constrainedHorizontalPopupX(preferredX, windowWidth, popupWidth, surfaceOffsetX, popupMargin) {
+    var margin = Math.max(0, Number(popupMargin) || 0)
+    var normalMin = margin
+    var normalMax = Math.max(normalMin, Number(windowWidth) - Number(popupWidth) - margin)
+    var insets = bar && bar.popupAvoidanceInsets ? bar.popupAvoidanceInsets : ({})
+    var leftInset = Math.max(0, Number(insets.left) || 0)
+    var rightInset = Math.max(0, Number(insets.right) || 0)
+    var surfaceOffset = Math.max(0, Number(surfaceOffsetX) || 0)
+    var avoidedMin = Math.max(normalMin, leftInset - surfaceOffset)
+    var avoidedMax = Math.min(normalMax,
+      Number(windowWidth) - rightInset - surfaceOffset - root.fullWidth)
+    // If the output cannot fit both surfaces, retain normal screen clamping;
+    // otherwise keep the complete molded flyout outside the expanded sidebar.
+    if (avoidedMin > avoidedMax)
+      return Math.max(normalMin, Math.min(Number(preferredX), normalMax))
+    return Math.max(avoidedMin, Math.min(Number(preferredX), avoidedMax))
+  }
 
   Shape {
     anchors.fill: parent
@@ -181,8 +203,9 @@ Item {
       strokeWidth: root.borderWidth
       capStyle: ShapePath.FlatCap
       joinStyle: ShapePath.RoundJoin
-      startX: root.fullWidth - root.borderInset
+      startX: root.fullWidth
       startY: root.borderInset
+      PathLine { x: root.fullWidth - root.borderInset; y: root.borderInset }
       PathCubic {
         x: root.panelRight - root.borderInset; y: root.panelTop + root.borderInset
         control1X: root.fullWidth - root.borderInset - root.joinRadius * root.curveKappa; control1Y: root.borderInset

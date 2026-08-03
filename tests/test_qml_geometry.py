@@ -258,7 +258,7 @@ class QmlGeometryTests(unittest.TestCase):
         self.assertIn("readonly property real curveKappa: lacunaGeometry.curveKappa", surface)
         self.assertIn('x: root.attachmentEdge === "right" ? root.implicitWidth - width : 0', flyout)
         self.assertIn('y: root.attachmentEdge === "bottom" ? root.implicitHeight - height : 0', flyout)
-        self.assertIn("point.x = Math.max(root.margin", flyout)
+        self.assertIn("point.x = surface.constrainedHorizontalPopupX(", flyout)
         self.assertIn("point.y = Math.max(root.margin", flyout)
 
     def test_calendar_shadow_padding_stays_off_the_attached_edge(self):
@@ -302,7 +302,7 @@ class QmlGeometryTests(unittest.TestCase):
         self.assertIn("readonly property real curveKappa: lacunaGeometry.curveKappa", surface)
         self.assertIn('x: root.attachmentEdge === "right" ? root.implicitWidth - width : 0', flyout)
         self.assertIn('y: root.attachmentEdge === "bottom" ? root.implicitHeight - height : 0', flyout)
-        self.assertIn("point.x = Math.max(root.margin", flyout)
+        self.assertIn("point.x = surface.constrainedHorizontalPopupX(", flyout)
         self.assertIn("point.y = Math.max(root.margin", flyout)
 
         self.assertEqual({"left": 31, "right": 31, "top": 0, "bottom": 51}, calendar_shadow_margins("top"))
@@ -635,7 +635,7 @@ class QmlGeometryTests(unittest.TestCase):
         claude = read("lacuna.claude-usage/ClaudeUsageFlyout.qml")
         codex = read("lacuna.codex-usage/CodexUsageFlyout.qml")
         for text in (notifications, claude, codex):
-            self.assertIn("point.x = Math.max(root.margin, Math.min(point.x, root.anchorWindow.width - root.implicitWidth - root.margin))", text)
+            self.assertIn("point.x = surface.constrainedHorizontalPopupX(", text)
             self.assertIn("point.y = Math.max(root.margin, Math.min(point.y, root.anchorWindow.height - root.implicitHeight - root.margin))", text)
             self.assertIn("popupAnchor.rect.x = Math.round(point.x)", text)
 
@@ -710,11 +710,19 @@ class QmlGeometryTests(unittest.TestCase):
                 self.assertIn("property bool borderEnabled: bar && bar.frameBorderEnabled === true", surface)
                 self.assertIn("property color borderColor: bar && bar.frameBorderColor", surface)
                 self.assertIn("readonly property int attachmentOverlap: 1", surface)
+                self.assertIn("readonly property real borderGapLength: horizontalAttachment", surface)
+                self.assertIn("? Math.max(0, fullWidth - 1) : Math.max(0, fullHeight - 1)", surface)
+                self.assertIn("function constrainedHorizontalPopupX(", surface)
+                self.assertIn("leftInset - surfaceOffset", surface)
+                self.assertIn("Number(windowWidth) - rightInset - surfaceOffset - root.fullWidth", surface)
                 self.assertIn("capStyle: ShapePath.FlatCap", surface)
                 border_section = surface.split("// Continue the frame outline", 1)[1]
                 self.assertEqual(16, border_section.count("joinRadius"))
                 self.assertEqual(16, border_section.count("PathCubic {"))
-                self.assertEqual(3, border_section.count("startX: root.fullWidth - root.borderInset"))
+                self.assertEqual(2, border_section.count("startX: root.fullWidth - root.borderInset"))
+                self.assertEqual(1, border_section.count("startX: root.fullWidth\n"))
+                self.assertIn("PathLine { x: root.fullWidth - root.borderInset; y: root.borderInset }", border_section)
+                self.assertIn("control1X: root.fullWidth - root.borderInset - root.joinRadius * root.curveKappa", border_section)
                 self.assertEqual(1, border_section.count("startX: root.borderInset"))
                 self.assertIn("readonly property string attachmentEdge: bar && /^(top|bottom|left|right)$/.test(bar.position)", flyout)
                 self.assertIn("bar: root.bar", flyout)
@@ -725,11 +733,13 @@ class QmlGeometryTests(unittest.TestCase):
                 self.assertEqual(4, flyout.count("surface.attachmentOverlap"))
                 shadowed = plugin in {"claude-usage", "codex-usage", "system-stats", "temperature", "theme", "wallpaper", "clock", "weather"}
                 if shadowed:
+                    self.assertIn("root.implicitWidth, root.shadowLeftMargin, root.margin)", flyout)
                     self.assertIn("var localY = target.height - root.shadowTopMargin - surface.attachmentOverlap", flyout)
                     self.assertIn("localY = -(root.shadowTopMargin + surface.fullHeight) + surface.attachmentOverlap", flyout)
                     self.assertIn("localX = target.width - root.shadowLeftMargin - surface.attachmentOverlap", flyout)
                     self.assertIn("localX = -(root.shadowLeftMargin + surface.fullWidth) + surface.attachmentOverlap", flyout)
                 else:
+                    self.assertIn("root.implicitWidth, 0, root.margin)", flyout)
                     self.assertIn("var localY = target.height - surface.attachmentOverlap", flyout)
                     self.assertIn("localY = -surface.fullHeight + surface.attachmentOverlap", flyout)
                     self.assertIn("localX = target.width - surface.attachmentOverlap", flyout)

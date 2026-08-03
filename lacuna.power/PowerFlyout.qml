@@ -129,7 +129,8 @@ PopupWindow {
       }
       var point = root.anchorWindow.contentItem.mapFromItem(target, localX, localY)
       if (root.attachmentEdge === "top" || root.attachmentEdge === "bottom")
-        point.x = Math.max(root.margin, Math.min(point.x, root.anchorWindow.width - root.implicitWidth - root.margin))
+        point.x = surface.constrainedHorizontalPopupX(point.x, root.anchorWindow.width,
+          root.implicitWidth, 0, root.margin)
       else
         point.y = Math.max(root.margin, Math.min(point.y, root.anchorWindow.height - root.implicitHeight - root.margin))
       popupAnchor.rect.x = Math.round(point.x)
@@ -137,8 +138,7 @@ PopupWindow {
       if (typeof root.bar.setPopoutBorderGap === "function") {
         var gapStart = root.attachmentEdge === "top" || root.attachmentEdge === "bottom"
           ? popupAnchor.rect.x : popupAnchor.rect.y
-        var gapLength = root.attachmentEdge === "top" || root.attachmentEdge === "bottom"
-          ? surface.fullWidth : surface.fullHeight
+        var gapLength = surface.borderGapLength
         root.bar.setPopoutBorderGap(root.coordinatorKey, gapStart, gapLength)
       }
     }

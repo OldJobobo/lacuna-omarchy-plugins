@@ -69,6 +69,7 @@ Item {
   property bool frameBorderEnabled: false
   property bool barOutlineEnabled: false
   property var barOutlineInsetsProvider: null
+  property var popoutAvoidanceInsetsProvider: null
   property color frameBorderColor: Color.popups.border
   // Theme accent, exposed to bar widgets (e.g. lacuna.bar-seam breathing glow,
   // active-state accents). Theme-derived; mirrors the menu's accent role.
@@ -962,6 +963,13 @@ Item {
     }
   }
 
+  function popoutAvoidanceInsetsFor(screen, surfacePosition) {
+    if (typeof root.popoutAvoidanceInsetsProvider !== "function")
+      return { left: 0, right: 0, top: 0, bottom: 0 }
+    var value = root.popoutAvoidanceInsetsProvider(screen, surfacePosition)
+    return value && typeof value === "object" ? value : ({ left: 0, right: 0, top: 0, bottom: 0 })
+  }
+
   component SurfaceBarContext: QtObject {
     required property string surfacePosition
     property var owningScreen: null
@@ -989,6 +997,7 @@ Item {
     readonly property bool editMode: root.editMode
     readonly property bool lacunaFrameHost: root.lacunaFrameHost
     readonly property var layout: root.layoutConfig
+    readonly property var popupAvoidanceInsets: root.popoutAvoidanceInsetsFor(owningScreen, position)
 
     function popupContext(anchorItem, moduleId) {
       return root.popupContextFor(position, anchorItem, moduleId, owningScreen)

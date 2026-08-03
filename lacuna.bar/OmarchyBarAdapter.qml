@@ -14,6 +14,7 @@ Item {
   property bool frameBorderEnabled: false
   property bool barOutlineEnabled: false
   property var barOutlineInsetsProvider: null
+  property var popoutAvoidanceInsetsProvider: null
   property color frameBorderColor: "transparent"
   readonly property var barItem: omarchyBar
 
@@ -50,6 +51,7 @@ Item {
     frameBorderEnabled: root.frameBorderEnabled
     barOutlineEnabled: root.barOutlineEnabled
     barOutlineInsetsProvider: root.barOutlineInsetsProvider
+    popoutAvoidanceInsetsProvider: root.popoutAvoidanceInsetsProvider
     frameBorderColor: root.frameBorderColor
   }
 }
