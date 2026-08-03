@@ -71,7 +71,7 @@ While AUR publishing is unavailable, the public bootstrap provides the normal
 full-profile experience without exposing the multi-step source workflow:
 
 ```bash
-( f="$(mktemp)" && trap 'rm -f "$f"' EXIT && curl -fsSL https://raw.githubusercontent.com/OldJobobo/lacuna-shell/master/install.sh -o "$f" && bash "$f" )
+( f="$(mktemp)" && trap 'rm -f "$f"' EXIT && curl -fsSL https://raw.githubusercontent.com/OldJobobo/lacuna-shell/refs/heads/master/install.sh -o "$f" && bash "$f" )
 ```
 
 The command downloads the script to a temporary file and runs it only when the

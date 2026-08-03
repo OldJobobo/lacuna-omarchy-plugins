@@ -71,7 +71,7 @@ development, recovery, and manual customization. Browse the
 While AUR publishing is unavailable, download and run the reviewed bootstrap:
 
 ```bash
-( f="$(mktemp)" && trap 'rm -f "$f"' EXIT && curl -fsSL https://raw.githubusercontent.com/OldJobobo/lacuna-shell/master/install.sh -o "$f" && bash "$f" )
+( f="$(mktemp)" && trap 'rm -f "$f"' EXIT && curl -fsSL https://raw.githubusercontent.com/OldJobobo/lacuna-shell/refs/heads/master/install.sh -o "$f" && bash "$f" )
 ```
 
 The bootstrap shows its dependency, source, checkout, and profile plan before
