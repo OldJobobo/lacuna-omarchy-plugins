@@ -19,7 +19,8 @@ else
 fi
 
 if command -v shellcheck >/dev/null 2>&1; then
-  shellcheck scripts/check.sh \
+  shellcheck install.sh \
+    scripts/check.sh \
     scripts/check-aur-package \
     lacuna.theme-preloader/scripts/*.sh \
     lacuna.claude-usage/scripts/claude-code-status.sh \

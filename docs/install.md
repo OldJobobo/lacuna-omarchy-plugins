@@ -65,6 +65,23 @@ Stage a full install without enabling it:
 ./scripts/lacuna install --profile full --no-activate --keep-layout
 ```
 
+## Temporary Source Bootstrap
+
+While AUR publishing is unavailable, the public bootstrap provides the normal
+full-profile experience without exposing the multi-step source workflow:
+
+```bash
+( f="$(mktemp)" && trap 'rm -f "$f"' EXIT && curl -fsSL https://raw.githubusercontent.com/OldJobobo/lacuna-shell/master/install.sh -o "$f" && bash "$f" )
+```
+
+The command downloads the script to a temporary file and runs it only when the
+download succeeds. The script previews the required and optional feature
+packages, official source, checkout path, and selected profile before asking
+for confirmation. It keeps a verified checkout at
+`${XDG_DATA_HOME:-$HOME/.local/share}/lacuna-shell`, refuses dirty or divergent
+existing checkouts, and reinstalls the full profile so reruns refresh the live
+plugin payloads.
+
 ## Arch Linux And AUR Packages
 
 The repository maintains the `lacuna-shell` AUR recipe in

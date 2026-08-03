@@ -66,10 +66,22 @@ development, recovery, and manual customization. Browse the
 
 ## Install
 
-### Omarchy + AUR (recommended)
+### Temporary source bootstrap
 
-Install the package through Omarchy's AUR package workflow, then start the
-guided installer:
+While AUR publishing is unavailable, download and run the reviewed bootstrap:
+
+```bash
+( f="$(mktemp)" && trap 'rm -f "$f"' EXIT && curl -fsSL https://raw.githubusercontent.com/OldJobobo/lacuna-shell/master/install.sh -o "$f" && bash "$f" )
+```
+
+The bootstrap shows its dependency, source, checkout, and profile plan before
+asking for confirmation. It keeps the source checkout under
+`~/.local/share/lacuna-shell` so the same command can safely refresh it later.
+
+### Omarchy + AUR
+
+When AUR publishing is available, install the package through Omarchy's AUR
+workflow, then start the guided installer:
 
 ```bash
 omarchy pkg aur add lacuna-shell
