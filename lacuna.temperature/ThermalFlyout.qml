@@ -81,6 +81,10 @@ PopupWindow {
 
   Behavior on reveal { NumberAnimation { duration: motionTokens.reveal; easing.type: Easing.OutCubic } }
   visible: open || reveal > 0.001
+  onVisibleChanged: {
+    if (!visible && bar && typeof bar.clearPopoutBorderGap === "function")
+      bar.clearPopoutBorderGap(coordinatorKey)
+  }
   color: "transparent"
   implicitWidth: surface.fullWidth + shadowLeftMargin + shadowRightMargin
   implicitHeight: surface.fullHeight + shadowTopMargin + shadowBottomMargin
@@ -121,6 +125,14 @@ PopupWindow {
         point.y = Math.max(root.margin, Math.min(point.y, root.anchorWindow.height - root.implicitHeight - root.margin))
       popupAnchor.rect.x = Math.round(point.x)
       popupAnchor.rect.y = Math.round(point.y)
+      if (typeof root.bar.setPopoutBorderGap === "function") {
+        var gapStart = root.attachmentEdge === "top" || root.attachmentEdge === "bottom"
+          ? popupAnchor.rect.x + root.shadowLeftMargin
+          : popupAnchor.rect.y + root.shadowTopMargin
+        var gapLength = root.attachmentEdge === "top" || root.attachmentEdge === "bottom"
+          ? surface.fullWidth : surface.fullHeight
+        root.bar.setPopoutBorderGap(root.coordinatorKey, gapStart, gapLength)
+      }
     }
   }
   Item {
@@ -136,10 +148,10 @@ PopupWindow {
       x: -clipper.x
       y: -clipper.y
       width: root.implicitWidth; height: root.implicitHeight
-      Item { id: shadowSource; anchors.fill: parent; visible: root.shadowEnabled; BarFlyoutSurface { x: root.shadowLeftMargin
+      Item { id: shadowSource; anchors.fill: parent; visible: root.shadowEnabled; BarFlyoutSurface { bar: root.bar; x: root.shadowLeftMargin
           y: root.shadowTopMargin; panelWidth: root.panelWidth; panelHeight: root.panelHeight; joinRadius: root.joinRadius; panelColor: root.background; attachmentEdge: root.attachmentEdge } }
       LacunaDropShadow { source: shadowSource; shadowEnabled: root.shadowEnabled; shadowColor: "black"; shadowOpacity: 0.62; shadowBlur: 0.85; blurMax: root.shadowBlurMax; shadowHorizontalOffset: root.shadowOffsetX; shadowVerticalOffset: root.shadowOffsetY }
-      BarFlyoutSurface { id: surface; x: root.shadowLeftMargin
+      BarFlyoutSurface { bar: root.bar; id: surface; x: root.shadowLeftMargin
         y: root.shadowTopMargin; panelWidth: root.panelWidth; panelHeight: root.panelHeight; joinRadius: root.joinRadius; panelColor: root.background; attachmentEdge: root.attachmentEdge }
 
       Column {

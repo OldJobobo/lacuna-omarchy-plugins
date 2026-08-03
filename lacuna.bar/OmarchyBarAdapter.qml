@@ -11,6 +11,10 @@ Item {
   property var pluginRegistry: null
   property var menuToggleHandler: null
   property bool portraitSplitEnabled: true
+  property bool frameBorderEnabled: false
+  property bool barOutlineEnabled: false
+  property var barOutlineInsetsProvider: null
+  property color frameBorderColor: "transparent"
   readonly property var barItem: omarchyBar
 
   function debugBarGeometry() {
@@ -43,5 +47,9 @@ Item {
     manifest: root.manifest
     menuToggleHandler: root.menuToggleHandler
     portraitSplitEnabled: root.portraitSplitEnabled
+    frameBorderEnabled: root.frameBorderEnabled
+    barOutlineEnabled: root.barOutlineEnabled
+    barOutlineInsetsProvider: root.barOutlineInsetsProvider
+    frameBorderColor: root.frameBorderColor
   }
 }

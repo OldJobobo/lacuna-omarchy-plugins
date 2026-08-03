@@ -26,8 +26,12 @@ Item {
   property string barPosition: "top"
   property bool frameMoldingPieces: true
   property bool frameBorder: false
-  property color frameBorderColor: Qt.rgba(1, 1, 1, 0.18)
+  property color frameBorderColor: Qt.rgba(1, 1, 1, 1)
   property real frameBorderWidth: 1
+  property bool attachedFlyoutVisible: false
+  property real attachedFlyoutY: 0
+  property real attachedFlyoutHeight: 0
+  property real outputScale: 1
   property bool openFromRight: false
   property color panelColor: "#101315"
   property color foreground: "#d8dee9"
@@ -40,10 +44,28 @@ Item {
   readonly property color solidPanelColor: Qt.rgba(panelColor.r, panelColor.g, panelColor.b, 1)
   readonly property real curveKappa: lacunaGeometry.curveKappa
   readonly property real frameBorderInset: Math.max(0, frameBorderWidth / 2)
+  readonly property real frameMoldingBorderWidth: frameBorderWidth + (outputScale <= 1.25 ? 0.5 : 0)
   readonly property real frameBorderRadius: Math.max(0.01, bodyRightInset - frameBorderInset)
   readonly property bool bottomFrameJoinVisible: backgroundVisible && fullFrame
     && barPosition !== "bottom" && frameMoldingPieces && bodyRightInset > 0
   readonly property bool bottomFrameJoinBorderVisible: bottomFrameJoinVisible && frameBorder
+  readonly property bool standaloneSidebarBorderVisible: backgroundVisible && frameBorder && !fullFrame
+  readonly property real standaloneBorderTop: Math.max(frameBorderInset, joinTop + frameBorderInset)
+  readonly property real standaloneBorderRadius: frameMoldingPieces
+    ? Math.max(0, bodyRightInset) : 0
+  readonly property real standaloneBorderRight: panelWidth - frameBorderInset
+  readonly property real standaloneBorderOuterTopX: standaloneBorderRight + standaloneBorderRadius
+  readonly property real standaloneBorderBottom: Math.max(standaloneBorderTop, height - frameBorderInset)
+  readonly property real standaloneBorderTangentY: standaloneBorderTop + standaloneBorderRadius
+  readonly property real standaloneAttachmentGapTop: Math.max(standaloneBorderTangentY, attachedFlyoutY + frameBorderInset)
+  readonly property real standaloneAttachmentGapBottom: Math.min(standaloneBorderBottom, attachedFlyoutY + attachedFlyoutHeight - frameBorderInset)
+  readonly property bool standaloneAttachmentGapRenderable: attachedFlyoutVisible
+    && attachedFlyoutHeight > 0
+    && standaloneAttachmentGapBottom > standaloneAttachmentGapTop + frameBorderWidth
+  readonly property real standaloneVerticalUpperEnd: standaloneAttachmentGapRenderable
+    ? standaloneAttachmentGapTop : standaloneBorderBottom
+  readonly property real standaloneVerticalLowerStart: standaloneAttachmentGapRenderable
+    ? standaloneAttachmentGapBottom : standaloneBorderBottom
 
   LacunaGeometry { id: lacunaGeometry }
 
@@ -112,6 +134,80 @@ Item {
       }
     }
 
+    // With full-frame paint disabled, paint only the exposed seam owned by the
+    // sidebar: its molding curve and vertical content edge. The bar stops at
+    // the curve's outer tangent, so neither path continues behind the other.
+    Shape {
+      id: standaloneSidebarBorderShape
+
+      visible: root.standaloneSidebarBorderVisible && !root.openFromRight
+      anchors.fill: parent
+      asynchronous: false
+      antialiasing: true
+      preferredRendererType: Shape.CurveRenderer
+
+      ShapePath {
+        fillColor: "transparent"
+        strokeColor: root.frameBorderColor
+        strokeWidth: root.frameBorderWidth
+        capStyle: ShapePath.FlatCap
+        joinStyle: ShapePath.RoundJoin
+        startX: root.standaloneBorderOuterTopX
+        startY: root.standaloneBorderTop
+
+        PathCubic {
+          x: root.standaloneBorderRight
+          y: root.standaloneBorderTop + root.standaloneBorderRadius
+          control1X: root.standaloneBorderOuterTopX - root.standaloneBorderRadius * root.curveKappa
+          control1Y: root.standaloneBorderTop
+          control2X: root.standaloneBorderRight
+          control2Y: root.standaloneBorderTop + root.standaloneBorderRadius * (1 - root.curveKappa)
+        }
+        PathLine {
+          x: root.standaloneBorderRight
+          y: root.standaloneVerticalUpperEnd
+        }
+        PathMove {
+          x: root.standaloneBorderRight
+          y: root.standaloneVerticalLowerStart
+        }
+        PathLine {
+          x: root.standaloneBorderRight
+          y: root.standaloneBorderBottom
+        }
+      }
+    }
+
+    Shape {
+      visible: root.standaloneSidebarBorderVisible && root.openFromRight
+      anchors.fill: parent
+      asynchronous: false
+      antialiasing: true
+      preferredRendererType: Shape.CurveRenderer
+
+      ShapePath {
+        fillColor: "transparent"
+        strokeColor: root.frameBorderColor
+        strokeWidth: root.frameBorderWidth
+        capStyle: ShapePath.FlatCap
+        startX: root.frameBorderInset
+        startY: root.standaloneBorderTop
+
+        PathLine {
+          x: root.frameBorderInset
+          y: root.standaloneVerticalUpperEnd
+        }
+        PathMove {
+          x: root.frameBorderInset
+          y: root.standaloneVerticalLowerStart
+        }
+        PathLine {
+          x: root.frameBorderInset
+          y: root.standaloneBorderBottom
+        }
+      }
+    }
+
     Shape {
       id: bottomFrameJoinShape
 
@@ -151,6 +247,8 @@ Item {
 
     // The bar-owned frame border sits below this Overlay surface. Repaint the
     // exposed lower molding curve here so the opaque join fill cannot cover it.
+    // Match LacunaFrameBorderWindow exactly: the canonical one-pixel base pass
+    // first, followed by the scale-aware optical curve pass.
     Shape {
       id: bottomFrameJoinBorderShape
 
@@ -167,6 +265,24 @@ Item {
         fillColor: "transparent"
         strokeColor: root.frameBorderColor
         strokeWidth: root.frameBorderWidth
+        capStyle: ShapePath.FlatCap
+        startX: root.bodyRightInset
+        startY: root.frameBorderRadius
+
+        PathCubic {
+          x: root.frameBorderInset
+          y: 0
+          control1X: root.frameBorderInset + root.frameBorderRadius * (1 - root.curveKappa)
+          control1Y: root.frameBorderRadius
+          control2X: root.frameBorderInset
+          control2Y: root.frameBorderRadius * root.curveKappa
+        }
+      }
+
+      ShapePath {
+        fillColor: "transparent"
+        strokeColor: root.frameBorderColor
+        strokeWidth: root.frameMoldingBorderWidth
         capStyle: ShapePath.FlatCap
         startX: root.bodyRightInset
         startY: root.frameBorderRadius

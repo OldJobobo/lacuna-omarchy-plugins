@@ -34,6 +34,7 @@ Each role is named from the gap metaphor and defined as a **derivation**, never 
 | `whisper` | contrast-aware mix of `ink` over `plate` (minimum 4.5:1 for menu text) | — | muted foreground: hints and secondary labels |
 | `soft` | `withAlpha(ink, 0.78)` | — | de-emphasized but legible foreground |
 | `seam` | `withAlpha(ink, 0.18)` | — | expressed edges, dividers, connector strokes, linework |
+| `frameBorder` | opaque `Color.popups.border` | `Color.accent` | solid frame reveal, molding, and attached-panel outlines using the theme's active-border role |
 | `accent` | `Color.menu.selectedText` | `#88c0d0` | the single theme accent (see unified model) |
 | `danger` | `color("color9")` | `#bf616a` | destructive/high-impact actions only |
 | `warning` | `color("color11")` | `#ebcb8b` | warm/low/warning status |
@@ -120,5 +121,5 @@ Status colors are also theme-derived and carry fixed meaning across the shell:
 2. **`danger` is for destructive actions only.** A red system *state* is `urgent`/`warning`.
 3. **One accent for non-destructive chrome.** Do not reintroduce per-category tones into the menu.
 4. **Reach for `void`/`seam`/`recess` before reaching for new color.** Depth and edge first.
-5. **Muted text remains legible.** Resolve menu metadata against the actual plate at a 4.5:1 target; decorative seams keep their independent alpha.
+5. **Muted text remains legible.** Resolve menu metadata against the actual plate at a 4.5:1 target; decorative seams keep their independent alpha, while `frameBorder` remains fully opaque.
 6. **Fallbacks are a floor, not a palette.** Never design *to* the fallback hexes.

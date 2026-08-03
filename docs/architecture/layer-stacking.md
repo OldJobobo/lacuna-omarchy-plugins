@@ -50,7 +50,7 @@ toggle time). Hence the rules below.
 | --- | --- | --- |
 | background | `omarchy-background` (Omarchy), `lacuna-media-player-video`, `lacuna-background-vignette` (ignore-animations mode) | Video surfaces remain mapped to preserve reliable background-layer presentation and carry their fade cover internally. |
 | bottom | `lacuna-ambience-host-bottom` (enabled bottom mode only), fallback ambience overlays, `lacuna-desktop-clock`, `lacuna-background-vignette` (default) | Disabled ambience maps no host surface. |
-| top | `omarchy-bar`, `lacuna-bar-portrait-companion` (portrait split outputs only), `lacuna-bar-frame` (always mapped), frame/sidebar reserve windows | The frame surface also owns optional border paint, eliminating a separate Overlay surface. |
+| top | `omarchy-bar`, `lacuna-bar-portrait-companion` (portrait split outputs only), `lacuna-bar-frame` (always mapped), frame/sidebar reserve windows | The frame surface owns border paint except on the hosted-sidebar screen, where its border is disabled and the existing Overlay menu window recomposes the complete border above the opaque sidebar. No additional layer surface is created. |
 | overlay | `lacuna-ambience-host-overlay` (enabled foreground mode only), `lacuna-menu` sidebar, transient panels, `omarchy-bar-drag-ghost`, non-exclusive Lacuna panels | Foreground ambience is a true foreground effect: when enabled dynamically it may paint above already-mapped Overlay UI, but its input mask is empty. |
 
 ## Verifying live
@@ -85,9 +85,12 @@ Mapped shells and heavyweight content share explicit resource lifecycles:
   previously hidden Background `PanelWindow` is not reliable in the live shell.
   Decoder/player content remains lazy and the existing black-cover lifecycle
   still gates entry, playback, normal/failure exit, and fade settlement.
-- The persistent Top frame owns fill, shadow, and optional border paint as
-  siblings. There is no separate frame-border surface. Portrait companions
-  exist only on effective portrait split outputs.
+- The persistent Top frame owns fill and shadow. It also owns border paint on
+  screens without the hosted sidebar. On the hosted-sidebar screen, the
+  already-mapped Overlay menu window receives the same frame geometry record
+  and owns the complete border path; the Top copy is disabled there. There is
+  no separate frame-border surface. Portrait companions exist only on
+  effective portrait split outputs.
 - Shared status followers such as Voxtype belong to one shell service, not to
   each monitor-local widget instance.
 

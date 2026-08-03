@@ -19,7 +19,15 @@ instead of the stock Omarchy bar plugin set. It is not placed in `bar.layout`.
 The Lacuna bar is deliberately opaque so its bar, frame, sidebar, connectors,
 and attached flyouts read as one unified surface. Activating `lacuna.bar`
 normalizes `bar.transparent` to `false`; the stock bar's double-click
-transparency gesture is not part of the Lacuna bar contract.
+transparency gesture is not part of the Lacuna bar contract. When the optional
+Frame Border is enabled, Lacuna-owned bar flyouts continue that same solid
+theme border around their exposed edges and leave the bar attachment edge open,
+matching sidebar-attached flyouts. The border toggle is independent of Full
+Frame: with Full Frame off, the bar and sidebar share one exposed seam rather
+than boxing either surface. The bar rail stops at the sidebar molding tangent,
+and the sidebar owns the curve plus its vertical content edge. Open bar flyouts
+report their connector span to the owning bar window so this rail also stops at
+both connector tangents and returns only after the attachment opening.
 
 ## Portrait Split
 

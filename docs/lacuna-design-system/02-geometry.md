@@ -76,7 +76,10 @@ frame border consumes the exact interpolated frame hole record used by frame
 fill; it must never reconstruct hole bounds from discrete occupancy flags.
 When an attached flyout interrupts a vertical border edge, the gap splits only
 the straight segment: each resumed segment must first reach the canonical
-corner tangent before entering its cubic arc. The attached-panel outline uses
+corner tangent before entering its cubic arc. While connector molding is
+visible, that gap is bounded by `connectorY` and `connectorY + connectorHeight`,
+not by the inset flyout body; otherwise the straight rail overpaints both
+connector cubics past their sidebar tangents. The attached-panel outline uses
 the same half-stroke inset, color, and width around flyout edges and both
 connector molding curves. Its lower connector endpoint is one full connector
 radius below the flyout bottom; stopping at the flyout bottom reverses the
@@ -93,6 +96,14 @@ progress 1 without animation.
 Frame molding pieces are the curved trim that joins frame rails around the
 content shell, including the upper and lower joins beside a sidebar. They use
 `frame.moldingPieces` and must never depend on `sidebar.connectorPieces`.
+The four corners and their connecting rails must always have one rendering
+owner. On a screen without the hosted sidebar, the bar's Top frame paints the
+complete border. On the hosted-sidebar screen, the bar passes its authoritative
+interpolated geometry record to the already-mapped Overlay menu window; that
+window paints the complete border once, above the opaque sidebar, and the Top
+frame disables its border paint for that screen. Never transfer an individual
+corner between renderers or leave both complete paths active: either choice
+changes antialias coverage between covered and uncovered corners.
 
 The phrase **corner pieces** is reserved for a future black outer-screen mask
 that will visually round the physical shell corners in the Noctalia style.
@@ -126,6 +137,19 @@ Lacuna surface shells are **fill-only** (`strokeWidth: 0`). Do **not** draw thin
 around a flyout or panel shell. Edges are expressed by the `seam` color used on *internal*
 dividers, controls, and explicit selected states — never as a hairline outlining the whole
 surface. A bordered shell reads as a card; Lacuna wants a recess in space.
+
+The optional global **Frame Border** is the deliberate exception. When enabled,
+its single solid theme-border outline continues around the exposed edges and
+molding curves of both sidebar-attached and bar-attached flyouts. The edge that
+meets the sidebar or bar remains open so the flyout shares the frame outline
+instead of becoming a separately boxed card. When Full Frame is off, the same
+toggle draws only the exposed outside seam of the combined bar/sidebar shell,
+not a closed box around either surface. A bar rail is clipped at the sidebar
+molding's outer tangent; the sidebar then owns that curve and its vertical
+content edge. Neither path may continue behind the other or into content space.
+When a flyout attaches, this standalone seam uses the same outer connector
+bounds as the full-frame border and stops for the entire molding gap. This
+applies to both sidebar flyouts and plugin-owned bar flyouts on every bar edge.
 
 ## Painted treatments (the visible metaphor)
 

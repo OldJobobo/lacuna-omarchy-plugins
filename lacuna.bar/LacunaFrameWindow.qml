@@ -30,7 +30,7 @@ PanelWindow {
   property real leftOccupiedWidth: 0
   property real rightOccupiedWidth: 0
   property bool borderEnabled: false
-  property color borderColor: Qt.rgba(1, 1, 1, 0.18)
+  property color borderColor: Qt.rgba(1, 1, 1, 1)
   property bool attachedFlyoutVisible: false
   property real attachedFlyoutY: 0
   property real attachedFlyoutHeight: 0
@@ -380,6 +380,8 @@ PanelWindow {
           frameRadius: root.r
           moldingPieces: root.effectiveMoldingPieces
           borderColor: root.borderColor
+          outputScale: root.targetScreen && root.targetScreen.devicePixelRatio !== undefined
+            ? Number(root.targetScreen.devicePixelRatio) : 1
           topEdgeOccupied: root.effectiveTopEdgeOccupied
           bottomEdgeOccupied: root.effectiveBottomEdgeOccupied
           leftEdgeOccupied: root.effectiveLeftEdgeOccupied

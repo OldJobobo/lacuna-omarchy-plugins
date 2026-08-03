@@ -17,7 +17,7 @@ Item {
   property real flyoutWidth: 0
   property real flyoutHeight: 0
   property real panelRadius: 14
-  property color borderColor: Qt.rgba(1, 1, 1, 0.18)
+  property color borderColor: Qt.rgba(1, 1, 1, 1)
   property real borderWidth: 1
 
   readonly property real curveKappa: lacunaGeometry.curveKappa

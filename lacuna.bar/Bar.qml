@@ -144,6 +144,27 @@ Item {
     return hostedMenu.sidebarScreen === screen
   }
 
+  function barOutlineInsetsFor(screen, barPosition) {
+    var result = { left: 0, right: 0, top: 0, bottom: 0 }
+    if (!hostedSidebarVisibleOnScreen(screen)) return result
+    if (barPosition !== "top" && barPosition !== "bottom") return result
+    var surfaceInset = root.frameMoldingPieces ? root.frameRadius : 0
+    if (hostedMenu && typeof hostedMenu.panelGeometryFor === "function") {
+      var panelGeometry = hostedMenu.panelGeometryFor(screen)
+      if (panelGeometry && panelGeometry.connectorVisible === true) {
+        surfaceInset = Math.max(surfaceInset, Number(panelGeometry.connectorWidth || 0))
+      }
+    }
+    var sidebarExtent = Math.max(0, Number(hostedMenu.panelWidth || 0))
+      + Math.max(0, surfaceInset)
+    // One physical-pixel overlap closes the antialias seam between separate
+    // bar and sidebar windows without carrying either rail behind the other.
+    var tangentInset = Math.max(0, sidebarExtent - 1)
+    if (hostedMenu.panelOnRight) result.right = tangentInset
+    else result.left = tangentInset
+    return result
+  }
+
   function hostedFlyoutVisibleOnScreen(screen) {
     if (!hostedSidebarVisibleOnScreen(screen)) return false
     if (hostedMenu && typeof hostedMenu.frameBorderAttachedFlyoutVisibleOnScreen === "function") {
@@ -450,8 +471,10 @@ Item {
       rightEdgeOccupied: root.hostedSidebarVisibleOnScreen(modelData) && hostedMenu.panelOnRight
       leftOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
       rightOccupiedWidth: root.hostedSidebarFrameOcclusionWidth
-      borderEnabled: root.frameBorder
-      borderColor: barTheme.seam
+      // The hosted Overlay menu owns the complete border on its screen so the
+      // sidebar and all four corners share one scene-graph renderer.
+      borderEnabled: root.frameBorder && !hostedMenu.ownsHostFrameBorderOnScreen(modelData)
+      borderColor: barTheme.frameBorder
       attachedFlyoutVisible: root.hostedFlyoutVisibleOnScreen(modelData)
       attachedFlyoutY: hostedMenu.frameBorderAttachedFlyoutYFor ? hostedMenu.frameBorderAttachedFlyoutYFor(modelData) : hostedMenu.frameBorderAttachedFlyoutY
       attachedFlyoutHeight: hostedMenu.frameBorderAttachedFlyoutHeightFor ? hostedMenu.frameBorderAttachedFlyoutHeightFor(modelData) : hostedMenu.frameBorderAttachedFlyoutHeight
@@ -468,6 +491,12 @@ Item {
     barWidgetRegistry: root.barWidgetRegistry
     barConfig: root.barConfig
     portraitSplitEnabled: root.portraitSplitEnabled
+    frameBorderEnabled: root.frameBorder
+    barOutlineEnabled: root.frameBorder && !root.frameEnabled
+    barOutlineInsetsProvider: function(screen, barPosition) {
+      return root.barOutlineInsetsFor(screen, barPosition)
+    }
+    frameBorderColor: barTheme.frameBorder
     menuToggleHandler: function(payloadJson, popupContext) {
       return root.toggleMenu(root.contextualMenuPayload(payloadJson, popupContext))
     }
@@ -539,5 +568,9 @@ Item {
     barWidgetRegistry: root.barWidgetRegistry
     hostManaged: true
     hostBarSize: root.barSize
+    hostFrameBorderEnabled: root.frameBorder
+    hostFrameGeometryProvider: function(screen) {
+      return root.lacunaFrameGeometryRecord(screen)
+    }
   }
 }

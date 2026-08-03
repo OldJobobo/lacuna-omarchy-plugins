@@ -20,6 +20,8 @@ Item {
   property var barWidgetRegistry: null
   property bool hostManaged: false
   property int hostBarSize: 0
+  property bool hostFrameBorderEnabled: false
+  property var hostFrameGeometryProvider: null
   property string pluginId: manifest && manifest.id ? manifest.id : "lacuna.menu"
   property var menuState: localMenuState
   property var flyoutContentRefs: ({})
@@ -161,6 +163,11 @@ Item {
   readonly property int barOwnedLeftFrameReserve: barOwnsLacunaFrame && externalLeftFrameReserveActive && !sidebarSurfaceVisible ? frameThickness : 0
   readonly property int sidebarReserveSize: sidebarReserveActive ? Math.max(0, panelWidth + effectiveSidebarReserveExtra - barOwnedLeftFrameReserve) : 0
   readonly property int visualTopInset: lacunaEnabled && sidebarState.exclusive && root.topBar ? root.barHeight : 0
+  // The standalone sidebar border shares the top bar's final pixel row. Pull
+  // this Overlay window up by one pixel so both strokes have the same tangent
+  // center instead of placing the sidebar curve one pixel below the bar rail.
+  readonly property int standaloneBorderWindowOverlap: lacunaEnabled && frameBorder
+    && frameMode === "off" && root.topBar ? 1 : 0
   readonly property int visualBottomInset: lacunaEnabled && sidebarState.exclusive && root.bottomBar ? root.barHeight : 0
   readonly property int visualLeftInset: lacunaEnabled && sidebarState.exclusive && root.leftBar ? root.barControlSize : 0
   readonly property int visualRightInset: lacunaEnabled && sidebarState.exclusive && root.rightBar ? root.barControlSize : 0
@@ -266,6 +273,28 @@ Item {
     return sidebarSurfaceVisible
       && MonitorPolicy.isSidebarScreen(sidebarScreens, screen)
       && !fullscreenWorkspaceOnScreen(screen)
+  }
+
+  function ownsHostFrameBorderOnScreen(screen) {
+    return hostManaged && hostFrameBorderEnabled && lacunaEnabled
+      && frameMode === "fullframe"
+      && typeof hostFrameGeometryProvider === "function"
+      && MonitorPolicy.isSidebarScreen(sidebarScreens, screen)
+  }
+
+  function hostFrameGeometryFor(screen) {
+    if (!ownsHostFrameBorderOnScreen(screen)) return null
+    var source = hostFrameGeometryProvider(screen)
+    if (!source || typeof source !== "object") return null
+    var record = {}
+    for (var key in source) record[key] = source[key]
+    // The exclusive menu window begins inside its bar edge; authoritative bar
+    // geometry is monitor-local. Translate once into this window's coordinates.
+    record.holeX = Number(source.holeX) - visualLeftInset
+    record.holeRight = Number(source.holeRight) - visualLeftInset
+    record.holeY = Number(source.holeY) - visualTopInset
+    record.holeBottom = Number(source.holeBottom) - visualTopInset
+    return record
   }
 
   function flyoutVisibleOnScreen(screen) {
@@ -625,7 +654,8 @@ Item {
   }
 
   function frameOverlayWidthFor(screen) {
-    if (!lacunaEnabled || barOwnsLacunaFrame || frameMode === "off") return 0
+    if (!lacunaEnabled || frameMode === "off") return 0
+    if (barOwnsLacunaFrame && !ownsHostFrameBorderOnScreen(screen)) return 0
     var width = screen && screen.width !== undefined ? Number(screen.width) : 0
     return Math.max(0, Math.round(width) + 100)
   }
@@ -2321,7 +2351,7 @@ Item {
     surfaceRightInset: Math.max(panelHost.effectiveConnectorWidth, root.frameMoldingPieces ? root.frameRadius : 0)
     flyoutLaneWidth: root.flyoutLaneWidthFor(modelData, panelHost.effectiveConnectorWidth)
     visualWidth: Math.max(root.frameOverlayWidthFor(modelData), root.topBarPanelShadowVisualWidthFor(modelData))
-    visualTopInset: root.visualTopInset
+    visualTopInset: Math.max(0, root.visualTopInset - root.standaloneBorderWindowOverlap)
     visualBottomInset: root.visualBottomInset
     visualLeftInset: root.visualLeftInset
     visualRightInset: root.visualRightInset
@@ -2371,9 +2401,12 @@ Item {
       id: frameOverlay
 
       anchors.fill: parent
+      z: borderOnly ? 11 : 0
       mode: root.lacunaEnabled && !root.barOwnsLacunaFrame ? root.frameMode : "off"
+      borderOnly: root.ownsHostFrameBorderOnScreen(modelData)
+      borderGeometryRecord: root.hostFrameGeometryFor(modelData)
       shadowEnabled: root.lacunaEnabled && !root.barOwnsLacunaFrame && root.frameShadow && root.frameMode !== "off"
-      borderEnabled: root.lacunaEnabled && !root.barOwnsLacunaFrame && root.frameBorder && root.frameMode !== "off"
+      borderEnabled: root.lacunaEnabled && root.frameBorder && root.frameMode !== "off"
       barPosition: root.barPosition
       barSize: root.barControlSize
       barBottomY: root.barBottomY
@@ -2384,7 +2417,9 @@ Item {
       moldingPieces: root.frameMoldingPieces
       progress: root.frameOverlayProgress
       frameColor: root.panelColor
-      borderColor: root.menuThemeRef.seam
+      borderColor: root.menuThemeRef.frameBorder
+      outputScale: modelData && modelData.devicePixelRatio !== undefined
+        ? Number(modelData.devicePixelRatio) : 1
       shadowOffsetX: root.frameShadowOffsetX
       shadowOffsetY: root.frameShadowOffsetY
       sidebarX: panelHost.sidebarMaskX
@@ -2481,8 +2516,17 @@ Item {
       frameThickness: root.frameThickness
       barPosition: root.barPosition
       frameMoldingPieces: root.frameMoldingPieces
-      frameBorder: root.frameBorder
-      frameBorderColor: root.menuThemeRef.seam
+      frameBorder: root.frameBorder && !frameOverlay.borderOnly
+      frameBorderColor: root.menuThemeRef.frameBorder
+      attachedFlyoutVisible: root.flyoutVisibleOnScreen(modelData)
+        && root.menuPanelControllerRef.flyoutProgress > 0.001
+      attachedFlyoutY: panelHost.effectiveConnectorVisible
+        ? panelHost.connectorY : panelHost.flyoutMaskY
+      attachedFlyoutHeight: panelHost.effectiveConnectorVisible
+        ? panelHost.effectiveFlyoutHeight + panelHost.effectiveConnectorWidth * 2
+        : panelHost.flyoutMaskHeight
+      outputScale: modelData && modelData.devicePixelRatio !== undefined
+        ? Number(modelData.devicePixelRatio) : 1
       openFromRight: root.panelOnRight
       panelColor: root.panelColor
       foreground: root.foreground
@@ -2764,7 +2808,7 @@ Item {
       flyoutWidth: panelHost.flyoutMaskWidth
       flyoutHeight: panelHost.flyoutMaskHeight
       panelRadius: root.attachedFlyoutRadius
-      borderColor: root.menuThemeRef.seam
+      borderColor: root.menuThemeRef.frameBorder
     }
 
     Item {

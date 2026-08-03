@@ -40,6 +40,9 @@ Item {
   readonly property color ink: foreground
   readonly property color whisper: muted
   readonly property color seam: border
+  // Frame chrome follows Omarchy's theme-defined popup/active-border role;
+  // only normalize its alpha so the stroke is always solid.
+  readonly property color frameBorder: opaqueColor(Color.popups.border)
   readonly property color danger: color("color9")
   readonly property color warning: color("color11")
   readonly property color urgent: contrastAwareRole(palette.red || palette.color9 || fallback("providerYoutube"), panelBackground, 3.0)

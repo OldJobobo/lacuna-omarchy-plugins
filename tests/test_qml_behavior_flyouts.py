@@ -1,4 +1,6 @@
+import tempfile
 import unittest
+from pathlib import Path
 
 from qml_harness import HAVE_SESSION, parse_behave, qml_url, require_no_qml_errors, run_quickshell
 
@@ -66,6 +68,82 @@ ShellRoot {{
                 self.assertEqual(426, by_edge["left"]["height"])
                 self.assertEqual(13, by_edge["left"]["left"])
                 self.assertEqual(0, by_edge["right"]["left"])
+
+    def test_bar_flyout_continues_enabled_frame_border(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            border_off = Path(temp_dir) / "bar-flyout-border-off.png"
+            border_on = Path(temp_dir) / "bar-flyout-border-on.png"
+            qml = f"""
+import Quickshell
+import QtQuick
+import QtQuick.Window
+
+ShellRoot {{
+  QtObject {{
+    id: mockBar
+    property bool frameBorderEnabled: false
+    property color frameBorderColor: "#78824b"
+  }}
+
+  Window {{
+    width: 128
+    height: 128
+    visible: true
+    color: "transparent"
+
+    Loader {{
+      id: surfaceLoader
+      source: "{qml_url('lacuna.clock/BarFlyoutSurface.qml')}"
+      onLoaded: {{
+        item.bar = mockBar
+        item.panelWidth = 96
+        item.panelHeight = 96
+        item.joinRadius = 13
+        item.cornerRadius = 14
+        item.panelColor = "#222222"
+        item.attachmentEdge = "top"
+        firstGrab.start()
+      }}
+    }}
+
+    Timer {{
+      id: firstGrab
+      interval: 80
+      onTriggered: surfaceLoader.item.grabToImage(function(result) {{
+        result.saveToFile("{border_off}")
+        mockBar.frameBorderEnabled = true
+        secondGrab.start()
+      }})
+    }}
+
+    Timer {{
+      id: secondGrab
+      interval: 80
+      onTriggered: surfaceLoader.item.grabToImage(function(result) {{
+        result.saveToFile("{border_on}")
+        console.log("BEHAVE " + JSON.stringify({{
+          enabled: surfaceLoader.item.borderEnabled,
+          alpha: surfaceLoader.item.borderColor.a,
+          inset: surfaceLoader.item.borderInset,
+          color: surfaceLoader.item.borderColor.toString()
+        }}))
+        Qt.quit()
+      }})
+    }}
+  }}
+}}
+"""
+            output = run_quickshell(qml, timeout=10)
+            require_no_qml_errors(output)
+            result = parse_behave(output)[-1]
+
+            self.assertGreater(border_off.stat().st_size, 0)
+            self.assertGreater(border_on.stat().st_size, 0)
+            self.assertNotEqual(border_off.read_bytes(), border_on.read_bytes())
+            self.assertTrue(result["enabled"])
+            self.assertEqual(result["alpha"], 1)
+            self.assertEqual(result["inset"], 0.5)
+            self.assertEqual(result["color"], "#78824b")
 
 
 if __name__ == "__main__":

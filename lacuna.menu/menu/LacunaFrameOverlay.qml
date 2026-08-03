@@ -8,6 +8,8 @@ Item {
   property string mode: "off"
   property bool shadowEnabled: false
   property bool borderEnabled: false
+  property bool borderOnly: false
+  property var borderGeometryRecord: null
   property string barPosition: "top"
   property int barSize: 0
   property int barBottomY: 0
@@ -17,8 +19,9 @@ Item {
   property bool moldingPieces: true
   property real progress: 1
   property color frameColor: "#101315"
-  property color borderColor: Qt.rgba(1, 1, 1, 0.18)
+  property color borderColor: Qt.rgba(1, 1, 1, 1)
   property real borderWidth: 1
+  property real outputScale: 1
   property color shadowColor: "black"
   property real shadowOpacity: 0.88
   property real shadowBlur: 0.85
@@ -48,6 +51,9 @@ Item {
   property bool flyoutVisible: false
 
   readonly property bool frameEnabled: mode === "fullframe"
+  readonly property bool borderFrameEnabled: frameEnabled || borderOnly
+  readonly property bool hasBorderGeometryRecord: borderGeometryRecord
+    && typeof borderGeometryRecord === "object"
   readonly property bool fullFrame: mode === "fullframe"
   readonly property real clampedProgress: Math.max(0, Math.min(1, progress))
   readonly property real edgeProgress: smoothEdgeProgress(clampedProgress)
@@ -73,20 +79,40 @@ Item {
   readonly property real surfaceShadowSize: Math.max(12, Math.min(34, shadowExtent))
   readonly property bool sidebarOnRight: rightEdgeOccupied && !leftEdgeOccupied
   readonly property real sidebarOccupiedWidth: sidebarWidth + (sidebarMoldingVisible ? sidebarMoldingWidth : 0)
-  readonly property real borderLeft: Math.max(0, leftEdgeOccupied ? sidebarX + sidebarWidth : (leftBar ? effectiveBarSize : t))
-  readonly property real borderTop: Math.max(0, topBar ? barBottomY : t)
-  readonly property real borderRight: Math.max(borderLeft + 1, effectiveFrameWidth - (rightEdgeOccupied ? Math.max(0, effectiveFrameWidth - sidebarX) : (rightBar ? effectiveBarSize : t)))
-  readonly property real borderBottom: Math.max(borderTop + 1, height - (bottomBar ? effectiveBarSize : t))
+  readonly property real fallbackBorderLeft: Math.max(0, leftEdgeOccupied ? sidebarX + sidebarWidth : (leftBar ? effectiveBarSize : t))
+  readonly property real fallbackBorderTop: Math.max(0, topBar ? barBottomY : t)
+  readonly property real fallbackBorderRight: Math.max(fallbackBorderLeft + 1, effectiveFrameWidth - (rightEdgeOccupied ? Math.max(0, effectiveFrameWidth - sidebarX) : (rightBar ? effectiveBarSize : t)))
+  readonly property real fallbackBorderBottom: Math.max(fallbackBorderTop + 1, height - (bottomBar ? effectiveBarSize : t))
+  readonly property real borderLeft: hasBorderGeometryRecord ? Number(borderGeometryRecord.holeX) : fallbackBorderLeft
+  readonly property real borderTop: hasBorderGeometryRecord ? Number(borderGeometryRecord.holeY) : fallbackBorderTop
+  readonly property real borderRight: hasBorderGeometryRecord ? Number(borderGeometryRecord.holeRight) : fallbackBorderRight
+  readonly property real borderBottom: hasBorderGeometryRecord ? Number(borderGeometryRecord.holeBottom) : fallbackBorderBottom
   readonly property real borderInset: Math.max(0, borderWidth / 2)
+  readonly property real moldingBorderWidth: borderWidth + (outputScale <= 1.25 ? 0.5 : 0)
   readonly property real strokeLeft: borderLeft + borderInset
   readonly property real strokeTop: borderTop + borderInset
   readonly property real strokeRight: borderRight - borderInset
   readonly property real strokeBottom: borderBottom - borderInset
-  readonly property real borderRadius: moldingPieces ? Math.max(0.01, Math.min(moldingSize, (borderRight - borderLeft) / 2, (borderBottom - borderTop) / 2) - borderInset) : 0.01
-  readonly property bool leftAttachmentGapVisible: leftEdgeOccupied && flyoutVisible && flyoutHeight > 0
-  readonly property bool rightAttachmentGapVisible: rightEdgeOccupied && flyoutVisible && flyoutHeight > 0
-  readonly property real attachmentGapTop: Math.max(strokeTop + borderRadius, flyoutY + borderInset)
-  readonly property real attachmentGapBottom: Math.min(strokeBottom - borderRadius, flyoutY + flyoutHeight - borderInset)
+  readonly property real borderGeometryRadius: hasBorderGeometryRecord
+    ? Math.max(0, Number(borderGeometryRecord.contentRadius) || 0) : moldingSize
+  readonly property real borderRadius: borderGeometryRadius > 0
+    ? Math.max(0.01, Math.min(borderGeometryRadius, (borderRight - borderLeft) / 2, (borderBottom - borderTop) / 2) - borderInset)
+    : 0.01
+  readonly property bool effectiveLeftEdgeOccupied: hasBorderGeometryRecord
+    ? borderGeometryRecord.leftEdgeOccupied === true : leftEdgeOccupied
+  readonly property bool effectiveRightEdgeOccupied: hasBorderGeometryRecord
+    ? borderGeometryRecord.rightEdgeOccupied === true : rightEdgeOccupied
+  readonly property bool leftAttachmentGapVisible: effectiveLeftEdgeOccupied && flyoutVisible && flyoutHeight > 0
+  readonly property bool rightAttachmentGapVisible: effectiveRightEdgeOccupied && flyoutVisible && flyoutHeight > 0
+  // The straight frame rail meets the connector at its outer cubic tangents,
+  // not at the flyout body's square attachment corners. Using flyoutY here
+  // leaves the rail visibly running through both molding curves.
+  readonly property real attachedOutlineTop: connectorVisible && connectorHeight > 0
+    ? connectorY : flyoutY
+  readonly property real attachedOutlineBottom: connectorVisible && connectorHeight > 0
+    ? connectorY + connectorHeight : flyoutY + flyoutHeight
+  readonly property real attachmentGapTop: Math.max(strokeTop + borderRadius, attachedOutlineTop + borderInset)
+  readonly property real attachmentGapBottom: Math.min(strokeBottom - borderRadius, attachedOutlineBottom - borderInset)
   readonly property bool attachmentGapRenderable: attachmentGapBottom > attachmentGapTop + borderWidth
   readonly property real rightVerticalUpperEndY: rightAttachmentGapVisible && attachmentGapRenderable ? attachmentGapTop : strokeBottom - borderRadius
   readonly property real rightVerticalLowerStartY: rightAttachmentGapVisible && attachmentGapRenderable ? attachmentGapBottom : strokeBottom - borderRadius
@@ -98,7 +124,7 @@ Item {
   readonly property real sidebarJoinTop: Math.max(-sidebarMoldingWidth, barBottomY - 1)
   readonly property real sidebarJoinHeight: Math.max(0, sidebarHeight - sidebarJoinTop)
 
-  visible: frameEnabled && clampedProgress > 0.001
+  visible: (frameEnabled || (borderOnly && borderEnabled)) && clampedProgress > 0.001
   enabled: false
 
   function smoothEdgeProgress(value) {
@@ -360,7 +386,7 @@ Item {
     id: frameBorderSource
 
     anchors.fill: parent
-    visible: root.frameEnabled && root.borderEnabled && root.clampedProgress > 0.001
+    visible: root.borderFrameEnabled && root.borderEnabled && root.clampedProgress > 0.001
     asynchronous: false
     antialiasing: true
     preferredRendererType: Shape.CurveRenderer
@@ -428,6 +454,60 @@ Item {
         y: root.leftVerticalUpperStartY
       }
       PathLine {
+        x: root.strokeLeft
+        y: root.strokeTop + root.borderRadius
+      }
+      PathCubic {
+        x: root.strokeLeft + root.borderRadius
+        y: root.strokeTop
+        control1X: root.strokeLeft
+        control1Y: root.strokeTop + root.borderRadius * (1 - root.curveKappa)
+        control2X: root.strokeLeft + root.borderRadius * (1 - root.curveKappa)
+        control2Y: root.strokeTop
+      }
+    }
+
+    ShapePath {
+      fillColor: "transparent"
+      strokeColor: root.borderColor
+      strokeWidth: root.moldingBorderWidth
+      capStyle: ShapePath.FlatCap
+
+      startX: root.strokeRight - root.borderRadius
+      startY: root.strokeTop
+      PathCubic {
+        x: root.strokeRight
+        y: root.strokeTop + root.borderRadius
+        control1X: root.strokeRight - root.borderRadius * (1 - root.curveKappa)
+        control1Y: root.strokeTop
+        control2X: root.strokeRight
+        control2Y: root.strokeTop + root.borderRadius * (1 - root.curveKappa)
+      }
+      PathMove {
+        x: root.strokeRight
+        y: root.strokeBottom - root.borderRadius
+      }
+      PathCubic {
+        x: root.strokeRight - root.borderRadius
+        y: root.strokeBottom
+        control1X: root.strokeRight
+        control1Y: root.strokeBottom - root.borderRadius * (1 - root.curveKappa)
+        control2X: root.strokeRight - root.borderRadius * (1 - root.curveKappa)
+        control2Y: root.strokeBottom
+      }
+      PathMove {
+        x: root.strokeLeft + root.borderRadius
+        y: root.strokeBottom
+      }
+      PathCubic {
+        x: root.strokeLeft
+        y: root.strokeBottom - root.borderRadius
+        control1X: root.strokeLeft + root.borderRadius * (1 - root.curveKappa)
+        control1Y: root.strokeBottom
+        control2X: root.strokeLeft
+        control2Y: root.strokeBottom - root.borderRadius * (1 - root.curveKappa)
+      }
+      PathMove {
         x: root.strokeLeft
         y: root.strokeTop + root.borderRadius
       }

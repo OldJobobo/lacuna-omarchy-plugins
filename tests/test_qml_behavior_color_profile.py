@@ -9,6 +9,7 @@ class QmlColorProfileBehaviorTests(unittest.TestCase):
         qml = f"""
 import Quickshell
 import QtQuick
+import qs.Commons
 
 ShellRoot {{
   id: root
@@ -52,6 +53,10 @@ ShellRoot {{
         jellyfinContrast: root.jellyfinContrast,
         mutedAlpha: theme.muted.a,
         seamAlpha: theme.seam.a,
+        frameBorderAlpha: theme.frameBorder.a,
+        frameBorderMatchesThemeBorder: Math.abs(theme.frameBorder.r - Color.popups.border.r) < 0.001
+          && Math.abs(theme.frameBorder.g - Color.popups.border.g) < 0.001
+          && Math.abs(theme.frameBorder.b - Color.popups.border.b) < 0.001,
         youtube: root.youtube,
         jellyfin: root.jellyfin
       }}))
@@ -71,6 +76,8 @@ ShellRoot {{
         self.assertGreaterEqual(result["jellyfinContrast"], 2.99)
         self.assertEqual(result["mutedAlpha"], 1)
         self.assertAlmostEqual(result["seamAlpha"], 0.18, places=2)
+        self.assertEqual(result["frameBorderAlpha"], 1)
+        self.assertTrue(result["frameBorderMatchesThemeBorder"])
         self.assertTrue(result["youtube"].startswith("#"))
         self.assertTrue(result["jellyfin"].startswith("#"))
 

@@ -64,6 +64,12 @@ Item {
   property color barForeground: themeForeground
   property color background: opaqueColor(Color.bar.background)
   property color urgent: Color.bar.active
+  // The outer Lacuna frame host injects the optional frame-border treatment
+  // so plugin-owned flyouts can continue the same outline around exposed edges.
+  property bool frameBorderEnabled: false
+  property bool barOutlineEnabled: false
+  property var barOutlineInsetsProvider: null
+  property color frameBorderColor: Color.popups.border
   // Theme accent, exposed to bar widgets (e.g. lacuna.bar-seam breathing glow,
   // active-state accents). Theme-derived; mirrors the menu's accent role.
   property color accent: Color.accent
@@ -90,6 +96,7 @@ Item {
   property bool tooltipShown: false
   property int tooltipRequest: 0
   property var activePopout: null
+  property var activePopoutBorderGap: ({})
   property bool editMode: false
   property string activeInteractionScreenName: ""
   property var activePopupContext: ({})
@@ -405,7 +412,23 @@ Item {
       if ("closeForPopoutSwitch" in activePopout) activePopout.closeForPopoutSwitch()
       else if ("close" in activePopout) activePopout.close()
     }
+    if (activePopoutBorderGap.owner !== owner) activePopoutBorderGap = ({})
     activePopout = owner
+  }
+
+  function setPopoutBorderGapFor(surfacePosition, owner, start, length, owningScreen) {
+    if (!owner || (activePopout && activePopout !== owner)) return
+    activePopoutBorderGap = {
+      owner: owner,
+      screenName: root.screenName(owningScreen),
+      edge: surfacePosition,
+      start: Math.max(0, Number(start || 0)),
+      length: Math.max(0, Number(length || 0))
+    }
+  }
+
+  function clearPopoutBorderGap(owner) {
+    if (activePopoutBorderGap.owner === owner) activePopoutBorderGap = ({})
   }
 
   function requestPopout(owner, anchorItem, moduleId) {
@@ -956,6 +979,8 @@ Item {
     readonly property color background: root.background
     readonly property color accent: root.accent
     readonly property color urgent: root.urgent
+    readonly property bool frameBorderEnabled: root.frameBorderEnabled
+    readonly property color frameBorderColor: root.frameBorderColor
     readonly property string fontFamily: root.fontFamily
     readonly property var shell: root.shell
     readonly property string omarchyPath: root.omarchyPath
@@ -977,6 +1002,11 @@ Item {
       return root.requestPopoutFor(position, owner, anchorItem, moduleId, owningScreen)
     }
 
+    function setPopoutBorderGap(owner, start, length) {
+      root.setPopoutBorderGapFor(position, owner, start, length, owningScreen)
+    }
+
+    function clearPopoutBorderGap(owner) { root.clearPopoutBorderGap(owner) }
     function registerClickTarget(target) { root.registerClickTarget(target) }
     function unregisterClickTarget(target) { root.unregisterClickTarget(target) }
     function releasePopout(owner) { root.releasePopout(owner) }
@@ -1003,6 +1033,28 @@ Item {
     readonly property bool surfaceVertical: surfacePosition === "left" || surfacePosition === "right"
     readonly property bool surfaceActive: band === "primary" ? !root.barHidden : splitActive && !root.barHidden
     readonly property string surfaceScreenName: root.screenName(screen)
+    readonly property var outlineInsets: typeof root.barOutlineInsetsProvider === "function"
+      ? root.barOutlineInsetsProvider(screen, surfacePosition) : ({ left: 0, right: 0, top: 0, bottom: 0 })
+    readonly property real outlineLeftInset: Math.max(0, Number(outlineInsets.left || 0))
+    readonly property real outlineRightInset: Math.max(0, Number(outlineInsets.right || 0))
+    readonly property real outlineTopInset: Math.max(0, Number(outlineInsets.top || 0))
+    readonly property real outlineBottomInset: Math.max(0, Number(outlineInsets.bottom || 0))
+    readonly property var popoutBorderGap: root.activePopoutBorderGap
+    readonly property bool popoutBorderGapActive: popoutBorderGap
+      && popoutBorderGap.screenName === surfaceScreenName
+      && popoutBorderGap.edge === surfacePosition
+      && Number(popoutBorderGap.length || 0) > 0
+    readonly property real outlineAxisStart: surfaceVertical ? outlineTopInset : outlineLeftInset
+    readonly property real outlineAxisEnd: surfaceVertical
+      ? Math.max(outlineAxisStart, height - outlineBottomInset)
+      : Math.max(outlineAxisStart, width - outlineRightInset)
+    readonly property real popoutBorderGapStart: popoutBorderGapActive
+      ? Math.max(outlineAxisStart, Math.min(outlineAxisEnd, Number(popoutBorderGap.start || 0)))
+      : outlineAxisEnd
+    readonly property real popoutBorderGapEnd: popoutBorderGapActive
+      ? Math.max(popoutBorderGapStart, Math.min(outlineAxisEnd,
+          Number(popoutBorderGap.start || 0) + Number(popoutBorderGap.length || 0)))
+      : outlineAxisEnd
 
     visible: band === "companion" ? true : !root.barHidden
 
@@ -1039,6 +1091,62 @@ Item {
       active: barWindow.band === "primary" || barWindow.surfaceActive
       visible: barWindow.surfaceActive
       sourceComponent: barWindow.surfaceVertical ? verticalBar : horizontalBar
+    }
+
+    // Standalone mode paints only the exposed shell seam, never a closed box.
+    // Insets remove segments owned by an attached sidebar or open bar flyout.
+    Repeater {
+      model: ["top", "bottom"]
+      delegate: Item {
+        required property string modelData
+        visible: barWindow.surfaceActive && root.barOutlineEnabled
+          && barWindow.surfacePosition === modelData
+        anchors.fill: parent
+        z: 100
+
+        Rectangle {
+          x: barWindow.outlineAxisStart
+          y: modelData === "top" ? Math.max(0, parent.height - 1) : 0
+          width: Math.max(0, barWindow.popoutBorderGapStart - barWindow.outlineAxisStart)
+          height: 1
+          color: root.frameBorderColor
+        }
+
+        Rectangle {
+          x: barWindow.popoutBorderGapEnd
+          y: modelData === "top" ? Math.max(0, parent.height - 1) : 0
+          width: Math.max(0, barWindow.outlineAxisEnd - barWindow.popoutBorderGapEnd)
+          height: 1
+          color: root.frameBorderColor
+        }
+      }
+    }
+
+    Repeater {
+      model: ["left", "right"]
+      delegate: Item {
+        required property string modelData
+        visible: barWindow.surfaceActive && root.barOutlineEnabled
+          && barWindow.surfacePosition === modelData
+        anchors.fill: parent
+        z: 100
+
+        Rectangle {
+          x: modelData === "left" ? Math.max(0, parent.width - 1) : 0
+          y: barWindow.outlineAxisStart
+          width: 1
+          height: Math.max(0, barWindow.popoutBorderGapStart - barWindow.outlineAxisStart)
+          color: root.frameBorderColor
+        }
+
+        Rectangle {
+          x: modelData === "left" ? Math.max(0, parent.width - 1) : 0
+          y: barWindow.popoutBorderGapEnd
+          width: 1
+          height: Math.max(0, barWindow.outlineAxisEnd - barWindow.popoutBorderGapEnd)
+          color: root.frameBorderColor
+        }
+      }
     }
 
     PopupWindow {

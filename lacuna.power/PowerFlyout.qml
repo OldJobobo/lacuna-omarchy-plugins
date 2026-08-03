@@ -55,6 +55,10 @@ PopupWindow {
   readonly property real contentOpacity: Math.max(0, Math.min(1, (reveal - 0.3) / 0.7))
 
   visible: open || reveal > 0.001
+  onVisibleChanged: {
+    if (!visible && bar && typeof bar.clearPopoutBorderGap === "function")
+      bar.clearPopoutBorderGap(coordinatorKey)
+  }
   color: "transparent"
   implicitWidth: surface.fullWidth
   implicitHeight: surface.fullHeight
@@ -130,6 +134,13 @@ PopupWindow {
         point.y = Math.max(root.margin, Math.min(point.y, root.anchorWindow.height - root.implicitHeight - root.margin))
       popupAnchor.rect.x = Math.round(point.x)
       popupAnchor.rect.y = Math.round(point.y)
+      if (typeof root.bar.setPopoutBorderGap === "function") {
+        var gapStart = root.attachmentEdge === "top" || root.attachmentEdge === "bottom"
+          ? popupAnchor.rect.x : popupAnchor.rect.y
+        var gapLength = root.attachmentEdge === "top" || root.attachmentEdge === "bottom"
+          ? surface.fullWidth : surface.fullHeight
+        root.bar.setPopoutBorderGap(root.coordinatorKey, gapStart, gapLength)
+      }
     }
   }
   Item {
@@ -149,6 +160,7 @@ PopupWindow {
       height: root.implicitHeight
 
       BarFlyoutSurface {
+        bar: root.bar
         id: surface
         panelWidth: root.panelWidth
         panelHeight: root.panelHeight

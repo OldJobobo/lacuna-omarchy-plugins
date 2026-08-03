@@ -14,8 +14,9 @@ Item {
   property int frameThickness: 8
   property int frameRadius: 14
   property bool moldingPieces: true
-  property color borderColor: Qt.rgba(1, 1, 1, 0.18)
+  property color borderColor: Qt.rgba(1, 1, 1, 1)
   property real borderWidth: 1
+  property real outputScale: 1
   property bool topEdgeOccupied: false
   property bool bottomEdgeOccupied: false
   property bool leftEdgeOccupied: false
@@ -55,6 +56,7 @@ Item {
   readonly property bool effectiveMoldingPieces: hasGeometryRecord ? r > 0 : moldingPieces
   readonly property real holeRadius: effectiveMoldingPieces ? Math.max(minArcRadius, Math.min(r, holeWidth / 2, holeHeight / 2)) : minArcRadius
   readonly property real borderInset: Math.max(0, borderWidth / 2)
+  readonly property real moldingBorderWidth: borderWidth + (outputScale <= 1.25 ? 0.5 : 0)
   readonly property real borderLeft: holeX + borderInset
   readonly property real borderTop: holeY + borderInset
   readonly property real borderRight: holeRight - borderInset
@@ -150,6 +152,64 @@ Item {
         y: root.leftVerticalUpperStartY
       }
       PathLine {
+        x: root.borderLeft
+        y: root.borderTop + root.borderRadius
+      }
+      PathCubic {
+        x: root.borderLeft + root.borderRadius
+        y: root.borderTop
+        control1X: root.borderLeft
+        control1Y: root.borderTop + root.borderRadius * (1 - root.curveKappa)
+        control2X: root.borderLeft + root.borderRadius * (1 - root.curveKappa)
+        control2Y: root.borderTop
+      }
+    }
+
+    // At 1x output scale, a one-pixel cubic spreads its coverage across the
+    // pixel grid and reads thinner/jaggier than the connected axis-aligned
+    // rails. Repaint only the four frame molding corners with a half-pixel
+    // optical allowance; straight frame-border segments remain one pixel.
+    ShapePath {
+      fillColor: "transparent"
+      strokeColor: root.borderColor
+      strokeWidth: root.moldingBorderWidth
+      capStyle: ShapePath.FlatCap
+
+      startX: root.borderRight - root.borderRadius
+      startY: root.borderTop
+      PathCubic {
+        x: root.borderRight
+        y: root.borderTop + root.borderRadius
+        control1X: root.borderRight - root.borderRadius * (1 - root.curveKappa)
+        control1Y: root.borderTop
+        control2X: root.borderRight
+        control2Y: root.borderTop + root.borderRadius * (1 - root.curveKappa)
+      }
+      PathMove {
+        x: root.borderRight
+        y: root.borderBottom - root.borderRadius
+      }
+      PathCubic {
+        x: root.borderRight - root.borderRadius
+        y: root.borderBottom
+        control1X: root.borderRight
+        control1Y: root.borderBottom - root.borderRadius * (1 - root.curveKappa)
+        control2X: root.borderRight - root.borderRadius * (1 - root.curveKappa)
+        control2Y: root.borderBottom
+      }
+      PathMove {
+        x: root.borderLeft + root.borderRadius
+        y: root.borderBottom
+      }
+      PathCubic {
+        x: root.borderLeft
+        y: root.borderBottom - root.borderRadius
+        control1X: root.borderLeft + root.borderRadius * (1 - root.curveKappa)
+        control1Y: root.borderBottom
+        control2X: root.borderLeft
+        control2Y: root.borderBottom - root.borderRadius * (1 - root.curveKappa)
+      }
+      PathMove {
         x: root.borderLeft
         y: root.borderTop + root.borderRadius
       }

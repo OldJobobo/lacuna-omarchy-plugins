@@ -136,6 +136,10 @@ PopupWindow {
   }
 
   visible: open || reveal > 0.001
+  onVisibleChanged: {
+    if (!visible && bar && typeof bar.clearPopoutBorderGap === "function")
+      bar.clearPopoutBorderGap(coordinatorKey)
+  }
   color: "transparent"
   implicitWidth: surface.fullWidth + shadowLeftMargin + shadowRightMargin
   implicitHeight: surface.fullHeight + shadowTopMargin + shadowBottomMargin
@@ -188,6 +192,14 @@ PopupWindow {
         point.y = Math.max(root.margin, Math.min(point.y, root.anchorWindow.height - root.implicitHeight - root.margin))
       popupAnchor.rect.x = Math.round(point.x)
       popupAnchor.rect.y = Math.round(point.y)
+      if (typeof root.bar.setPopoutBorderGap === "function") {
+        var gapStart = root.attachmentEdge === "top" || root.attachmentEdge === "bottom"
+          ? popupAnchor.rect.x + root.shadowLeftMargin
+          : popupAnchor.rect.y + root.shadowTopMargin
+        var gapLength = root.attachmentEdge === "top" || root.attachmentEdge === "bottom"
+          ? surface.fullWidth : surface.fullHeight
+        root.bar.setPopoutBorderGap(root.coordinatorKey, gapStart, gapLength)
+      }
     }
   }
 
@@ -214,6 +226,7 @@ PopupWindow {
         z: -2
 
         BarFlyoutSurface {
+          bar: root.bar
           x: root.shadowLeftMargin
           y: root.shadowTopMargin
           panelWidth: root.panelWidth
@@ -238,6 +251,7 @@ PopupWindow {
       }
 
       BarFlyoutSurface {
+        bar: root.bar
         id: surface
         x: root.shadowLeftMargin
         y: root.shadowTopMargin

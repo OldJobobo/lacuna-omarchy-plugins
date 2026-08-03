@@ -51,6 +51,8 @@ ShellRoot {{
     id: settle
     interval: 30
     onTriggered: {{
+      var moldingWidthAt1x = border.moldingBorderWidth
+      border.outputScale = 2
       console.log("BEHAVE " + JSON.stringify({{
         holeX: border.holeX,
         holeY: border.holeY,
@@ -59,6 +61,9 @@ ShellRoot {{
         holeRadius: border.holeRadius,
         borderLeft: border.borderLeft,
         borderTop: border.borderTop,
+        borderAlpha: border.borderColor.a,
+        moldingWidthAt1x: moldingWidthAt1x,
+        moldingWidthAt2x: border.moldingBorderWidth,
         leftGap: border.leftAttachmentGapVisible,
         renderable: border.isRenderable
       }}))
@@ -78,10 +83,208 @@ ShellRoot {{
         self.assertEqual(result["holeRadius"], 31)
         self.assertEqual(result["borderLeft"], 159.5)
         self.assertEqual(result["borderTop"], 30.5)
+        self.assertEqual(result["borderAlpha"], 1)
+        self.assertEqual(result["moldingWidthAt1x"], 1.5)
+        self.assertEqual(result["moldingWidthAt2x"], 1)
         self.assertFalse(result["leftGap"])
         self.assertTrue(result["renderable"])
 
-    def test_sidebar_lower_molding_repaints_frame_border_above_its_fill(self):
+    def test_border_only_overlay_consumes_authoritative_host_geometry(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var overlay: null
+
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.menu/menu/LacunaFrameOverlay.qml')}", Component.PreferSynchronous)
+    overlay = component.createObject(root, {{
+      width: 800,
+      height: 600,
+      mode: "off",
+      borderOnly: true,
+      borderEnabled: true,
+      progress: 1,
+      frameWidth: 800,
+      frameThickness: 8,
+      frameRadius: 14,
+      borderGeometryRecord: {{
+        framed: true,
+        holeX: 123,
+        holeY: 34,
+        holeRight: 789,
+        holeBottom: 588,
+        contentRadius: 27,
+        leftEdgeOccupied: true,
+        rightEdgeOccupied: false
+      }}
+    }})
+    settle.start()
+  }}
+
+  Timer {{
+    id: settle
+    interval: 30
+    onTriggered: {{
+      console.log("BEHAVE " + JSON.stringify({{
+        visible: overlay.visible,
+        frameEnabled: overlay.frameEnabled,
+        borderFrameEnabled: overlay.borderFrameEnabled,
+        borderLeft: overlay.borderLeft,
+        borderTop: overlay.borderTop,
+        borderRight: overlay.borderRight,
+        borderBottom: overlay.borderBottom,
+        borderRadius: overlay.borderRadius
+      }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        result = parse_behave(output)[-1]
+
+        self.assertTrue(result["visible"])
+        self.assertFalse(result["frameEnabled"])
+        self.assertTrue(result["borderFrameEnabled"])
+        self.assertEqual(result["borderLeft"], 123)
+        self.assertEqual(result["borderTop"], 34)
+        self.assertEqual(result["borderRight"], 789)
+        self.assertEqual(result["borderBottom"], 588)
+        self.assertEqual(result["borderRadius"], 26.5)
+
+    def test_overlay_frame_rail_stops_at_connector_molding_tangents(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var overlay: null
+
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.menu/menu/LacunaFrameOverlay.qml')}", Component.PreferSynchronous)
+    overlay = component.createObject(root, {{
+      width: 800,
+      height: 600,
+      mode: "off",
+      borderOnly: true,
+      borderEnabled: true,
+      borderGeometryRecord: {{
+        holeX: 159,
+        holeY: 30,
+        holeRight: 784,
+        holeBottom: 584,
+        contentRadius: 31,
+        leftEdgeOccupied: true,
+        rightEdgeOccupied: false
+      }},
+      leftEdgeOccupied: true,
+      flyoutVisible: true,
+      flyoutY: 200,
+      flyoutHeight: 200,
+      connectorVisible: true,
+      connectorY: 182,
+      connectorWidth: 18,
+      connectorHeight: 236
+    }})
+    settle.start()
+  }}
+
+  Timer {{
+    id: settle
+    interval: 30
+    onTriggered: {{
+      var connectorTop = overlay.attachmentGapTop
+      var connectorBottom = overlay.attachmentGapBottom
+      overlay.connectorVisible = false
+      console.log("BEHAVE " + JSON.stringify({{
+        connectorTop: connectorTop,
+        connectorBottom: connectorBottom,
+        bodyTop: overlay.attachmentGapTop,
+        bodyBottom: overlay.attachmentGapBottom
+      }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        result = parse_behave(output)[-1]
+
+        self.assertEqual(result["connectorTop"], 182.5)
+        self.assertEqual(result["connectorBottom"], 417.5)
+        self.assertEqual(result["bodyTop"], 200.5)
+        self.assertEqual(result["bodyBottom"], 399.5)
+
+    def test_sidebar_keeps_standalone_outline_when_full_frame_is_off(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var surface: null
+
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.menu/menu/MenuSurface.qml')}", Component.PreferSynchronous)
+    surface = component.createObject(root, {{
+      height: 600,
+      open: true,
+      progress: 1,
+      panelWidth: 320,
+      bodyRightInset: 18,
+      frameMoldingPieces: true,
+      fullFrame: false,
+      frameBorder: true,
+      attachedFlyoutVisible: true,
+      attachedFlyoutY: 200,
+      attachedFlyoutHeight: 236
+    }})
+    settle.start()
+  }}
+
+  Timer {{
+    id: settle
+    interval: 30
+    onTriggered: {{
+      var visibleWithoutFrame = surface.standaloneSidebarBorderVisible
+      var gapTop = surface.standaloneAttachmentGapTop
+      var gapBottom = surface.standaloneAttachmentGapBottom
+      var gapRenderable = surface.standaloneAttachmentGapRenderable
+      surface.fullFrame = true
+      console.log("BEHAVE " + JSON.stringify({{
+        visibleWithoutFrame: visibleWithoutFrame,
+        hiddenWithFullFrame: !surface.standaloneSidebarBorderVisible,
+        panelWidth: surface.panelWidth,
+        moldingRadius: surface.bodyRightInset,
+        joinTangentY: surface.joinTop + surface.bodyRightInset,
+        gapTop: gapTop,
+        gapBottom: gapBottom,
+        gapRenderable: gapRenderable
+      }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        result = parse_behave(output)[-1]
+
+        self.assertTrue(result["visibleWithoutFrame"])
+        self.assertTrue(result["hiddenWithFullFrame"])
+        self.assertEqual(result["panelWidth"], 320)
+        self.assertEqual(result["moldingRadius"], 18)
+        self.assertEqual(result["gapTop"], 200.5)
+        self.assertEqual(result["gapBottom"], 435.5)
+        self.assertTrue(result["gapRenderable"])
+
+    def test_sidebar_lower_molding_repaints_canonical_two_pass_frame_border(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             border_off = Path(temp_dir) / "border-off.png"
             border_on = Path(temp_dir) / "border-on.png"
@@ -139,6 +342,8 @@ ShellRoot {{
         console.log("BEHAVE " + JSON.stringify({{
           borderInset: surfaceLoader.item.frameBorderInset,
           borderRadius: surfaceLoader.item.frameBorderRadius,
+          baseWidth: surfaceLoader.item.frameBorderWidth,
+          moldingWidthAt1x: surfaceLoader.item.frameMoldingBorderWidth,
           joinTop: surfaceLoader.item.bottomJoinTop,
           hiddenForBottomBar: !surfaceLoader.item.bottomFrameJoinBorderVisible
         }}))
@@ -157,6 +362,8 @@ ShellRoot {{
             self.assertNotEqual(border_off.read_bytes(), border_on.read_bytes())
             self.assertEqual(result["borderInset"], 0.5)
             self.assertEqual(result["borderRadius"], 31.5)
+            self.assertEqual(result["baseWidth"], 1)
+            self.assertEqual(result["moldingWidthAt1x"], 1.5)
             self.assertGreater(result["joinTop"], 0)
             self.assertTrue(result["hiddenForBottomBar"])
 
