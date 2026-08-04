@@ -10,7 +10,7 @@ BOOTSTRAP = ROOT / "install.sh"
 
 
 class SourceBootstrapTests(unittest.TestCase):
-    def test_help_describes_temporary_source_install(self):
+    def test_help_describes_official_source_alternative(self):
         result = subprocess.run(
             [str(BOOTSTRAP), "--help"],
             check=True,
@@ -19,7 +19,8 @@ class SourceBootstrapTests(unittest.TestCase):
             stderr=subprocess.PIPE,
         )
 
-        self.assertIn("Temporarily install Lacuna Shell from GitHub", result.stdout)
+        self.assertIn("Install or refresh Lacuna Shell from the official GitHub source checkout", result.stdout)
+        self.assertIn("alternative to the published AUR package", result.stdout)
         self.assertIn("--dir PATH", result.stdout)
 
     @unittest.skipIf(os.geteuid() == 0, "bootstrap intentionally refuses root")

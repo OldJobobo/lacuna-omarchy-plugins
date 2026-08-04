@@ -10,8 +10,8 @@ usage() {
   cat <<'EOF'
 Usage: install.sh [--yes] [--dir PATH]
 
-Temporarily install Lacuna Shell from GitHub while AUR publishing is
-unavailable.
+Install or refresh Lacuna Shell from the official GitHub source checkout.
+Use this as an alternative to the published AUR package.
 
 Options:
   --yes, -y    Skip the bootstrap confirmation.
@@ -65,7 +65,7 @@ done
 [[ ${EUID:-$(id -u)} -ne 0 ]] || fail "run this as your normal user, not root"
 command -v omarchy >/dev/null 2>&1 || fail "Omarchy is required"
 
-printf '\nLacuna temporary source installer\n\n'
+printf '\nLacuna source installer\n\n'
 printf '  Required packages: git, Python, Qt Multimedia\n'
 printf '  Feature packages:  mpv, yt-dlp, ImageMagick\n'
 printf '  Source:            %s\n' "$repo_url"

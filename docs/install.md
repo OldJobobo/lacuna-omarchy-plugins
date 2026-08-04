@@ -1,225 +1,41 @@
-# Install And Update
+# Install and update
 
-Status: reference
+Status: compatibility entry point
 
-Lacuna Omarchy Plugins installs into Omarchy's normal plugin system. The repo
-contains top-level `lacuna.*` plugin directories because Omarchy's repo-source
-installer scans only top-level folders that contain a `manifest.json`.
+The user installation documentation has moved into task-oriented guides:
 
-## Installer
+- [Requirements](getting-started/requirements.md)
+- [Install Lacuna](getting-started/installation.md)
+- [First-run tour](getting-started/first-run.md)
+- [Upgrade Lacuna](getting-started/upgrading.md)
+- [Reset and recovery](operations/reset-and-recovery.md)
+- [Uninstall](operations/uninstall.md)
 
-Run the Lacuna helper for a menu-driven setup:
-
-```bash
-./scripts/lacuna
-```
-
-This works from either a Git clone or a downloaded and extracted repository
-archive. A clone uses the local checkout as its Omarchy plugin source; an
-archive automatically registers the official GitHub repository as `lacuna`.
-
-The first screen offers:
-
-- Full Lacuna install
-- Custom install
-- Update installed Lacuna plugins
-- Reset Lacuna to omakase defaults
-- Uninstall Lacuna
-- Status
-
-Full install is the canonical omakase path. Its checked inventory contains all
-46 supported roots, including experimental plugins and both media plugins, and
-excludes deprecated `lacuna.compact-pill`. It activates the Lacuna bar plus all
-applicable menu, persistent service, and overlay entries, while the exact
-canonical layout places only its curated bar widgets. Providers without
-credentials remain disabled or visibly unavailable rather than breaking media
-or the shell. Custom profiles remain an advanced development/recovery path.
-
-## Scripted Installs
-
-```bash
-./scripts/lacuna install
-./scripts/lacuna install --profile core
-./scripts/lacuna install --profile native --activate
-./scripts/lacuna install --plugin lacuna.clock,lacuna.weather
-```
-
-Preview the normal omakase install without changing the system:
-
-```bash
-./scripts/lacuna install --dry-run
-```
-
-The installer performs a dependency preflight before staging. A non-dry-run
-preserves the current `shell.json` and Lacuna `settings.json` under
-`${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/lacuna/backups/`, stages each plugin through a temporary
-directory, and retains the previous installed copy as a hidden plugin backup.
-If validation, rescan, or shell activation fails, the staged copies and shell
-configuration are restored and the previous shell is reloaded. Mutating
-installer commands are serialized through a per-user transaction lock, and
-configuration/plugin staging uses operation-owned temporary paths.
-
-Stage a full install without enabling it:
-
-```bash
-./scripts/lacuna install --profile full --no-activate --keep-layout
-```
-
-## Temporary Source Bootstrap
-
-While AUR publishing is unavailable, the public bootstrap provides the normal
-full-profile experience without exposing the multi-step source workflow:
-
-```bash
-( f="$(mktemp)" && trap 'rm -f "$f"' EXIT && curl -fsSL https://raw.githubusercontent.com/OldJobobo/lacuna-shell/refs/heads/master/install.sh -o "$f" && bash "$f" )
-```
-
-The command downloads the script to a temporary file and runs it only when the
-download succeeds. The script previews the required and optional feature
-packages, official source, checkout path, and selected profile before asking
-for confirmation. It keeps a verified checkout at
-`${XDG_DATA_HOME:-$HOME/.local/share}/lacuna-shell`, refuses dirty or divergent
-existing checkouts, and reinstalls the full profile so reruns refresh the live
-plugin payloads.
-
-## Arch Linux And AUR Packages
-
-The repository maintains the `lacuna-shell` AUR recipe in
-`packaging/aur/`. Approved beta, RC, and stable releases are published to the
-same AUR package after their immutable GitHub release exists and the package
-lifecycle gate passes. Upstream `0.1.0-beta.3` maps to Arch
-`0.1.0beta.3`, which correctly upgrades through RC versions to stable `0.1.0`.
-Install it through Omarchy's AUR package workflow:
+The recommended package path is:
 
 ```bash
 omarchy pkg aur add lacuna-shell
+lacuna-shell
 ```
 
-The package requires `omarchy` and `quickshell` providers, Python, and Qt
-Multimedia, places the versioned payload under `/usr/share/lacuna-shell`, and
-provides the `lacuna-shell` command; package installation itself never edits a
-user's Omarchy configuration.
+Choose **Full Lacuna install** for the normal, canonical setup. The package
+places the versioned payload on disk; the guided installer previews, snapshots,
+stages, validates, activates, and reloads the user shell.
 
-Choose a profile after installing the package:
+Inspect the plan without changing anything:
 
 ```bash
-lacuna-shell install --profile full
+lacuna-shell install --dry-run
 ```
 
-After updating packages through Omarchy, explicitly copy the new payload into
-the active Omarchy plugin installation:
+Advanced profile, individual-plugin, manual source, and recovery options are
+listed by the executable itself:
 
 ```bash
-omarchy update
-lacuna-shell update --yes
+lacuna-shell install --help
+lacuna-shell uninstall --help
 ```
 
-This explicit step preserves the installer's snapshots, validation, and
-rollback behavior instead of mutating user state from a pacman transaction.
-See `packaging/aur/README.md` for the maintainer publication procedure.
-
-## Diagnostics
-
-```bash
-lacuna-shell status
-```
-
-Status reports Omarchy and Quickshell host versions, host/runtime paths, shell
-and settings-schema health, sidebar monitor policy, the last installer failure
-phase and recovery commands, and missing, disabled, or stale core plugins.
-
-## Update
-
-Update already-installed Lacuna plugins from this checkout:
-
-```bash
-./scripts/lacuna update --dry-run
-./scripts/lacuna update --yes
-./scripts/lacuna update --plugin lacuna.menu,lacuna.state --yes
-```
-
-Updates are transactional at the plugin-batch level. A failed rescan restores
-all plugins touched by that update, while the state snapshots remain available
-for manual recovery.
-
-## Safe Reset
-
-```bash
-./scripts/lacuna reset --dry-run
-./scripts/lacuna reset
-```
-
-Reset first requires all 46 canonical omakase plugin roots to be present in the
-installed plugin directory; dry-run enforces the same preflight. If roots are
-missing, install the complete profile with `./scripts/lacuna install --yes`
-before resetting. Reset then snapshots `shell.json` and `settings.json`,
-validates the checked profile and both inputs, atomically replaces each file,
-and reloads exactly once. It is
-transactional for handled write and reload failures: either failure restores
-exact prior bytes and modes. An abrupt process or power loss between the two
-file replacements can leave only one file updated; cross-file journaling is
-outside this safe-reset scope. Reset owns
-`bar.id`, `bar.layout`, `bar.centerAnchor`, `bar.transparent`, canonical Lacuna
-plugin activation, and the presentation/runtime branches listed in
-`config/omakase-profile.json`. Direct external state files are captured before
-reload and restored byte-for-byte if shell shutdown or startup rewrites them.
-It preserves credentials, provider settings, media-player preferences,
-favorites, queue/history, auth and reminder files,
-preferred/custom apps, unrelated plugin entries, other bar keys, and unknown
-JSON-safe fields. Media-player preferences remain preserved because they are
-mirrored into `media-player.json`; resetting only the settings copy would let
-shell shutdown overwrite otherwise preserved media state. Reset
-never changes installed plugin copies and deliberately has no purge mode.
-
-## Uninstall
-
-```bash
-./scripts/lacuna uninstall --all
-./scripts/lacuna uninstall --plugin lacuna.clock,lacuna.weather
-./scripts/lacuna uninstall --all --purge-state
-```
-
-Selective uninstall refuses to remove a plugin while another installed Lacuna
-plugin requires it. Review the printed reverse dependency closure and pass
-`--cascade` only when those dependent plugins should be removed too.
-
-## Manual Omarchy Source Install
-
-If you prefer to use Omarchy's plugin commands directly, add this repository as
-a trusted plugin source:
-
-```bash
-omarchy plugin source add <repo-url> --as lacuna
-omarchy plugin available
-omarchy plugin add lacuna.clock --from lacuna --enable --yes
-```
-
-Bar widgets are placed in `bar.layout`; use `omarchy bar plugin add <id>` or
-copy `config/shell.lacuna-native-replacements.example.json` into
-`~/.config/omarchy/shell.json` as a starting point.
-
-`lacuna.bar` is a full Omarchy bar option rather than a bar widget. Activate it
-with:
-
-```bash
-omarchy bar use lacuna.bar
-```
-
-Reset only the active bar host to Omarchy's stock bar with:
-
-```bash
-omarchy bar reset
-```
-
-That command preserves the current bar layout. Use `omarchy bar defaults` only
-when you intentionally want the broader packaged default layout too.
-
-For a live checkout deploy during development, use the same verified workflow:
-
-```bash
-./scripts/dev deploy --all --only-changed --dry-run
-./scripts/dev deploy --all --only-changed
-```
-
-The developer deploy also keeps prior plugin copies and restores them if the
-rescan, shell restart, or installed-copy verification fails.
+Maintainers should use the [release workflow](development/release.md) and
+[AUR packaging runbook](https://github.com/OldJobobo/lacuna-shell/tree/master/packaging/aur)
+rather than this user entry point.

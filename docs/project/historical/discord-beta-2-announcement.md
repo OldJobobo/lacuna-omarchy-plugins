@@ -1,3 +1,11 @@
+# Beta.2 Discord announcement
+
+Status: historical publication copy — not current installation guidance
+
+This message is preserved as the Discord follow-up used for the
+`0.1.0-beta.2` release. Use the current [installation guide](../../getting-started/installation.md)
+for installation and AUR status.
+
 ## Lacuna Shell beta is live 🎉
 
 I’m excited to share **Lacuna Shell `v0.1.0-beta.2`** — a complete visual shell for Omarchy featuring:

@@ -53,7 +53,8 @@ focus traversal, and screen-reader coverage are deferred because they require a
 design-wide interaction model rather than piecemeal shortcuts. Existing bounded
 focus behavior remains supported: intentional text entry, Escape and click-away
 dismissal, and already-shipped semantic metadata must not regress. This matches
-the beta boundary in [`../roadmap.md`](../roadmap.md).
+the beta boundary in the repository's
+[project roadmap](https://github.com/OldJobobo/lacuna-shell/blob/master/docs/roadmap.md).
 
 ## How this lives in the code
 

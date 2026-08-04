@@ -1,64 +1,76 @@
-# Lacuna Documentation
+# Lacuna documentation portal
 
-Status: reference
+Status: audience map
 
-This directory is split by document intent:
+The published documentation begins at [`docs/index.md`](index.md). It is written
+for people using the complete Lacuna shell and follows a task-first journey.
 
-- Current user/project documentation stays at the root of `docs/`.
-- Stable architecture references live in `docs/architecture/`.
-- Plugin catalog and install grouping lives in `docs/plugins/`.
-- Contributor workflow documentation lives in `docs/development/`.
-- Design-language specifications live in `docs/lacuna-design-system/`.
-- UI reference captures live in `docs/screenshots/reference/`.
-- Project roadmap and issue grouping live in `roadmap.md` and `issues.md`.
-- Implementation plans, migration notes, historical trackers, and superseded
-  design notes live in `docs/plans/`.
+## Use Lacuna
 
-## Reading Paths
+1. [Start here](getting-started/index.md)
+2. [Install Lacuna](getting-started/installation.md)
+3. [Take the first-run tour](getting-started/first-run.md)
+4. [Choose the right settings surface](configuration/index.md)
+5. [Learn the main features](guides/sidebar-and-launchers.md)
+6. [Update safely](getting-started/upgrading.md)
+7. [Troubleshoot or recover](help/troubleshooting.md)
+8. [Get support](help/support.md)
 
-For users:
+User content lives in:
 
-1. [Install And Update](./install.md)
-2. [Configuration](./configuration.md)
-3. [Plugin Catalog](./plugins/README.md)
+- `getting-started/`
+- `guides/`
+- `configuration/`
+- `operations/`
+- `help/`
+- `releases/`
 
-For maintainers:
+`install.md` and `configuration.md` remain concise compatibility entry points
+for older inbound links; they are not independent copies of current guidance.
 
-1. [Roadmap](./roadmap.md)
-2. [Issue Map](./issues.md)
-3. [Architecture Overview](./architecture/overview.md)
-4. [Plugin Contracts](./architecture/plugin-contracts.md)
-5. [Services And State](./architecture/services-and-state.md)
-6. [Focus And Input Contract](./architecture/focus-and-input.md)
-7. [Performance Ownership And Measurement](./architecture/performance.md)
-8. [Quattro Compatibility Ledger](./architecture/quattro-compatibility.md)
-9. [Testing](./development/testing.md)
-10. [Release Workflow](./development/release.md)
+## Develop Lacuna
 
-For design work:
+Contributor and implementation authority remains separate from user guidance:
 
-1. [Lacuna Design Language](./lacuna-design-system/README.md)
-2. [UI Reference Screenshots](./screenshots/reference/README.md)
+- [Contributor setup](development/setup.md)
+- [Testing](development/testing.md)
+- [Developer troubleshooting](development/troubleshooting.md)
+- [Release workflow](development/release.md)
+- [Architecture overview](architecture/overview.md)
+- [Plugin contracts](architecture/plugin-contracts.md)
+- [Services and state](architecture/services-and-state.md)
+- [Omarchy integration](architecture/omarchy-integration.md)
+- [Compatibility ledger](architecture/quattro-compatibility.md)
+- [Plugin inventory](plugins/README.md)
 
-For historical context:
+## Design Lacuna
 
-1. [Plans And Historical Notes](./plans/README.md)
+- [Design-language entry point](lacuna-design-system/README.md)
+- [Current UI reference captures](screenshots/reference/README.md)
 
-## Current References
+The design system is an implementation contract. User feature guides explain
+outcomes and controls rather than repeating its geometry internals.
 
-- `install.md`: install, update, uninstall, and manual source workflows.
-- `configuration.md`: Omarchy shell settings and Lacuna runtime state.
-- `roadmap.md`: current project priorities and operating cadence.
-- `issues.md`: GitHub issue grouping, labels, and milestone mapping.
-- `architecture/`: current architecture, plugin contracts, Omarchy
-  integration policy, and the Quattro compatibility ledger.
-- `plugins/`: plugin catalog, install groups, and manifest metadata.
-- `development/`: local setup, testing, troubleshooting, and release notes.
-- `lacuna-design-system/`: authored Lacuna design language.
-- `screenshots/reference/`: live UI reference screenshots and capture notes.
+## Project history and evidence
 
-## Plans And Trackers
+The following material is retained for maintainers but intentionally excluded
+from the primary published navigation and search:
 
-Use `plans/README.md` as the complete lifecycle index. Store plans under
-`plans/active/`, `plans/proposed/`, `plans/completed/`, or `plans/archive/`;
-do not add `*-plan.md` files directly to `docs/` or `docs/plans/`.
+- [Roadmap](roadmap.md)
+- [Issue map](issues.md)
+- [Plan lifecycle index](plans/README.md)
+- `benchmarks/`
+- `project/historical/`
+- `screenshots/reference/`
+
+Plans belong only under `plans/active/`, `plans/proposed/`,
+`plans/completed/`, or `plans/archive/`. Update `plans/README.md` whenever a
+plan changes lifecycle.
+
+## Documentation source boundaries
+
+Current facts come from machine-readable or executable authorities wherever
+possible: `VERSION`, `CHANGELOG.md`, `scripts/lacuna`,
+`config/omakase-profile.json`, `config/quattro-compatibility.json`, and plugin
+manifests. User prose summarizes those sources; it must not invent another
+version, command, plugin count, default, or support range.

@@ -1,0 +1,287 @@
+/* Lacuna documentation: form carries identity; the active mode owns hue. */
+@font-face {
+  font-family: "Lacuna Hack";
+  src: url("../fonts/Hack-Regular.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Lacuna Tektur";
+  src: url("../fonts/Tektur-SemiBold.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 600;
+}
+
+:root {
+  --md-text-font: "Lacuna Hack";
+  --md-code-font: "Lacuna Hack";
+  --md-text-font-family: "Lacuna Hack", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --md-code-font-family: "Lacuna Hack", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
+[data-md-color-scheme="default"] {
+  --lacuna-field: #f4f4f1;
+  --lacuna-plate: #ffffff;
+  --lacuna-ink: #171918;
+  --lacuna-whisper: #555a57;
+  --lacuna-seam: rgba(23, 25, 24, 0.2);
+  --lacuna-void: rgba(23, 25, 24, 0.055);
+  --md-primary-fg-color: var(--lacuna-ink);
+  --md-primary-bg-color: var(--lacuna-plate);
+  --md-accent-fg-color: var(--lacuna-ink);
+  --md-default-bg-color: var(--lacuna-field);
+  --md-default-fg-color: var(--lacuna-ink);
+  --md-default-fg-color--light: var(--lacuna-whisper);
+  --md-typeset-a-color: var(--lacuna-ink);
+}
+
+[data-md-color-scheme="slate"] {
+  --lacuna-field: #101315;
+  --lacuna-plate: #171b1d;
+  --lacuna-ink: #e5e8e5;
+  --lacuna-whisper: #abb2ad;
+  --lacuna-seam: rgba(229, 232, 229, 0.2);
+  --lacuna-void: rgba(0, 0, 0, 0.22);
+  --md-primary-fg-color: var(--lacuna-plate);
+  --md-primary-bg-color: var(--lacuna-ink);
+  --md-accent-fg-color: var(--lacuna-ink);
+  --md-default-bg-color: var(--lacuna-field);
+  --md-default-fg-color: var(--lacuna-ink);
+  --md-default-fg-color--light: var(--lacuna-whisper);
+  --md-typeset-a-color: var(--lacuna-ink);
+}
+
+html {
+  scrollbar-color: var(--lacuna-seam) var(--lacuna-field);
+}
+
+body {
+  font-family: var(--md-text-font-family);
+}
+
+body,
+.md-container,
+.md-main {
+  background: var(--lacuna-field);
+}
+
+.md-header {
+  background: var(--lacuna-plate);
+  border-bottom: 1px solid var(--lacuna-seam);
+  box-shadow: none;
+}
+
+[data-md-color-scheme="slate"] .md-logo img {
+  filter: invert(1);
+}
+
+.md-tabs {
+  background: var(--lacuna-plate);
+  border-bottom: 1px solid var(--lacuna-seam);
+}
+
+.md-sidebar--primary .md-sidebar__scrollwrap {
+  border-right: 1px solid var(--lacuna-seam);
+}
+
+.md-nav__link--active,
+.md-nav__link:focus,
+.md-nav__link:hover,
+.md-typeset a:focus,
+.md-typeset a:hover {
+  color: var(--lacuna-ink);
+  text-decoration-color: currentColor;
+}
+
+.md-nav__link--active {
+  position: relative;
+  font-weight: 700;
+}
+
+.md-nav__link--active::before {
+  position: absolute;
+  top: 0.2rem;
+  bottom: 0.2rem;
+  left: -0.8rem;
+  width: 0.22rem;
+  content: "";
+  background: currentColor;
+}
+
+.md-typeset {
+  font-size: 0.76rem;
+  line-height: 1.72;
+}
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-header__title {
+  font-family: "Lacuna Tektur", "Arial Narrow", ui-sans-serif, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.045em;
+}
+
+.md-typeset h1 {
+  max-width: 24ch;
+  color: var(--lacuna-ink);
+  margin-bottom: 1.4rem;
+  font-size: clamp(2.15rem, 4vw, 3.2rem);
+  line-height: 1.02;
+}
+
+.md-typeset h2 {
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--lacuna-seam);
+}
+
+.md-typeset a {
+  text-decoration: underline;
+  text-decoration-color: var(--lacuna-seam);
+  text-underline-offset: 0.2em;
+}
+
+.md-typeset code,
+.md-typeset pre > code {
+  background: var(--lacuna-void);
+}
+
+.md-typeset .admonition,
+.md-typeset details,
+.md-typeset table:not([class]) {
+  background: var(--lacuna-plate);
+  border: 1px solid var(--lacuna-seam);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.md-typeset .admonition-title,
+.md-typeset summary {
+  background: var(--lacuna-void);
+  border-bottom: 1px solid var(--lacuna-seam);
+}
+
+.lacuna-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  align-items: end;
+  margin: 0 0 3rem;
+  padding: clamp(1.25rem, 4vw, 2.6rem) 0 0 clamp(1.25rem, 4vw, 2.6rem);
+  border-left: 0.3rem solid var(--lacuna-ink);
+  border-bottom: 1px solid var(--lacuna-seam);
+}
+
+.lacuna-hero::before {
+  position: absolute;
+  top: 0;
+  left: -0.3rem;
+  width: min(6rem, 22vw);
+  height: 1px;
+  content: "";
+  background: var(--lacuna-ink);
+}
+
+.lacuna-hero__copy {
+  padding-bottom: clamp(1.5rem, 4vw, 3rem);
+}
+
+.lacuna-hero__eyebrow {
+  margin: 0 0 1rem;
+  color: var(--lacuna-whisper);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.lacuna-hero__title {
+  margin: 0;
+}
+
+.lacuna-hero__lede {
+  max-width: 44ch;
+  color: var(--lacuna-whisper);
+  font-size: 0.9rem;
+}
+
+.lacuna-hero__status {
+  margin: 1.25rem 0;
+  color: var(--lacuna-ink);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.lacuna-hero__image {
+  display: block;
+  width: 100%;
+  border-top: 1px solid var(--lacuna-seam);
+  border-left: 1px solid var(--lacuna-seam);
+}
+
+.lacuna-paths {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--lacuna-seam);
+  border-left: 1px solid var(--lacuna-seam);
+}
+
+.lacuna-paths > section {
+  min-width: 0;
+  padding: 1.2rem;
+  background: var(--lacuna-plate);
+  border-right: 1px solid var(--lacuna-seam);
+  border-bottom: 1px solid var(--lacuna-seam);
+}
+
+.lacuna-paths h3 {
+  margin-top: 0;
+}
+
+.md-typeset .md-button {
+  color: var(--lacuna-ink);
+  border-color: var(--lacuna-seam);
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.md-typeset .md-button--primary {
+  color: var(--lacuna-field);
+  background: var(--lacuna-ink);
+  border-color: var(--lacuna-ink);
+}
+
+*:focus-visible {
+  outline: 3px solid var(--lacuna-ink);
+  outline-offset: 3px;
+}
+
+@media (max-width: 52rem) {
+  .lacuna-hero {
+    grid-template-columns: 1fr;
+    padding-right: 0;
+  }
+
+  .lacuna-paths {
+    grid-template-columns: 1fr;
+  }
+
+  .md-typeset h1 {
+    font-size: clamp(2rem, 14vw, 3.4rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

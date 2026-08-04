@@ -1,8 +1,12 @@
 # Lacuna Suite Polish Review
 
-Status: strategic review
+Status: historical review — recommendations may be implemented or superseded
 
-Date: 2026-07-17
+This review is retained as project evidence. Current user guidance begins at
+[`docs/index.md`](../../index.md), and current priorities remain in the
+[project roadmap](../../roadmap.md).
+
+Original review date: 2026-07-17
 
 ## Executive Verdict
 

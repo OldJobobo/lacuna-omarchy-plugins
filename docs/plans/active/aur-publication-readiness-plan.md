@@ -1,11 +1,11 @@
 # AUR Publication Readiness Plan
 
-Status: readiness tooling implemented and validated 2026-07-21; first beta publication pending release gate
+Status: readiness tooling implemented; beta.3 published; future release updates remain gated
 
 ## Goal
 
 Make Lacuna reproducibly buildable, inspectable, and publishable as an Arch
-package without creating a Git tag, GitHub release, AUR repository, or AUR
+package while preventing any future Git tag, GitHub release, AUR update, or AUR
 submission before the corresponding beta, RC, or stable candidate is approved.
 
 ## Policy
@@ -66,8 +66,9 @@ submission before the corresponding beta, RC, or stable candidate is approved.
 
 ## Publication Stop Conditions
 
-Do not tag, create a GitHub release, create/push an AUR repository, or submit a
-package until explicitly approved. Do not publish if the source checksum is
+Beta.3 has already been published. For every future update, do not tag, create a
+GitHub release, push the AUR repository, or submit a package until explicitly
+approved. Do not publish if the source checksum is
 `SKIP`, package ownership is unavailable, `.SRCINFO` drifts, the worktree is
 unreviewed, compatibility requires review, or clean-chroot/package/live smoke,
 rollback, uninstall, or stock-bar recovery fails.

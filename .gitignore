@@ -8,6 +8,8 @@ htmlcov/
 dist/
 .venv/
 venv/
+site/
+.pi-subagents/
 
 # Local tool versions
 mise.toml

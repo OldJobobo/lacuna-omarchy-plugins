@@ -16,17 +16,20 @@ class DocsContractTests(unittest.TestCase):
             self.assertIn(name, design)
         self.assertIn("[design-system entry point](DESIGN.md)", readme)
 
-    def test_aur_policy_publishes_approved_beta_rc_and_stable_versions(self):
+    def test_aur_policy_and_user_install_path_are_current(self):
         release = (ROOT / "docs/development/release.md").read_text(encoding="utf-8")
-        install = (ROOT / "docs/install.md").read_text(encoding="utf-8")
+        user_install = (ROOT / "docs/getting-started/installation.md").read_text(encoding="utf-8")
+        release_notes = (ROOT / "docs/releases/index.md").read_text(encoding="utf-8")
         package = (ROOT / "packaging/aur/README.md").read_text(encoding="utf-8")
         submission = (ROOT / "packaging/aur/SUBMISSION.md").read_text(encoding="utf-8")
-        for text in [release, install, package, submission]:
+        for text in [release, package, submission]:
             self.assertIn("beta", text)
             self.assertIn("RC", text)
             self.assertIn("stable", text)
         self.assertIn("0.1.0beta.3", release)
-        self.assertIn("0.1.0beta.3", install)
+        self.assertIn("0.1.0beta.3", release_notes)
+        self.assertIn("omarchy pkg aur add lacuna-shell", user_install)
+        self.assertIn("package is published and installable", user_install)
         self.assertIn("single", submission)
         self.assertIn("`lacuna-shell` AUR package", submission)
         self.assertNotIn("GitHub prereleases only", package)
@@ -42,11 +45,39 @@ class DocsContractTests(unittest.TestCase):
 
     def test_docs_have_status_markers(self):
         for path in sorted((ROOT / "docs").glob("*.md")):
-            head = "\n".join(path.read_text(encoding="utf-8").splitlines()[:8])
+            head = "\n".join(path.read_text(encoding="utf-8").splitlines()[:20])
             self.assertIn("Status:", head, str(path.relative_to(ROOT)))
 
     def test_first_class_docs_structure_exists(self):
-        for name in [
+        user_pages = [
+            "docs/index.md",
+            "docs/getting-started/index.md",
+            "docs/getting-started/requirements.md",
+            "docs/getting-started/installation.md",
+            "docs/getting-started/first-run.md",
+            "docs/getting-started/upgrading.md",
+            "docs/guides/sidebar-and-launchers.md",
+            "docs/guides/bar-and-widgets.md",
+            "docs/guides/appearance-and-themes.md",
+            "docs/guides/media-player.md",
+            "docs/guides/desktop-ambience.md",
+            "docs/guides/multiple-monitors.md",
+            "docs/configuration/index.md",
+            "docs/configuration/lacuna-settings.md",
+            "docs/configuration/omarchy-settings.md",
+            "docs/configuration/advanced-state-files.md",
+            "docs/operations/reset-and-recovery.md",
+            "docs/operations/uninstall.md",
+            "docs/operations/restore-stock-omarchy.md",
+            "docs/help/troubleshooting.md",
+            "docs/help/compatibility.md",
+            "docs/help/known-limitations.md",
+            "docs/help/faq.md",
+            "docs/help/support.md",
+            "docs/releases/index.md",
+            "docs/releases/migration-notes.md",
+        ]
+        technical_references = [
             "docs/README.md",
             "docs/install.md",
             "docs/configuration.md",
@@ -63,8 +94,163 @@ class DocsContractTests(unittest.TestCase):
             "docs/plugins/menu.md",
             "docs/plugins/widgets.md",
             "docs/plugins/overlays.md",
-        ]:
+        ]
+        for name in [*user_pages, *technical_references, "mkdocs.yml", "docs/requirements.txt", ".github/workflows/docs.yml"]:
             self.assertTrue((ROOT / name).exists(), name)
+
+        mkdocs = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+        for name in user_pages:
+            self.assertIn(name.removeprefix("docs/"), mkdocs, name)
+        exclusion_block = mkdocs.split("nav:", 1)[0]
+        for excluded in [
+            "/configuration.md",
+            "/install.md",
+            "/requirements.txt",
+            "plans/**",
+            "project/historical/**",
+        ]:
+            self.assertIn(excluded, exclusion_block)
+        self.assertNotIn("navigation.sections", mkdocs)
+        self.assertIn("assets/javascripts/accessibility.js", mkdocs)
+
+        workflow = (ROOT / ".github/workflows/docs.yml").read_text(encoding="utf-8")
+        self.assertIn("mkdocs build --strict", workflow)
+        self.assertIn("python scripts/check_docs_links.py site --site-prefix /lacuna-shell/", workflow)
+        top_permissions = workflow.split("jobs:", 1)[0]
+        self.assertIn("contents: read", top_permissions)
+        self.assertNotIn("pages: write", top_permissions)
+        self.assertNotIn("id-token: write", top_permissions)
+
+    def test_user_docs_use_current_release_and_aur_truth(self):
+        user_paths = [ROOT / "README.md", ROOT / "docs/index.md"]
+        for directory in ["getting-started", "guides", "configuration", "operations", "help", "releases"]:
+            user_paths.extend(sorted((ROOT / "docs" / directory).glob("*.md")))
+
+        current_version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+        combined = "\n".join(path.read_text(encoding="utf-8") for path in user_paths)
+        self.assertIn(current_version, combined)
+        self.assertIn("omarchy pkg aur add lacuna-shell", combined)
+        for stale in [
+            "AUR publishing is unavailable",
+            "preparing for its first public beta",
+            "currently report the `0.1.0-beta.1` candidate",
+            "AUR maintenance",
+            "maintainer SSH pushes",
+            "pushes were temporarily paused",
+            "pushes are temporarily paused",
+        ]:
+            self.assertNotIn(stale.lower(), combined.lower())
+        self.assertNotIn("AUR publishing is\nunavailable", (ROOT / "install.sh").read_text(encoding="utf-8"))
+
+    def test_user_safety_facts_match_runtime_contracts(self):
+        reviewed_omarchy = "4.0.0.r1438.g9b693cc-1"
+        reviewed_quickshell = "0.3.0.r18.g10b439f-3"
+        for relative in ["README.md", "docs/getting-started/requirements.md", "docs/help/compatibility.md"]:
+            text = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn(reviewed_omarchy, text, relative)
+            self.assertIn(reviewed_quickshell, text, relative)
+            self.assertNotIn("current Omarchy installation", text, relative)
+
+        requirements = (ROOT / "docs/getting-started/requirements.md").read_text(encoding="utf-8")
+        self.assertIn("Do not update Omarchy solely to install Lacuna", requirements)
+        self.assertNotIn("Finish any pending Omarchy update", requirements)
+
+        installation = (ROOT / "docs/getting-started/installation.md").read_text(encoding="utf-8")
+        self.assertIn("`shell.json`", installation)
+        self.assertIn("`settings.json`", installation)
+        self.assertNotIn("and Lacuna state,", installation)
+
+        upgrading = (ROOT / "docs/getting-started/upgrading.md").read_text(encoding="utf-8")
+        for phrase in ["Do not update\nthe host solely for Lacuna", "changed\ninstalled plugin copies", "rescan plugins", "restores the touched plugin copies", "omarchy restart shell"]:
+            self.assertIn(phrase, upgrading)
+        self.assertIn("does\nnot mutate or roll back `shell.json`", upgrading)
+        self.assertNotIn("restores the touched plugin\ncopies and shell configuration", upgrading)
+
+        uninstall = (ROOT / "docs/operations/uninstall.md").read_text(encoding="utf-8")
+        for phrase in ["packaged bar host", "packaged bar\nlayout", "replacing the current bar composition", "`omarchy bar reset`"]:
+            self.assertIn(phrase, uninstall)
+        self.assertIn("preserves the current layout", uninstall)
+
+        media = (ROOT / "docs/guides/media-player.md").read_text(encoding="utf-8")
+        self.assertIn("server URL and API key", media)
+        self.assertIn("advanced `userId` field is optional", media)
+        self.assertNotIn("server URL, API key, and user ID", media)
+
+        xdg_media_path = "${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/lacuna/media-player.json"
+        for relative in ["docs/configuration.md", "docs/configuration/advanced-state-files.md"]:
+            self.assertIn(xdg_media_path, (ROOT / relative).read_text(encoding="utf-8"), relative)
+
+    def test_docs_assets_and_accessibility_contracts(self):
+        for relative in [
+            "docs/assets/fonts/Hack-Regular.ttf",
+            "docs/assets/fonts/Hack-LICENSE.txt",
+            "docs/assets/fonts/Tektur-SemiBold.ttf",
+            "docs/assets/fonts/Tektur-OFL.txt",
+            "docs/assets/javascripts/accessibility.js",
+            "scripts/check_docs_links.py",
+        ]:
+            path = ROOT / relative
+            self.assertTrue(path.is_file(), relative)
+            self.assertGreater(path.stat().st_size, 0, relative)
+
+        css = (ROOT / "docs/assets/stylesheets/lacuna.css").read_text(encoding="utf-8")
+        for phrase in [
+            '@font-face',
+            'font-display: swap',
+            '[data-md-color-scheme="default"]',
+            '[data-md-color-scheme="slate"] .md-logo img',
+            '--md-text-font: "Lacuna Hack"',
+            'font-family: "Lacuna Tektur"',
+        ]:
+            self.assertIn(phrase, css)
+
+        javascript = (ROOT / "docs/assets/javascripts/accessibility.js").read_text(encoding="utf-8")
+        for phrase in [
+            '.md-header__button[for="__drawer"]',
+            '.md-header__button[for="__search"]',
+            'setAttribute("role", "button")',
+            'setAttribute("tabindex", "0")',
+            'setAttribute("aria-expanded"',
+            'event.key !== "Enter"',
+            'event.key !== " "',
+        ]:
+            self.assertIn(phrase, javascript)
+
+        home = (ROOT / "docs/index.md").read_text(encoding="utf-8")
+        self.assertIn('<div class="lacuna-hero" markdown="1">', home)
+        self.assertIn("# The desktop lives in the seam.", home)
+        self.assertIn("Beta 3</strong> · check compatibility before installing", home)
+        self.assertLess(home.index("[Start here]"), home.index("[Installation]"))
+        self.assertNotIn("## Where to go next", home)
+
+    def test_user_documentation_plan_is_active_and_indexed_once(self):
+        relative = "active/lacuna-user-documentation-plan.md"
+        plan = (PLANS / relative).read_text(encoding="utf-8")
+        index = (PLANS / "README.md").read_text(encoding="utf-8")
+        self.assertIn("Status: active", "\n".join(plan.splitlines()[:8]))
+        self.assertEqual(1, index.count(f"(./{relative})"))
+        for heading in [
+            "## Source Of Truth",
+            "## Migration Map",
+            "## Delivery Phases",
+            "## Documentation Quality Gates",
+            "## Acceptance Criteria",
+        ]:
+            self.assertIn(heading, plan)
+
+    def test_stale_publication_material_is_historical(self):
+        old_paths = [
+            ROOT / "docs/discord-beta-announcement.md",
+            ROOT / "docs/lacuna-suite-polish-review.md",
+        ]
+        self.assertTrue(all(not path.exists() for path in old_paths))
+        historical = [
+            ROOT / "docs/project/historical/discord-beta-2-announcement.md",
+            ROOT / "docs/project/historical/lacuna-suite-polish-review.md",
+        ]
+        for path in historical:
+            head = "\n".join(path.read_text(encoding="utf-8").splitlines()[:10])
+            self.assertIn("Status: historical", head)
 
     def test_plan_docs_are_separated_from_reference_docs(self):
         root_plan_docs = sorted((ROOT / "docs").glob("*plan*.md"))
@@ -112,13 +298,13 @@ class DocsContractTests(unittest.TestCase):
 
     def test_lacuna_bar_docs_define_the_opaque_surface_contract(self):
         bar = (ROOT / "docs" / "plugins" / "bar.md").read_text(encoding="utf-8")
-        configuration = (ROOT / "docs" / "configuration.md").read_text(encoding="utf-8")
+        configuration = (ROOT / "docs" / "configuration" / "omarchy-settings.md").read_text(encoding="utf-8")
 
         self.assertIn("The Lacuna bar is deliberately opaque", bar)
         self.assertIn("normalizes `bar.transparent` to `false`", bar)
         self.assertIn("stock bar's double-click", bar)
         self.assertIn("transparency gesture is not part of the Lacuna bar contract", bar)
-        self.assertIn("writes `bar.transparent` as `false`", configuration)
+        self.assertIn("normalizes the host transparency setting to false", configuration)
 
     def test_completed_panel_and_frame_plans_are_not_left_active(self):
         for path in [
@@ -136,7 +322,7 @@ class DocsContractTests(unittest.TestCase):
         plans_index = (PLANS / "README.md").read_text(encoding="utf-8")
         historical_tracker = (PLANS / "archive" / "lacuna-suite-improvement-plan.md").read_text(encoding="utf-8")
 
-        self.assertIn("Status: active project control (updated 2026-07-16)", roadmap)
+        self.assertIn("Status: active project control (updated 2026-08-04)", roadmap)
         self.assertIn("`lacuna.bar` is the intentional custom bar host", roadmap)
         self.assertIn("P0 — Core foundation", roadmap)
         self.assertIn("P1 — Product integration", roadmap)
@@ -219,7 +405,7 @@ class DocsContractTests(unittest.TestCase):
         p1 = (PLANS / "active" / "quattro-p1-product-integration-plan.md").read_text(encoding="utf-8")
         closeout = (PLANS / "active" / "quattro-p1-closeout-execution-plan.md").read_text(encoding="utf-8")
         roadmap = (ROOT / "docs/roadmap.md").read_text(encoding="utf-8")
-        install = (ROOT / "docs/install.md").read_text(encoding="utf-8")
+        recovery = (ROOT / "docs/operations/reset-and-recovery.md").read_text(encoding="utf-8")
         catalog = (ROOT / "docs/plugins/README.md").read_text(encoding="utf-8")
         release = (ROOT / "docs/development/release.md").read_text(encoding="utf-8")
 
@@ -233,15 +419,15 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("no P1 workstream is complete by this record.", p1)
         self.assertIn("No P1 workstream is complete by this checkpoint.", closeout)
         self.assertIn("checked 46-root omakase profile", roadmap)
-        self.assertIn("reset\nnever changes installed plugin copies", install.lower())
+        self.assertIn("reset does not replace installed plugin payloads", recovery.lower())
         self.assertIn("Adding\na manifest cannot silently add it", catalog)
         self.assertIn("automatic backups, verified restoration capability", release)
         self.assertIn("no destructive rehearsal was run", release)
-        self.assertIn("all 46 canonical omakase plugin roots", install)
-        self.assertIn("./scripts/lacuna install --yes", install)
-        self.assertIn("atomically replaces each file", install)
-        self.assertIn("abrupt process or power loss between the two", install)
-        self.assertNotIn("atomically merges only reset-owned state", install)
+        self.assertIn("complete normal Lacuna plugin set", recovery)
+        self.assertIn("lacuna-shell install --profile full --reinstall --yes", recovery)
+        self.assertIn("replaced atomically", recovery)
+        self.assertIn("power loss between replacing `shell.json` and `settings.json`", recovery)
+        self.assertNotIn("atomically merges only reset-owned state", recovery)
 
     def test_quattro_compatibility_docs_match_reviewed_baseline(self):
         compatibility = json.loads((ROOT / "config" / "quattro-compatibility.json").read_text(encoding="utf-8"))
@@ -267,8 +453,7 @@ class DocsContractTests(unittest.TestCase):
 
     def test_current_docs_use_r1438_bar_commands(self):
         documents = {
-            "README.md": ROOT / "README.md",
-            "docs/install.md": ROOT / "docs/install.md",
+            "docs/operations/restore-stock-omarchy.md": ROOT / "docs/operations/restore-stock-omarchy.md",
             "docs/architecture/quattro-compatibility.md": ROOT / "docs/architecture/quattro-compatibility.md",
             "docs/plugins/README.md": ROOT / "docs/plugins/README.md",
             "docs/plugins/bar.md": ROOT / "docs/plugins/bar.md",
@@ -279,17 +464,14 @@ class DocsContractTests(unittest.TestCase):
             self.assertNotIn("omarchy plugin bar", text, name)
 
         for name in (
-            "README.md",
-            "docs/install.md",
+            "docs/operations/restore-stock-omarchy.md",
             "docs/architecture/quattro-compatibility.md",
             "docs/plans/proposed/lacuna-portrait-split-bar-plan.md",
         ):
             self.assertIn("omarchy bar reset", contents[name], name)
-        self.assertIn("omarchy bar plugin add <id>", contents["docs/install.md"])
-        self.assertIn("omarchy bar use lacuna.bar", contents["docs/install.md"])
         self.assertIn("omarchy bar use lacuna.bar", contents["docs/plugins/README.md"])
         self.assertIn("omarchy bar use lacuna.bar", contents["docs/plugins/bar.md"])
-        for name in ("README.md", "docs/install.md", "docs/architecture/quattro-compatibility.md"):
+        for name in ("docs/operations/restore-stock-omarchy.md", "docs/architecture/quattro-compatibility.md"):
             self.assertIn("omarchy bar defaults", contents[name], name)
 
     def test_beta_candidate_changelog_is_honest_and_scoped(self):

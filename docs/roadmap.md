@@ -1,6 +1,6 @@
 # Lacuna Quattro Roadmap
 
-Status: active project control (updated 2026-07-16)
+Status: active project control (updated 2026-08-04)
 
 This is the canonical roadmap for turning Lacuna into a first-class desktop
 enhancement for Omarchy Quattro. It is intentionally narrower than the full
@@ -78,12 +78,13 @@ the core shell is stabilized.
 
 ## Release Sequence
 
-The repository originally established the `0.1.0` line before preparing this
-`0.1.0-beta.1` candidate. Prereleases therefore use SemVer prerelease
-identifiers instead of moving backward to `0.0.1`:
+The repository established the `0.1.0` line before its public beta. Prereleases
+therefore use SemVer prerelease identifiers instead of moving backward to
+`0.0.1`:
 
-1. `0.1.0-beta.1` proves the supported product scope in real installs.
-2. Additional `0.1.0-beta.N` builds close defects found during beta.
+1. `0.1.0-beta.1` established the supported public-beta baseline.
+2. `0.1.0-beta.2` and `0.1.0-beta.3` shipped provider-resolution fixes found
+   during beta; additional `0.1.0-beta.N` builds may close further defects.
 3. `0.1.0-rc.1` freezes product scope and proves the release artifact.
 4. `0.1.0` promotes the verified RC lineage without feature additions.
 
@@ -155,9 +156,9 @@ Deliverables:
 
 Plan: [P2 Release And Evolution](plans/active/quattro-p2-release-and-evolution-plan.md)
 
-## `0.1.0-beta.1` Acceptance Gates
+## Historical `0.1.0-beta.1` Acceptance Baseline
 
-Beta is ready when:
+The first public beta used these gates as its acceptance baseline:
 
 - P0 remains green on the declared Omarchy/Quickshell pair.
 - Core settings have an inventory and deterministic persistence coverage.
@@ -249,6 +250,7 @@ true:
   suppressed in the bar and dimmed in the flyout. Claude currently reports both
   session and weekly windows through its authenticated usage endpoint. Both
   widgets restore a provider window automatically if it reappears.
-- The suite and all manifests currently report the `0.1.0-beta.1` candidate;
-  it is not publishable until the remaining beta gates and destructive artifact
-  rehearsal pass. The release line does not move backward to `0.0.1-beta`.
+- The suite and manifests currently report `0.1.0-beta.3`; the matching public
+  beta package is published and installable. P1 completion and destructive
+  lifecycle rehearsal remain separate project gates rather than claims that the
+  public beta has not shipped.

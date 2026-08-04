@@ -1,0 +1,122 @@
+site_name: Lacuna
+site_description: A connected visual shell for Omarchy
+site_url: https://oldjobobo.github.io/lacuna-shell/
+repo_url: https://github.com/OldJobobo/lacuna-shell
+repo_name: OldJobobo/lacuna-shell
+edit_uri: edit/master/docs/
+strict: true
+
+exclude_docs: |
+  /README.md
+  /configuration.md
+  /install.md
+  /issues.md
+  /requirements.txt
+  /roadmap.md
+  plans/**
+  benchmarks/**
+  project/historical/**
+  screenshots/reference/**
+
+nav:
+  - Welcome: index.md
+  - Getting started:
+      - Start here: getting-started/index.md
+      - Requirements: getting-started/requirements.md
+      - Installation: getting-started/installation.md
+      - First run: getting-started/first-run.md
+      - Upgrading: getting-started/upgrading.md
+  - Guides:
+      - Sidebar and launchers: guides/sidebar-and-launchers.md
+      - Bar and widgets: guides/bar-and-widgets.md
+      - Appearance and themes: guides/appearance-and-themes.md
+      - Media Player: guides/media-player.md
+      - Desktop ambience: guides/desktop-ambience.md
+      - Multiple monitors: guides/multiple-monitors.md
+  - Configuration:
+      - Overview: configuration/index.md
+      - Lacuna Settings: configuration/lacuna-settings.md
+      - Omarchy Settings: configuration/omarchy-settings.md
+      - Advanced state files: configuration/advanced-state-files.md
+  - Operations:
+      - Reset and recovery: operations/reset-and-recovery.md
+      - Uninstall: operations/uninstall.md
+      - Restore stock Omarchy: operations/restore-stock-omarchy.md
+  - Help:
+      - Troubleshooting: help/troubleshooting.md
+      - Compatibility: help/compatibility.md
+      - Known limitations: help/known-limitations.md
+      - FAQ: help/faq.md
+      - Support: help/support.md
+  - Releases:
+      - Release notes: releases/index.md
+      - Migration notes: releases/migration-notes.md
+  - Develop Lacuna:
+      - Contributor setup: development/setup.md
+      - Testing: development/testing.md
+      - Architecture overview: architecture/overview.md
+      - Plugin catalog: plugins/README.md
+      - Design language: lacuna-design-system/README.md
+      - Release process: development/release.md
+
+theme:
+  name: material
+  language: en
+  logo: assets/lacuna-mark.svg
+  favicon: assets/lacuna-mark.svg
+  font: false
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-7
+        name: Use light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-4
+        name: Use dark mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+extra_css:
+  - assets/stylesheets/lacuna.css
+
+extra_javascript:
+  - assets/javascripts/accessibility.js
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/OldJobobo/lacuna-shell
+      name: Lacuna on GitHub
+  generator: false
+
+copyright: Lacuna is available under the MIT License.

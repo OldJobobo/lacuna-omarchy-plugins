@@ -1,6 +1,6 @@
 # Lacuna Plan Index
 
-Status: current planning ledger (reviewed 2026-07-28)
+Status: current planning ledger (reviewed 2026-08-04)
 
 This index covers every document under `docs/plans/`. The canonical project
 priority queue remains the [Quattro roadmap](../roadmap.md); placement here
@@ -27,7 +27,8 @@ axes.
 | [Quattro P1 Closeout Execution](./active/quattro-p1-closeout-execution-plan.md) | Ready after decision checkpoint | Execute the ordered P1 closeout with review, live deployment, and packaged Beta Exit evidence. |
 | [Quattro P2 — Release And Evolution](./active/quattro-p2-release-and-evolution-plan.md) | In progress alongside P1 | Complete support declarations, diagnostics, migration, documentation, beta, and RC gates. |
 | [Reliability And Optimization](./active/lacuna-reliability-and-optimization-plan.md) | Phases 0–6 complete; Phase 7 next | Perform bounded structural cleanup without replacing the Quattro roadmap. |
-| [AUR Publication Readiness](./active/aur-publication-readiness-plan.md) | Tooling validated; beta publication pending | Publish only after the immutable GitHub artifact and lifecycle gates pass. |
+| [AUR Publication Readiness](./active/aur-publication-readiness-plan.md) | Beta.3 published; future updates gated | Publish each future beta, RC, or stable update only after its immutable GitHub artifact and lifecycle gates pass. |
+| [User Documentation](./active/lacuna-user-documentation-plan.md) | Foundation and MVP user journey in progress | Publish a searchable user-first site while keeping technical and historical evidence separate. |
 
 ## Proposed And Draft
 
