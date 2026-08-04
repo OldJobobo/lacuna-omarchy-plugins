@@ -8,9 +8,9 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
 ## [Unreleased]
 
 ### Changed
-- Documentation now pairs its user-first content with a violet seam palette,
-  dark navigation rail, attached article plates, asymmetric product layouts,
-  responsive typography, authentic product crops, and hardened keyboard behavior.
+- Documentation now pairs its user-first content with a calm neutral shell,
+  restrained navigation and accent states, readable proportional prose,
+  asymmetric product layouts, authentic product crops, and hardened keyboard behavior.
 
 ### Fixed
 - Full uninstall now removes Lacuna-owned Hyprland gap, corner-rounding, and

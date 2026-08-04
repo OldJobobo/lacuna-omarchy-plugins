@@ -1,5 +1,5 @@
-/* Lacuna documentation: a violet editorial accent makes the seam visible;
-   runtime shell hue remains theme-owned and is not sourced from this stylesheet. */
+/* Lacuna documentation: calm technical editorial design.
+   Product screenshots carry hue; the documentation shell stays quiet. */
 @font-face {
   font-family: "Lacuna Hack";
   src: url("../fonts/Hack-Regular.ttf") format("truetype");
@@ -17,27 +17,25 @@
 }
 
 :root {
-  --md-text-font: "Lacuna Hack";
+  --md-text-font: system-ui;
   --md-code-font: "Lacuna Hack";
-  --md-text-font-family: "Lacuna Hack", ui-monospace, "SFMono-Regular", Consolas, monospace;
-  --md-code-font-family: "Lacuna Hack", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --md-text-font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --md-code-font-family: "Lacuna Hack", "SFMono-Regular", Consolas, monospace;
 
-  /* Documentation-site mappings of Lacuna roles, not shell runtime tokens. */
   --lacuna-prose: 68ch;
-  --lacuna-grid: 96rem;
-  --lacuna-seam-width: 1px;
+  --lacuna-grid: 90rem;
   --lacuna-type-micro: 0.62rem;
-  --lacuna-type-caption: 0.66rem;
+  --lacuna-type-caption: 0.68rem;
   --lacuna-type-label: 0.72rem;
   --lacuna-type-body: 0.8rem;
-  --lacuna-type-lede: 0.86rem;
-  --lacuna-type-subheading: 1.02rem;
+  --lacuna-type-lede: 0.95rem;
+  --lacuna-type-subheading: 1rem;
   --lacuna-space-1: 0.4rem;
   --lacuna-space-2: 0.7rem;
   --lacuna-space-3: 1rem;
   --lacuna-space-4: 1.5rem;
   --lacuna-space-5: 2.25rem;
-  --lacuna-space-6: 3.25rem;
+  --lacuna-space-6: 3.5rem;
   --lacuna-instant: 75ms;
   --lacuna-quick: 150ms;
   --lacuna-color: 160ms;
@@ -46,364 +44,300 @@
 }
 
 [data-md-color-scheme="default"] {
-  --lacuna-field: #e8e6ee;
-  --lacuna-plate: #fbfaff;
-  --lacuna-deep: #15131b;
-  --lacuna-on-deep: #f7f4fb;
-  --lacuna-ink: #1b1720;
-  --lacuna-soft: #4d4657;
-  --lacuna-whisper: #686071;
-  --lacuna-accent: #6d4ed0;
-  --lacuna-accent-strong: #5232b5;
-  --lacuna-accent-on-deep: #b59cff;
-  --lacuna-button-bg: #6d4ed0;
-  --lacuna-accent-wash: rgba(109, 78, 208, 0.12);
-  --lacuna-seam: rgba(27, 23, 32, 0.2);
-  --lacuna-control-edge: rgba(27, 23, 32, 0.56);
-  --lacuna-gridline: rgba(27, 23, 32, 0.055);
-  --lacuna-void: rgba(27, 23, 32, 0.065);
-  --lacuna-recess-hover: rgba(109, 78, 208, 0.1);
-  --lacuna-recess-active: rgba(109, 78, 208, 0.18);
-  --lacuna-shadow: rgba(22, 16, 33, 0.16);
-  --lacuna-focus: #6d4ed0;
-  --md-primary-fg-color: var(--lacuna-deep);
-  --md-primary-bg-color: var(--lacuna-on-deep);
+  --lacuna-canvas: #f7f8fa;
+  --lacuna-surface: #ffffff;
+  --lacuna-surface-muted: #f1f2f5;
+  --lacuna-ink: #18191d;
+  --lacuna-soft: #4b4f59;
+  --lacuna-whisper: #6b707c;
+  --lacuna-border: #dfe1e6;
+  --lacuna-border-strong: #858a96;
+  --lacuna-accent: #5b5bd6;
+  --lacuna-accent-strong: #4545b6;
+  --lacuna-accent-soft: rgba(91, 91, 214, 0.09);
+  --lacuna-hover: rgba(24, 25, 29, 0.045);
+  --lacuna-active: rgba(24, 25, 29, 0.08);
+  --lacuna-focus: #5b5bd6;
+
+  --md-primary-fg-color: var(--lacuna-surface);
+  --md-primary-bg-color: var(--lacuna-ink);
   --md-accent-fg-color: var(--lacuna-accent);
-  --md-default-bg-color: var(--lacuna-field);
+  --md-default-bg-color: var(--lacuna-canvas);
   --md-default-fg-color: var(--lacuna-ink);
   --md-default-fg-color--light: var(--lacuna-whisper);
   --md-typeset-a-color: var(--lacuna-accent-strong);
-  --md-code-bg-color: var(--lacuna-void);
+  --md-code-bg-color: var(--lacuna-surface-muted);
   --md-code-fg-color: var(--lacuna-ink);
 }
 
 [data-md-color-scheme="slate"] {
-  --lacuna-field: #09090d;
-  --lacuna-plate: #15131a;
-  --lacuna-deep: #08070b;
-  --lacuna-on-deep: #f5f1f8;
-  --lacuna-ink: #f0ecf3;
-  --lacuna-soft: #c8c0ce;
-  --lacuna-whisper: #a79dac;
-  --lacuna-accent: #aa90ff;
-  --lacuna-accent-strong: #c0aeff;
-  --lacuna-accent-on-deep: #aa90ff;
-  --lacuna-button-bg: #7050d0;
-  --lacuna-accent-wash: rgba(170, 144, 255, 0.14);
-  --lacuna-seam: rgba(240, 236, 243, 0.18);
-  --lacuna-control-edge: rgba(240, 236, 243, 0.52);
-  --lacuna-gridline: rgba(240, 236, 243, 0.045);
-  --lacuna-void: rgba(0, 0, 0, 0.28);
-  --lacuna-recess-hover: rgba(170, 144, 255, 0.12);
-  --lacuna-recess-active: rgba(170, 144, 255, 0.2);
-  --lacuna-shadow: rgba(0, 0, 0, 0.42);
-  --lacuna-focus: #aa90ff;
-  --md-primary-fg-color: var(--lacuna-deep);
-  --md-primary-bg-color: var(--lacuna-on-deep);
+  --lacuna-canvas: #0b0c0f;
+  --lacuna-surface: #111318;
+  --lacuna-surface-muted: #181a20;
+  --lacuna-ink: #f2f3f5;
+  --lacuna-soft: #c5c8cf;
+  --lacuna-whisper: #969ba7;
+  --lacuna-border: #2a2d34;
+  --lacuna-border-strong: #686d78;
+  --lacuna-accent: #a5a3ff;
+  --lacuna-accent-strong: #c2c0ff;
+  --lacuna-accent-soft: rgba(165, 163, 255, 0.12);
+  --lacuna-hover: rgba(242, 243, 245, 0.055);
+  --lacuna-active: rgba(242, 243, 245, 0.1);
+  --lacuna-focus: #a5a3ff;
+
+  --md-primary-fg-color: var(--lacuna-surface);
+  --md-primary-bg-color: var(--lacuna-ink);
   --md-accent-fg-color: var(--lacuna-accent);
-  --md-default-bg-color: var(--lacuna-field);
+  --md-default-bg-color: var(--lacuna-canvas);
   --md-default-fg-color: var(--lacuna-ink);
   --md-default-fg-color--light: var(--lacuna-whisper);
   --md-typeset-a-color: var(--lacuna-accent-strong);
-  --md-code-bg-color: var(--lacuna-void);
+  --md-code-bg-color: var(--lacuna-surface-muted);
   --md-code-fg-color: var(--lacuna-ink);
 }
 
 html {
-  scrollbar-color: var(--lacuna-seam) var(--lacuna-field);
-  scroll-padding-top: 4.4rem;
+  scrollbar-color: var(--lacuna-border-strong) var(--lacuna-canvas);
+  scroll-padding-top: 4rem;
 }
 
 body {
   color: var(--lacuna-ink);
-  background-color: var(--lacuna-field);
-  background-image:
-    linear-gradient(var(--lacuna-gridline) 1px, transparent 1px),
-    linear-gradient(90deg, var(--lacuna-gridline) 1px, transparent 1px);
-  background-attachment: fixed;
-  background-size: 3rem 3rem;
+  background: var(--lacuna-canvas);
   font-family: var(--md-text-font-family);
 }
 
 .md-container,
 .md-main {
-  background: transparent;
+  background: var(--lacuna-canvas);
 }
 
 .md-grid {
   max-width: var(--lacuna-grid);
 }
 
-/* Material shell --------------------------------------------------------- */
+/* Global shell ---------------------------------------------------------- */
 .md-header {
-  color: var(--lacuna-on-deep);
-  background: var(--lacuna-deep);
-  border-bottom: 0.2rem solid var(--lacuna-accent-on-deep);
+  color: var(--lacuna-ink);
+  background: color-mix(in srgb, var(--lacuna-surface) 94%, transparent);
+  border-bottom: 1px solid var(--lacuna-border);
   box-shadow: none;
+  backdrop-filter: blur(14px);
 }
 
 .md-header__inner {
-  min-height: 3.4rem;
+  min-height: 3.2rem;
   padding-inline: 1rem;
 }
 
 .md-header__title {
-  color: var(--lacuna-on-deep);
-  font-family: "Lacuna Tektur", "Arial Narrow", ui-sans-serif, sans-serif;
-  font-size: 0.9rem;
-  letter-spacing: 0.1em;
+  color: var(--lacuna-ink);
+  font-family: "Lacuna Tektur", ui-sans-serif, sans-serif;
+  font-size: 0.84rem;
+  letter-spacing: 0.055em;
   text-transform: uppercase;
 }
 
 .md-header__button,
-.md-header__option,
-.md-top,
-.md-content__button {
+.md-content__button,
+.md-top {
+  color: var(--lacuna-ink);
   transition:
-    background-color var(--lacuna-quick) ease-out,
-    color var(--lacuna-color) ease-out;
+    color var(--lacuna-color) ease-out,
+    background-color var(--lacuna-quick) ease-out;
 }
 
 .md-header__button {
-  min-width: 2.55rem;
-  min-height: 2.55rem;
-  color: var(--lacuna-on-deep);
+  min-width: 2.4rem;
+  min-height: 2.4rem;
 }
 
 .md-header__button:hover,
-.md-header__button:focus-visible {
-  color: var(--lacuna-on-deep);
-  background: rgba(255, 255, 255, 0.1);
-}
-
+.md-header__button:focus-visible,
 .md-content__button:hover,
 .md-content__button:focus-visible,
 .md-top:hover,
 .md-top:focus-visible {
-  background: var(--lacuna-recess-hover);
+  color: var(--lacuna-ink);
+  background: var(--lacuna-hover);
 }
 
 .md-header__button:active,
 .md-content__button:active,
 .md-top:active {
-  background: var(--lacuna-recess-active);
+  background: var(--lacuna-active);
 }
 
-.md-logo img,
 [data-md-color-scheme="slate"] .md-logo img {
   filter: invert(1);
 }
 
 .md-tabs {
-  color: var(--lacuna-on-deep);
-  background: var(--lacuna-deep);
-  border-bottom: var(--lacuna-seam-width) solid rgba(255, 255, 255, 0.14);
+  color: var(--lacuna-ink);
+  background: var(--lacuna-surface);
+  border-bottom: 1px solid var(--lacuna-border);
 }
 
+/* Search ---------------------------------------------------------------- */
 .md-search__form {
-  color: var(--lacuna-on-deep);
-  background: rgba(255, 255, 255, 0.07);
-  border: var(--lacuna-seam-width) solid rgba(255, 255, 255, 0.34);
-  border-radius: 0;
+  color: var(--lacuna-ink);
+  background: var(--lacuna-surface-muted);
+  border: 1px solid var(--lacuna-border-strong);
+  border-radius: 0.3rem;
   box-shadow: none;
 }
 
 .md-search__input {
-  color: var(--lacuna-on-deep);
+  color: var(--lacuna-ink);
 }
 
 .md-search__input::placeholder {
-  color: rgba(247, 244, 251, 0.7);
+  color: var(--lacuna-whisper);
   opacity: 1;
 }
 
 .md-search__form:hover,
 .md-search__form:focus-within {
-  border-color: var(--lacuna-accent-on-deep);
-  box-shadow: inset 0 -0.14rem 0 var(--lacuna-accent-on-deep);
+  background: var(--lacuna-surface);
+  border-color: var(--lacuna-border-strong);
+  box-shadow: 0 0 0 2px var(--lacuna-accent-soft);
 }
 
 .md-search__output {
   color: var(--lacuna-ink);
-  background: var(--lacuna-plate);
-  border: 0;
-  border-top: 0.2rem solid var(--lacuna-accent);
-  border-radius: 0;
-  box-shadow: 0 1.2rem 2.6rem var(--lacuna-shadow);
+  background: var(--lacuna-surface);
+  border: 1px solid var(--lacuna-border);
+  border-radius: 0.35rem;
+  box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.16);
 }
 
 .md-search-result__item {
-  border-bottom: var(--lacuna-seam-width) solid var(--lacuna-seam);
+  border-bottom: 1px solid var(--lacuna-border);
 }
 
 .md-search-result__link:hover,
 .md-search-result__link:focus-visible {
-  background: var(--lacuna-recess-hover);
+  background: var(--lacuna-hover);
 }
 
+/* Documentation columns ------------------------------------------------ */
 .md-main__inner {
   gap: 0;
   align-items: flex-start;
-  margin-top: 1.4rem;
-  padding-inline: 1rem;
+  margin-top: 0;
+  padding-inline: 0;
 }
 
 .md-sidebar--primary {
-  color: var(--lacuna-on-deep);
-  background: transparent;
-  border-radius: 0;
+  color: var(--lacuna-soft);
+  background: var(--lacuna-canvas);
 }
 
 .md-sidebar--primary .md-sidebar__scrollwrap {
-  min-height: calc(100vh - 5rem);
   margin: 0;
-  padding: 1rem 0.7rem 2rem;
-  background: var(--lacuna-deep);
-  border-top: 0.2rem solid var(--lacuna-accent-on-deep);
-  border-right: 0;
-  border-radius: 0;
+  padding: 1.4rem 0.9rem 2.5rem;
+  border-right: 1px solid var(--lacuna-border);
 }
 
 .md-sidebar--primary .md-nav,
 .md-sidebar--primary .md-nav__title,
-.md-sidebar--primary .md-nav__link {
-  color: var(--lacuna-on-deep);
-  background: transparent;
-}
-
 .md-sidebar--primary .md-nav__list,
 .md-sidebar--primary .md-nav__source {
-  color: var(--lacuna-on-deep);
-  background: var(--lacuna-deep) !important;
-}
-
-.md-sidebar--primary .md-nav__source {
-  border-bottom: var(--lacuna-seam-width) solid var(--lacuna-accent-on-deep);
+  color: var(--lacuna-soft);
+  background: var(--lacuna-canvas) !important;
 }
 
 .md-sidebar--primary .md-nav__title {
-  padding: 0.35rem 0.5rem 0.8rem;
-  background: var(--lacuna-deep);
+  padding: 0.35rem 0.6rem 0.8rem;
+  color: var(--lacuna-ink);
   box-shadow: none;
-  font-family: "Lacuna Tektur", "Arial Narrow", ui-sans-serif, sans-serif;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--md-text-font-family);
+  font-size: var(--lacuna-type-label);
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
-.md-sidebar--primary .md-nav__link {
-  color: rgba(247, 244, 251, 0.72);
-}
-
-.md-sidebar--primary .md-nav__link:hover,
-.md-sidebar--primary .md-nav__link:focus-visible {
-  color: var(--lacuna-on-deep);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.md-sidebar--primary .md-nav__link--active,
-.md-sidebar--primary .md-nav__item .md-nav__link--active {
-  color: var(--lacuna-accent-on-deep);
-}
-
-.md-sidebar--secondary {
-  padding-left: 1rem;
-}
-
-.md-sidebar--secondary .md-sidebar__scrollwrap {
-  margin: 0;
-  padding: 1.2rem 0.6rem;
-  border-left: 0.16rem solid var(--lacuna-accent);
-}
-
-.md-sidebar--secondary .md-nav__title {
-  color: var(--lacuna-whisper);
-  font-size: var(--lacuna-type-micro);
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-}
-
-.md-content {
-  position: relative;
-  min-width: 0;
-  background: var(--lacuna-plate);
-  box-shadow: 0 1.35rem 3.5rem var(--lacuna-shadow);
+.md-sidebar--primary .md-nav__source {
+  border-bottom: 1px solid var(--lacuna-border);
 }
 
 .md-nav__link {
   position: relative;
+  min-height: 1.8rem;
   margin-top: 0;
-  padding: 0.28rem 0.4rem;
+  padding: 0.36rem 0.55rem;
+  border-radius: 0.25rem;
+  line-height: 1.35;
   transition:
-    background-color var(--lacuna-quick) ease-out,
-    color var(--lacuna-color) ease-out;
+    color var(--lacuna-color) ease-out,
+    background-color var(--lacuna-quick) ease-out;
 }
 
 .md-nav__link:hover,
 .md-nav__link:focus-visible {
   color: var(--lacuna-ink);
-  background: var(--lacuna-recess-hover);
+  background: var(--lacuna-hover);
 }
 
 .md-nav__link:active {
-  background: var(--lacuna-recess-active);
+  background: var(--lacuna-active);
 }
 
 .md-nav__link--active,
 .md-nav__item .md-nav__link--active,
 .md-nav__item .md-nav__link--active code {
-  color: var(--lacuna-ink);
+  color: var(--lacuna-accent-strong);
+  background: var(--lacuna-accent-soft);
 }
 
 .md-nav__link--active::before {
   position: absolute;
-  top: 0.25rem;
-  bottom: 0.25rem;
-  left: -0.35rem;
-  width: 0.18rem;
+  top: 0.42rem;
+  bottom: 0.42rem;
+  left: 0;
+  width: 2px;
   content: "";
-  background: currentColor;
+  background: var(--lacuna-accent);
 }
 
-.md-footer {
-  color: var(--lacuna-on-deep);
-  background: var(--lacuna-deep);
-  border-top: 0.2rem solid var(--lacuna-accent-on-deep);
+.md-sidebar--secondary {
+  padding-left: 0;
 }
 
-.md-footer-meta {
-  color: var(--lacuna-on-deep);
-  background: var(--lacuna-deep);
-  border-top: var(--lacuna-seam-width) solid rgba(255, 255, 255, 0.14);
+.md-sidebar--secondary .md-sidebar__scrollwrap {
+  margin: 0;
+  padding: 1.6rem 1rem 2rem;
+  border-left: 1px solid var(--lacuna-border);
 }
 
-.md-footer__link,
-.md-footer__title,
-.md-footer-meta a,
-.md-copyright {
-  color: var(--lacuna-on-deep);
+.md-sidebar--secondary .md-nav__title {
+  color: var(--lacuna-whisper);
+  font-size: var(--lacuna-type-micro);
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
-.md-footer__direction {
-  color: rgba(247, 244, 251, 0.62);
+.md-content {
+  min-width: 0;
+  background: var(--lacuna-surface);
+  border: 0;
+  box-shadow: none;
 }
 
-.md-footer__link:hover,
-.md-footer__link:focus-visible {
-  color: var(--lacuna-on-deep);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-/* Long-form reading ------------------------------------------------------ */
 .md-content__inner {
   min-height: 72vh;
   margin: 0;
-  padding: clamp(2rem, 4vw, 4.2rem) clamp(1.5rem, 4.6vw, 5rem) var(--lacuna-space-6);
+  padding: clamp(2.2rem, 4vw, 4rem) clamp(1.5rem, 4.5vw, 4.5rem) var(--lacuna-space-6);
 }
 
+/* Reading typography ---------------------------------------------------- */
 .md-typeset {
   color: var(--lacuna-ink);
   font-size: var(--lacuna-type-body);
-  line-height: 1.65;
+  line-height: 1.68;
 }
 
 .md-typeset > p:not([class]),
@@ -417,103 +351,82 @@ body {
 .md-typeset h2,
 .md-typeset h3 {
   color: var(--lacuna-ink);
-  font-family: "Lacuna Tektur", "Arial Narrow", ui-sans-serif, sans-serif;
-  font-weight: 600;
 }
 
 .md-typeset h1 {
-  max-width: 20ch;
-  margin: 0 0 var(--lacuna-space-5);
-  padding-left: 1.1rem;
-  border-left: 0.22rem solid var(--lacuna-accent);
-  font-size: clamp(2.35rem, 5vw, 3.65rem);
-  letter-spacing: 0.025em;
-  line-height: 0.98;
+  max-width: 24ch;
+  margin: 0 0 var(--lacuna-space-4);
+  font-family: "Lacuna Tektur", ui-sans-serif, sans-serif;
+  font-size: clamp(1.8rem, 3vw, 2.1rem);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  line-height: 1.04;
 }
 
 .md-typeset h2 {
-  position: relative;
   margin-top: var(--lacuna-space-6);
-  padding-top: 1.15rem;
-  font-size: clamp(1.35rem, 2.5vw, 1.65rem);
-  letter-spacing: 0.025em;
-  line-height: 1.15;
-}
-
-.md-typeset h2::before {
-  position: absolute;
-  top: 0.46rem;
-  left: 0;
-  width: 4.8rem;
-  height: 0.16rem;
-  content: "";
-  background: linear-gradient(90deg, var(--lacuna-accent) 0 68%, transparent 68% 78%, var(--lacuna-seam) 78%);
-}
-
-.md-typeset h2::after {
-  position: absolute;
-  top: 0.28rem;
-  left: 3.2rem;
-  width: 0.16rem;
-  height: 0.52rem;
-  content: "";
-  background: var(--lacuna-accent);
+  margin-bottom: 0.9rem;
+  font-size: clamp(1.35rem, 2.2vw, 1.65rem);
+  font-weight: 700;
+  letter-spacing: -0.018em;
+  line-height: 1.2;
 }
 
 .md-typeset h3 {
   margin-top: var(--lacuna-space-5);
+  margin-bottom: 0.7rem;
   font-size: var(--lacuna-type-subheading);
-  letter-spacing: 0.018em;
-  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.008em;
+  line-height: 1.3;
 }
 
 .md-typeset h4 {
   color: var(--lacuna-soft);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: var(--lacuna-type-label);
+  letter-spacing: 0.02em;
 }
 
 .md-typeset a {
   color: var(--lacuna-accent-strong);
   text-decoration: underline;
-  text-decoration-color: var(--lacuna-accent);
+  text-decoration-color: color-mix(in srgb, var(--lacuna-accent) 48%, transparent);
   text-decoration-thickness: 1px;
-  text-underline-offset: 0.2em;
-  transition:
-    color var(--lacuna-color) ease-out,
-    text-decoration-color var(--lacuna-color) ease-out;
+  text-underline-offset: 0.18em;
 }
 
 .md-typeset a:hover,
 .md-typeset a:focus-visible {
-  color: var(--lacuna-ink);
+  color: var(--lacuna-accent-strong);
   text-decoration-color: currentColor;
   text-decoration-thickness: 2px;
 }
 
 .md-typeset blockquote {
+  padding: 0.2rem 0 0.2rem 1rem;
   color: var(--lacuna-soft);
-  background: var(--lacuna-accent-wash);
-  border-left-color: var(--lacuna-accent);
+  border-left-color: var(--lacuna-border-strong);
 }
 
 .md-typeset hr {
-  border-bottom-color: var(--lacuna-seam);
+  border-bottom-color: var(--lacuna-border);
 }
 
+/* Technical content ----------------------------------------------------- */
 .md-typeset code,
 .md-typeset pre > code {
-  background: var(--lacuna-void);
+  background: var(--lacuna-surface-muted);
 }
 
 .md-typeset code {
-  border-radius: 0;
+  border: 1px solid var(--lacuna-border);
+  border-radius: 0.2rem;
 }
 
 .md-typeset pre {
-  border: 0;
-  border-radius: 0;
-  box-shadow: inset 0 0 0 var(--lacuna-seam-width) var(--lacuna-seam);
+  border: 1px solid var(--lacuna-border);
+  border-radius: 0.3rem;
+  box-shadow: none;
 }
 
 .md-typeset .highlighttable,
@@ -523,217 +436,179 @@ body {
 }
 
 .md-typeset table:not([class]) {
-  background: var(--lacuna-plate);
-  border: var(--lacuna-seam-width) solid var(--lacuna-seam);
-  border-radius: 0;
+  background: var(--lacuna-surface);
+  border: 1px solid var(--lacuna-border);
+  border-radius: 0.3rem;
   box-shadow: none;
 }
 
 .md-typeset table:not([class]) th {
-  color: var(--lacuna-on-deep);
-  background: var(--lacuna-deep);
-  border-bottom-color: var(--lacuna-accent);
+  color: var(--lacuna-ink);
+  background: var(--lacuna-surface-muted);
+  border-bottom-color: var(--lacuna-border);
 }
 
 .md-typeset table:not([class]) td {
-  border-top-color: var(--lacuna-seam);
+  border-top-color: var(--lacuna-border);
 }
 
 .md-typeset .admonition,
 .md-typeset details {
-  background: var(--lacuna-accent-wash);
-  border: 0;
-  border-left: 0.2rem solid var(--lacuna-accent);
-  border-radius: 0;
+  background: var(--lacuna-surface);
+  border: 1px solid var(--lacuna-border);
+  border-radius: 0.3rem;
   box-shadow: none;
+}
+
+.md-typeset details {
+  border-color: var(--lacuna-border-strong);
 }
 
 .md-typeset .admonition-title,
 .md-typeset summary {
   color: var(--lacuna-ink);
-  background: var(--lacuna-accent-wash);
-  border-bottom: var(--lacuna-seam-width) solid var(--lacuna-seam);
-}
-
-.md-typeset details {
-  box-shadow: inset 0 0 0 var(--lacuna-seam-width) var(--lacuna-control-edge);
-}
-
-.md-typeset details > summary {
-  border-bottom-color: var(--lacuna-control-edge);
+  background: var(--lacuna-surface-muted);
+  border-bottom: 1px solid var(--lacuna-border);
 }
 
 .md-typeset details[open] > summary {
-  box-shadow: inset 0.18rem 0 0 var(--lacuna-ink);
+  box-shadow: inset 2px 0 0 var(--lacuna-accent);
 }
 
 .md-typeset .tabbed-labels {
-  border-bottom-color: var(--lacuna-seam);
+  border-bottom-color: var(--lacuna-border);
 }
 
 .md-typeset .tabbed-labels > label:hover,
 .md-typeset .tabbed-labels > label:focus-visible {
-  background: var(--lacuna-recess-hover);
+  background: var(--lacuna-hover);
 }
 
 .md-typeset .tabbed-set > input:checked + label {
-  box-shadow: inset 0 -0.16rem 0 var(--lacuna-ink);
+  color: var(--lacuna-ink);
+  box-shadow: inset 0 -2px 0 var(--lacuna-accent);
 }
 
 .md-typeset .md-button {
   min-height: 2.45rem;
   padding: 0.62rem 1rem;
   color: var(--lacuna-ink);
-  background: transparent;
-  border-color: var(--lacuna-control-edge);
-  border-radius: 0 !important;
+  background: var(--lacuna-surface);
+  border-color: var(--lacuna-border-strong);
+  border-radius: 0.3rem !important;
   box-shadow: none !important;
   line-height: 1.2;
   text-decoration: none;
   transition:
     background-color var(--lacuna-quick) ease-out,
-    border-color var(--lacuna-color) ease-out,
-    color var(--lacuna-color) ease-out;
+    border-color var(--lacuna-color) ease-out;
 }
 
 .md-typeset .md-button:hover,
 .md-typeset .md-button:focus-visible {
   color: var(--lacuna-ink);
-  background: var(--lacuna-recess-hover);
+  background: var(--lacuna-hover);
   border-color: var(--lacuna-ink);
 }
 
 .md-typeset .md-button:active {
-  background: var(--lacuna-recess-active);
+  background: var(--lacuna-active);
 }
 
 .md-typeset .md-button--primary {
-  color: var(--lacuna-on-deep);
-  background: var(--lacuna-button-bg);
-  border-color: var(--lacuna-button-bg);
+  color: var(--lacuna-surface);
+  background: var(--lacuna-ink);
+  border-color: var(--lacuna-ink);
 }
 
 .md-typeset .md-button--primary:hover,
 .md-typeset .md-button--primary:focus-visible {
-  color: var(--lacuna-on-deep);
-  background: var(--lacuna-button-bg);
+  color: var(--lacuna-surface);
+  background: var(--lacuna-ink);
+  border-color: var(--lacuna-ink);
   box-shadow: inset 0 0 0 999px rgba(255, 255, 255, 0.08) !important;
 }
 
-/* Homepage attached specimen -------------------------------------------- */
+/* Homepage -------------------------------------------------------------- */
 .lacuna-hero {
-  position: relative;
   display: grid;
-  grid-template-columns: minmax(19rem, 0.82fr) minmax(24rem, 1.18fr);
-  min-height: 35rem;
-  margin: 0 0 calc(var(--lacuna-space-6) + 1rem);
-  background: var(--lacuna-deep);
-  border-top: 0.24rem solid var(--lacuna-accent-on-deep);
-  box-shadow: 0 1.6rem 3.8rem var(--lacuna-shadow);
-}
-
-.lacuna-hero::after {
-  position: absolute;
-  right: -0.65rem;
-  bottom: -0.65rem;
-  width: 3.2rem;
-  height: 3.2rem;
-  content: "";
-  border-right: 0.18rem solid var(--lacuna-accent-on-deep);
-  border-bottom: 0.18rem solid var(--lacuna-accent-on-deep);
-  pointer-events: none;
+  grid-template-columns: minmax(18rem, 0.85fr) minmax(0, 1.15fr);
+  gap: clamp(2rem, 4vw, 4rem);
+  align-items: center;
+  margin: 0 0 calc(var(--lacuna-space-6) + 0.5rem);
 }
 
 .lacuna-hero__copy {
-  position: relative;
-  z-index: 3;
-  align-self: center;
-  margin: 2rem -2.6rem 2rem 0;
-  padding: clamp(2rem, 3.4vw, 3.4rem);
-  color: var(--lacuna-on-deep);
-  background: var(--lacuna-deep);
-  border-left: 0.26rem solid var(--lacuna-accent-on-deep);
-  box-shadow: 1rem 0 0 var(--lacuna-deep);
-}
-
-.lacuna-hero__copy::after {
-  position: absolute;
-  top: 18%;
-  right: -1.15rem;
-  width: 0.18rem;
-  height: 64%;
-  content: "";
-  background: var(--lacuna-accent-on-deep);
+  min-width: 0;
+  padding-block: 1.2rem;
 }
 
 .lacuna-hero__eyebrow {
   margin: 0 0 var(--lacuna-space-3);
-  color: var(--lacuna-accent-on-deep);
+  color: var(--lacuna-accent-strong);
+  font-family: var(--md-code-font-family);
   font-size: var(--lacuna-type-caption);
-  letter-spacing: 0.15em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .md-typeset .lacuna-hero__title {
   max-width: 11ch;
   margin: 0;
-  padding: 0;
-  color: var(--lacuna-on-deep);
-  border-left: 0;
-  font-size: clamp(2.8rem, 5.3vw, 4.6rem);
-  letter-spacing: 0.01em;
-  line-height: 0.88;
+  font-family: "Lacuna Tektur", ui-sans-serif, sans-serif;
+  font-size: clamp(2.6rem, 4.5vw, 3.6rem);
+  letter-spacing: -0.015em;
+  line-height: 0.94;
 }
 
 .lacuna-hero__lede {
-  max-width: 43ch;
+  max-width: 42ch;
   margin: var(--lacuna-space-4) 0;
-  color: rgba(247, 244, 251, 0.76);
+  color: var(--lacuna-soft);
   font-size: var(--lacuna-type-lede);
-  line-height: 1.65;
+  line-height: 1.6;
 }
 
 .lacuna-release {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   margin: var(--lacuna-space-4) 0;
-  background: rgba(255, 255, 255, 0.055);
-  border-top: var(--lacuna-seam-width) solid rgba(255, 255, 255, 0.2);
-  border-bottom: var(--lacuna-seam-width) solid rgba(255, 255, 255, 0.2);
+  border-top: 1px solid var(--lacuna-border);
+  border-bottom: 1px solid var(--lacuna-border);
 }
 
-.lacuna-release__version {
-  display: flex;
-  align-items: center;
-  padding: 0.52rem 0.7rem;
-  color: var(--lacuna-accent-on-deep);
-  border-bottom: var(--lacuna-seam-width) solid rgba(255, 255, 255, 0.16);
-  font-size: var(--lacuna-type-caption);
-  letter-spacing: 0.03em;
-  white-space: nowrap;
-}
-
+.lacuna-release__version,
 .lacuna-release p,
 .lacuna-release a {
   margin: 0;
-  padding: 0.42rem 0.7rem;
+  padding: 0.55rem 0.7rem;
+  font-family: var(--md-code-font-family);
   font-size: var(--lacuna-type-caption);
-  line-height: 1.35;
+  line-height: 1.4;
+}
+
+.lacuna-release__version {
+  grid-row: 1 / 3;
+  align-content: center;
+  color: var(--lacuna-ink);
+  background: var(--lacuna-surface-muted);
+  border-right: 1px solid var(--lacuna-border);
+  white-space: nowrap;
 }
 
 .lacuna-release p {
-  color: rgba(247, 244, 251, 0.72);
+  color: var(--lacuna-soft);
+  border-bottom: 1px solid var(--lacuna-border);
 }
 
 .lacuna-release a {
-  color: var(--lacuna-accent-on-deep);
-  border-top: var(--lacuna-seam-width) solid rgba(255, 255, 255, 0.16);
+  color: var(--lacuna-accent-strong);
   text-decoration: none;
 }
 
 .lacuna-release a:hover,
 .lacuna-release a:focus-visible {
-  background: var(--lacuna-recess-hover);
+  background: var(--lacuna-hover);
   text-decoration: underline;
 }
 
@@ -747,57 +622,19 @@ body {
   display: contents;
 }
 
-.md-typeset .lacuna-hero__actions .md-button {
-  color: var(--lacuna-on-deep);
-  border-color: rgba(255, 255, 255, 0.56);
-}
-
-.md-typeset .lacuna-hero__actions .md-button:hover,
-.md-typeset .lacuna-hero__actions .md-button:focus-visible {
-  color: var(--lacuna-on-deep);
-  background: rgba(255, 255, 255, 0.09);
-  border-color: var(--lacuna-on-deep);
-}
-
-.md-typeset .lacuna-hero__actions .md-button--primary {
-  color: var(--lacuna-on-deep);
-  background: var(--lacuna-button-bg);
-  border-color: var(--lacuna-button-bg);
-}
-
 .lacuna-hero__specimen {
-  position: relative;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  background: var(--lacuna-deep);
-  border-left: 0;
-}
-
-.lacuna-hero__specimen::before,
-.lacuna-hero__specimen::after {
-  position: absolute;
-  left: 0;
-  z-index: 2;
-  width: 0.7rem;
-  height: var(--lacuna-seam-width);
-  content: "";
-  background: var(--lacuna-accent-on-deep);
-}
-
-.lacuna-hero__specimen::before {
-  top: 1.4rem;
-}
-
-.lacuna-hero__specimen::after {
-  bottom: 3.8rem;
+  background: var(--lacuna-surface-muted);
+  border: 1px solid var(--lacuna-border);
+  border-radius: 0.35rem;
 }
 
 .lacuna-hero__specimen .lacuna-specimen__image {
-  align-self: stretch;
-  min-height: 23rem;
+  min-height: 29rem;
 }
 
 .lacuna-hero__specimen img {
@@ -811,45 +648,33 @@ body {
 
 .lacuna-hero__specimen figcaption,
 .lacuna-specimen figcaption {
-  padding: 0.75rem 0.85rem;
+  padding: 0.8rem 0.9rem;
   color: var(--lacuna-soft);
-  background: var(--lacuna-plate);
-  border-top: var(--lacuna-seam-width) solid var(--lacuna-seam);
+  background: var(--lacuna-surface);
+  border-top: 1px solid var(--lacuna-border);
+  font-family: var(--md-text-font-family);
   font-size: var(--lacuna-type-caption);
   font-style: normal;
   line-height: 1.5;
   text-align: left;
 }
 
-.lacuna-hero__specimen figcaption {
-  color: rgba(247, 244, 251, 0.72);
-  background: var(--lacuna-deep);
-  border-top-color: var(--lacuna-accent-on-deep);
-}
-
 .lacuna-hero__specimen figcaption span,
 .lacuna-specimen figcaption > span {
   display: block;
   margin-bottom: 0.2rem;
-  font-family: "Lacuna Tektur", "Arial Narrow", ui-sans-serif, sans-serif;
-  font-size: var(--lacuna-type-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.lacuna-hero__specimen figcaption span {
-  color: var(--lacuna-accent-on-deep);
-}
-
-.lacuna-specimen figcaption > span {
   color: var(--lacuna-ink);
+  font-family: var(--md-code-font-family);
+  font-size: var(--lacuna-type-caption);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .lacuna-specimen__image {
   position: relative;
   display: block;
   overflow: hidden;
-  background: var(--lacuna-void);
+  background: var(--lacuna-surface-muted);
   text-decoration: none !important;
 }
 
@@ -857,7 +682,7 @@ body {
   position: absolute;
   inset: 0;
   content: "";
-  border: 0 solid var(--lacuna-ink);
+  border: 0 solid var(--lacuna-accent);
   transition:
     border-width var(--lacuna-quick) ease-out,
     background-color var(--lacuna-quick) ease-out;
@@ -866,92 +691,90 @@ body {
 
 .lacuna-specimen__image:hover::after,
 .lacuna-specimen__image:focus-visible::after {
-  background: var(--lacuna-recess-hover);
-  border-width: 0.16rem;
-}
-
-.lacuna-specimen__image:active::after {
-  background: var(--lacuna-recess-active);
+  background: var(--lacuna-hover);
+  border-width: 2px;
 }
 
 .lacuna-specimen__image img {
   display: block;
 }
 
+.lacuna-hero + p {
+  max-width: 58ch;
+  margin-bottom: var(--lacuna-space-6);
+  color: var(--lacuna-soft);
+  font-size: 1rem;
+  line-height: 1.58;
+}
+
 .md-typeset .lacuna-feature-list ul {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: var(--lacuna-seam-width);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 2.25rem;
   max-width: none;
   margin: var(--lacuna-space-4) 0 var(--lacuna-space-5);
-  padding: var(--lacuna-seam-width);
-  background: var(--lacuna-seam);
+  padding: 0;
   list-style: none;
 }
 
 .md-typeset .lacuna-feature-list ul > li {
   position: relative;
-  grid-column: span 2;
-  min-height: 8rem;
   margin: 0;
-  padding: 1.15rem 1.2rem 1.25rem 1.7rem;
-  background: var(--lacuna-plate);
-}
-
-.md-typeset .lacuna-feature-list li:nth-last-child(-n + 2) {
-  grid-column: span 3;
+  padding: 1rem 0 1.05rem 1.05rem;
+  border-top: 1px solid var(--lacuna-border);
 }
 
 .md-typeset .lacuna-feature-list li::before {
   position: absolute;
-  top: 1.5rem;
-  left: 0.72rem;
-  width: 0.28rem;
-  height: 0.28rem;
+  top: 1.55rem;
+  left: 0;
+  width: 0.3rem;
+  height: 0.3rem;
   content: "";
   background: var(--lacuna-accent);
+}
+
+.md-typeset .lacuna-feature-list li:last-child {
+  grid-column: 1 / -1;
 }
 
 .lacuna-paths {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--lacuna-seam-width);
+  gap: 0.8rem;
   margin: var(--lacuna-space-5) 0 var(--lacuna-space-6);
-  padding: var(--lacuna-seam-width);
-  background: var(--lacuna-seam);
 }
 
 .lacuna-paths > section {
-  position: relative;
   display: flex;
   min-width: 0;
-  min-height: 13rem;
+  min-height: 12rem;
   flex-direction: column;
-  padding: 1.35rem;
-  background: var(--lacuna-deep);
-  border-top: 0.2rem solid var(--lacuna-accent-on-deep);
+  padding: 1.2rem;
+  background: var(--lacuna-surface);
+  border: 1px solid var(--lacuna-border);
+  border-radius: 0.35rem;
 }
 
 .lacuna-paths > section:hover {
-  background: var(--lacuna-deep);
-  box-shadow: inset 0 0 0 999px rgba(255, 255, 255, 0.045);
+  border-color: var(--lacuna-border-strong);
 }
 
 .lacuna-paths__label {
   margin: 0 0 0.75rem;
-  color: var(--lacuna-accent-on-deep);
+  color: var(--lacuna-whisper);
+  font-family: var(--md-code-font-family);
   font-size: var(--lacuna-type-micro);
-  letter-spacing: 0.11em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .md-typeset .lacuna-paths h3 {
-  margin: 0 0 0.6rem;
-  color: var(--lacuna-on-deep);
+  margin: 0 0 0.55rem;
 }
 
 .lacuna-paths section > p:not([class]) {
-  color: rgba(247, 244, 251, 0.7);
+  color: var(--lacuna-soft);
   font-size: var(--lacuna-type-label);
 }
 
@@ -962,16 +785,14 @@ body {
 
 .lacuna-paths a {
   display: block;
-  min-height: 2.2rem;
-  padding: 0.5rem 0;
-  color: var(--lacuna-accent-on-deep);
-  border-top: var(--lacuna-seam-width) solid rgba(255, 255, 255, 0.2);
+  min-height: 2rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--lacuna-border);
   text-decoration: none;
 }
 
 .lacuna-paths a:hover,
 .lacuna-paths a:focus-visible {
-  border-top-color: var(--lacuna-ink);
   text-decoration: underline;
 }
 
@@ -979,10 +800,8 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(16rem, 0.65fr);
   grid-template-rows: repeat(2, minmax(17rem, auto));
-  gap: var(--lacuna-seam-width);
+  gap: 0.8rem;
   margin: var(--lacuna-space-5) 0 var(--lacuna-space-6);
-  padding: var(--lacuna-seam-width);
-  background: var(--lacuna-seam);
 }
 
 .lacuna-specimen {
@@ -990,8 +809,10 @@ body {
   grid-template-rows: minmax(12rem, 1fr) auto;
   min-width: 0;
   margin: 0;
-  background: var(--lacuna-plate);
-  border: 0;
+  overflow: hidden;
+  background: var(--lacuna-surface);
+  border: 1px solid var(--lacuna-border);
+  border-radius: 0.35rem;
 }
 
 .lacuna-specimen:first-child {
@@ -1018,36 +839,29 @@ body {
   margin: 0;
 }
 
-/* One deliberate disclosure: geometry first, specimen content after 55%. */
+/* One restrained disclosure for the homepage product specimen. */
 @media (prefers-reduced-motion: no-preference) {
   .lacuna-hero__specimen {
-    animation: lacuna-disclose-horizontal var(--lacuna-reveal) var(--lacuna-reveal-curve) both;
+    animation: lacuna-disclose var(--lacuna-reveal) var(--lacuna-reveal-curve) both;
   }
 
   .lacuna-hero__specimen > * {
-    animation: lacuna-disclose-content 135ms ease-out 165ms both;
+    animation: lacuna-content 140ms ease-out 150ms both;
   }
 }
 
-@keyframes lacuna-disclose-horizontal {
+@keyframes lacuna-disclose {
   from {
-    clip-path: inset(0 100% 0 0);
+    clip-path: inset(0 8% 0 0);
+    opacity: 0.72;
   }
   to {
     clip-path: inset(0);
+    opacity: 1;
   }
 }
 
-@keyframes lacuna-disclose-vertical {
-  from {
-    clip-path: inset(0 0 100% 0);
-  }
-  to {
-    clip-path: inset(0);
-  }
-}
-
-@keyframes lacuna-disclose-content {
+@keyframes lacuna-content {
   from {
     opacity: 0;
   }
@@ -1056,81 +870,55 @@ body {
   }
 }
 
-/* Focus is structural and contrast-safe across field, plate, and image wells. */
 *:focus-visible {
   outline: 2px solid var(--lacuna-focus);
   outline-offset: 3px;
-  box-shadow: 0 0 0 1px var(--lacuna-field);
 }
 
-/* Responsive composition ------------------------------------------------ */
+/* Footer ---------------------------------------------------------------- */
+.md-footer {
+  color: var(--lacuna-ink);
+  background: var(--lacuna-surface);
+  border-top: 1px solid var(--lacuna-border);
+}
+
+.md-footer-meta {
+  color: var(--lacuna-soft);
+  background: var(--lacuna-canvas);
+  border-top: 1px solid var(--lacuna-border);
+}
+
+.md-footer__link,
+.md-footer__title,
+.md-footer-meta a,
+.md-copyright {
+  color: var(--lacuna-ink);
+}
+
+.md-footer__direction {
+  color: var(--lacuna-whisper);
+}
+
+.md-footer__link:hover,
+.md-footer__link:focus-visible {
+  color: var(--lacuna-ink);
+  background: var(--lacuna-hover);
+}
+
+/* Responsive ------------------------------------------------------------ */
 @media (max-width: 59.99rem) {
-  .md-search__form,
-  [data-md-toggle="search"]:checked ~ .md-header .md-search__form {
-    color: var(--lacuna-on-deep) !important;
-    background: var(--lacuna-deep) !important;
-    border-color: var(--lacuna-accent-on-deep) !important;
-  }
-
-  .md-search__input,
-  .md-search__icon,
-  .md-search__options,
-  [data-md-toggle="search"]:checked ~ .md-header .md-search__input,
-  [data-md-toggle="search"]:checked ~ .md-header .md-search__icon,
-  [data-md-toggle="search"]:checked ~ .md-header .md-search__options {
-    color: var(--lacuna-on-deep) !important;
-  }
-
-  .md-search__input::placeholder,
-  [data-md-toggle="search"]:checked ~ .md-header .md-search__input::placeholder {
-    color: rgba(247, 244, 251, 0.7) !important;
-  }
-
   .lacuna-hero {
-    grid-template-columns: minmax(0, 1fr);
-    min-height: 0;
+    grid-template-columns: 1fr;
+    gap: var(--lacuna-space-4);
   }
 
   .lacuna-hero__copy {
-    margin: 0;
-    box-shadow: none;
+    max-width: 42rem;
+    padding-bottom: 0;
   }
 
-  .lacuna-hero__copy::after {
-    top: auto;
-    right: 18%;
-    bottom: -1.15rem;
-    width: 64%;
-    height: 0.18rem;
-  }
-
-  .lacuna-hero__specimen {
-    border-top: var(--lacuna-seam-width) solid var(--lacuna-accent-on-deep);
-    border-left: 0;
-  }
-
-  .lacuna-hero__specimen::before,
-  .lacuna-hero__specimen::after {
-    top: 0;
-    left: auto;
-    width: var(--lacuna-seam-width);
-    height: 0.7rem;
-  }
-
-  .lacuna-hero__specimen::before {
-    right: 1.4rem;
-  }
-
-  .lacuna-hero__specimen::after {
-    right: auto;
-    bottom: auto;
-    left: 1.4rem;
-  }
-
-  @media (prefers-reduced-motion: no-preference) {
-    .lacuna-hero__specimen {
-      animation-name: lacuna-disclose-vertical;
-    }
+  .lacuna-hero__specimen .lacuna-specimen__image {
+    min-height: 25rem;
   }
 }
 
@@ -1145,75 +933,51 @@ body {
     grid-row: auto;
     grid-template-rows: minmax(15rem, 54vw) auto;
   }
-
-  .md-typeset .lacuna-feature-list ul {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .md-typeset .lacuna-feature-list li,
-  .md-typeset .lacuna-feature-list li:nth-last-child(-n + 2) {
-    grid-column: span 1;
-  }
-
-  .md-typeset .lacuna-feature-list li:last-child {
-    grid-column: 1 / -1;
-  }
 }
 
 @media (max-width: 44rem) {
   :root {
-    --lacuna-type-body: 0.78rem;
-    --lacuna-space-6: 2.6rem;
-  }
-
-  body {
-    background-image: none;
+    --lacuna-type-body: 0.8rem;
+    --lacuna-space-6: 2.8rem;
   }
 
   .md-main__inner {
-    margin-top: 0;
     padding-inline: 0;
   }
 
-  .md-content {
-    box-shadow: none;
-  }
-
   .md-content__inner {
-    padding: 1.65rem 1.05rem 2.8rem;
+    padding: 1.8rem 1.05rem 3rem;
   }
 
-  .md-typeset h1,
+  .md-typeset h1 {
+    font-size: clamp(1.75rem, 8vw, 2rem);
+  }
+
   .md-typeset .lacuna-hero__title {
     max-width: 12ch;
-    font-size: clamp(2.15rem, 11.5vw, 2.8rem);
-    line-height: 0.98;
-  }
-
-  .md-typeset h1:not(.lacuna-hero__title) {
-    padding-left: 0.8rem;
+    font-size: clamp(2.25rem, 10.5vw, 2.8rem);
   }
 
   .lacuna-hero__copy {
-    padding: 1.6rem 1.35rem;
+    padding-top: 0.4rem;
   }
 
-  .lacuna-hero__lede {
-    font-size: 0.8rem;
+  .lacuna-release {
+    grid-template-columns: 1fr;
   }
 
-  .lacuna-hero__actions {
-    gap: 0.4rem;
+  .lacuna-release__version {
+    grid-row: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--lacuna-border);
   }
 
   .lacuna-hero__actions .md-button {
-    padding: 0.58rem 0.72rem;
-    font-size: 0.72rem;
-    text-align: center;
+    padding-inline: 0.8rem;
   }
 
   .lacuna-hero__specimen .lacuna-specimen__image {
-    min-height: 17rem;
+    min-height: 18rem;
   }
 
   .md-typeset .lacuna-feature-list ul,
@@ -1221,25 +985,60 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .md-typeset .lacuna-feature-list li,
-  .md-typeset .lacuna-feature-list li:nth-last-child(-n + 2),
   .md-typeset .lacuna-feature-list li:last-child {
     grid-column: 1;
-    min-height: 0;
   }
 
   .lacuna-paths > section {
     min-height: 0;
   }
+
+  .md-sidebar--primary .md-nav,
+  .md-sidebar--primary .md-nav__title,
+  .md-sidebar--primary .md-nav__list,
+  .md-sidebar--primary .md-nav__source {
+    color: var(--lacuna-ink);
+    background: var(--lacuna-surface) !important;
+  }
+
+  .md-sidebar--primary .md-sidebar__scrollwrap {
+    background: var(--lacuna-surface);
+    border-right: 0;
+  }
+
+  .md-search__inner {
+    transform: none !important;
+  }
+
+  .md-search__form,
+  [data-md-toggle="search"]:checked ~ .md-header .md-search__form {
+    color: var(--lacuna-ink) !important;
+    background: var(--lacuna-surface) !important;
+    border-color: var(--lacuna-border) !important;
+  }
+
+  .md-search__input,
+  .md-search__icon,
+  .md-search__options,
+  [data-md-toggle="search"]:checked ~ .md-header .md-search__input,
+  [data-md-toggle="search"]:checked ~ .md-header .md-search__icon,
+  [data-md-toggle="search"]:checked ~ .md-header .md-search__options {
+    color: var(--lacuna-ink) !important;
+  }
+
+  .md-search__input::placeholder,
+  [data-md-toggle="search"]:checked ~ .md-header .md-search__input::placeholder {
+    color: var(--lacuna-whisper) !important;
+  }
 }
 
 @media (max-width: 22rem) {
-  .lacuna-hero__copy {
-    padding: 1rem;
+  .md-content__inner {
+    padding-inline: 0.8rem;
   }
 
   .lacuna-hero__specimen .lacuna-specimen__image {
-    min-height: 14rem;
+    min-height: 15rem;
   }
 }
 

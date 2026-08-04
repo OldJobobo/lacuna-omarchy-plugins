@@ -206,24 +206,22 @@ class DocsContractTests(unittest.TestCase):
             'font-display: swap',
             '[data-md-color-scheme="default"]',
             '[data-md-color-scheme="slate"] .md-logo img',
-            '--md-text-font: "Lacuna Hack"',
+            '--md-text-font: system-ui',
             'font-family: "Lacuna Tektur"',
             '--lacuna-prose: 68ch',
             '--lacuna-type-body: 0.8rem',
-            '--lacuna-control-edge:',
-            '--lacuna-deep: #15131b',
-            '--lacuna-accent: #6d4ed0',
-            '--lacuna-accent: #aa90ff',
-            '--lacuna-accent-on-deep: #b59cff',
-            '--lacuna-button-bg: #7050d0',
+            '--lacuna-canvas: #f7f8fa',
+            '--lacuna-surface: #ffffff',
+            '--lacuna-accent: #5b5bd6',
+            '--lacuna-canvas: #0b0c0f',
+            '--lacuna-accent: #a5a3ff',
             '--lacuna-reveal: 300ms',
             '--lacuna-reveal-curve: cubic-bezier(0.2, 0, 0.32, 1)',
             '.md-nav__item .md-nav__link--active',
             '.md-sidebar--primary .md-nav__source',
             '[data-md-toggle="search"]:checked ~ .md-header .md-search__form',
-            'background-size: 3rem 3rem',
             '.lacuna-hero__specimen',
-            'grid-template-columns: minmax(19rem, 0.82fr) minmax(24rem, 1.18fr)',
+            'grid-template-columns: minmax(18rem, 0.85fr) minmax(0, 1.15fr)',
             '.lacuna-gallery',
             'grid-template-columns: minmax(0, 1.35fr) minmax(16rem, 0.65fr)',
             '@media (prefers-reduced-motion: reduce)',
@@ -231,6 +229,12 @@ class DocsContractTests(unittest.TestCase):
             'outline: 2px solid var(--lacuna-focus)',
         ]:
             self.assertIn(phrase, css)
+        for discarded_ornament in [
+            'background-size: 3rem 3rem',
+            '.md-content::before',
+            'border-top: 0.18rem solid var(--lacuna-accent)',
+        ]:
+            self.assertNotIn(discarded_ornament, css)
 
         javascript = (ROOT / "docs/assets/javascripts/accessibility.js").read_text(encoding="utf-8")
         for phrase in [
