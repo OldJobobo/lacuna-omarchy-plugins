@@ -512,7 +512,6 @@ body {
 
 .md-typeset pre {
   border: 0;
-  border-top: 0.18rem solid var(--lacuna-accent);
   border-radius: 0;
   box-shadow: inset 0 0 0 var(--lacuna-seam-width) var(--lacuna-seam);
 }
