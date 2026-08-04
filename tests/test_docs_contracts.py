@@ -219,7 +219,6 @@ class DocsContractTests(unittest.TestCase):
             '--lacuna-reveal: 300ms',
             '--lacuna-reveal-curve: cubic-bezier(0.2, 0, 0.32, 1)',
             '.md-nav__item .md-nav__link--active',
-            '.md-content::before',
             '.md-sidebar--primary .md-nav__source',
             '[data-md-toggle="search"]:checked ~ .md-header .md-search__form',
             'background-size: 3rem 3rem',

@@ -329,19 +329,6 @@ body {
   box-shadow: 0 1.35rem 3.5rem var(--lacuna-shadow);
 }
 
-.md-content::before {
-  position: absolute;
-  top: 0;
-  left: -1rem;
-  width: 1rem;
-  height: 1.25rem;
-  content: "";
-  border-top: 0.2rem solid var(--lacuna-accent);
-  border-right: 0.2rem solid var(--lacuna-accent);
-  border-radius: 0 1rem 0 0;
-  pointer-events: none;
-}
-
 .md-nav__link {
   position: relative;
   margin-top: 0;
@@ -1191,10 +1178,6 @@ body {
 
   .md-content {
     box-shadow: none;
-  }
-
-  .md-content::before {
-    display: none;
   }
 
   .md-content__inner {
