@@ -13,9 +13,8 @@ curated shell, then customize it after you have seen the intended layout.
 4. Let the Omarchy shell reload.
 5. Run `lacuna-shell status` and complete the [first-run tour](first-run.md).
 
-The installer previews the operation before it changes your shell. Package
-installation alone only places the Lacuna payload on disk; the guided installer
-is the step that activates it for your user.
+When prompted, review the summary and confirm. Lacuna backs up your current
+shell settings before applying the new layout.
 
 ## What the normal setup gives you
 
