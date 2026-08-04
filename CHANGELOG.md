@@ -7,6 +7,11 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
 
 ## [Unreleased]
 
+### Changed
+- Documentation now uses Lacuna's attached-surface, seam, recess, typography,
+  and reveal language across the responsive homepage and long-form guides, with
+  authentic product crops and hardened keyboard behavior.
+
 ## [0.1.0-beta.3] - 2026-07-29
 
 ### Fixed

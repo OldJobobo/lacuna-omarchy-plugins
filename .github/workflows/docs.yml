@@ -7,12 +7,20 @@ on:
       - "docs/**"
       - "mkdocs.yml"
       - "README.md"
+      - "VERSION"
+      - "scripts/check_docs_links.py"
+      - "tests/test_docs*.py"
+      - "tests/fixtures/docs-accessibility-harness.js"
       - ".github/workflows/docs.yml"
   pull_request:
     paths:
       - "docs/**"
       - "mkdocs.yml"
       - "README.md"
+      - "VERSION"
+      - "scripts/check_docs_links.py"
+      - "tests/test_docs*.py"
+      - "tests/fixtures/docs-accessibility-harness.js"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
@@ -38,6 +46,8 @@ jobs:
           cache-dependency-path: docs/requirements.txt
       - name: Install documentation dependencies
         run: python -m pip install -r docs/requirements.txt
+      - name: Run documentation contracts
+        run: python -m unittest discover -s tests -p 'test_docs*.py'
       - name: Build documentation
         run: mkdocs build --strict --site-dir site
       - name: Check generated internal links

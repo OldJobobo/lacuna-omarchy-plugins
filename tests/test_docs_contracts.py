@@ -114,6 +114,8 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("assets/javascripts/accessibility.js", mkdocs)
 
         workflow = (ROOT / ".github/workflows/docs.yml").read_text(encoding="utf-8")
+        self.assertIn('- "VERSION"', workflow)
+        self.assertIn("python -m unittest discover -s tests -p 'test_docs*.py'", workflow)
         self.assertIn("mkdocs build --strict", workflow)
         self.assertIn("python scripts/check_docs_links.py site --site-prefix /lacuna-shell/", workflow)
         top_permissions = workflow.split("jobs:", 1)[0]
@@ -187,6 +189,11 @@ class DocsContractTests(unittest.TestCase):
             "docs/assets/fonts/Tektur-SemiBold.ttf",
             "docs/assets/fonts/Tektur-OFL.txt",
             "docs/assets/javascripts/accessibility.js",
+            "docs/screenshots/user/hero-attached-settings.webp",
+            "docs/screenshots/user/connected-shell.webp",
+            "docs/screenshots/user/appearance-settings.webp",
+            "docs/screenshots/user/desktop-ambience.webp",
+            "docs/screenshots/user/sources.json",
             "scripts/check_docs_links.py",
         ]:
             path = ROOT / relative
@@ -201,6 +208,18 @@ class DocsContractTests(unittest.TestCase):
             '[data-md-color-scheme="slate"] .md-logo img',
             '--md-text-font: "Lacuna Hack"',
             'font-family: "Lacuna Tektur"',
+            '--lacuna-prose: 68ch',
+            '--lacuna-type-body: 0.8rem',
+            '--lacuna-control-edge:',
+            '--lacuna-reveal: 300ms',
+            '--lacuna-reveal-curve: cubic-bezier(0.2, 0, 0.32, 1)',
+            '.md-nav__item .md-nav__link--active',
+            '.lacuna-hero__specimen',
+            'grid-template-columns: minmax(20rem, 0.9fr) minmax(0, 1.1fr)',
+            '.lacuna-gallery',
+            '@media (prefers-reduced-motion: reduce)',
+            'clip-path: none !important',
+            'outline: 2px solid var(--lacuna-focus)',
         ]:
             self.assertIn(phrase, css)
 
@@ -211,17 +230,58 @@ class DocsContractTests(unittest.TestCase):
             'setAttribute("role", "button")',
             'setAttribute("tabindex", "0")',
             'setAttribute("aria-expanded"',
+            'setAttribute("aria-haspopup", "dialog")',
+            'removeAttribute("aria-haspopup")',
             'event.key !== "Enter"',
             'event.key !== " "',
+            'label.click()',
+            'const enhancementByLabel = new WeakMap()',
+            'removeEventListener("change"',
+            'removeEventListener("keydown"',
+            'event.key !== "Escape"',
+            'document.addEventListener("keydown", closeOpenHeaderControl)',
+            'document$.subscribe(enhanceHeaderControls)',
         ]:
             self.assertIn(phrase, javascript)
+        self.assertNotIn("control.checked = !control.checked", javascript)
 
         home = (ROOT / "docs/index.md").read_text(encoding="utf-8")
         self.assertIn('<div class="lacuna-hero" markdown="1">', home)
         self.assertIn("# The desktop lives in the seam.", home)
-        self.assertIn("Beta 3</strong> · check compatibility before installing", home)
+        self.assertIn('<div class="lacuna-release">', home)
+        current_version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+        self.assertEqual(1, home.count(current_version))
+        self.assertIn(f'<span class="lacuna-release__version">{current_version}</span>', home)
+        self.assertIn('href="help/compatibility/"', home)
+        self.assertIn('class="lacuna-hero__specimen"', home)
+        self.assertIn('class="lacuna-gallery"', home)
+        self.assertIn('width="1387" height="1100"', home)
         self.assertLess(home.index("[Start here]"), home.index("[Installation]"))
         self.assertNotIn("## Where to go next", home)
+        self.assertNotIn("screenshots/reference/", home)
+
+        source_manifest = json.loads((ROOT / "docs/screenshots/user/sources.json").read_text(encoding="utf-8"))
+        expected_images = {
+            "hero-attached-settings.webp": [1387, 1100],
+            "connected-shell.webp": [900, 990],
+            "appearance-settings.webp": [1000, 870],
+            "desktop-ambience.webp": [1100, 815],
+        }
+        expected_source_commits = {
+            "hero-attached-settings.webp": "1a066cc",
+            "connected-shell.webp": "1a066cc",
+            "appearance-settings.webp": "1a066cc",
+            "desktop-ambience.webp": "01c0934",
+        }
+        self.assertEqual(set(expected_images), set(source_manifest))
+        for filename, dimensions in expected_images.items():
+            entry = source_manifest[filename]
+            self.assertEqual(dimensions, entry["dimensions"])
+            self.assertEqual("0.1.0", entry["capturedVersion"])
+            self.assertEqual(expected_source_commits[filename], entry["sourceCommit"])
+            self.assertTrue(entry["state"])
+            self.assertTrue(entry["treatment"])
+            self.assertTrue((ROOT / "docs/screenshots/user" / entry["source"]).resolve().is_file())
 
     def test_user_documentation_plan_is_active_and_indexed_once(self):
         relative = "active/lacuna-user-documentation-plan.md"

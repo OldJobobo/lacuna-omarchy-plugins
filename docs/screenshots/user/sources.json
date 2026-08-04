@@ -1,0 +1,34 @@
+{
+  "hero-attached-settings.webp": {
+    "source": "../readme/lacuna-appearance.webp",
+    "dimensions": [1387, 1100],
+    "capturedVersion": "0.1.0",
+    "sourceCommit": "1a066cc",
+    "state": "Expanded sidebar joined to the Appearance settings flyout inside the full desktop frame.",
+    "treatment": "Left-biased documentation crop; color and UI content are unchanged."
+  },
+  "connected-shell.webp": {
+    "source": "../readme/lacuna-desktop.webp",
+    "dimensions": [900, 990],
+    "capturedVersion": "0.1.0",
+    "sourceCommit": "1a066cc",
+    "state": "Expanded sidebar meeting the top bar and desktop frame with launchers and media controls visible.",
+    "treatment": "Left-edge documentation crop; color and UI content are unchanged."
+  },
+  "appearance-settings.webp": {
+    "source": "../readme/lacuna-appearance.webp",
+    "dimensions": [1000, 870],
+    "capturedVersion": "0.1.0",
+    "sourceCommit": "1a066cc",
+    "state": "Appearance settings attached to the expanded sidebar with frame controls visible.",
+    "treatment": "Attached-surface documentation crop; color and UI content are unchanged."
+  },
+  "desktop-ambience.webp": {
+    "source": "../readme/lacuna-animations.webp",
+    "dimensions": [1100, 815],
+    "capturedVersion": "0.1.0",
+    "sourceCommit": "01c0934",
+    "state": "Expanded sidebar over the desktop with restrained CRT-style ambience enabled.",
+    "treatment": "Ambience documentation crop; color and UI content are unchanged."
+  }
+}

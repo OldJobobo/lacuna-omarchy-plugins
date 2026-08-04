@@ -29,6 +29,7 @@ axes.
 | [Reliability And Optimization](./active/lacuna-reliability-and-optimization-plan.md) | Phases 0–6 complete; Phase 7 next | Perform bounded structural cleanup without replacing the Quattro roadmap. |
 | [AUR Publication Readiness](./active/aur-publication-readiness-plan.md) | Beta.3 published; future updates gated | Publish each future beta, RC, or stable update only after its immutable GitHub artifact and lifecycle gates pass. |
 | [User Documentation](./active/lacuna-user-documentation-plan.md) | Foundation and MVP user journey in progress | Publish a searchable user-first site while keeping technical and historical evidence separate. |
+| [Documentation Design Pass](./active/lacuna-documentation-design-pass-plan.md) | Implemented locally; deployment validation pending | Give the MkDocs site a stronger Lacuna identity through attached surfaces, seams, readable typography, authentic product specimens, and verified accessibility. |
 
 ## Proposed And Draft
 

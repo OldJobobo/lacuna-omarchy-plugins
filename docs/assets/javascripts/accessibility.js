@@ -3,46 +3,83 @@
   "use strict";
 
   let headerObserver = null;
+  const enhancementByLabel = new WeakMap();
+
+  function controlName(controlId, expanded) {
+    const noun = controlId === "__drawer" ? "navigation" : "search";
+    return `${expanded ? "Close" : "Open"} ${noun}`;
+  }
+
+  function syncLabel(controlId, control, label) {
+    const expanded = control.checked === true;
+    label.setAttribute("aria-expanded", expanded ? "true" : "false");
+    label.setAttribute("aria-label", controlName(controlId, expanded));
+  }
+
+  function detachEnhancement(label, enhancement) {
+    if (!enhancement) return;
+    enhancement.control.removeEventListener("change", enhancement.onChange);
+    label.removeEventListener("keydown", enhancement.onKeyDown);
+  }
 
   function enhanceLabel(controlId, label) {
     if (!label) return false;
-    if (label.dataset.lacunaKeyboardReady === "true") return true;
 
     const control = document.getElementById(controlId);
     if (!control) return false;
+
+    const existing = enhancementByLabel.get(label);
+    if (existing && existing.control === control) {
+      syncLabel(controlId, control, label);
+      return true;
+    }
+
+    detachEnhancement(label, existing);
 
     label.dataset.lacunaKeyboardReady = "true";
     label.setAttribute("role", "button");
     label.setAttribute("tabindex", "0");
     label.setAttribute("aria-controls", controlId);
-    label.setAttribute("aria-expanded", control.checked ? "true" : "false");
-
-    if (!label.hasAttribute("aria-label")) {
-      label.setAttribute(
-        "aria-label",
-        controlId === "__drawer" ? "Open navigation" : "Open search"
-      );
+    if (controlId === "__search") {
+      label.setAttribute("aria-haspopup", "dialog");
+    } else {
+      label.removeAttribute("aria-haspopup");
     }
 
-    control.addEventListener("change", function () {
-      label.setAttribute("aria-expanded", control.checked ? "true" : "false");
-      label.setAttribute(
-        "aria-label",
-        controlId === "__drawer"
-          ? (control.checked ? "Close navigation" : "Open navigation")
-          : (control.checked ? "Close search" : "Open search")
-      );
-    });
+    const onChange = function () {
+      syncLabel(controlId, control, label);
+    };
 
-    label.addEventListener("keydown", function (event) {
+    const onKeyDown = function (event) {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
       event.stopPropagation();
-      control.checked = !control.checked;
-      control.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+      // Use the label's native activation path so Material retains ownership of
+      // checkbox toggling, search focus, and any future click-side behavior.
+      label.click();
+    };
 
+    control.addEventListener("change", onChange);
+    label.addEventListener("keydown", onKeyDown);
+    enhancementByLabel.set(label, { control, onChange, onKeyDown });
+    syncLabel(controlId, control, label);
     return true;
+  }
+
+  function closeOpenHeaderControl(event) {
+    if (event.key !== "Escape") return;
+
+    for (const controlId of ["__search", "__drawer"]) {
+      const control = document.getElementById(controlId);
+      if (!control || !control.checked) continue;
+
+      const label = document.querySelector(`.md-header__button[for="${controlId}"]`);
+      event.preventDefault();
+      control.checked = false;
+      control.dispatchEvent(new Event("change", { bubbles: true }));
+      if (label) label.focus();
+      return;
+    }
   }
 
   function enhanceHeaderControls() {
@@ -63,6 +100,8 @@
       headerObserver.observe(document.documentElement, { childList: true, subtree: true });
     }
   }
+
+  document.addEventListener("keydown", closeOpenHeaderControl);
 
   if (typeof document$ !== "undefined") {
     document$.subscribe(enhanceHeaderControls);
