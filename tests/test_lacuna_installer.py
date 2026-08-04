@@ -1,6 +1,7 @@
 import fcntl
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -139,6 +140,11 @@ class LacunaInstallerTests(unittest.TestCase):
             self.assertEqual(module.run_reload_command(command, dry_run=False), 1)
         ping.assert_not_called()
 
+    def test_run_command_returns_failure_when_executable_is_missing(self):
+        module = load_installer_module()
+        with mock.patch.object(module.subprocess, "run", side_effect=FileNotFoundError("missing")):
+            self.assertEqual(module.run_command(["hyprctl", "reload"], dry_run=False), 127)
+
     def test_omarchy_host_paths_ignore_custom_xdg_config_home(self):
         module = load_installer_module()
 
@@ -155,6 +161,10 @@ class LacunaInstallerTests(unittest.TestCase):
                 self.assertEqual(module.plugins_dir(), home / ".config/omarchy/plugins")
                 self.assertEqual(module.shell_config_path(), home / ".config/omarchy/shell.json")
                 self.assertEqual(module.lacuna_state_dir(), xdg_config / "omarchy/lacuna")
+                self.assertEqual(
+                    module.lacuna_hypr_override_paths()[0].parent,
+                    home / ".local/state/omarchy/toggles/hypr",
+                )
 
     def test_installer_transaction_lock_serializes_processes(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -385,9 +395,138 @@ with module.installer_transaction_lock():
         self.assertIn("lacuna.clock", result.stdout)
         self.assertIn("shell.json once", result.stdout)
         self.assertIn("remove", result.stdout)
+        self.assertIn("remove Lacuna Hyprland overrides", result.stdout)
+        self.assertIn("hyprctl reload", result.stdout)
         self.assertIn("omarchy plugin rescan", result.stdout)
         self.assertNotIn("disable lacuna.clock if enabled", result.stdout)
         self.assertNotIn("omarchy plugin remove", result.stdout)
+
+    def test_plugin_selection_takes_precedence_over_all_for_override_cleanup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_home = Path(tmp) / "config"
+            for plugin_id in ["lacuna.clock", "lacuna.shell-settings"]:
+                installed = config_home / "omarchy" / "plugins" / plugin_id
+                installed.mkdir(parents=True)
+                shutil.copy2(ROOT / plugin_id / "manifest.json", installed / "manifest.json")
+
+            result = run_lacuna(
+                ["uninstall", "--all", "--plugin", "lacuna.clock", "--dry-run", "--yes"],
+                config_home=config_home,
+            )
+
+        self.assertIn("lacuna.clock", result.stdout)
+        self.assertNotIn("lacuna.shell-settings", result.stdout)
+        self.assertNotIn("Lacuna Hyprland overrides", result.stdout)
+        self.assertNotIn("hyprctl reload", result.stdout)
+
+    def test_uninstall_removes_only_lacuna_owned_hyprland_overrides(self):
+        module = load_installer_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            config_home = Path(tmp) / "config"
+            hypr_dir = home / ".local/state/omarchy/toggles/hypr"
+            hypr_dir.mkdir(parents=True)
+            canonical_service = (ROOT / "lacuna.shell-settings/Service.qml").read_text(encoding="utf-8")
+            service_owned_names = set(re.findall(r'/((?:zz-lacuna-)[^"]+\.lua)"', canonical_service))
+            self.assertEqual(set(module.LACUNA_HYPR_OVERRIDE_FILENAMES), service_owned_names)
+
+            owned = [hypr_dir / name for name in module.LACUNA_HYPR_OVERRIDE_FILENAMES]
+            for path in owned:
+                path.write_text(f"-- {path.name}\n", encoding="utf-8")
+            stock_overrides = [hypr_dir / "window-no-gaps.lua", hypr_dir / "single-window-aspect-ratio.lua"]
+            for path in stock_overrides:
+                path.write_text(f"-- Omarchy {path.name}\n", encoding="utf-8")
+
+            env = {
+                "HOME": str(home),
+                "XDG_CONFIG_HOME": str(config_home),
+                "LACUNA_OMARCHY_CONFIG_HOME": str(config_home),
+            }
+            with mock.patch.dict(module.os.environ, env, clear=True), \
+                mock.patch.object(module, "deactivate_plugins", return_value=0), \
+                mock.patch.object(module, "remove_plugin", return_value=0), \
+                mock.patch.object(module, "run_reload_command", return_value=0) as reload_command:
+                result = module.uninstall_plugins(["lacuna.shell-settings"], dry_run=False, cleanup_hypr_overrides=True)
+
+            self.assertEqual(result, 0)
+            self.assertTrue(all(not path.exists() for path in owned))
+            for path in stock_overrides:
+                self.assertEqual(path.read_text(encoding="utf-8"), f"-- Omarchy {path.name}\n")
+            self.assertEqual(
+                reload_command.call_args_list,
+                [mock.call(["hyprctl", "reload"], False), mock.call(["omarchy", "plugin", "rescan"], False)],
+            )
+
+    def test_uninstall_restores_hyprland_overrides_when_reload_fails(self):
+        module = load_installer_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            config_home = Path(tmp) / "config"
+            override = home / ".local/state/omarchy/toggles/hypr/zz-lacuna-window-rounded.lua"
+            override.parent.mkdir(parents=True)
+            original = b"hl.config({ decoration = { rounding = 12 } })\n"
+            override.write_bytes(original)
+
+            env = {
+                "HOME": str(home),
+                "XDG_CONFIG_HOME": str(config_home),
+                "LACUNA_OMARCHY_CONFIG_HOME": str(config_home),
+            }
+            with mock.patch.dict(module.os.environ, env, clear=True), \
+                mock.patch.object(module, "deactivate_plugins", return_value=0), \
+                mock.patch.object(module, "remove_plugin", return_value=0), \
+                mock.patch.object(module, "run_reload_command", side_effect=[1, 0]) as reload_command, \
+                mock.patch.object(module, "reload_after_rollback", return_value=0) as recovery:
+                result = module.uninstall_plugins(["lacuna.shell-settings"], dry_run=False, cleanup_hypr_overrides=True)
+
+            self.assertEqual(result, 1)
+            self.assertEqual(override.read_bytes(), original)
+            self.assertEqual(
+                reload_command.call_args_list,
+                [mock.call(["hyprctl", "reload"], False), mock.call(["hyprctl", "reload"], dry_run=False)],
+            )
+            recovery.assert_called_once_with({"lacuna.shell-settings"})
+
+    def test_uninstall_refuses_directory_at_override_path_without_mutation(self):
+        module = load_installer_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            config_home = Path(tmp) / "config"
+            override = home / ".local/state/omarchy/toggles/hypr/zz-lacuna-window-rounded.lua"
+            override.mkdir(parents=True)
+            payload = override / "user-data"
+            payload.write_text("keep\n", encoding="utf-8")
+            env = {
+                "HOME": str(home),
+                "XDG_CONFIG_HOME": str(config_home),
+                "LACUNA_OMARCHY_CONFIG_HOME": str(config_home),
+            }
+            with mock.patch.dict(module.os.environ, env, clear=True), \
+                mock.patch.object(module, "deactivate_plugins") as deactivate:
+                result = module.uninstall_plugins(["lacuna.shell-settings"], dry_run=False, cleanup_hypr_overrides=True)
+
+            self.assertEqual(result, 1)
+            self.assertEqual(payload.read_text(encoding="utf-8"), "keep\n")
+            deactivate.assert_not_called()
+
+    def test_interactive_uninstall_recovers_stale_hyprland_overrides(self):
+        module = load_installer_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            override = home / ".local/state/omarchy/toggles/hypr/zz-lacuna-window-gaps.lua"
+            override.parent.mkdir(parents=True)
+            override.write_text("-- stale\n", encoding="utf-8")
+            args = module.argparse.Namespace(all=False)
+            with mock.patch.dict(module.os.environ, {"HOME": str(home)}, clear=True), \
+                mock.patch.object(module, "installed_lacuna_plugins", return_value=[]):
+                result = module.uninstall_menu(args)
+
+            self.assertIs(result, args)
+            self.assertTrue(args.all)
 
     def test_uninstall_lacuna_bar_dry_run_reports_stock_bar_restore_and_shell_restart(self):
         with tempfile.TemporaryDirectory() as tmp:

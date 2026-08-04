@@ -24,6 +24,13 @@ layout**, replacing the current bar composition. This is intentionally broader
 than `omarchy bar reset`, which preserves the current layout. Lacuna-owned
 preferences are retained for a future reinstall.
 
+A full uninstall also removes Lacuna-owned Hyprland toggle overrides for window
+gaps, corner rounding, and single-window aspect ratio, then runs
+`hyprctl reload` so the active Omarchy theme and host configuration take effect
+immediately. Omarchy-owned toggle files are left untouched. If the Hyprland or
+shell reload fails, the installer restores the removed overrides together with
+the previous plugin and shell state.
+
 ## Remove plugins and saved Lacuna state
 
 Only add `--purge-state` when you also want to delete the Lacuna state directory,

@@ -54,6 +54,12 @@ RESET_PRESERVED_SETTINGS_KEYS = [
 ]
 BACKUPS_TO_KEEP = 2
 RUNTIME_BACKUPS_TO_KEEP = 8
+LACUNA_HYPR_OVERRIDE_FILENAMES = (
+    "zz-lacuna-window-gaps.lua",
+    "zz-lacuna-window-no-gaps.lua",
+    "zz-lacuna-window-rounded.lua",
+    "zz-lacuna-single-window-aspect.lua",
+)
 OMARCHY_STOCK_SHELL_CONFIG_PATHS = [
     Path.home() / ".local/share/omarchy/config/omarchy/shell.json",
     Path("/usr/share/omarchy/config/omarchy/shell.json"),
@@ -258,6 +264,11 @@ def plugins_dir() -> Path:
 
 def lacuna_state_dir() -> Path:
     return config_home() / "omarchy" / "lacuna"
+
+
+def lacuna_hypr_override_paths() -> list[Path]:
+    toggle_dir = Path.home() / ".local" / "state" / "omarchy" / "toggles" / "hypr"
+    return [toggle_dir / name for name in LACUNA_HYPR_OVERRIDE_FILENAMES]
 
 
 def load_plugins() -> dict[str, Plugin]:
@@ -1252,7 +1263,7 @@ def activation_commands(ids: list[str], apply_layout_choice: bool = False) -> li
     return commands
 
 
-def uninstall_stage_commands(ids: list[str]) -> list[str]:
+def uninstall_stage_commands(ids: list[str], cleanup_hypr_overrides: bool = False) -> list[str]:
     commands = []
     if ids:
         commands.append(f"update {shell_config_path()} once")
@@ -1260,6 +1271,9 @@ def uninstall_stage_commands(ids: list[str]) -> list[str]:
         commands.append("restore stock Omarchy bar layout in shell.json")
     for plugin_id in ids:
         commands.append(f"remove {plugins_dir() / plugin_id}")
+    if cleanup_hypr_overrides:
+        commands.append(f"remove Lacuna Hyprland overrides from {lacuna_hypr_override_paths()[0].parent}")
+        commands.append("hyprctl reload")
     if ids:
         commands.append(uninstall_reload_label(ids))
     return commands
@@ -1280,6 +1294,9 @@ def run_command(command: list[str], dry_run: bool, timeout_seconds: int = 60) ->
     except subprocess.TimeoutExpired:
         print(f"Command timed out after {timeout_seconds}s: {' '.join(command)}")
         return 124
+    except OSError as error:
+        print(f"Could not run {' '.join(command)}: {error}", file=sys.stderr)
+        return 127
 
 
 def omarchy_shell_process_ids() -> set[int]:
@@ -1495,25 +1512,74 @@ def remove_plugin(
     return 0
 
 
-def uninstall_plugins(ids: list[str], dry_run: bool) -> int:
+def validate_lacuna_hypr_override_paths() -> bool:
+    for path in lacuna_hypr_override_paths():
+        if path.exists() and not path.is_file() and not path.is_symlink():
+            print(f"Refusing to remove non-file Hyprland override path: {path}", file=sys.stderr)
+            return False
+    return True
+
+
+def remove_lacuna_hypr_overrides(dry_run: bool) -> None:
+    for path in lacuna_hypr_override_paths():
+        if dry_run or path.exists() or path.is_symlink():
+            print(f"  remove {path}", flush=True)
+        if not dry_run and (path.exists() or path.is_symlink()):
+            if not path.is_file() and not path.is_symlink():
+                raise IsADirectoryError(f"refusing to recursively remove override path: {path}")
+            path.unlink()
+
+
+def uninstall_plugins(ids: list[str], dry_run: bool, cleanup_hypr_overrides: bool = False) -> int:
+    if cleanup_hypr_overrides and not dry_run and not validate_lacuna_hypr_override_paths():
+        return 1
     shell_path = shell_config_path()
     shell_state = capture_path_state(shell_path) if not dry_run else {"kind": "missing"}
+    override_states = {
+        path: capture_path_state(path)
+        for path in lacuna_hypr_override_paths()
+    } if cleanup_hypr_overrides and not dry_run else {}
     code = deactivate_plugins(ids, dry_run)
     if code != 0:
         return code
     removed: list[tuple[Path, Path | None]] = []
-    for plugin_id in ids:
-        code = remove_plugin(plugin_id, dry_run, removed)
-        if code != 0:
+
+    def rollback() -> None:
+        restore_path_state(shell_path, shell_state)
+        rollback_staged_changes(removed)
+        for path, state in override_states.items():
+            restore_path_state(path, state)
+        if cleanup_hypr_overrides:
+            run_reload_command(["hyprctl", "reload"], dry_run=False)
+        reload_after_rollback(set(ids))
+
+    try:
+        for plugin_id in ids:
+            code = remove_plugin(plugin_id, dry_run, removed)
+            if code != 0:
+                if not dry_run:
+                    print("  uninstall failed; restoring the previous plugin and shell state", flush=True)
+                    rollback()
+                return code
+        if cleanup_hypr_overrides:
+            remove_lacuna_hypr_overrides(dry_run)
+            code = run_reload_command(["hyprctl", "reload"], dry_run)
+            if code != 0:
+                if not dry_run:
+                    print("  Hyprland reload failed; restoring the previous override, plugin, and shell state", flush=True)
+                    rollback()
+                return code
+        if ids:
+            code = run_reload_command(uninstall_reload_command(ids), dry_run)
+            if code != 0 and not dry_run:
+                print("  uninstall reload failed; restoring the previous override, plugin, and shell state", flush=True)
+                rollback()
             return code
-    if ids:
-        code = run_reload_command(uninstall_reload_command(ids), dry_run)
-        if code != 0 and not dry_run:
-            print("  uninstall reload failed; restoring the previous plugin and shell state", flush=True)
-            restore_path_state(shell_path, shell_state)
-            rollback_staged_changes(removed)
-            reload_after_rollback(set(ids))
-        return code
+    except OSError as error:
+        print(f"Failed to remove Lacuna files: {error}", file=sys.stderr)
+        if not dry_run:
+            rollback()
+        return 1
     return 0
 
 
@@ -1759,8 +1825,12 @@ def uninstall(args: argparse.Namespace) -> int:
         selected = cascade
 
     ids = ordered(selected, plugins)
+    full_uninstall = args.all and not args.plugins
+    cleanup_hypr_overrides = (full_uninstall or "lacuna.shell-settings" in ids) and (
+        args.dry_run or any(path.exists() or path.is_symlink() for path in lacuna_hypr_override_paths())
+    )
     print_plan("Uninstall plan", ids, plugins)
-    commands = uninstall_stage_commands(ids)
+    commands = uninstall_stage_commands(ids, cleanup_hypr_overrides)
     if commands:
         print("\nCommands")
         print_stage_commands(commands)
@@ -1769,14 +1839,14 @@ def uninstall(args: argparse.Namespace) -> int:
 
     if args.dry_run:
         return 0
-    if not ids and not args.purge_state:
-        print("No installed Lacuna plugins found.")
+    if not ids and not args.purge_state and not cleanup_hypr_overrides:
+        print("No installed Lacuna plugins or Hyprland overrides found.")
         return 0
     if not confirm("Remove selected Lacuna plugins?", args.yes):
         print("Uninstall cancelled.")
         return 1
     preserve_runtime_state()
-    code = uninstall_plugins(ids, args.dry_run)
+    code = uninstall_plugins(ids, args.dry_run, cleanup_hypr_overrides)
     if code != 0:
         return code
     if args.purge_state:
@@ -2089,7 +2159,11 @@ def uninstall_menu(args: argparse.Namespace) -> argparse.Namespace | None:
     plugins = load_plugins()
     installed = installed_lacuna_plugins(plugins)
     if not installed:
-        print("No installed Lacuna plugins found.")
+        if any(path.exists() or path.is_symlink() for path in lacuna_hypr_override_paths()):
+            print("No installed Lacuna plugins found; stale Lacuna Hyprland overrides will be removed.")
+            args.all = True
+            return args
+        print("No installed Lacuna plugins or Hyprland overrides found.")
         return None
     action = choose("Uninstall Lacuna", ["Remove all Lacuna plugins", "Choose plugins", "Cancel"])
     if action == "Remove all Lacuna plugins":

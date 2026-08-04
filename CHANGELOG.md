@@ -12,6 +12,11 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
   and reveal language across the responsive homepage and long-form guides, with
   authentic product crops and hardened keyboard behavior.
 
+### Fixed
+- Full uninstall now removes Lacuna-owned Hyprland gap, corner-rounding, and
+  single-window-aspect overrides, reloads Hyprland, and transactionally restores
+  those overrides if the uninstall reload fails.
+
 ## [0.1.0-beta.3] - 2026-07-29
 
 ### Fixed
