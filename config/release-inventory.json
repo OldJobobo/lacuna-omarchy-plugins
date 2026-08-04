@@ -16,6 +16,7 @@
     "payloadRoot": "/usr/share/lacuna-shell",
     "command": "/usr/bin/lacuna-shell",
     "sharedFiles": [
+      "qml/FullscreenGuard.qml",
       "qml/LacunaGeometry.qml",
       "qml/LacunaTokens.qml",
       "qml/simple-bar/BarHoverSeam.qml",
@@ -48,6 +49,7 @@
       },
       "files": [
         "AmbienceStack.qml",
+        "FullscreenGuard.qml",
         "Overlay.qml",
         "effects/AuroraDriftEffect.qml",
         "effects/CinematicLightEffect.qml",
@@ -80,6 +82,7 @@
         "AudioModel.js",
         "BarFlyoutSurface.qml",
         "ColorProfile.qml",
+        "FullscreenGuard.qml",
         "LacunaGeometry.qml",
         "MotionTokens.qml",
         "Panel.qml",
@@ -104,6 +107,7 @@
         "overlay": "Overlay.qml"
       },
       "files": [
+        "FullscreenGuard.qml",
         "Overlay.qml",
         "manifest.json"
       ]
@@ -234,6 +238,7 @@
         "BluetoothFlyout.qml",
         "BluetoothModel.js",
         "ColorProfile.qml",
+        "FullscreenGuard.qml",
         "LacunaGeometry.qml",
         "MotionTokens.qml",
         "Panel.qml",
@@ -258,6 +263,7 @@
         "overlay": "Overlay.qml"
       },
       "files": [
+        "FullscreenGuard.qml",
         "Overlay.qml",
         "manifest.json"
       ]
@@ -386,6 +392,7 @@
         "overlay": "Overlay.qml"
       },
       "files": [
+        "FullscreenGuard.qml",
         "Overlay.qml",
         "manifest.json"
       ]
@@ -426,6 +433,7 @@
         "overlay": "Overlay.qml"
       },
       "files": [
+        "FullscreenGuard.qml",
         "Overlay.qml",
         "manifest.json"
       ]
@@ -446,6 +454,7 @@
         "overlay": "Overlay.qml"
       },
       "files": [
+        "FullscreenGuard.qml",
         "Overlay.qml",
         "manifest.json"
       ]
@@ -466,6 +475,7 @@
         "overlay": "Overlay.qml"
       },
       "files": [
+        "FullscreenGuard.qml",
         "Overlay.qml",
         "manifest.json"
       ]
@@ -733,6 +743,7 @@
       "files": [
         "BarFlyoutSurface.qml",
         "ColorProfile.qml",
+        "FullscreenGuard.qml",
         "LacunaGeometry.qml",
         "MotionTokens.qml",
         "NetworkFlyout.qml",
@@ -806,6 +817,7 @@
       "files": [
         "BarFlyoutSurface.qml",
         "ColorProfile.qml",
+        "FullscreenGuard.qml",
         "LacunaGeometry.qml",
         "MotionTokens.qml",
         "Panel.qml",
@@ -832,6 +844,7 @@
         "overlay": "Overlay.qml"
       },
       "files": [
+        "FullscreenGuard.qml",
         "Overlay.qml",
         "manifest.json"
       ]
@@ -1164,6 +1177,7 @@
         "overlay": "Overlay.qml"
       },
       "files": [
+        "FullscreenGuard.qml",
         "Overlay.qml",
         "manifest.json"
       ]
