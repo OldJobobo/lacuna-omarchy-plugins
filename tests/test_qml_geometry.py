@@ -229,6 +229,29 @@ def calendar_shadow_margins(edge: str, blur_max: int = 28, offset_x: int = 2, of
     }
 
 
+def frame_sidebar_occlusion(*, visible: bool, autohide: bool, width: int) -> int:
+    return max(0, width) if visible and not autohide else 0
+
+
+def autohide_visible_body_width(*, panel_width: int, surface_width: int, progress: float) -> float:
+    surface_x = -surface_width * (1 - max(0.0, min(1.0, progress)))
+    return max(0.0, panel_width + min(0.0, surface_x))
+
+
+def frame_paint_bounds(*, width: int, outer_left: int, outer_right: int,
+                       sidebar_left: float = 0, sidebar_right: float = 0) -> tuple[float, float]:
+    return max(outer_left, sidebar_left), min(outer_right, width - sidebar_right)
+
+
+def attached_flyout_shadow_exclusion(*, sidebar_edge: float, flyout_x: float,
+                                     flyout_y: float, flyout_width: float,
+                                     flyout_height: float, connector_width: float,
+                                     connector_visible: bool) -> tuple[float, float, float, float]:
+    top = flyout_y - connector_width if connector_visible else flyout_y
+    height = flyout_height + connector_width * 2 if connector_visible else flyout_height
+    return sidebar_edge, top, max(0, flyout_x + flyout_width - sidebar_edge), height
+
+
 def sidebar_window_bar_geometry(
     *, screen_height: int, bar_position: str, bar_size: int, exclusive: bool, autohide: bool
 ) -> dict[str, int]:
@@ -248,6 +271,63 @@ def sidebar_window_bar_geometry(
 
 
 class QmlGeometryTests(unittest.TestCase):
+    def test_autohide_overlay_border_uses_sidebar_animation_clock(self):
+        widths = [
+            autohide_visible_body_width(panel_width=310, surface_width=324, progress=p)
+            for p in (0, 0.25, 0.5, 0.75, 1)
+        ]
+        self.assertEqual([0, 67, 148, 229, 310], widths)
+        self.assertEqual(sorted(widths), widths)
+
+    def test_frame_paint_meets_live_sidebar_edge_without_overlap(self):
+        visible_widths = [
+            autohide_visible_body_width(panel_width=310, surface_width=324, progress=p)
+            for p in (0, 0.25, 0.5, 0.75, 1)
+        ]
+        left_bounds = [
+            frame_paint_bounds(width=2560, outer_left=0, outer_right=2560,
+                               sidebar_left=visible)[0]
+            for visible in visible_widths
+        ]
+        self.assertEqual(visible_widths, left_bounds)
+
+        shadow_bounds = [
+            frame_paint_bounds(width=2560, outer_left=0, outer_right=2560,
+                               sidebar_left=visible + (14 if visible > 0 else 0))[0]
+            for visible in visible_widths
+        ]
+        self.assertEqual([0, 81, 162, 243, 324], shadow_bounds)
+
+    def test_attached_flyout_masks_complete_frame_shadow_envelope(self):
+        with_connector = attached_flyout_shadow_exclusion(
+            sidebar_edge=310, flyout_x=328, flyout_y=220,
+            flyout_width=560, flyout_height=660, connector_width=18,
+            connector_visible=True,
+        )
+        self.assertEqual((310, 202, 578, 696), with_connector)
+
+        without_connector = attached_flyout_shadow_exclusion(
+            sidebar_edge=310, flyout_x=310, flyout_y=220,
+            flyout_width=560, flyout_height=660, connector_width=0,
+            connector_visible=False,
+        )
+        self.assertEqual((310, 220, 560, 660), without_connector)
+
+    def test_autohide_sidebar_does_not_reflow_frame_or_vignette_geometry(self):
+        hidden = content_rect(
+            screen_width=1920, screen_height=1080, frame_enabled=True,
+            position="top", bar_size=32, thickness=8, radius=14,
+            sidebar_on_left=frame_sidebar_occlusion(visible=False, autohide=True, width=310),
+        )
+        revealed = content_rect(
+            screen_width=1920, screen_height=1080, frame_enabled=True,
+            position="top", bar_size=32, thickness=8, radius=14,
+            sidebar_on_left=frame_sidebar_occlusion(visible=True, autohide=True, width=310),
+        )
+        self.assertEqual(hidden, revealed)
+        self.assertEqual(0, frame_sidebar_occlusion(visible=True, autohide=True, width=310))
+        self.assertEqual(310, frame_sidebar_occlusion(visible=True, autohide=False, width=310))
+
     def test_autohide_sidebar_avoids_top_bar_without_double_offset(self):
         geometry = sidebar_window_bar_geometry(
             screen_height=1440, bar_position="top", bar_size=32,
@@ -501,13 +581,18 @@ class QmlGeometryTests(unittest.TestCase):
         newest_midpoint = blend(midpoint, newest_target, 0.5)
         self.assertEqual({"holeX": 215, "holeY": 36, "holeRight": 1906, "radius": 13}, newest_midpoint)
 
-    def test_frame_geometry_never_paints_under_owning_bar_edge(self):
+    def test_frame_geometry_never_paints_under_owning_bar_or_sidebar_edge(self):
         frame = read("lacuna.bar/LacunaFrameWindow.qml")
         self.assertIn("readonly property real outerY: hasGeometryRecord ? Number(geometryRecord.outerY || 0)", frame)
         self.assertIn("readonly property real outerX: hasGeometryRecord ? Number(geometryRecord.outerX || 0)", frame)
         self.assertIn("id: shadowClip", frame)
         self.assertIn("id: framePaintClip", frame)
-        self.assertIn("x: root.outerX", frame)
+        self.assertIn("readonly property real paintLeft: Math.max(outerX, Math.max(0, paintOcclusionLeft))", frame)
+        self.assertIn("readonly property real paintRight: Math.min(outerRight, width - Math.max(0, paintOcclusionRight))", frame)
+        self.assertIn("readonly property real shadowPaintLeft: Math.max(outerX, Math.max(0, shadowOcclusionLeft))", frame)
+        self.assertIn("readonly property real shadowPaintRight: Math.min(outerRight, width - Math.max(0, shadowOcclusionRight))", frame)
+        self.assertIn("x: root.paintLeft", frame)
+        self.assertIn("x: root.shadowPaintLeft", frame)
         self.assertIn("y: root.outerY", frame)
         self.assertGreaterEqual(frame.count("clip: true"), 2)
         self.assertIn("property var shadowGeometryRecord: null", frame)

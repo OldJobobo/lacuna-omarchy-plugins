@@ -16,6 +16,7 @@ Item {
 
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
   readonly property string settingsFile: configHome + "/omarchy/lacuna/settings.json"
+  readonly property var lacunaState: resolveLacunaState()
   readonly property var backgroundEffects: lacunaSettings && typeof lacunaSettings === "object"
     && lacunaSettings.backgroundEffects && typeof lacunaSettings.backgroundEffects === "object"
     ? lacunaSettings.backgroundEffects : ({})
@@ -25,6 +26,16 @@ Item {
   readonly property var activeEffects: Array.isArray(backgroundEffects.activeEffects)
     ? backgroundEffects.activeEffects
     : [String(backgroundEffects.activeEffect || backgroundEffects.selectedEffect || backgroundEffects.currentEffect || "trackingLines")]
+
+  function resolveLacunaState() {
+    if (root.shell && typeof root.shell.ensureService === "function") {
+      var ensured = root.shell.ensureService("lacuna.state")
+      if (ensured) return ensured
+    }
+    if (root.shell && typeof root.shell.serviceFor === "function")
+      return root.shell.serviceFor("lacuna.state")
+    return null
+  }
 
   function loadSettings(raw) {
     try {
@@ -131,6 +142,11 @@ Item {
       id: overlayWindow
       required property var modelData
       readonly property bool fullscreenSuppressed: fullscreenGuard.activeOnScreen(modelData)
+      readonly property string outputName: modelData && modelData.name !== undefined
+        ? String(modelData.name) : ""
+      readonly property var foregroundFrameBridge: root.lacunaState
+        && typeof root.lacunaState.foregroundFrameSource === "function"
+        ? root.lacunaState.foregroundFrameSource(outputName) : null
 
       screen: modelData
       // True foreground mode: this dynamically mapped Overlay may paint above
@@ -158,6 +174,13 @@ Item {
         paintEnabled: root.mappingMode === "overlay" && !overlayWindow.fullscreenSuppressed
         Component.onCompleted: root.registerProductionStack(this)
         Component.onDestruction: root.unregisterProductionStack(this)
+      }
+
+      ForegroundFrameBorder {
+        anchors.fill: parent
+        z: 10000
+        bridge: overlayWindow.foregroundFrameBridge
+        paintEnabled: root.mappingMode === "overlay" && !overlayWindow.fullscreenSuppressed
       }
     }
   }

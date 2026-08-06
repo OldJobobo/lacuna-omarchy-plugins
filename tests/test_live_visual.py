@@ -93,6 +93,20 @@ def lacuna_layers() -> dict[str, list[str]]:
     return result
 
 
+def menu_frame_layers() -> dict[str, list[str]]:
+    data = json.loads(run(["hyprctl", "-j", "layers"]))
+    result: dict[str, list[str]] = {}
+    for screen, payload in data.items():
+        names: list[str] = []
+        for level in sorted(payload.get("levels", {}), key=lambda value: int(value)):
+            for item in payload["levels"][level]:
+                namespace = item.get("namespace", "")
+                if namespace == "lacuna-bar-frame" or namespace.startswith("lacuna.menu-menu-"):
+                    names.append(f"{level}:{namespace}")
+        result[screen] = names
+    return result
+
+
 def ambience_layers() -> dict[str, list[str]]:
     data = json.loads(run(["hyprctl", "-j", "layers"]))
     result: dict[str, list[str]] = {}
@@ -174,6 +188,20 @@ class LiveVisualTests(unittest.TestCase):
 
         set_frame_mode("off")
         self.assertEqual(wait_for_frame_layers(), off_layers)
+
+    def test_attached_flyout_surface_stays_above_fullframe_shadow(self):
+        set_frame_mode("fullframe")
+        summon_menu("settings")
+        time.sleep(0.75)
+
+        layers = menu_frame_layers()
+        hosted = [names for names in layers.values()
+                  if any("lacuna.menu-menu-" in name for name in names)]
+        self.assertTrue(hosted, layers)
+        for names in hosted:
+            self.assertIn("2:lacuna-bar-frame", names)
+            self.assertTrue(any(name.startswith("3:lacuna.menu-menu-") for name in names), names)
+            self.assertFalse(any(name.startswith("2:lacuna.menu-menu-") for name in names), names)
 
     def test_portrait_companion_exists_only_on_effective_outputs(self):
         set_portrait_split(False)

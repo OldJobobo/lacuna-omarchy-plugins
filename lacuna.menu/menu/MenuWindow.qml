@@ -154,6 +154,8 @@ Item {
   readonly property int activeFlyoutY: activeFlyoutYFor(sidebarScreen)
   property var panelGeometryByScreen: ({})
   property int panelGeometryRevision: 0
+  property var sidebarPaintOcclusionByScreen: ({})
+  property int sidebarPaintOcclusionRevision: 0
   readonly property bool frameBorderAttachedFlyoutVisible: lacunaEnabled && panelController.flyoutRenderable && panelController.flyoutProgress > 0.001
   readonly property bool frameBorderAttachedConnectorVisible: frameBorderAttachedFlyoutVisible
     && panelGeometryFor(sidebarScreen).connectorVisible === true
@@ -701,12 +703,28 @@ Item {
     return kind === "" ? 0 : flyoutGeometryFor(screen, kind).y
   }
 
+  function publishSidebarPaintOcclusion(screen, width) {
+    var key = screenNamespace(screen)
+    var next = {}
+    for (var existing in sidebarPaintOcclusionByScreen)
+      next[existing] = sidebarPaintOcclusionByScreen[existing]
+    next[key] = Math.max(0, Number(width) || 0)
+    sidebarPaintOcclusionByScreen = next
+    sidebarPaintOcclusionRevision += 1
+  }
+
+  function sidebarPaintOcclusionWidthFor(screen) {
+    sidebarPaintOcclusionRevision
+    return Math.max(0, Number(sidebarPaintOcclusionByScreen[screenNamespace(screen)]) || 0)
+  }
+
   function publishPanelGeometry(screen, host) {
     if (!host) return
     var key = screenNamespace(screen)
     var next = {}
     for (var existing in panelGeometryByScreen) next[existing] = panelGeometryByScreen[existing]
     next[key] = {
+      x: host.flyoutMaskX,
       y: host.effectiveFlyoutY,
       width: host.effectiveFlyoutWidth,
       height: host.effectiveFlyoutHeight,
@@ -723,7 +741,22 @@ Item {
     panelGeometryRevision
     var value = panelGeometryByScreen[screenNamespace(screen)]
     if (value && typeof value === "object") return value
-    return { y: 0, width: 0, height: 0, connectorWidth: 0, connectorVisible: false }
+    return { x: 0, y: 0, width: 0, height: 0, connectorWidth: 0, connectorVisible: false }
+  }
+
+  function frameShadowAttachedFlyoutXFor(screen) {
+    var geometry = panelGeometryFor(screen)
+    if (panelOnRight) return Math.max(0, Number(geometry.x) || 0)
+    return sidebarPaintOcclusionWidthFor(screen)
+  }
+
+  function frameShadowAttachedFlyoutWidthFor(screen) {
+    var geometry = panelGeometryFor(screen)
+    var x = frameShadowAttachedFlyoutXFor(screen)
+    var sidebarEdge = panelOnRight
+      ? Math.max(0, Number(screen && screen.width || 0) - sidebarPaintOcclusionWidthFor(screen))
+      : Math.max(x, (Number(geometry.x) || 0) + (Number(geometry.width) || 0))
+    return Math.max(0, sidebarEdge - x)
   }
 
   function frameBorderAttachedFlyoutYFor(screen) {
@@ -2461,14 +2494,38 @@ Item {
       required property var modelData
       readonly property bool fullscreenSuppressed: root.fullscreenWorkspaceOnScreen(modelData)
       readonly property bool sidebarRenderable: root.sidebarVisibleOnScreen(modelData)
+      readonly property string outputName: modelData && modelData.name !== undefined
+        ? String(modelData.name) : ""
+      readonly property real liveSidebarBodyWidth: sidebarRenderable
+        ? (root.sidebarAutoHideEnabled
+          ? Math.max(0, root.panelWidth + Math.min(0, panelHost.surfaceX))
+          : root.panelWidth)
+        : 0
+
+      onLiveSidebarBodyWidthChanged: root.publishSidebarPaintOcclusion(
+        modelData, liveSidebarBodyWidth)
 
     onFullscreenSuppressedChanged: {
       var name = root.sidebarAutohideScreenName(modelData)
       sidebarAutohide.setScreenSuppressed(name, fullscreenSuppressed)
       if (fullscreenSuppressed && root.flyoutTargetsScreen(modelData)) root.closeFlyouts("fullscreen")
     }
-    Component.onCompleted: sidebarAutohide.setScreenSuppressed(
-      root.sidebarAutohideScreenName(modelData), fullscreenSuppressed)
+    Component.onCompleted: {
+      sidebarAutohide.setScreenSuppressed(
+        root.sidebarAutohideScreenName(modelData), fullscreenSuppressed)
+      root.publishSidebarPaintOcclusion(modelData, liveSidebarBodyWidth)
+      if (root.lacunaSettings
+          && typeof root.lacunaSettings.publishForegroundFrameSource === "function")
+        root.lacunaSettings.publishForegroundFrameSource(
+          menuWindow.outputName, "menu", foregroundFrameBridge)
+    }
+    Component.onDestruction: {
+      root.publishSidebarPaintOcclusion(modelData, 0)
+      if (root.lacunaSettings
+          && typeof root.lacunaSettings.clearForegroundFrameSource === "function")
+        root.lacunaSettings.clearForegroundFrameSource(
+          menuWindow.outputName, "menu", foregroundFrameBridge)
+    }
 
     targetScreen: modelData
     layerNamespace: root.pluginId + "-menu-" + root.screenNamespace(modelData)
@@ -2543,6 +2600,13 @@ Item {
       Component.onCompleted: root.publishPanelGeometry(modelData, panelHost)
     }
 
+    QtObject {
+      id: foregroundFrameBridge
+      readonly property var borderSource: frameOverlay
+      readonly property real offsetX: menuWindow.visualLeftInset
+      readonly property real offsetY: menuWindow.visualTopInset
+    }
+
     LacunaFrameOverlay {
       id: frameOverlay
 
@@ -2551,7 +2615,10 @@ Item {
       mode: root.lacunaEnabled && !menuWindow.fullscreenSuppressed
         && !root.barOwnsLacunaFrame ? root.frameMode : "off"
       borderOnly: root.ownsHostFrameBorderOnScreen(modelData)
-      borderGeometryRecord: root.hostFrameGeometryFor(modelData)
+      // Autohide's border shares the sidebar animation clock. The host frame
+      // record intentionally stays on persistent geometry to keep background
+      // consumers stable, so use the live clipped body width here instead.
+      borderGeometryRecord: root.sidebarAutoHideEnabled ? null : root.hostFrameGeometryFor(modelData)
       shadowEnabled: root.lacunaEnabled && !menuWindow.fullscreenSuppressed
         && !root.barOwnsLacunaFrame && root.frameShadow && root.frameMode !== "off"
       borderEnabled: root.lacunaEnabled && !menuWindow.fullscreenSuppressed
@@ -2573,7 +2640,7 @@ Item {
       shadowOffsetY: root.frameShadowOffsetY
       sidebarX: panelHost.sidebarMaskX
       sidebarY: panelHost.sidebarMaskY
-      sidebarWidth: menuWindow.sidebarRenderable ? root.panelWidth : 0
+      sidebarWidth: menuWindow.liveSidebarBodyWidth
       sidebarHeight: panelHost.sidebarMaskHeight
       sidebarMoldingWidth: root.frameMoldingPieces ? root.frameRadius : 0
       sidebarMoldingVisible: menuWindow.sidebarRenderable && root.frameMoldingPieces && root.frameRadius > 0

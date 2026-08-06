@@ -55,8 +55,8 @@ toggle time). Hence the rules below.
 | --- | --- | --- |
 | background | `omarchy-background` (Omarchy), `lacuna-media-player-video`, `lacuna-background-vignette` (ignore-animations mode) | Video surfaces remain mapped to preserve reliable background-layer presentation and carry their fade cover internally. |
 | bottom | `lacuna-ambience-host-bottom` (enabled bottom mode only), fallback ambience overlays, `lacuna-desktop-clock`, `lacuna-background-vignette` (default) | Disabled ambience maps no host surface. |
-| top | `omarchy-bar`, `lacuna-bar-portrait-companion` (portrait split outputs only), `lacuna-bar-frame` (always mapped), frame/sidebar reserve windows | The frame surface owns border paint except on the hosted-sidebar screen, where its border is disabled and the existing Overlay menu window recomposes the complete border above the opaque sidebar. No additional layer surface is created. All Top paint and reserves suppress per output during real fullscreen. |
-| overlay | `lacuna-ambience-host-overlay` (enabled foreground mode only), `lacuna-menu` sidebar, transient panels, `omarchy-bar-drag-ghost`, non-exclusive Lacuna panels | Foreground ambience may paint above ordinary windows and existing Overlay UI, but never above a real fullscreen window. Persistent overlay hosts become transparent per output during fullscreen; transient panels close. |
+| top | `omarchy-bar`, `lacuna-bar-portrait-companion` (portrait split outputs only), `lacuna-bar-frame` (always mapped), frame/sidebar reserve windows | The frame surface owns border paint except on the hosted-sidebar screen, where its border is disabled and the Overlay menu window recomposes the complete border above the opaque sidebar. No additional layer surface is created. All Top paint and reserves suppress per output during real fullscreen. |
+| overlay | `lacuna-menu` sidebar and attached flyouts, `lacuna-ambience-host-overlay` (enabled foreground mode only), transient panels, `omarchy-bar-drag-ghost`, non-exclusive Lacuna panels | The complete menu surface stays above the Top frame by layer level, so frame fill and shadow cannot cover a flyout regardless of map order. Foreground ambience may paint above existing Overlay UI and repaints the authoritative frame-border path inside its own window. No Overlay paint appears above a real fullscreen window. |
 
 ## Verifying live
 
@@ -67,8 +67,10 @@ hyprctl layers
 Within `Layer level 2 (top)` the current Quattro list is expected to show
 `omarchy-bar`, one `lacuna-bar-portrait-companion` per portrait split output,
 and `lacuna-bar-frame`; there is no `lacuna-bar-frame-border` namespace.
-The open `lacuna-menu` sidebar appears in Overlay. Disabled ambience has no
-host namespaces; enabled ambience has exactly one selected host per output.
+The open `lacuna-menu` sidebar appears at Overlay, above the Top frame. Foreground
+ambience also appears at Overlay when enabled and may paint above existing
+Overlay UI under the documented resource-first mapping policy. Disabled ambience
+has no host namespaces; enabled ambience has exactly one selected host per output.
 While an output has a real fullscreen window, its Lacuna bar/frame/sidebar and
 foreground ambience hosts may remain listed but must paint nothing, accept no
 input, and reserve no exclusive zone.
@@ -95,15 +97,34 @@ Mapped shells and heavyweight content share explicit resource lifecycles:
   still gates entry, playback, normal/failure exit, and fade settlement.
 - The persistent Top frame owns fill and shadow. It also owns border paint on
   screens without the hosted sidebar. On the hosted-sidebar screen, the
-  already-mapped Overlay menu window receives the same frame geometry record
-  and owns the complete border path; the Top copy is disabled there. There is
+  Overlay menu window receives the same frame geometry record and owns the
+  complete border path; the frame copy is disabled there. There is
   no separate frame-border surface. Portrait companions exist only on
   effective portrait split outputs. Fullscreen suppression gates both copies,
   the owning bar, and every frame reserve without remapping persistent paint.
-- Sidebar autohide reuses the existing Overlay `lacuna-menu` surface. The
-  surface remains mapped while its narrow left-edge input zone is armed; only
-  its paint and input mask change. Autohide adds no namespace or layer level,
-  and fullscreen clears the hot-zone input region on the affected output.
+- Sidebar autohide reuses the existing Overlay `lacuna-menu` surface. This keeps
+  the complete sidebar/connector/flyout assembly above the persistent Top frame
+  by layer level rather than fragile same-layer map order. Foreground ambience
+  remains at Overlay and accepts the resource-first mapping semantics described
+  above. The frame still clips its fill at the sidebar's live body edge. The existing frame shadow remains authoritative:
+  its reveal hole follows the live sidebar body edge, and the caster's existing
+  radius produces the molding's outer tangent. Opening the sidebar therefore moves
+  the same full-frame shadow contour around the sidebar instead of disabling
+  the rail shadow or joining separately rasterized shadows. While an attached
+  flyout is visible, its complete attachment envelope is added to the inverse
+  shadow mask so the sidebar contour cannot paint over the flyout; the flyout's
+  own outer shadow remains visible. Foreground ambience remains
+  above ordinary windows, and its own window repaints only the crisp authoritative
+  border afterward. No extra layer-shell surface is added, and the menu remains
+  above the frame regardless of map order. The sidebar surface
+  remains mapped while its narrow left-edge input zone is armed; only
+  its paint and input mask change. Because it is transient shell paint, it
+  never mutates the persistent background-content rectangle consumed by
+  wallpaper, video, or vignette surfaces; the visible frame border still
+  follows the sidebar edge. The vignette rasterizes its SVG once per output
+  size and lets the scene graph scale the cached texture. Autohide adds no
+  namespace or layer level, and fullscreen clears the hot-zone input region on
+  the affected output.
 - Shared status followers such as Voxtype belong to one shell service, not to
   each monitor-local widget instance.
 

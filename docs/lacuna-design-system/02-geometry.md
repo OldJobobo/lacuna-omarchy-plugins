@@ -99,7 +99,7 @@ content shell, including the upper and lower joins beside a sidebar. They use
 The four corners and their connecting rails must always have one rendering
 owner. On a screen without the hosted sidebar, the bar's Top frame paints the
 complete border. On the hosted-sidebar screen, the bar passes its authoritative
-interpolated geometry record to the already-mapped Overlay menu window; that
+interpolated geometry record to the Overlay menu window; that
 window paints the complete border once, above the opaque sidebar, and the Top
 frame disables its border paint for that screen. Never transfer an individual
 corner between renderers or leave both complete paths active: either choice
@@ -149,7 +149,13 @@ the frame outline instead of becoming a separately boxed card. When Full Frame i
 draws only the exposed outside seam of the combined bar/sidebar shell, not a
 closed box around either surface. A bar rail is clipped at the sidebar molding's
 outer tangent; the sidebar then owns that curve and its vertical content edge.
-Neither path may continue behind the other or into content space. When a sidebar
+The full-frame shadow remains one authoritative caster. Its application-reveal
+hole moves to the live sidebar body edge; the caster radius then produces the
+molding's outer tangent, preserving the rail, curve, and vertical sidebar
+shadow as one contour. An attached flyout's full connector/flyout envelope
+masks that contour, preventing the sidebar shadow from crossing the joined
+surface while preserving the flyout's outer shadow. Neither paint path may continue behind the other or into content
+space. When a sidebar
 flyout attaches, this standalone seam uses the same outer connector bounds as
 the full-frame border and stops for the entire molding gap.
 

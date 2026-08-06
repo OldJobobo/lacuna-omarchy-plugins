@@ -71,10 +71,10 @@ The stored Docked/Overlay preference remains unchanged and becomes effective
 again when autohide is disabled. Lacuna Settings must explain that Window Mode
 is temporarily overridden by autohide rather than silently changing it.
 
-### 2.3 Reuse the existing Overlay window
+### 2.3 Reuse the existing sidebar window
 
 Extend the existing `LacunaPanelWindow`; do not add a hot-zone window. Keep it
-mapped while autohide is armed, preserve `WlrLayer.Overlay`, and expose only a
+mapped while autohide is armed, preserve its layer assignment, and expose only a
 small masked input region while concealed. This preserves map order and avoids
 adding another namespace to the layer-stacking policy.
 
@@ -338,7 +338,10 @@ Add registry actions and Layout controls. Update:
 - `config/release-inventory.json`.
 
 The layer document should record that autohide keeps the existing Overlay menu
-surface mapped and adds no new level assignment.
+surface mapped and adds no new level assignment. Overlay keeps the complete
+sidebar/flyout assembly above the persistent Top frame regardless of map order;
+foreground ambience shares Overlay under the documented resource-first mapping
+semantics.
 
 ### Phase 6 — Live validation
 
@@ -391,7 +394,7 @@ The plan is complete only when:
 
 ## 9. Principal Risks
 
-- A mask bug in a permanently mapped Overlay window can intercept invisible
+- A mask bug in a permanently mapped layer-shell window can intercept invisible
   screen content; runtime mask probes and live pointer testing are mandatory.
 - A 1 px logical strip may be unreliable at fractional scale; keep the default
   bounded to 2–4 px until scale testing proves otherwise.

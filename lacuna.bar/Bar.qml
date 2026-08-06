@@ -199,12 +199,15 @@ Item {
     var screens = root.validBarScreens || []
     for (var i = 0; i < screens.length; i++) {
       var screen = screens[i]
+      var occupiedEdge = root.hostedSidebarOccupiesEdge("left", screen) ? "left"
+        : root.hostedSidebarOccupiesEdge("right", screen) ? "right" : ""
       values.push([
         frameScreenKey(screen),
         Number(screen && screen.width || 0),
         Number(screen && screen.height || 0),
         root.portraitCompanionEdge(screen),
-        root.hostedSidebarVisibleOnScreen(screen) ? "sidebar" : ""
+        occupiedEdge,
+        occupiedEdge === "" ? 0 : root.hostedSidebarFrameOcclusionWidth
       ].join(":"))
     }
     values.sort()
@@ -219,10 +222,6 @@ Item {
       frameMoldingPieces,
       position,
       barSize,
-      hostedSidebarVisible,
-      hostedSidebarFrameOcclusionWidth,
-      hostedMenu.panelOnRight,
-      hostedMenu.sidebarScreen ? String(hostedMenu.sidebarScreen.name || "") : "",
       portraitSplitEnabled,
       selectedOutputGeometrySignature()
     ].join("|")
@@ -284,9 +283,13 @@ Item {
     var bottomInset = root.position === "bottom" || companionEdge === "bottom" ? Math.max(0, root.barSize) : t
     var leftInset = root.position === "left" ? Math.max(0, root.barSize) : t
     var rightInset = root.position === "right" ? Math.max(0, root.barSize) : t
-    var sidebarOnThisScreen = root.hostedSidebarVisibleOnScreen(screen)
-    var leftOcclusion = sidebarOnThisScreen && !hostedMenu.panelOnRight ? root.hostedSidebarFrameOcclusionWidth : 0
-    var rightOcclusion = sidebarOnThisScreen && hostedMenu.panelOnRight ? root.hostedSidebarFrameOcclusionWidth : 0
+    // Autohide is transient Overlay paint. Keep the persistent frame and every
+    // background consumer on one stable geometry transaction; the Overlay
+    // border follows the sidebar's actual mask from the menu animation clock.
+    var sidebarOnLeft = root.hostedSidebarOccupiesEdge("left", screen)
+    var sidebarOnRight = root.hostedSidebarOccupiesEdge("right", screen)
+    var leftOcclusion = sidebarOnLeft ? root.hostedSidebarFrameOcclusionWidth : 0
+    var rightOcclusion = sidebarOnRight ? root.hostedSidebarFrameOcclusionWidth : 0
     var holeX = Math.max(0, leftOcclusion > 0 ? leftOcclusion : leftInset)
     var holeY = Math.max(0, topInset)
     var holeRight = Math.max(holeX + 1, screenWidth - (rightOcclusion > 0 ? rightOcclusion : rightInset))
@@ -310,8 +313,8 @@ Item {
       barSize: root.barSize,
       topEdgeOccupied: companionEdge === "top",
       bottomEdgeOccupied: companionEdge === "bottom",
-      leftEdgeOccupied: sidebarOnThisScreen && !hostedMenu.panelOnRight,
-      rightEdgeOccupied: sidebarOnThisScreen && hostedMenu.panelOnRight,
+      leftEdgeOccupied: sidebarOnLeft,
+      rightEdgeOccupied: sidebarOnRight,
       leftOccupiedWidth: leftOcclusion,
       rightOccupiedWidth: rightOcclusion,
       outerX: root.position === "left" ? Math.max(0, root.barSize) : 0,
@@ -455,14 +458,39 @@ Item {
     id: barTheme
   }
 
-  // Declaration order is mapping order. The single always-mapped Top frame
-  // surface owns fill, shadow, and optional border paint and is created before
-  // the bar and hosted Overlay menu.
+  // The single always-mapped Top frame owns fill, shadow, and optional border
+  // paint. The hosted menu lives at Overlay, so its sidebar and flyouts remain
+  // above this frame regardless of runtime map order.
   Variants {
     model: root.validBarScreens
 
     LacunaFrameWindow {
+      id: frameWindow
       required property var modelData
+
+      readonly property string outputName: modelData && modelData.name !== undefined
+        ? String(modelData.name) : ""
+      readonly property real sidebarPaintOcclusion:
+        typeof hostedMenu.sidebarPaintOcclusionWidthFor === "function"
+          ? hostedMenu.sidebarPaintOcclusionWidthFor(modelData) : 0
+      readonly property real sidebarMoldingOcclusion: sidebarPaintOcclusion > 0.001
+        && root.frameMoldingPieces ? root.frameRadius : 0
+
+      QtObject {
+        id: foregroundFrameBridge
+        readonly property var borderSource: frameWindow.foregroundBorderSource
+        readonly property real offsetX: 0
+        readonly property real offsetY: 0
+      }
+
+      Component.onCompleted: {
+        if (root.lacunaState && typeof root.lacunaState.publishForegroundFrameSource === "function")
+          root.lacunaState.publishForegroundFrameSource(outputName, "bar", foregroundFrameBridge)
+      }
+      Component.onDestruction: {
+        if (root.lacunaState && typeof root.lacunaState.clearForegroundFrameSource === "function")
+          root.lacunaState.clearForegroundFrameSource(outputName, "bar", foregroundFrameBridge)
+      }
 
       targetScreen: modelData
       geometryRecord: root.lacunaFrameGeometryRecord(modelData)
@@ -489,8 +517,25 @@ Item {
       borderEnabled: root.frameBorder && !hostedMenu.ownsHostFrameBorderOnScreen(modelData)
       borderColor: barTheme.frameBorder
       attachedFlyoutVisible: root.hostedFlyoutVisibleOnScreen(modelData)
+      attachedFlyoutX: hostedMenu.frameShadowAttachedFlyoutXFor
+        ? hostedMenu.frameShadowAttachedFlyoutXFor(modelData) : 0
       attachedFlyoutY: hostedMenu.frameBorderAttachedFlyoutYFor ? hostedMenu.frameBorderAttachedFlyoutYFor(modelData) : hostedMenu.frameBorderAttachedFlyoutY
+      attachedFlyoutWidth: hostedMenu.frameShadowAttachedFlyoutWidthFor
+        ? hostedMenu.frameShadowAttachedFlyoutWidthFor(modelData) : 0
       attachedFlyoutHeight: hostedMenu.frameBorderAttachedFlyoutHeightFor ? hostedMenu.frameBorderAttachedFlyoutHeightFor(modelData) : hostedMenu.frameBorderAttachedFlyoutHeight
+      // Frame paint stays clipped at the live sidebar body. The authoritative
+      // shadow uses an inverse source mask, so its clip can begin beneath the
+      // opaque molding while only the inward blur reaches the reveal.
+      paintOcclusionLeft: !hostedMenu.panelOnRight ? frameWindow.sidebarPaintOcclusion : 0
+      paintOcclusionRight: hostedMenu.panelOnRight ? frameWindow.sidebarPaintOcclusion : 0
+      shadowOcclusionLeft: !hostedMenu.panelOnRight ? frameWindow.sidebarPaintOcclusion : 0
+      shadowOcclusionRight: hostedMenu.panelOnRight ? frameWindow.sidebarPaintOcclusion : 0
+      shadowHoleLeftOverride: !hostedMenu.panelOnRight
+        && frameWindow.sidebarPaintOcclusion > 0.001
+          ? frameWindow.sidebarPaintOcclusion : -1
+      shadowHoleRightOverride: hostedMenu.panelOnRight
+        && frameWindow.sidebarPaintOcclusion > 0.001
+          ? frameWindow.width - frameWindow.sidebarPaintOcclusion : -1
     }
   }
 

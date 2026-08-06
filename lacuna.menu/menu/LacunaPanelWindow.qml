@@ -118,9 +118,10 @@ PanelWindow {
     hotZoneEnabled ? hotZoneX + hotZoneWidth : 0)
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.namespace: layerNamespace
-  // The frame surface is always mapped at Top. Keep the sidebar at Overlay so
-  // compositor map timing cannot place a primary-output sidebar underneath
-  // the frame shadow while other output variants remain above it.
+  // Keep the complete sidebar/connector/flyout surface above the persistent
+  // Top frame. Same-level map order is not stable across Variants, so placing
+  // the menu at Overlay is the compositor-level guarantee that frame paint and
+  // shadow cannot cover an attached flyout.
   WlrLayershell.layer: WlrLayer.Overlay
   // The persistent sidebar and its flyouts share one layer-shell surface. Keep
   // ordinary menu use pointer-driven, but allow explicitly keyboard-driven

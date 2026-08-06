@@ -36,6 +36,47 @@ Item {
   property int suppressFileReloads: 0
   property bool hasLoaded: false
   property bool recoveredFromCorruptSettings: false
+  // Runtime-only visual bridges. Publishers keep QML objects here so
+  // foreground ambience can repaint the authoritative frame border above its
+  // effects without persisting animation state or duplicating its clock.
+  property var foregroundFrameSources: ({})
+
+  function publishForegroundFrameSource(screenName, owner, bridge) {
+    var key = String(screenName || "")
+    var sourceOwner = String(owner || "")
+    if (key === "" || sourceOwner === "" || !bridge) return
+    var next = {}
+    for (var screenKey in foregroundFrameSources) {
+      next[screenKey] = {}
+      for (var ownerKey in foregroundFrameSources[screenKey])
+        next[screenKey][ownerKey] = foregroundFrameSources[screenKey][ownerKey]
+    }
+    if (!next[key]) next[key] = {}
+    next[key][sourceOwner] = bridge
+    foregroundFrameSources = next
+  }
+
+  function clearForegroundFrameSource(screenName, owner, bridge) {
+    var key = String(screenName || "")
+    var sourceOwner = String(owner || "")
+    if (!foregroundFrameSources[key]
+        || foregroundFrameSources[key][sourceOwner] !== bridge) return
+    var next = {}
+    for (var screenKey in foregroundFrameSources) {
+      next[screenKey] = {}
+      for (var ownerKey in foregroundFrameSources[screenKey]) {
+        if (screenKey !== key || ownerKey !== sourceOwner)
+          next[screenKey][ownerKey] = foregroundFrameSources[screenKey][ownerKey]
+      }
+    }
+    foregroundFrameSources = next
+  }
+
+  function foregroundFrameSource(screenName) {
+    var sources = foregroundFrameSources[String(screenName || "")]
+    if (!sources) return null
+    return sources.menu || sources.bar || null
+  }
 
   function defaultData() {
     return {

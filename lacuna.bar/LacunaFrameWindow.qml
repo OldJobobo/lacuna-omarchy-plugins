@@ -7,6 +7,7 @@ import "../lacuna.menu/components"
 PanelWindow {
   id: root
 
+  readonly property alias foregroundBorderSource: frameBorderPaint
   property var targetScreen: null
   property var geometryRecord: null
   property var shadowGeometryRecord: null
@@ -33,8 +34,18 @@ PanelWindow {
   property bool borderEnabled: false
   property color borderColor: Qt.rgba(1, 1, 1, 1)
   property bool attachedFlyoutVisible: false
+  property real attachedFlyoutX: 0
   property real attachedFlyoutY: 0
+  property real attachedFlyoutWidth: 0
   property real attachedFlyoutHeight: 0
+  property real paintOcclusionLeft: 0
+  property real paintOcclusionRight: 0
+  property real shadowOcclusionLeft: 0
+  property real shadowOcclusionRight: 0
+  // Live reveal-hole overrides let the existing frame shadow wrap transient
+  // sidebar geometry without rebuilding or replacing the frame caster.
+  property real shadowHoleLeftOverride: -1
+  property real shadowHoleRightOverride: -1
 
   readonly property bool hasGeometryRecord: geometryRecord && typeof geometryRecord === "object"
   readonly property int t: hasGeometryRecord ? Math.max(1, Number(geometryRecord.thickness) || 1) : Math.max(1, frameThickness)
@@ -63,6 +74,10 @@ PanelWindow {
   readonly property real outerY: hasGeometryRecord ? Number(geometryRecord.outerY || 0) : (topBar || effectiveTopEdgeOccupied ? effectiveBarSize : 0)
   readonly property real outerRight: hasGeometryRecord ? Number(geometryRecord.outerRight || width) : (rightBar ? Math.max(outerX + 1, width - effectiveBarSize) : width)
   readonly property real outerBottom: hasGeometryRecord ? Number(geometryRecord.outerBottom || height) : (bottomBar || effectiveBottomEdgeOccupied ? Math.max(outerY + 1, height - effectiveBarSize) : height)
+  readonly property real paintLeft: Math.max(outerX, Math.max(0, paintOcclusionLeft))
+  readonly property real paintRight: Math.min(outerRight, width - Math.max(0, paintOcclusionRight))
+  readonly property real shadowPaintLeft: Math.max(outerX, Math.max(0, shadowOcclusionLeft))
+  readonly property real shadowPaintRight: Math.min(outerRight, width - Math.max(0, shadowOcclusionRight))
   readonly property real holeX: hasGeometryRecord ? Number(geometryRecord.holeX || 0) : Math.max(0, effectiveLeftEdgeOccupied ? leftOcclusion : leftInset)
   readonly property real holeY: hasGeometryRecord ? Number(geometryRecord.holeY || 0) : Math.max(0, topInset)
   readonly property real holeRight: hasGeometryRecord ? Number(geometryRecord.holeRight || holeX + 1) : Math.max(holeX + 1, width - (effectiveRightEdgeOccupied ? rightOcclusion : rightInset))
@@ -90,9 +105,13 @@ PanelWindow {
   readonly property real shadowRecordHoleRight: hasShadowGeometryRecord ? Number(shadowGeometryRecord.holeRight || width) : holeRight
   readonly property real shadowRecordHoleBottom: hasShadowGeometryRecord ? Number(shadowGeometryRecord.holeBottom || height) : holeBottom
   readonly property real shadowRecordRadius: hasShadowGeometryRecord ? Math.max(0, Number(shadowGeometryRecord.contentRadius) || 0) : holeRadius
-  readonly property real casterHoleX: shadowFrameRenderable ? shadowRecordHoleX : (shadowBarPosition === "left" ? shadowBarSize : 0)
+  readonly property real casterHoleX: shadowFrameRenderable
+    ? (shadowHoleLeftOverride >= 0 ? shadowHoleLeftOverride : shadowRecordHoleX)
+    : (shadowBarPosition === "left" ? shadowBarSize : 0)
   readonly property real casterHoleY: shadowFrameRenderable ? shadowRecordHoleY : (shadowBarPosition === "top" || shadowTopEdgeOccupied ? shadowBarSize : 0)
-  readonly property real casterHoleRight: shadowFrameRenderable ? shadowRecordHoleRight : (shadowBarPosition === "right" ? Math.max(casterHoleX + 1, width - shadowBarSize) : width)
+  readonly property real casterHoleRight: shadowFrameRenderable
+    ? (shadowHoleRightOverride >= 0 ? shadowHoleRightOverride : shadowRecordHoleRight)
+    : (shadowBarPosition === "right" ? Math.max(casterHoleX + 1, width - shadowBarSize) : width)
   readonly property real casterHoleBottom: shadowFrameRenderable ? shadowRecordHoleBottom : (shadowBarPosition === "bottom" || shadowBottomEdgeOccupied ? Math.max(casterHoleY + 1, height - shadowBarSize) : height)
   readonly property real casterHoleRadius: shadowFrameRenderable
     ? Math.max(minArcRadius, Math.min(shadowRecordRadius, (casterHoleRight - casterHoleX) / 2, (casterHoleBottom - casterHoleY) / 2))
@@ -142,6 +161,7 @@ PanelWindow {
 
       visible: false
       anchors.fill: parent
+      layer.enabled: true
       asynchronous: false
       antialiasing: true
       preferredRendererType: Shape.CurveRenderer
@@ -210,19 +230,43 @@ PanelWindow {
     }
 
     Item {
+      id: frameShadowMask
+
+      anchors.fill: parent
+      visible: false
+      layer.enabled: true
+
+      ShaderEffectSource {
+        anchors.fill: parent
+        sourceItem: frameShadowCaster
+        live: true
+      }
+
+      Rectangle {
+        visible: root.attachedFlyoutVisible
+          && root.attachedFlyoutWidth > 0 && root.attachedFlyoutHeight > 0
+        x: root.attachedFlyoutX
+        y: root.attachedFlyoutY
+        width: root.attachedFlyoutWidth
+        height: root.attachedFlyoutHeight
+        color: "white"
+      }
+    }
+
+    Item {
       id: shadowClip
 
       // Only the content side of the chrome shows the cast shadow; the bar
       // strip is excluded because the frame must never draw over the bar.
-      x: root.outerX
+      x: root.shadowPaintLeft
       y: root.outerY
-      width: Math.max(0, root.outerRight - root.outerX)
+      width: Math.max(0, root.shadowPaintRight - root.shadowPaintLeft)
       height: Math.max(0, root.outerBottom - root.outerY)
       clip: true
       z: 0
 
       Item {
-        x: -root.outerX
+        x: -root.shadowPaintLeft
         y: -root.outerY
         width: root.width
         height: root.height
@@ -235,6 +279,8 @@ PanelWindow {
           blurMax: root.shadowBlurMax
           shadowHorizontalOffset: root.shadowOffsetX
           shadowVerticalOffset: root.shadowOffsetY
+          shadowOnly: true
+          shadowMaskSource: frameShadowMask
         }
       }
     }
@@ -246,15 +292,15 @@ PanelWindow {
     Item {
       id: framePaintClip
 
-      x: root.outerX
+      x: root.paintLeft
       y: root.outerY
-      width: Math.max(0, root.outerRight - root.outerX)
+      width: Math.max(0, root.paintRight - root.paintLeft)
       height: Math.max(0, root.outerBottom - root.outerY)
       clip: true
       z: 1
 
       Item {
-        x: -root.outerX
+        x: -root.paintLeft
         y: -root.outerY
         width: root.width
         height: root.height
@@ -373,6 +419,8 @@ PanelWindow {
         // Compose border paint inside the same authoritative outer clip as the
         // frame fill. The translated item restores monitor-local coordinates.
         LacunaFrameBorderWindow {
+          id: frameBorderPaint
+
           anchors.fill: parent
           z: 2
           active: root.active && root.borderEnabled

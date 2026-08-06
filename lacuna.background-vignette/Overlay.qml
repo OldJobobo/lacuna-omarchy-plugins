@@ -119,6 +119,8 @@ Item {
       id: vignetteWindow
 
       required property var modelData
+      readonly property real outputScale: modelData && modelData.devicePixelRatio !== undefined
+        ? Math.max(1, Number(modelData.devicePixelRatio) || 1) : 1
       readonly property var frameRect: {
         root.frameGeometryKey
         root.frameGeometryRevision
@@ -159,8 +161,13 @@ Item {
         Image {
           anchors.fill: parent
           source: Qt.resolvedUrl("assets/vignette.svg")
-          sourceSize.width: width
-          sourceSize.height: height
+          // Rasterize once per output size. Frame/sidebar geometry can then
+          // scale the cached texture in the scene graph instead of asking the
+          // SVG provider to rebuild it on every transition frame.
+          sourceSize.width: Math.max(1, Math.round((Number(vignetteWindow.modelData.width) || 1)
+            * vignetteWindow.outputScale))
+          sourceSize.height: Math.max(1, Math.round((Number(vignetteWindow.modelData.height) || 1)
+            * vignetteWindow.outputScale))
           fillMode: Image.Stretch
           smooth: true
           asynchronous: true
@@ -178,7 +185,9 @@ Item {
         visible: root.effectVisible,
         enabled: root.vignetteEnabled,
         intensity: root.vignetteIntensity,
-        ignoreBackgroundAnimationLayer: root.ignoreBackgroundAnimationLayer
+        ignoreBackgroundAnimationLayer: root.ignoreBackgroundAnimationLayer,
+        frameGeometryKey: root.frameGeometryKey,
+        frameGeometryRevision: root.frameGeometryRevision
       })
     }
   }

@@ -18,7 +18,9 @@
   "lacuna": {
     "standalone": false,
     "bundle": "ambience",
-    "requires": [],
+    "requires": [
+      "lacuna.state"
+    ],
     "recommends": [],
     "stability": "beta"
   }

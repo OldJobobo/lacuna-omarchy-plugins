@@ -13,6 +13,8 @@ Item {
   property real shadowHorizontalOffset: 2
   property real shadowVerticalOffset: 3
   property bool autoPaddingEnabled: false
+  property bool shadowOnly: false
+  property Item shadowMaskSource: null
 
   anchors.fill: parent
   visible: shadowEnabled
@@ -28,5 +30,8 @@ Item {
     shadowHorizontalOffset: root.shadowHorizontalOffset
     shadowVerticalOffset: root.shadowVerticalOffset
     autoPaddingEnabled: root.autoPaddingEnabled
+    maskEnabled: root.shadowOnly
+    maskSource: root.shadowMaskSource || root.source
+    maskInverted: root.shadowOnly
   }
 }
