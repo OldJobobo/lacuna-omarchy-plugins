@@ -104,7 +104,13 @@ Item {
         // frame and connector settings diverge a v1 reader cannot preserve both.
         cornerPieces: true,
         monitorPolicy: "auto",
-        monitorNames: []
+        monitorNames: [],
+        autoHide: {
+          enabled: false,
+          hotZoneWidth: 3,
+          revealDelayMs: 120,
+          hideDelayMs: 350
+        }
       },
       backgroundEffects: {
         enabled: true,
@@ -215,6 +221,7 @@ Item {
     var next = defaultData()
     if (source && typeof source === "object") {
       var sourceSidebar = source.sidebar && typeof source.sidebar === "object" ? source.sidebar : ({})
+      var sourceAutoHide = sourceSidebar.autoHide && typeof sourceSidebar.autoHide === "object" ? sourceSidebar.autoHide : ({})
       var sourceFrame = source.frame && typeof source.frame === "object" ? source.frame : ({})
       var legacyCornerPieces = sourceSidebar.cornerPieces !== false
       next.sidebar.connectorPieces = typeof sourceSidebar.connectorPieces === "boolean"
@@ -310,6 +317,17 @@ Item {
         next.sidebar.cornerPieces = next.sidebar.connectorPieces
         next.sidebar.monitorPolicy = normalizeSidebarMonitorPolicy(sourceSidebar.monitorPolicy)
         next.sidebar.monitorNames = normalizeSidebarMonitorNames(sourceSidebar.monitorNames)
+        next.sidebar.autoHide.enabled = sourceAutoHide.enabled === true
+        next.sidebar.autoHide.hotZoneWidth = boundedInt(sourceAutoHide.hotZoneWidth, 3, 2, 8)
+        next.sidebar.autoHide.revealDelayMs = boundedInt(sourceAutoHide.revealDelayMs, 120, 0, 1000)
+        next.sidebar.autoHide.hideDelayMs = boundedInt(sourceAutoHide.hideDelayMs, 350, 0, 3000)
+        preserveUnknownJson(next.sidebar.autoHide, sourceAutoHide, {
+          enabled: true,
+          revealMode: true,
+          hotZoneWidth: true,
+          revealDelayMs: true,
+          hideDelayMs: true
+        })
         preserveUnknownJson(next.sidebar, sourceSidebar, {
           defaultMode: true,
           collapsed: true,
@@ -317,7 +335,8 @@ Item {
           connectorPieces: true,
           cornerPieces: true,
           monitorPolicy: true,
-          monitorNames: true
+          monitorNames: true,
+          autoHide: true
         })
       }
       next.backgroundEffects = normalizeBackgroundEffects(source.backgroundEffects || source.bgEffects)
@@ -1189,6 +1208,7 @@ Item {
         settingsFile: root.settingsFile,
         schemaVersion: root.settingsSchemaVersion,
         sidebarConnectorPieces: sidebar.connectorPieces !== false,
+        sidebarAutoHideEnabled: sidebar.autoHide && sidebar.autoHide.enabled === true,
         frameMoldingPieces: frame.moldingPieces !== false,
         frameRoundedContentCorners: frame.moldingPieces !== false,
         persistenceState: root.persistenceState,

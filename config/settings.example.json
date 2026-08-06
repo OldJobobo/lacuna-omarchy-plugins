@@ -52,7 +52,13 @@
     "connectorPieces": true,
     "cornerPieces": true,
     "monitorPolicy": "auto",
-    "monitorNames": []
+    "monitorNames": [],
+    "autoHide": {
+      "enabled": false,
+      "hotZoneWidth": 3,
+      "revealDelayMs": 120,
+      "hideDelayMs": 350
+    }
   },
   "backgroundEffects": {
     "enabled": true,

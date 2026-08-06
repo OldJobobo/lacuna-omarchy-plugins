@@ -25,6 +25,7 @@ Item {
   property string pluginId: manifest && manifest.id ? manifest.id : "lacuna.menu"
   property var menuState: localMenuState
   property var flyoutContentRefs: ({})
+  property var autohideContentHolds: ({})
   property string settingsSection: "overview"
   property string requestedInteractionMonitorName: ""
   property bool initialSidebarDefaultApplied: false
@@ -34,6 +35,12 @@ Item {
   readonly property var lacunaSettings: resolveLacunaSettings()
   readonly property var compactState: sharedCompactState || localCompactState
   readonly property var sidebarState: sharedSidebarState || localSidebarState
+  readonly property bool sidebarAutoHideEnabled: sidebarState.autoHideEnabled === true
+  readonly property int sidebarAutoHideHotZoneWidth: Math.max(2, Math.min(8, Number(sidebarState.autoHideHotZoneWidth) || 3))
+  readonly property int sidebarAutoHideRevealDelayMs: Math.max(0, Math.min(1000, Number(sidebarState.autoHideRevealDelayMs) || 0))
+  readonly property int sidebarAutoHideHideDelayMs: Math.max(0, Math.min(3000, Number(sidebarState.autoHideHideDelayMs) || 0))
+  readonly property string sidebarAutoHideActiveScreenName: sidebarAutohide.activeScreenName
+  readonly property bool effectiveSidebarExclusive: sidebarState.exclusive && !sidebarAutoHideEnabled
   // These aliases keep shared services visible inside per-output Variants.
   // Variant delegates have their own lexical scope and cannot resolve sibling
   // ids such as registry or designTokens directly.
@@ -98,10 +105,10 @@ Item {
   property int frameReservePadding: 4
   property int sidebarReserveExtra: 0
   property int flyoutLaneWidth: lacunaEnabled && panelController.menuRenderable ? maxFlyoutWidthFor(sidebarScreen) + panelShadowOutset : 0
-  // In exclusive mode the compositor already places this window below the top
-  // bar, so the bar edge is local y=0. In overlay mode the window starts at
-  // screen top and the bar edge is the live bar height.
-  property int barBottomY: sidebarState.exclusive ? 0 : barHeight
+  // When the sidebar window is inset around the bar, the bar edge is local
+  // y=0. A persistent non-exclusive overlay still starts at screen top and
+  // therefore uses the live bar height as its local content offset.
+  property int barBottomY: root.topBar && visualTopInset === 0 ? barHeight : 0
   property bool panelVisible: panelController.panelVisible
   readonly property bool settingsPanelOpen: panelController.isFlyoutOpen("settings")
   readonly property bool settingsPanelVisible: panelController.isFlyoutVisible("settings")
@@ -154,27 +161,31 @@ Item {
   readonly property real frameBorderAttachedFlyoutY: frameBorderAttachedFlyoutYFor(sidebarScreen)
   readonly property real frameBorderAttachedFlyoutHeight: frameBorderAttachedFlyoutHeightFor(sidebarScreen)
   readonly property int frameOverlayWidth: frameOverlayWidthFor(sidebarScreen)
-  readonly property bool frameReserveActive: !barOwnsLacunaFrame && lacunaEnabled && sidebarState.exclusive && (panelController.menuRenderable || frameMode === "fullframe") && frameMode !== "off"
-  readonly property bool sidebarReserveActive: lacunaEnabled && sidebarState.exclusive && panelController.menuRenderable && sidebarSurfaceVisible
+  readonly property bool frameReserveActive: !barOwnsLacunaFrame && lacunaEnabled && effectiveSidebarExclusive && (panelController.menuRenderable || frameMode === "fullframe") && frameMode !== "off"
+  readonly property bool sidebarReserveActive: lacunaEnabled && effectiveSidebarExclusive && panelController.menuRenderable && sidebarSurfaceVisible
   readonly property bool frameReserveFlush: frameReserveMode === "flush" || hyprWindowGapsDisabled || (frameReserveMode === "auto" && fakeFullscreenWorkspaceActive())
   readonly property int reservePadding: lacunaEnabled && frameMode !== "off" && !frameReserveFlush ? frameReservePadding : 0
   readonly property int effectiveSidebarReserveExtra: frameReserveFlush ? 0 : sidebarReserveExtra
   readonly property bool externalLeftFrameReserveActive: frameMode === "fullframe" && !root.leftBar && !root.panelOnRight
   readonly property int barOwnedLeftFrameReserve: barOwnsLacunaFrame && externalLeftFrameReserveActive && !sidebarSurfaceVisible ? frameThickness : 0
   readonly property int sidebarReserveSize: sidebarReserveActive ? Math.max(0, panelWidth + effectiveSidebarReserveExtra - barOwnedLeftFrameReserve) : 0
-  readonly property int visualTopInset: lacunaEnabled && sidebarState.exclusive && root.topBar ? root.barHeight : 0
+  readonly property int visualTopInset: lacunaEnabled && root.topBar
+    && (effectiveSidebarExclusive || sidebarAutoHideEnabled) ? root.barHeight : 0
   // The standalone sidebar border shares the top bar's final pixel row. Pull
   // this Overlay window up by one pixel so both strokes have the same tangent
   // center instead of placing the sidebar curve one pixel below the bar rail.
   readonly property int standaloneBorderWindowOverlap: lacunaEnabled && frameBorder
     && frameMode === "off" && root.topBar ? 1 : 0
-  readonly property int visualBottomInset: lacunaEnabled && sidebarState.exclusive && root.bottomBar ? root.barHeight : 0
-  readonly property int visualLeftInset: lacunaEnabled && sidebarState.exclusive && root.leftBar ? root.barControlSize : 0
-  readonly property int visualRightInset: lacunaEnabled && sidebarState.exclusive && root.rightBar ? root.barControlSize : 0
+  readonly property int visualBottomInset: lacunaEnabled && root.bottomBar
+    && (effectiveSidebarExclusive || sidebarAutoHideEnabled) ? root.barHeight : 0
+  readonly property int visualLeftInset: lacunaEnabled && root.leftBar
+    && (effectiveSidebarExclusive || sidebarAutoHideEnabled) ? root.barControlSize : 0
+  readonly property int visualRightInset: lacunaEnabled && root.rightBar
+    && (effectiveSidebarExclusive || sidebarAutoHideEnabled) ? root.barControlSize : 0
   readonly property int frameShadowRightReserve: frameShadow ? Math.max(0, frameShadowOffsetX) : 0
   readonly property int frameReserveTop: frameReserveActive && frameMode === "fullframe" && !root.topBar ? frameThickness + reservePadding : 0
   readonly property int frameReserveBottom: frameReserveActive && frameMode === "fullframe" && !root.bottomBar ? frameThickness + reservePadding : 0
-  readonly property int frameReserveLeft: frameReserveActive && frameMode === "fullframe" && !root.leftBar && (root.panelOnRight || !root.sidebarSurfaceVisible) ? frameThickness + reservePadding : 0
+  readonly property int frameReserveLeft: frameReserveActive && frameMode === "fullframe" && !root.leftBar && (root.panelOnRight || !root.sidebarSurfaceVisible || sidebarAutoHideEnabled) ? frameThickness + reservePadding : 0
   readonly property int frameReserveRight: frameReserveActive && frameMode === "fullframe" && !root.panelOnRight && !root.rightBar ? frameThickness + reservePadding : 0
   readonly property int topBarShadowReserve: frameReserveActive && root.topBar ? reservePadding : 0
   // Fallback for the standalone menu only: when the Lacuna bar hosts the
@@ -269,10 +280,78 @@ Item {
     if (liveFocusedMonitorName !== "") monitorHandoffTimer.restart()
   }
 
+  onSidebarScreensChanged: Qt.callLater(root.syncSidebarAutohideScreens)
+  onSidebarAutoHideEnabledChanged: {
+    Qt.callLater(root.syncSidebarAutohideScreens)
+    if (sidebarAutoHideEnabled) {
+      focusDismissReason = "autohide-enabled"
+      pendingFlyoutFocus = ""
+      panelController.closeActiveFlyout()
+      panelController.closeMenu()
+    } else if (initialSidebarDefaultApplied) {
+      applySidebarDefaultState()
+    }
+  }
+
   function sidebarVisibleOnScreen(screen) {
-    return sidebarSurfaceVisible
-      && MonitorPolicy.isSidebarScreen(sidebarScreens, screen)
-      && !fullscreenWorkspaceOnScreen(screen)
+    if (!sidebarSurfaceVisible || !MonitorPolicy.isSidebarScreen(sidebarScreens, screen)
+        || fullscreenWorkspaceOnScreen(screen)) return false
+    if (!sidebarAutoHideEnabled) return true
+    return MonitorPolicy.screenName(screen) === sidebarAutoHideActiveScreenName
+  }
+
+  function sidebarAutohideScreenName(screen) {
+    return MonitorPolicy.screenName(screen)
+  }
+
+  function sidebarScreenNames() {
+    var names = []
+    var screens = sidebarScreens || []
+    for (var i = 0; i < screens.length; i++) {
+      var name = MonitorPolicy.screenName(screens[i])
+      if (name !== "") names.push(name)
+    }
+    return names
+  }
+
+  function syncSidebarAutohideScreens() {
+    sidebarAutohide.setEligibleScreens(sidebarScreenNames())
+  }
+
+  function setSidebarAutohideContentHeld(screen, held) {
+    var name = sidebarAutohideScreenName(screen)
+    if (name === "") return
+    var next = {}
+    for (var key in autohideContentHolds) next[key] = autohideContentHolds[key]
+    if (held === true) next[name] = true
+    else delete next[name]
+    autohideContentHolds = next
+  }
+
+  function sidebarAutohideContentHeld() {
+    var name = sidebarAutoHideActiveScreenName
+    return name !== "" && autohideContentHolds[name] === true
+  }
+
+  function sidebarAutohideRequestScreenName() {
+    var requested = requestedInteractionMonitorName
+    if (requested !== "" && sidebarAutohide.screenEligible(requested)) return requested
+    var screen = flyoutScreen || sidebarScreen
+    return MonitorPolicy.screenName(screen)
+  }
+
+  function revealSidebarFromAutohide(screenName, reason) {
+    if (!sidebarAutoHideEnabled || !lacunaEnabled) return
+    requestedInteractionMonitorName = String(screenName || "")
+    panelController.openMenu()
+  }
+
+  function concealSidebarFromAutohide(reason) {
+    if (!sidebarAutoHideEnabled) return
+    focusDismissReason = String(reason || "pointer-leave")
+    pendingFlyoutFocus = ""
+    panelController.closeActiveFlyout()
+    panelController.closeMenu()
   }
 
   function ownsHostFrameBorderOnScreen(screen) {
@@ -680,7 +759,12 @@ Item {
     var payload = openPayload(payloadJson)
     requestedInteractionMonitorName = payload && payload.popupContext && payload.popupContext.screenName
       ? String(payload.popupContext.screenName) : ""
-    panelController.openMenu()
+    if (sidebarAutoHideEnabled) {
+      var targetName = sidebarAutohideRequestScreenName()
+      if (!sidebarAutohide.explicitOpen(targetName)) return
+    } else {
+      panelController.openMenu()
+    }
     openPayloadFlyout(payload)
   }
 
@@ -726,7 +810,8 @@ Item {
   function close() {
     focusDismissReason = "explicit-close"
     pendingFlyoutFocus = ""
-    panelController.closeMenu()
+    if (sidebarAutoHideEnabled) sidebarAutohide.explicitClose("explicit-close")
+    else panelController.closeMenu()
   }
 
   function closeFlyouts(reason) {
@@ -786,6 +871,11 @@ Item {
     focusDismissReason = "explicit-close"
     pendingFlyoutFocus = ""
     panelController.closeActiveFlyout()
+    if (sidebarAutoHideEnabled) {
+      sidebarAutohide.explicitHeld = false
+      panelController.closeMenu()
+      return true
+    }
     if (menuState) {
       menuState.stack = ["main"]
       if (typeof menuState.save === "function") menuState.save()
@@ -845,6 +935,7 @@ Item {
 
   function sidebarDefaultKeepsMenuOpen() {
     if (!sidebarSettingsLoaded()) return true
+    if (sidebarAutoHideEnabled) return false
     var mode = sidebarDefaultMode()
     return mode === "rail" || mode === "full"
   }
@@ -1527,7 +1618,11 @@ Item {
 
   function setSidebarDefaultMode(mode) {
     sidebarState.setDefaultMode(mode)
-    applySidebarDefaultState()
+    if (!sidebarAutoHideEnabled) applySidebarDefaultState()
+  }
+
+  function setSidebarAutoHideEnabled(enabled) {
+    sidebarState.setAutoHideEnabled(enabled === true)
   }
 
   function validClockAnchor(value) {
@@ -1706,6 +1801,11 @@ Item {
 
     if (entry.action === "toggle-sidebar-rail") {
       sidebarState.toggleCollapsed()
+      return true
+    }
+
+    if (entry.action === "toggle-sidebar-autohide") {
+      setSidebarAutoHideEnabled(desiredChecked(entry, !sidebarAutoHideEnabled))
       return true
     }
 
@@ -2103,6 +2203,7 @@ Item {
   Component.onCompleted: {
     settledFocusedMonitorName = liveFocusedMonitorName
     versionFile.reload()
+    syncSidebarAutohideScreens()
     applyInitialSidebarDefault()
     refreshHyprWorkspaceState()
   }
@@ -2246,6 +2347,10 @@ Item {
     sidebarMonitorPolicy: root.sidebarMonitorPolicy
     sidebarMonitorNames: root.sidebarMonitorNames
     sidebarMonitorOptions: root.sidebarMonitorOptions
+    sidebarAutoHideEnabled: root.sidebarAutoHideEnabled
+    sidebarAutoHideHotZoneWidth: root.sidebarAutoHideHotZoneWidth
+    sidebarAutoHideRevealDelayMs: root.sidebarAutoHideRevealDelayMs
+    sidebarAutoHideHideDelayMs: root.sidebarAutoHideHideDelayMs
     compact: root.compact
     barSizeMode: barSizeModeService.barSizeMode
     designStyle: root.designStyle
@@ -2295,12 +2400,30 @@ Item {
     animationDisabled: root.reduceMotionEnabled
   }
 
+  SidebarAutohideController {
+    id: sidebarAutohide
+
+    enabled: root.sidebarAutoHideEnabled && root.lacunaEnabled
+    hotZoneWidth: root.sidebarAutoHideHotZoneWidth
+    revealDelayMs: root.sidebarAutoHideRevealDelayMs
+    hideDelayMs: root.sidebarAutoHideHideDelayMs
+    flyoutHeld: root.flyoutOpen || root.flyoutRenderable || root.pendingFlyoutFocus !== ""
+    contentHeld: root.pendingSystemRestartConfirmation || root.sidebarAutohideContentHeld()
+    onRevealRequested: function(screenName, reason) {
+      root.revealSidebarFromAutohide(screenName, reason)
+    }
+    onConcealRequested: function(reason) {
+      root.concealSidebarFromAutohide(reason)
+    }
+  }
+
   PanelController {
     id: panelController
     motionTokens: sharedMotion
     menuState: root.menuState
     retainMenuOnExternalClose: root.sidebarSettingsLoaded() && root.sidebarDefaultKeepsMenuOpen()
     transitionTraceEnabled: root.transitionTraceEnabled
+    onMenuProgressChanged: sidebarAutohide.notifyMenuProgress(menuProgress)
     onFlyoutOpenChanged: {
       if (!flyoutOpen) root.pendingFlyoutFocus = ""
       else root.applyPendingFlyoutFocus()
@@ -2339,15 +2462,20 @@ Item {
       readonly property bool fullscreenSuppressed: root.fullscreenWorkspaceOnScreen(modelData)
       readonly property bool sidebarRenderable: root.sidebarVisibleOnScreen(modelData)
 
-    onFullscreenSuppressedChanged: if (fullscreenSuppressed && root.flyoutTargetsScreen(modelData))
-      root.closeFlyouts("fullscreen")
+    onFullscreenSuppressedChanged: {
+      var name = root.sidebarAutohideScreenName(modelData)
+      sidebarAutohide.setScreenSuppressed(name, fullscreenSuppressed)
+      if (fullscreenSuppressed && root.flyoutTargetsScreen(modelData)) root.closeFlyouts("fullscreen")
+    }
+    Component.onCompleted: sidebarAutohide.setScreenSuppressed(
+      root.sidebarAutohideScreenName(modelData), fullscreenSuppressed)
 
     targetScreen: modelData
     layerNamespace: root.pluginId + "-menu-" + root.screenNamespace(modelData)
     menuOpen: root.menuState.open
     panelVisible: root.lacunaEnabled && root.panelVisible
       && (menuWindow.sidebarRenderable || root.flyoutVisibleOnScreen(modelData))
-    keepMapped: root.lacunaEnabled && (root.frameMode !== "off" || root.topBarPanelShadowVisible)
+    keepMapped: root.lacunaEnabled && (root.sidebarAutoHideEnabled || root.frameMode !== "off" || root.topBarPanelShadowVisible)
     flyoutOpen: root.lacunaEnabled && root.flyoutOpenOnScreen(modelData)
     flyoutInteractive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)
     keyboardInputActive: root.lacunaEnabled && !menuWindow.fullscreenSuppressed
@@ -2356,7 +2484,7 @@ Item {
     shortcutInhibitionActive: menuWindow.keyboardInputActive && mediaPlayerContent.searchInputFocused
     dismissActive: root.lacunaEnabled && root.flyoutInteractiveOnScreen(modelData)
     dismissReason: root.focusDismissReason
-    exclusive: sidebarState.exclusive
+    exclusive: root.effectiveSidebarExclusive
     panelWidth: root.panelWidth
     surfaceRightInset: Math.max(panelHost.effectiveConnectorWidth, root.frameMoldingPieces ? root.frameRadius : 0)
     flyoutLaneWidth: root.flyoutLaneWidthFor(modelData, panelHost.effectiveConnectorWidth)
@@ -2378,6 +2506,14 @@ Item {
     flyoutMaskY: panelHost.flyoutMaskY
     flyoutMaskWidth: panelHost.flyoutMaskWidth
     flyoutMaskHeight: panelHost.flyoutMaskHeight
+    hotZoneEnabled: root.sidebarAutoHideEnabled && root.lacunaEnabled && !menuWindow.fullscreenSuppressed
+    hotZoneX: 0
+    hotZoneY: root.barBottomY
+    hotZoneWidth: root.sidebarAutoHideHotZoneWidth
+    hotZoneHeight: Math.max(0, menuWindow.height - hotZoneY
+      - (root.bottomBar && root.visualBottomInset === 0 ? root.barHeight : 0))
+    onHotZoneEntered: sidebarAutohide.setHotZoneHovered(root.sidebarAutohideScreenName(modelData), true)
+    onHotZoneExited: sidebarAutohide.setHotZoneHovered(root.sidebarAutohideScreenName(modelData), false)
     onFocusGrabCleared: function(reason) { root.closeFlyouts(reason) }
     onDismissRequested: function(reason) { root.closeFlyouts(reason) }
 
@@ -2552,6 +2688,11 @@ Item {
       // while the unified surface beneath continues to cast one shadow.
       backgroundVisible: true
 
+      HoverHandler {
+        id: sidebarSurfaceHover
+        onHoveredChanged: sidebarAutohide.setSidebarHovered(root.sidebarAutohideScreenName(modelData), hovered)
+      }
+
       MenuContent {
         id: menuContent
 
@@ -2591,6 +2732,8 @@ Item {
         onQuickLaunchRemoveRequested: function(appId) {
           root.removeCustomQuickLaunchApp(appId)
         }
+        onQuickLaunchRenameOpenChanged: root.setSidebarAutohideContentHeld(modelData, quickLaunchRenameOpen)
+        Component.onDestruction: root.setSidebarAutohideContentHeld(modelData, false)
         onSettingsRequested: root.toggleSettingsPanel()
         onShellSettingsRequested: root.toggleShellSettingsPanel()
         onMediaPlayerRequested: root.openMediaPlayerPanel()
@@ -2648,6 +2791,11 @@ Item {
       panelColor: root.panelColor
       foreground: root.foreground
       backgroundVisible: false
+
+      HoverHandler {
+        id: connectorSurfaceHover
+        onHoveredChanged: sidebarAutohide.setConnectorHovered(root.sidebarAutohideScreenName(modelData), hovered)
+      }
     }
 
     LacunaAttachedFlyout {
@@ -2669,6 +2817,11 @@ Item {
       foreground: root.foreground
       designTokens: root.menuDesignTokensRef
       backgroundVisible: false
+
+      HoverHandler {
+        id: attachedFlyoutHover
+        onHoveredChanged: sidebarAutohide.setFlyoutHovered(root.sidebarAutohideScreenName(modelData), hovered)
+      }
 
       SettingsWindow {
         id: settingsPanel

@@ -137,6 +137,10 @@ Item {
   }
 
   function hostedSidebarOccupiesEdge(edge, screen) {
+    // Autohide is always overlay-only. Keep the frame's exclusive reserve in
+    // place while the transient sidebar paints above it so pointer reveal never
+    // causes application-window reflow.
+    if (hostedMenu.sidebarAutoHideEnabled === true) return false
     if (!hostedSidebarVisibleOnScreen(screen)) return false
     return (edge === "left" && hostedSidebarOnLeft) || (edge === "right" && hostedSidebarOnRight)
   }

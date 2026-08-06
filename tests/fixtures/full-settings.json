@@ -98,6 +98,13 @@
     "cornerPieces": false,
     "monitorPolicy": "pinned",
     "monitorNames": ["DP-1", "DP-2"],
+    "autoHide": {
+      "enabled": true,
+      "hotZoneWidth": 4,
+      "revealDelayMs": 140,
+      "hideDelayMs": 420,
+      "futureAutoHideField": { "keep": true }
+    },
     "futureSidebarField": { "keep": true }
   },
     "backgroundEffects": {

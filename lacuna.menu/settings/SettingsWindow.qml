@@ -399,7 +399,8 @@ Item {
           { value: "full", label: "Full" },
           { value: "rail", label: "Rail" }
         ], root.registry.sidebarDefaultMode, "set-sidebar-default-"),
-        row("sidebar-overlay", "Window Mode", root.registry.sidebarExclusive ? "Float over windows" : "Reserve screen space", sidebarModeName(), "lacuna", "toggle-sidebar-mode", "toggle", root.registry.sidebarExclusive),
+        row("sidebar-toggle", "Autohide Sidebar", root.registry.sidebarAutoHideHint(), root.registry.sidebarAutoHideName(), "lacuna", "toggle-sidebar-autohide", "toggle", root.registry.sidebarAutoHideEnabled),
+        row("sidebar-overlay", "Window Mode", root.registry.sidebarAutoHideEnabled ? "Autohide temporarily overlays windows; this saved choice returns when disabled" : (root.registry.sidebarExclusive ? "Float over windows" : "Reserve screen space"), root.registry.sidebarAutoHideEnabled ? "Overlay" : sidebarModeName(), "lacuna", "toggle-sidebar-mode", "toggle", root.registry.sidebarExclusive),
         row("monitor", "Sidebar Monitors", sidebarMonitorPolicyHint(), sidebarMonitorPolicyName(), "lacuna", "", "segments", false, [
           { value: "auto", label: "Auto" },
           { value: "pinned", label: "Pinned" },

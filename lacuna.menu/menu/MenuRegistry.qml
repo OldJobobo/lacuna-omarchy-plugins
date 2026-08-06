@@ -11,6 +11,10 @@ Item {
   property string sidebarMonitorPolicy: "auto"
   property var sidebarMonitorNames: []
   property var sidebarMonitorOptions: []
+  property bool sidebarAutoHideEnabled: false
+  property int sidebarAutoHideHotZoneWidth: 3
+  property int sidebarAutoHideRevealDelayMs: 120
+  property int sidebarAutoHideHideDelayMs: 350
   property bool compact: false
   property string barSizeMode: "full"
   property bool desktopClockEnabled: false
@@ -1048,6 +1052,16 @@ Item {
     if (root.sidebarDefaultMode === "rail") return "Return to the icon rail after actions and shell restart"
     if (root.sidebarDefaultMode === "full") return "Return to the full sidebar after actions and shell restart"
     return "Close the sidebar after actions and shell restart"
+  }
+
+  function sidebarAutoHideName() {
+    return root.sidebarAutoHideEnabled ? "On" : "Off"
+  }
+
+  function sidebarAutoHideHint() {
+    if (!root.sidebarAutoHideEnabled) return "Keep the configured sidebar presentation persistent"
+    return "Reveal from a " + root.sidebarAutoHideHotZoneWidth + " px left-edge zone after "
+      + root.sidebarAutoHideRevealDelayMs + " ms; hide after " + root.sidebarAutoHideHideDelayMs + " ms"
   }
 
   function sidebarMonitorPolicyName() {

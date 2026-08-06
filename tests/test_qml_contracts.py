@@ -512,7 +512,7 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn('readonly property bool topBarPanelShadowVisible: lacunaEnabled && !barOwnsLacunaFrame && frameShadow && frameMode === "off" && root.topBar', window)
         self.assertIn("readonly property int topBarPanelShadowVisualWidth", window)
         self.assertIn("visualWidth: Math.max(root.frameOverlayWidthFor(modelData), root.topBarPanelShadowVisualWidthFor(modelData))", window)
-        self.assertIn('keepMapped: root.lacunaEnabled && (root.frameMode !== "off" || root.topBarPanelShadowVisible)', window)
+        self.assertIn('keepMapped: root.lacunaEnabled && (root.sidebarAutoHideEnabled || root.frameMode !== "off" || root.topBarPanelShadowVisible)', window)
         self.assertIn("topBarShadowEnabled: root.topBarPanelShadowVisible", window)
         self.assertIn("topBarShadowX: root.topBarPanelShadowX", window)
         self.assertIn("topBarShadowWidth: root.topBarPanelShadowWidth", window)
@@ -687,6 +687,9 @@ class QmlContractTests(unittest.TestCase):
             self.assertIn('monitorPolicy: "auto"', qml)
             self.assertIn("function normalizeSidebarMonitorPolicy", qml)
             self.assertIn("function normalizeSidebarMonitorNames", qml)
+            self.assertNotIn("function normalizeSidebarAutoHideRevealMode", qml)
+            self.assertIn("preserveUnknownJson(next.sidebar.autoHide, sourceAutoHide", qml)
+            self.assertIn("revealMode: true", qml)
             self.assertIn("function designStyleBar", qml)
             self.assertIn("function saveDesignStyleBar", qml)
             self.assertIn('if (typeof value === "string")', qml)
@@ -703,6 +706,9 @@ class QmlContractTests(unittest.TestCase):
         self.assertEqual({"lacuna": {}, "omarchy": {}, "material": {}}, example["designStyles"])
         self.assertEqual("auto", example["sidebar"]["monitorPolicy"])
         self.assertEqual([], example["sidebar"]["monitorNames"])
+        self.assertFalse(example["sidebar"]["autoHide"]["enabled"])
+        self.assertNotIn("revealMode", example["sidebar"]["autoHide"])
+        self.assertEqual(3, example["sidebar"]["autoHide"]["hotZoneWidth"])
         self.assertEqual("pinned", fixture["sidebar"]["monitorPolicy"])
         self.assertEqual(["DP-1", "DP-2"], fixture["sidebar"]["monitorNames"])
         self.assertEqual("lacuna.clock", fixture["designStyles"]["lacuna"]["bar"]["centerAnchor"])
@@ -722,6 +728,7 @@ class QmlContractTests(unittest.TestCase):
             fixture["mediaProviders"]["futureProvider"],
             fixture["mediaPlayer"]["futurePlayerField"],
             fixture["sidebar"]["futureSidebarField"],
+            fixture["sidebar"]["autoHide"]["futureAutoHideField"],
             fixture["backgroundEffects"]["futureEffectsField"],
             fixture["backgroundEffects"]["effects"]["filmGrain"]["futureTuningField"],
             fixture["backgroundEffects"]["effects"]["futureEffect"]["futureEffectField"],
@@ -735,6 +742,8 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("next.sidebar.defaultMode = defaultMode", sidebar_state)
         self.assertIn("next.sidebar.connectorPieces = connectorPieces", sidebar_state)
         self.assertIn("next.sidebar.cornerPieces = connectorPieces", sidebar_state)
+        self.assertIn("next.sidebar.autoHide.enabled = autoHideEnabled", sidebar_state)
+        self.assertNotIn("autoHideRevealMode", sidebar_state)
         self.assertNotIn("property bool cornerPieces", sidebar_state)
 
         menu_window = read("lacuna.menu/menu/MenuWindow.qml")
@@ -3061,6 +3070,35 @@ class QmlContractTests(unittest.TestCase):
         old_editor_helper = "omarchy" + "-launch-editor"
         self.assertNotIn(f'role === "editor") return root.commands.hyprExec("{old_editor_helper}")', qml)
 
+    def test_sidebar_autohide_reuses_overlay_surface_and_has_single_policy_owner(self):
+        controller = read("lacuna.menu/services/SidebarAutohideController.qml")
+        panel_window = read("lacuna.menu/menu/LacunaPanelWindow.qml")
+        menu_window = read("lacuna.menu/menu/MenuWindow.qml")
+        bar = read("lacuna.bar/Bar.qml")
+
+        self.assertIn('property string phase: enabled ? "concealed" : "disabled"', controller)
+        self.assertIn("signal revealRequested(string screenName, string reason)", controller)
+        self.assertIn("signal concealRequested(string reason)", controller)
+        self.assertIn("property string rearmBlockedScreenName", controller)
+        self.assertIn("property int intentRevision", controller)
+        self.assertIn("property bool hotZoneEnabled: false", panel_window)
+        self.assertIn("width: Math.round(root.hotZoneEnabled ? Math.max(0, root.hotZoneWidth) : 0)", panel_window)
+        self.assertIn("signal hotZoneEntered()", panel_window)
+        self.assertEqual(1, panel_window.count("WlrLayershell.layer:"))
+        self.assertIn("WlrLayershell.layer: WlrLayer.Overlay", panel_window)
+        self.assertIn("readonly property bool effectiveSidebarExclusive: sidebarState.exclusive && !sidebarAutoHideEnabled", menu_window)
+        self.assertIn("hotZoneEnabled: root.sidebarAutoHideEnabled", menu_window)
+        self.assertIn("SidebarAutohideController {", menu_window)
+        self.assertIn('entry.action === "toggle-sidebar-autohide"', menu_window)
+        self.assertNotIn("set-sidebar-autohide-reveal-", menu_window)
+        self.assertNotIn("sidebarAutoHideRevealMode", menu_window)
+        self.assertNotIn("sidebarState.setDisplay(sidebarAutoHide", menu_window)
+        self.assertIn("&& (effectiveSidebarExclusive || sidebarAutoHideEnabled) ? root.barHeight : 0", menu_window)
+        self.assertIn("property int barBottomY: root.topBar && visualTopInset === 0 ? barHeight : 0", menu_window)
+        self.assertIn("hotZoneY: root.barBottomY", menu_window)
+        self.assertIn("root.bottomBar && root.visualBottomInset === 0 ? root.barHeight : 0", menu_window)
+        self.assertIn("if (hostedMenu.sidebarAutoHideEnabled === true) return false", bar)
+
     def test_sidebar_default_mode_is_separate_from_runtime_toggle(self):
         settings = read("lacuna.menu/services/LacunaSettings.qml")
         sidebar = read("lacuna.menu/services/SidebarState.qml")
@@ -3074,7 +3112,10 @@ class QmlContractTests(unittest.TestCase):
         # re-derived from defaultMode.
         self.assertIn("readonly property string desiredDefaultMode: defaultMode", sidebar)
         self.assertIn("readonly property bool runtimeCollapsed: collapsed", sidebar)
+        self.assertIn('collapsed = defaultMode === "rail"', sidebar)
         self.assertIn("next.sidebar.collapsed = collapsed", sidebar)
+        self.assertNotIn("autoHidePriorCollapsed", sidebar)
+        self.assertNotIn("autoHideSessionInitialized", sidebar)
         self.assertIn("settingsService.save(next, false, true)", sidebar)
         self.assertNotIn('collapsed: defaultMode === "rail"', sidebar)
         self.assertIn("settingsService.hasLoaded !== false", sidebar)
@@ -3100,6 +3141,8 @@ class QmlContractTests(unittest.TestCase):
         )
         self.assertIn('entry.action.indexOf("set-sidebar-default-")', window)
         self.assertIn('"Sidebar Default"', settings_window)
+        self.assertIn('"Autohide Sidebar"', settings_window)
+        self.assertNotIn('"Autohide Reveal As"', settings_window)
         self.assertNotIn('"set-sidebar-display-"', settings_window)
 
     def test_lacuna_settings_persistence_service_restores_idle_state(self):

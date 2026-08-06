@@ -663,6 +663,7 @@
         "services/MotionTokens.qml",
         "services/OmarchyShellSettingsService.qml",
         "services/PanelController.qml",
+        "services/SidebarAutohideController.qml",
         "services/SidebarState.qml",
         "services/Theme.qml",
         "settings/OmarchyShellSettingsWindow.qml",

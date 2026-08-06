@@ -11,6 +11,8 @@ PanelWindow {
   signal focusGrabCleared(string reason)
   signal dismissRequested(string reason)
   signal focusSessionReleased(string reason, int revision)
+  signal hotZoneEntered()
+  signal hotZoneExited()
 
   property var targetScreen: null
   property bool menuOpen: false
@@ -46,6 +48,11 @@ PanelWindow {
   property string dismissReason: "transition"
   property int focusSessionRevision: 0
   property bool anchorRight: false
+  property bool hotZoneEnabled: false
+  property real hotZoneX: 0
+  property real hotZoneY: 0
+  property real hotZoneWidth: 3
+  property real hotZoneHeight: height
   readonly property bool textEditingActive: focusedItemEditsText()
   property string layerNamespace: "lacuna-menu"
   readonly property bool inputActive: panelVisible
@@ -107,7 +114,8 @@ PanelWindow {
   visible: panelVisible || keepMapped
   screen: targetScreen
   color: "transparent"
-  implicitWidth: Math.max(panelWidth + surfaceRightInset + flyoutLaneWidth, visualWidth)
+  implicitWidth: Math.max(panelWidth + surfaceRightInset + flyoutLaneWidth, visualWidth,
+    hotZoneEnabled ? hotZoneX + hotZoneWidth : 0)
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.namespace: layerNamespace
   // The frame surface is always mapped at Top. Keep the sidebar at Overlay so
@@ -157,6 +165,13 @@ PanelWindow {
       width: Math.round(root.inputActive ? Math.max(0, root.flyoutMaskWidth) : 0)
       height: Math.round(root.inputActive ? Math.max(0, root.flyoutMaskHeight) : 0)
     }
+
+    Region {
+      x: Math.round(root.hotZoneX)
+      y: Math.round(root.hotZoneY)
+      width: Math.round(root.hotZoneEnabled ? Math.max(0, root.hotZoneWidth) : 0)
+      height: Math.round(root.hotZoneEnabled ? Math.max(0, root.hotZoneHeight) : 0)
+    }
   }
 
   HyprlandFocusGrab {
@@ -182,5 +197,24 @@ PanelWindow {
   Item {
     id: contentLayer
     anchors.fill: parent
+  }
+
+  Item {
+    id: hotZoneTarget
+
+    x: root.hotZoneX
+    y: root.hotZoneY
+    width: root.hotZoneEnabled ? Math.max(0, root.hotZoneWidth) : 0
+    height: root.hotZoneEnabled ? Math.max(0, root.hotZoneHeight) : 0
+    visible: root.hotZoneEnabled
+    z: 10000
+
+    HoverHandler {
+      id: hotZoneHover
+      onHoveredChanged: {
+        if (hovered) root.hotZoneEntered()
+        else root.hotZoneExited()
+      }
+    }
   }
 }

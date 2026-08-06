@@ -229,7 +229,52 @@ def calendar_shadow_margins(edge: str, blur_max: int = 28, offset_x: int = 2, of
     }
 
 
+def sidebar_window_bar_geometry(
+    *, screen_height: int, bar_position: str, bar_size: int, exclusive: bool, autohide: bool
+) -> dict[str, int]:
+    avoids_bar = exclusive or autohide
+    top_inset = bar_size if bar_position == "top" and avoids_bar else 0
+    bottom_inset = bar_size if bar_position == "bottom" and avoids_bar else 0
+    window_height = max(0, screen_height - top_inset - bottom_inset)
+    local_bar_bottom = bar_size if bar_position == "top" and top_inset == 0 else 0
+    local_bottom_bar = bar_size if bar_position == "bottom" and bottom_inset == 0 else 0
+    return {
+        "topInset": top_inset,
+        "bottomInset": bottom_inset,
+        "barBottomY": local_bar_bottom,
+        "hotZoneY": local_bar_bottom,
+        "hotZoneHeight": max(0, window_height - local_bar_bottom - local_bottom_bar),
+    }
+
+
 class QmlGeometryTests(unittest.TestCase):
+    def test_autohide_sidebar_avoids_top_bar_without_double_offset(self):
+        geometry = sidebar_window_bar_geometry(
+            screen_height=1440, bar_position="top", bar_size=32,
+            exclusive=False, autohide=True,
+        )
+        self.assertEqual(32, geometry["topInset"])
+        self.assertEqual(0, geometry["barBottomY"])
+        self.assertEqual(0, geometry["hotZoneY"])
+        self.assertEqual(1408, geometry["hotZoneHeight"])
+
+    def test_persistent_overlay_keeps_local_top_bar_offset(self):
+        geometry = sidebar_window_bar_geometry(
+            screen_height=1440, bar_position="top", bar_size=32,
+            exclusive=False, autohide=False,
+        )
+        self.assertEqual(0, geometry["topInset"])
+        self.assertEqual(32, geometry["barBottomY"])
+        self.assertEqual(32, geometry["hotZoneY"])
+
+    def test_autohide_sidebar_avoids_bottom_bar_without_double_subtraction(self):
+        geometry = sidebar_window_bar_geometry(
+            screen_height=1080, bar_position="bottom", bar_size=28,
+            exclusive=False, autohide=True,
+        )
+        self.assertEqual(28, geometry["bottomInset"])
+        self.assertEqual(1052, geometry["hotZoneHeight"])
+
     def test_calendar_surface_orients_attachment_and_reveal_on_all_bar_edges(self):
         surface = read("lacuna.clock/BarFlyoutSurface.qml")
         flyout = read("lacuna.clock/CalendarFlyout.qml")

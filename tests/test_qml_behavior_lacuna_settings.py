@@ -8,6 +8,51 @@ from qml_harness import HAVE_SESSION, parse_behave, qml_url, require_no_qml_erro
 
 @unittest.skipUnless(HAVE_SESSION, "needs a quickshell binary and a Wayland session")
 class QmlLacunaSettingsBehaviorTests(unittest.TestCase):
+    def test_sidebar_autohide_normalization_clamps_and_preserves_unknown_fields(self):
+        for relative in ["lacuna.state/Service.qml", "lacuna.menu/services/LacunaSettings.qml"]:
+            qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url(relative)}", Component.PreferSynchronous)
+    if (component.status !== Component.Ready) {{
+      console.log("BEHAVE_ERR " + component.errorString())
+      Qt.quit()
+      return
+    }}
+    var service = component.createObject(this)
+    var normalized = service.normalize({{
+      version: 2,
+      sidebar: {{
+        defaultMode: "rail",
+        autoHide: {{
+          enabled: true,
+          revealMode: "invalid",
+          hotZoneWidth: 99,
+          revealDelayMs: -20,
+          hideDelayMs: 99999,
+          futureAutoHide: {{ keep: true }}
+        }}
+      }}
+    }})
+    console.log("BEHAVE " + JSON.stringify(normalized.sidebar.autoHide))
+    finish.start()
+  }}
+  Timer {{ id: finish; interval: 20; onTriggered: Qt.quit() }}
+}}
+"""
+            output = run_quickshell(qml, timeout=8)
+            require_no_qml_errors(output)
+            row = parse_behave(output)[-1]
+            self.assertTrue(row["enabled"], output[-2000:])
+            self.assertNotIn("revealMode", row, output[-2000:])
+            self.assertEqual(8, row["hotZoneWidth"], output[-2000:])
+            self.assertEqual(0, row["revealDelayMs"], output[-2000:])
+            self.assertEqual(3000, row["hideDelayMs"], output[-2000:])
+            self.assertEqual({"keep": True}, row["futureAutoHide"], output[-2000:])
+
     def test_canonical_and_vendored_normalizers_preserve_future_nested_json(self):
         for service_path in (
             "lacuna.state/Service.qml",
@@ -416,6 +461,13 @@ ShellRoot {{
           cornerPieces: true,
           monitorPolicy: "pinned",
           monitorNames: ["DP-1"],
+          autoHide: {{
+            enabled: false,
+            hotZoneWidth: 3,
+            revealDelayMs: 120,
+            hideDelayMs: 350,
+            futureAutoHide: {{ keep: true }}
+          }},
           futureSidebar: {{ keep: true }}
         }}
       }}
@@ -435,16 +487,22 @@ ShellRoot {{
     sidebar.collapsed = true
     sidebar.exclusive = false
     sidebar.connectorPieces = false
+    sidebar.autoHideEnabled = true
+    sidebar.autoHideHotZoneWidth = 4
+    sidebar.autoHideRevealDelayMs = 140
+    sidebar.autoHideHideDelayMs = 420
     sidebar.save()
     console.log("BEHAVE " + JSON.stringify({{
       futurePreserved: settings.saved.sidebar.futureSidebar.keep === true,
       defaultMode: settings.saved.sidebar.defaultMode,
-      collapsed: settings.saved.sidebar.collapsed,
+      collapsed: sidebar.collapsed,
       exclusive: settings.saved.sidebar.exclusive,
       connectorPieces: settings.saved.sidebar.connectorPieces,
       cornerAlias: settings.saved.sidebar.cornerPieces,
       monitorPolicy: settings.saved.sidebar.monitorPolicy,
-      monitorName: settings.saved.sidebar.monitorNames[0]
+      monitorName: settings.saved.sidebar.monitorNames[0],
+      autoHide: settings.saved.sidebar.autoHide,
+      savedCollapsed: settings.saved.sidebar.collapsed
     }}))
     finish.restart()
   }}
@@ -467,6 +525,72 @@ ShellRoot {{
         self.assertFalse(row["cornerAlias"])
         self.assertEqual("pinned", row["monitorPolicy"])
         self.assertEqual("DP-1", row["monitorName"])
+        self.assertTrue(row["autoHide"]["enabled"])
+        self.assertNotIn("revealMode", row["autoHide"])
+        self.assertEqual(4, row["autoHide"]["hotZoneWidth"])
+        self.assertEqual({"keep": True}, row["autoHide"]["futureAutoHide"])
+        self.assertTrue(row["savedCollapsed"])
+
+    def test_sidebar_autohide_enable_disable_preserves_existing_runtime_presentation(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var sidebar: null
+
+  QtObject {{
+    id: settings
+    property bool hasLoaded: true
+    property var data: ({{ sidebar: {{ defaultMode: "full", collapsed: false, autoHide: {{ enabled: false }} }} }})
+    property var saved: null
+    function normalize(value) {{
+      return {{ version: 2, sidebar: {{
+        defaultMode: "full", collapsed: false, exclusive: true,
+        connectorPieces: true, cornerPieces: true, monitorPolicy: "auto", monitorNames: [],
+        autoHide: {{ enabled: false, hotZoneWidth: 3, revealDelayMs: 120, hideDelayMs: 350 }}
+      }} }}
+    }}
+    function save(value) {{ saved = value }}
+  }}
+
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.menu/services/SidebarState.qml')}", Component.PreferSynchronous)
+    if (component.status !== Component.Ready) {{
+      console.log("BEHAVE_ERR " + component.errorString())
+      Qt.quit()
+      return
+    }}
+    sidebar = component.createObject(root, {{ settingsService: settings }})
+    sidebar.setDisplay("rail")
+    sidebar.setAutoHideEnabled(true)
+    var savedWhileEnabled = settings.saved.sidebar.collapsed
+    var visibleModeWhileEnabled = sidebar.collapsed
+    sidebar.setAutoHideEnabled(false)
+    console.log("BEHAVE " + JSON.stringify({{
+      savedWhileEnabled: savedWhileEnabled,
+      visibleModeWhileEnabled: visibleModeWhileEnabled,
+      modeAfterDisable: sidebar.collapsed,
+      savedCollapsed: settings.saved.sidebar.collapsed,
+      enabled: settings.saved.sidebar.autoHide.enabled,
+      hasRevealMode: settings.saved.sidebar.autoHide.revealMode !== undefined
+    }}))
+    finish.start()
+  }}
+
+  Timer {{ id: finish; interval: 20; onTriggered: Qt.quit() }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        row = parse_behave(output)[-1]
+        self.assertTrue(row["savedWhileEnabled"], output[-2000:])
+        self.assertTrue(row["visibleModeWhileEnabled"], output[-2000:])
+        self.assertTrue(row["modeAfterDisable"], output[-2000:])
+        self.assertTrue(row["savedCollapsed"], output[-2000:])
+        self.assertFalse(row["enabled"], output[-2000:])
+        self.assertFalse(row["hasRevealMode"], output[-2000:])
 
 
 if __name__ == "__main__":

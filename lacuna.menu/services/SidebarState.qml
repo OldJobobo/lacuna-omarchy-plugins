@@ -12,6 +12,10 @@ Item {
   property string defaultMode: "off"
   property string monitorPolicy: "auto"
   property var monitorNames: []
+  property bool autoHideEnabled: false
+  property int autoHideHotZoneWidth: 3
+  property int autoHideRevealDelayMs: 120
+  property int autoHideHideDelayMs: 350
   property bool displayInitialized: false
 
   // Two distinct concepts that previously bled together:
@@ -62,6 +66,26 @@ Item {
     save()
   }
 
+  function setAutoHideEnabled(value) {
+    var nextEnabled = value === true
+    if (nextEnabled === autoHideEnabled) return
+    autoHideEnabled = nextEnabled
+    save()
+  }
+
+  function setAutoHideTiming(hotZoneWidth, revealDelayMs, hideDelayMs) {
+    autoHideHotZoneWidth = boundedInt(hotZoneWidth, 3, 2, 8)
+    autoHideRevealDelayMs = boundedInt(revealDelayMs, 120, 0, 1000)
+    autoHideHideDelayMs = boundedInt(hideDelayMs, 350, 0, 3000)
+    save()
+  }
+
+  function boundedInt(value, fallback, minimum, maximum) {
+    var parsed = Math.round(Number(value))
+    if (!isFinite(parsed)) return fallback
+    return Math.max(minimum, Math.min(maximum, parsed))
+  }
+
   function normalizeDefaultMode(mode) {
     var value = String(mode || "").toLowerCase()
     if (value === "off" || value === "rail" || value === "full") return value
@@ -74,9 +98,7 @@ Item {
     if (!next || typeof next !== "object") next = { version: 2 }
     if (!next.sidebar || typeof next.sidebar !== "object") next.sidebar = {}
     next.sidebar.defaultMode = defaultMode
-    // Persist the real runtime toggle rather than a value re-derived from
-    // defaultMode, so changing the default preference no longer silently
-    // rewrites the stored collapsed state.
+    // This live rail/full state is also the presentation autohide reveals.
     next.sidebar.collapsed = collapsed
     next.sidebar.exclusive = exclusive
     next.sidebar.connectorPieces = connectorPieces
@@ -85,6 +107,11 @@ Item {
     next.sidebar.cornerPieces = connectorPieces
     next.sidebar.monitorPolicy = next.sidebar.monitorPolicy ? String(next.sidebar.monitorPolicy) : monitorPolicy
     next.sidebar.monitorNames = Array.isArray(next.sidebar.monitorNames) ? next.sidebar.monitorNames : monitorNames
+    if (!next.sidebar.autoHide || typeof next.sidebar.autoHide !== "object") next.sidebar.autoHide = {}
+    next.sidebar.autoHide.enabled = autoHideEnabled
+    next.sidebar.autoHide.hotZoneWidth = autoHideHotZoneWidth
+    next.sidebar.autoHide.revealDelayMs = autoHideRevealDelayMs
+    next.sidebar.autoHide.hideDelayMs = autoHideHideDelayMs
     settingsService.save(next, false, true)
   }
 
@@ -102,6 +129,11 @@ Item {
       ? sidebar.connectorPieces : !(sidebar && sidebar.cornerPieces === false)
     monitorPolicy = sidebar && sidebar.monitorPolicy ? String(sidebar.monitorPolicy) : "auto"
     monitorNames = sidebar && Array.isArray(sidebar.monitorNames) ? sidebar.monitorNames : []
+    var autoHide = sidebar && sidebar.autoHide && typeof sidebar.autoHide === "object" ? sidebar.autoHide : ({})
+    autoHideEnabled = autoHide.enabled === true
+    autoHideHotZoneWidth = boundedInt(autoHide.hotZoneWidth, 3, 2, 8)
+    autoHideRevealDelayMs = boundedInt(autoHide.revealDelayMs, 120, 0, 1000)
+    autoHideHideDelayMs = boundedInt(autoHide.hideDelayMs, 350, 0, 3000)
   }
 
   Component.onCompleted: {
