@@ -16,6 +16,20 @@ The visible sidebar itself is pointer-first and should not take keyboard focus
 from the application you are using. Text-entry surfaces can take bounded focus
 while active and return it when dismissed.
 
+## Autohide
+
+Enable **Lacuna Settings → Layout → Autohide Sidebar** to conceal the sidebar
+until the pointer dwells at the left edge. The existing **Sidebar Default**
+choice remains authoritative: Full reveals the full sidebar and Rail reveals
+the icon rail. Autohide only controls whether that presentation conceals and
+reveals. Moving through the sidebar, connector, or an attached flyout keeps the surface open;
+it conceals shortly after the pointer leaves the complete interaction area.
+
+Autohide overlays application windows and never creates a temporary docked
+reserve. An explicit menu-button open remains held until explicitly closed.
+After closing at the edge, leave and re-enter the hot zone to reveal it again.
+A real fullscreen window disables the hot zone on its own output.
+
 ## Launch applications
 
 The sidebar offers normal application discovery plus Lacuna's preferred and

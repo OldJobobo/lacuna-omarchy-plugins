@@ -36,11 +36,18 @@ Controls supported Lacuna presentation choices, including:
 
 - theme, compact, or full bar sizing;
 - sidebar off, full, or rail presentation;
+- optional left-edge autohide using the existing full or rail sidebar presentation;
 - automatic or selected monitor behavior;
 - whether shell settings open as a flyout or window;
 - portrait split presentation where exposed.
 
 Use Omarchy Settings for the bar's screen edge and widget composition.
+
+Autohide uses a narrow left-edge hot zone and temporarily forces the sidebar to
+overlay windows, so revealing it never rearranges tiled applications. The saved
+Docked/Overlay choice becomes effective again when autohide is disabled. With a
+left-positioned bar, the hot zone begins immediately beside the bar rather than
+covering its controls.
 
 ## Media Player
 

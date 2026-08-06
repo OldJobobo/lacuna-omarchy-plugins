@@ -100,6 +100,10 @@ Mapped shells and heavyweight content share explicit resource lifecycles:
   no separate frame-border surface. Portrait companions exist only on
   effective portrait split outputs. Fullscreen suppression gates both copies,
   the owning bar, and every frame reserve without remapping persistent paint.
+- Sidebar autohide reuses the existing Overlay `lacuna-menu` surface. The
+  surface remains mapped while its narrow left-edge input zone is armed; only
+  its paint and input mask change. Autohide adds no namespace or layer level,
+  and fullscreen clears the hot-zone input region on the affected output.
 - Shared status followers such as Voxtype belong to one shell service, not to
   each monitor-local widget instance.
 

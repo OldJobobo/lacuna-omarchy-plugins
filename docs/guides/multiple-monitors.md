@@ -34,6 +34,12 @@ An expanded sidebar reserves a lane for attached content on its monitor. Bar
 flyouts move away when they would overlap that lane. A collapsed rail does not
 reserve the same avoidance space.
 
+Autohide arms a left-edge hot zone on every output selected by the monitor
+policy, but reveals only the output whose edge was activated. Moving to another
+eligible output closes the old reveal before opening the new one. Autohide is
+overlay-only, so neither the concealed nor revealed state changes application
+window reserves.
+
 On an output too narrow to fit both surfaces, the flyout falls back to normal
 screen clamping rather than opening off-screen.
 

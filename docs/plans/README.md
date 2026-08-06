@@ -30,6 +30,7 @@ axes.
 | [AUR Publication Readiness](./active/aur-publication-readiness-plan.md) | Beta.3 published; future updates gated | Publish each future beta, RC, or stable update only after its immutable GitHub artifact and lifecycle gates pass. |
 | [User Documentation](./active/lacuna-user-documentation-plan.md) | Foundation and MVP user journey in progress | Publish a searchable user-first site while keeping technical and historical evidence separate. |
 | [Documentation Design Pass](./active/lacuna-documentation-design-pass-plan.md) | Implemented locally; deployment validation pending | Give the MkDocs site a stronger Lacuna identity through attached surfaces, seams, readable typography, authentic product specimens, and verified accessibility. |
+| [Sidebar Autohide](./active/lacuna-sidebar-autohide-plan.md) | Implemented and live-verified on DP-1 | Complete the extended pinned/all multi-output, fractional-scale, and left-bar validation matrix. |
 
 ## Proposed And Draft
 
