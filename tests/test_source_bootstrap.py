@@ -71,6 +71,7 @@ class SourceBootstrapTests(unittest.TestCase):
                 {
                     "BOOTSTRAP_LOG": str(log),
                     "LACUNA_REPO_URL": str(source),
+                    "LACUNA_REPO_REF": "master",
                     "PATH": f"{fake_bin}:{env['PATH']}",
                 }
             )
@@ -91,6 +92,14 @@ class SourceBootstrapTests(unittest.TestCase):
             install_action = "lacuna install --profile full --reinstall --yes"
             self.assertIn(install_action, actions)
             self.assertTrue((checkout / ".git").is_dir())
+            self.assertIn("Source ref:        master", result.stdout)
+            self.assertEqual(
+                subprocess.run(
+                    ["git", "branch", "--show-current"], cwd=checkout, check=True,
+                    text=True, stdout=subprocess.PIPE,
+                ).stdout.strip(),
+                "master",
+            )
             self.assertIn("Lacuna Shell is installed.", result.stdout)
 
             second_result = subprocess.run(

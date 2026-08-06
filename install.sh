@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 repo_url="${LACUNA_REPO_URL:-https://github.com/OldJobobo/lacuna-shell.git}"
+repo_ref="${LACUNA_REPO_REF:-master}"
 install_dir="${LACUNA_INSTALL_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/lacuna-shell}"
 assume_yes=false
 staging_dir=""
@@ -69,7 +70,8 @@ printf '\nLacuna source installer\n\n'
 printf '  Required packages: git, Python, Qt Multimedia\n'
 printf '  Feature packages:  mpv, yt-dlp, ImageMagick\n'
 printf '  Source:            %s\n' "$repo_url"
-printf '  Checkout:     %s\n' "$install_dir"
+printf '  Source ref:        %s\n' "$repo_ref"
+printf '  Checkout:          %s\n' "$install_dir"
 printf '  Profile:      full\n\n'
 
 if [[ "$assume_yes" != true ]]; then
@@ -100,21 +102,18 @@ if [[ -e "$install_dir" ]]; then
     || fail "$install_dir points to an unexpected Git remote: ${origin_url:-none}"
   [[ -z "$(git -C "$install_dir" status --porcelain)" ]] \
     || fail "$install_dir has local changes; preserve or remove them before continuing"
-  git -C "$install_dir" fetch --prune origin
-  remote_ref="$(git -C "$install_dir" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
-  if [[ -z "$remote_ref" ]]; then
-    git -C "$install_dir" remote set-head origin --auto >/dev/null
-    remote_ref="$(git -C "$install_dir" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
-  fi
-  [[ -n "$remote_ref" ]] || fail "could not determine the repository's default branch"
+  git -C "$install_dir" fetch --prune origin "$repo_ref"
+  remote_ref="origin/$repo_ref"
+  git -C "$install_dir" rev-parse --verify "$remote_ref" >/dev/null 2>&1 \
+    || fail "could not resolve source ref: $repo_ref"
   git -C "$install_dir" merge --ff-only "$remote_ref"
   [[ "$(git -C "$install_dir" rev-parse HEAD)" == "$(git -C "$install_dir" rev-parse "$remote_ref")" ]] \
-    || fail "$install_dir contains commits outside the official default branch"
+    || fail "$install_dir contains commits outside the official source ref"
 else
   parent_dir="$(dirname "$install_dir")"
   mkdir -p -- "$parent_dir"
   staging_dir="${install_dir}.tmp.$$"
-  git clone --depth 1 "$repo_url" "$staging_dir"
+  git clone --depth 1 --branch "$repo_ref" --single-branch "$repo_url" "$staging_dir"
   mv -- "$staging_dir" "$install_dir"
   staging_dir=""
 fi
