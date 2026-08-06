@@ -43,6 +43,7 @@ These plans do not block beta or RC.
 | [Portrait Split Bar](./proposed/lacuna-portrait-split-bar-plan.md) | Proposed; ready | Portrait-only companion bar using the canonical Omarchy layout. |
 | [Shell Layout Presets And Agent Orchestration](./proposed/lacuna-shell-layout-presets-agent-orchestration-plan.md) | Proposed | Per-monitor/workspace presets and Agent Orchestration mode. |
 | [Issue Creation](./proposed/lacuna-issue-creation-plan.md) | Draft | Revalidate and authorize before creating external issues. |
+| [Architecture Decomposition](./proposed/lacuna-architecture-decomposition-plan.md) | Proposed; design reviewed, preflight required | Convert large plugin implementations into stable façades, single-owner controllers, pure policy modules, and verified plugin-local vendored components through serial behavior-preserving slices. |
 
 ## Completed
 
