@@ -23,6 +23,7 @@ Item {
   readonly property string designStyle: colorProfile.designStyle
   readonly property int workspaceCount: Math.max(1, Math.min(10, Number(setting("workspaceCount", 7))))
   readonly property bool showDynamicExtra: setting("showDynamicExtra", false) === true
+  readonly property bool activeWorkspaceOnly: setting("activeWorkspaceOnly", false) === true
 
   implicitWidth: workspaceGrid.implicitWidth
   implicitHeight: workspaceGrid.implicitHeight
@@ -86,6 +87,8 @@ Item {
 
   function workspaceIds() {
     workspaceSerial
+
+    if (activeWorkspaceOnly) return [activeWorkspace()]
 
     var ids = []
     for (var i = 1; i <= workspaceCount; i++) ids.push(i)

@@ -200,6 +200,22 @@ Item {
     return count + " widgets"
   }
 
+  function shellBarWidgetSettings(id) {
+    var sections = ["left", "center", "right"]
+    for (var sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
+      var entries = shellBarLayoutSection(sections[sectionIndex])
+      for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
+        var entry = entries[entryIndex]
+        if (entry && String(entry.id || "") === String(id || "")) return entry
+      }
+    }
+    return ({})
+  }
+
+  function workspacesActiveOnly() {
+    return shellBarWidgetSettings("lacuna.workspaces").activeWorkspaceOnly === true
+  }
+
   function secondsName(value) {
     var seconds = Math.max(0, Math.round(Number(value) || 0))
     if (seconds % 60 === 0) return String(seconds / 60) + "m"

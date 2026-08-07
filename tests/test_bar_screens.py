@@ -114,6 +114,8 @@ class BarScreenModelTests(unittest.TestCase):
             self.assertIn(f"property var {history}: []", stats_service)
             self.assertIn(f"readonly property var {history}: statsService ? statsService.{history} : []", stats)
         self.assertIn("readonly property bool workspaceOccupied", workspaces)
+        self.assertIn('readonly property bool activeWorkspaceOnly: setting("activeWorkspaceOnly", false) === true', workspaces)
+        self.assertIn("if (activeWorkspaceOnly) return [activeWorkspace()]", workspaces)
         self.assertIn('sweepActive: root.sweepOnPlaying && root.cssClass === "playing"', media)
 
 

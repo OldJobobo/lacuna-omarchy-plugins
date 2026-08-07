@@ -70,6 +70,15 @@ class ManifestContractTests(unittest.TestCase):
             )
             self.assertEqual(stability, expected, str(path))
 
+    def test_workspace_active_only_setting_defaults_to_false(self):
+        manifest = read_json(ROOT / "lacuna.workspaces" / "manifest.json")
+        widget = manifest["barWidget"]
+        schema = {field["key"]: field for field in widget["schema"]}
+
+        self.assertIs(widget["defaults"]["activeWorkspaceOnly"], False)
+        self.assertEqual("boolean", schema["activeWorkspaceOnly"]["type"])
+        self.assertIs(schema["activeWorkspaceOnly"]["defaultValue"], False)
+
     def test_manifest_versions_match_suite_version(self):
         self.assertRegex(SUITE_VERSION, r"^\d+\.\d+\.\d+(?:-(?:beta|rc)\.\d+)?$")
         for path in manifest_paths():

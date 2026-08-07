@@ -755,6 +755,11 @@ class QmlContractTests(unittest.TestCase):
         self.assertIn("property bool portraitSplit: true", registry)
         self.assertIn('"Portrait split bar"', settings_window)
         self.assertIn("Selected widgets are redistributed automatically", settings_window)
+        self.assertIn('function workspacesActiveOnly()', registry)
+        self.assertIn('pluginRegistry.setBarWidget(', menu_window)
+        self.assertIn('entry.action === "toggle-workspaces-active-only"', menu_window)
+        self.assertIn('{ id: "bar", icon: "density-normal", label: "Bar"', settings_window)
+        self.assertIn('"Active workspace only"', settings_window)
 
     def test_curve_kappa_constant_has_single_definition(self):
         # Plugins require local runtime copies, but every copy is vendored from

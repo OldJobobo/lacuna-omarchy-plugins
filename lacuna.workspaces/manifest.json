@@ -20,6 +20,7 @@
     "defaults": {
       "workspaceCount": 7,
       "showDynamicExtra": false,
+      "activeWorkspaceOnly": false,
       "colorProfile": "semantic"
     },
     "schema": [
@@ -36,6 +37,13 @@
         "key": "showDynamicExtra",
         "type": "boolean",
         "label": "Show dynamic extra workspaces",
+        "defaultValue": false
+      },
+      {
+        "key": "activeWorkspaceOnly",
+        "type": "boolean",
+        "label": "Show only active workspace",
+        "description": "Temporarily ignore workspace count and dynamic extras while this option is enabled.",
         "defaultValue": false
       },
       {

@@ -42,6 +42,7 @@ Item {
       { id: "overview", icon: "apps", label: "Overview", hint: "Current Lacuna state" },
       { id: "appearance", icon: "palette", label: "Appearance", hint: "Style, colors, theme shortcuts" },
       { id: "animations", icon: "background", label: "Animations", hint: "Background, foreground, and vignette effects" },
+      { id: "bar", icon: "density-normal", label: "Bar", hint: "Workspace widget behavior" },
       { id: "layout", icon: "density-normal", label: "Layout", hint: "Sidebar and density behavior" },
       { id: "media-player", icon: "music", label: "Media Player", hint: "Provider search and playback sources" },
       { id: "preferred-apps", icon: "preferred-apps", label: "Preferred Apps", hint: "Role-based app launch targets" },
@@ -345,6 +346,7 @@ Item {
         section("Status", "Fast links into each settings area.", "lacuna"),
         navRow("palette", "Appearance", root.registry.designStyleHint(), "appearance", "lacuna", root.registry.designStyleName()),
         navRow("background", "Animations", root.registry.backgroundEffectsHint(), "animations", "lacuna", root.registry.backgroundEffectStackCount() + " active"),
+        navRow("density-normal", "Bar", "Workspace widget behavior", "bar", "lacuna", root.registry.workspacesActiveOnly() ? "Active only" : "All workspaces"),
         navRow(root.registry.compact ? "density-compact" : "density-normal", "Layout", sidebarModeName() + " / default " + sidebarDefaultModeName(), "layout", "lacuna", densityName()),
         navRow("music", "Media Player", "Provider search and playback sources", "media-player", "lacuna", mediaPlayerSummary()),
         navRow("preferred-apps", "Preferred Apps", preferredSummary(), "preferred-apps", "lacuna", "Edit"),
@@ -382,6 +384,13 @@ Item {
 
     if (sectionId === "animations") {
       return backgroundEffectRows()
+    }
+
+    if (sectionId === "bar") {
+      return [
+        section("Workspaces", "Choose how the Lacuna workspace widget uses available bar space.", "lacuna"),
+        row("density-normal", "Active workspace only", "Show one button for the currently focused workspace", root.registry.workspacesActiveOnly() ? "On" : "Off", "lacuna", "toggle-workspaces-active-only", "toggle", root.registry.workspacesActiveOnly())
+      ]
     }
 
     if (sectionId === "layout") {

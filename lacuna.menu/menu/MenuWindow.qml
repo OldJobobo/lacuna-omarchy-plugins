@@ -1276,6 +1276,24 @@ Item {
     return merged
   }
 
+  function setWorkspaceActiveOnly(enabled) {
+    if (!pluginRegistry || typeof pluginRegistry.setBarWidget !== "function") {
+      console.warn("Lacuna settings: bar widget persistence is unavailable")
+      return false
+    }
+
+    var error = pluginRegistry.setBarWidget(
+      "lacuna.workspaces", "activeWorkspaceOnly", enabled === true, ({})
+    )
+    if (error) {
+      console.warn("Lacuna settings: failed to update workspace widget: " + error)
+      return false
+    }
+
+    pluginStateRevision += 1
+    return true
+  }
+
   function numberSetting(value, fallback) {
     return valueHelpers.numberSetting(value, fallback)
   }
@@ -1878,6 +1896,11 @@ Item {
 
     if (entry.action.indexOf("set-bar-size-mode-") === 0) {
       barSizeModeService.setMode(entry.action.substring("set-bar-size-mode-".length))
+      return true
+    }
+
+    if (entry.action === "toggle-workspaces-active-only") {
+      setWorkspaceActiveOnly(desiredChecked(entry, !registry.workspacesActiveOnly()))
       return true
     }
 
