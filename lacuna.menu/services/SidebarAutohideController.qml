@@ -177,7 +177,7 @@ Item {
   }
 
   function explicitOpen(screenName) {
-    return requestImmediateReveal(screenName, "explicit-open", true)
+    return requestImmediateReveal(screenName, "explicit-open", false)
   }
 
   function explicitClose(reason) {
@@ -219,7 +219,7 @@ Item {
       queuedScreenName = ""
       queuedReason = "edge"
       if (mapValue(hotZoneHover, next) || reason === "explicit-open")
-        requestImmediateReveal(next, reason, reason === "explicit-open")
+        requestImmediateReveal(next, reason, false)
     }
   }
 

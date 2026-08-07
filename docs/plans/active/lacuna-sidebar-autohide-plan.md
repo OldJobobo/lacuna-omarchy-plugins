@@ -32,8 +32,8 @@ The implementation must satisfy these invariants:
 6. Rail/full geometry is selected before the first reveal frame; a reveal may
    not resize from one presentation to the other mid-animation.
 7. Flyout open, close, or switching cannot accidentally conceal the sidebar.
-8. Explicit open and close requests remain deterministic and cannot bounce
-   against a stationary pointer.
+8. Explicit open and close requests remain deterministic, but an explicit open
+   still follows the autohide pointer envelope and hide delay.
 9. Existing behavior is unchanged when autohide is disabled.
 
 ## 2. Fixed Product Decisions
@@ -63,8 +63,8 @@ from the edge. Turning autohide on or off must not rewrite `defaultMode`,
 ### 2.2 Autohide always overlays
 
 The effective exclusive zone is zero for the entire time autohide is enabled,
-including while an explicit request holds the sidebar open. Repeatedly adding
-and removing a docked exclusive zone on pointer hover would reflow application
+including after an explicit request reveals the sidebar. Repeatedly adding and
+removing a docked exclusive zone on pointer hover would reflow application
 windows and is not acceptable.
 
 The stored Docked/Overlay preference remains unchanged and becomes effective
@@ -114,10 +114,11 @@ first release does not attempt compositor-specific pointer-pressure detection.
 ### 2.6 Explicit requests and rearming
 
 A hot-zone reveal is passive and may hide after pointer exit. A public
-`open(payloadJson)`, bar-menu action, or equivalent explicit request creates a
-held-open session on the requested/focused output. That session remains open
-until an explicit close or an existing action that deliberately closes the
-whole menu.
+`open(payloadJson)`, bar-menu action, or equivalent explicit request reveals
+immediately on the requested/focused output, but does not create a held-open
+session. Once the reveal settles, the normal pointer envelope and hide delay
+apply. Flyouts and active keyboard/modal content retain their semantic holds so
+users can complete those interactions.
 
 After explicit close, disarm edge activation until the pointer leaves the hot
 zone. Re-entering then starts a fresh dwell. This prevents close/reopen bounce
@@ -149,7 +150,7 @@ Use explicit semantic phases rather than loosely coupled booleans:
 - `visible`: passively revealed and pointer envelope is active;
 - `hidePending`: pointer left the envelope and grace is running;
 - `hiding`: menu animation targets 0;
-- `held`: explicit open or semantic content hold prevents pointer hide;
+- `held`: internal semantic hold phase; public explicit opens do not enter it;
 - `suppressed`: fullscreen, invalid output, disabled Lacuna, or monitor removal.
 
 Track at minimum:
@@ -177,7 +178,7 @@ The hide timer may run only when all of these are false:
 - connector hovered;
 - attached flyout hovered;
 - flyout open or transitioning;
-- explicitly held open;
+- active semantic content hold;
 - keyboard input active;
 - rename/editor interaction active;
 - restart confirmation or another modal sidebar interaction active.

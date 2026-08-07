@@ -103,6 +103,52 @@ ShellRoot {{
         self.assertTrue(row["blockedDidNotReveal"], output[-3000:])
         self.assertEqual("DP-1:edge-dwell", row["reveals"][-1], output[-3000:])
 
+    def test_explicit_open_still_conceals_outside_pointer_envelope(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var controller: null
+  property var conceals: []
+
+  Component.onCompleted: {{
+    var component = Qt.createComponent("{qml_url('lacuna.menu/services/SidebarAutohideController.qml')}", Component.PreferSynchronous)
+    if (component.status !== Component.Ready) {{
+      console.log("BEHAVE_ERR " + component.errorString())
+      Qt.quit()
+      return
+    }}
+    controller = component.createObject(root, {{ enabled: true, hideDelayMs: 0 }})
+    controller.concealRequested.connect(function(reason) {{ conceals.push(reason) }})
+    controller.setEligibleScreens(["DP-1"])
+    controller.explicitOpen("DP-1")
+    controller.notifyMenuProgress(1)
+    probe.restart()
+  }}
+
+  Timer {{
+    id: probe
+    interval: 30
+    onTriggered: {{
+      console.log("BEHAVE " + JSON.stringify({{
+        conceals: conceals,
+        explicitHeld: controller.explicitHeld,
+        phase: controller.phase
+      }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        row = parse_behave(output)[-1]
+        self.assertEqual(["pointer-leave"], row["conceals"], output[-3000:])
+        self.assertFalse(row["explicitHeld"], output[-3000:])
+        self.assertEqual("hiding", row["phase"], output[-3000:])
+
     def test_output_handoff_cannot_dismiss_semantically_held_session(self):
         qml = f"""
 import Quickshell
@@ -124,17 +170,13 @@ ShellRoot {{
     controller.revealRequested.connect(function(name, reason) {{ events.push("reveal:" + name + ":" + reason) }})
     controller.concealRequested.connect(function(reason) {{ events.push("conceal:" + reason) }})
     controller.setEligibleScreens(["DP-1", "DP-2"])
-    controller.explicitOpen("DP-1")
+    controller.requestImmediateReveal("DP-1", "test", false)
+    controller.flyoutHeld = true
     controller.notifyMenuProgress(1)
     controller.setHotZoneHovered("DP-2", true)
-    var explicitResult = events.slice()
-    controller.explicitHeld = false
-    controller.flyoutHeld = true
-    controller.setHotZoneHovered("DP-2", true)
-    var flyoutResult = events.slice()
+    var heldResult = events.slice()
     console.log("BEHAVE " + JSON.stringify({{
-      explicitResult: explicitResult,
-      flyoutResult: flyoutResult,
+      heldResult: heldResult,
       active: controller.activeScreenName,
       queued: controller.queuedScreenName
     }}))
@@ -147,8 +189,7 @@ ShellRoot {{
         output = run_quickshell(qml, timeout=8)
         require_no_qml_errors(output)
         row = parse_behave(output)[-1]
-        self.assertEqual(["reveal:DP-1:explicit-open"], row["explicitResult"], output[-3000:])
-        self.assertEqual(row["explicitResult"], row["flyoutResult"], output[-3000:])
+        self.assertEqual(["reveal:DP-1:test"], row["heldResult"], output[-3000:])
         self.assertEqual("DP-1", row["active"], output[-3000:])
         self.assertEqual("", row["queued"], output[-3000:])
 
