@@ -24,6 +24,71 @@ class SettingsFlyoutTransitionContracts(unittest.TestCase):
 
 @unittest.skipUnless(HAVE_SESSION, "needs a quickshell binary and a Wayland session")
 class QmlPanelBehaviorTests(unittest.TestCase):
+    def test_settings_toggle_uses_requested_on_off_palette(self):
+        qml = f"""
+import Quickshell
+import QtQuick
+
+ShellRoot {{
+  id: root
+  property var menuOff: null
+  property var menuOn: null
+  property var shellOff: null
+  property var shellOn: null
+
+  Component.onCompleted: {{
+    var menuComponent = Qt.createComponent("{qml_url('lacuna.menu/settings/SettingsRow.qml')}", Component.PreferSynchronous)
+    var shellComponent = Qt.createComponent("{qml_url('lacuna.shell-settings/settings/SettingsRow.qml')}", Component.PreferSynchronous)
+    var colors = {{
+      control: "toggle",
+      foreground: "#f0f0f0",
+      background: "#101010",
+      muted: "#777777",
+      toneAccent: "#ff3366"
+    }}
+    menuOff = menuComponent.createObject(root, Object.assign({{}}, colors, {{ checked: false }}))
+    menuOn = menuComponent.createObject(root, Object.assign({{}}, colors, {{ checked: true }}))
+    shellOff = shellComponent.createObject(root, Object.assign({{}}, colors, {{ checked: false }}))
+    shellOn = shellComponent.createObject(root, Object.assign({{}}, colors, {{ checked: true }}))
+    probe.restart()
+  }}
+
+  Timer {{
+    id: probe
+    interval: 30
+    onTriggered: {{
+      console.log("BEHAVE " + JSON.stringify({{
+        menuOnKnob: root.menuOn.toggleKnobColor.toString(),
+        menuOffKnob: root.menuOff.toggleKnobColor.toString(),
+        menuOnTrackAlpha: root.menuOn.toggleTrackColor.a,
+        menuOffTrackAlpha: root.menuOff.toggleTrackColor.a,
+        menuOnBorderAlpha: root.menuOn.toggleBorderColor.a,
+        menuOffBorderAlpha: root.menuOff.toggleBorderColor.a,
+        shellOnKnob: root.shellOn.toggleKnobColor.toString(),
+        shellOffKnob: root.shellOff.toggleKnobColor.toString(),
+        shellOnTrackAlpha: root.shellOn.toggleTrackColor.a,
+        shellOffTrackAlpha: root.shellOff.toggleTrackColor.a,
+        shellOnBorderAlpha: root.shellOn.toggleBorderColor.a,
+        shellOffBorderAlpha: root.shellOff.toggleBorderColor.a
+      }}))
+      Qt.quit()
+    }}
+  }}
+}}
+"""
+        output = run_quickshell(qml, timeout=8)
+        require_no_qml_errors(output)
+        row = parse_behave(output)[-1]
+
+        self.assertEqual("#f0f0f0", row["menuOnKnob"])
+        self.assertEqual("#101010", row["menuOffKnob"])
+        self.assertLess(row["menuOnTrackAlpha"], row["menuOffTrackAlpha"])
+        self.assertLess(row["menuOnBorderAlpha"], row["menuOffBorderAlpha"])
+        self.assertEqual("#f0f0f0", row["shellOnKnob"])
+        self.assertEqual("#101010", row["shellOffKnob"])
+        self.assertLess(row["shellOnTrackAlpha"], row["shellOffTrackAlpha"])
+        self.assertLess(row["shellOnBorderAlpha"], row["shellOffBorderAlpha"])
+
     def test_panel_geometry_transaction_is_newest_wins_and_reduced_motion_atomic(self):
         qml = f"""
 import Quickshell

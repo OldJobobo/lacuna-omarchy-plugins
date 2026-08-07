@@ -44,6 +44,9 @@ LacunaRect {
 
   readonly property bool hasHint: hint !== ""
   readonly property bool hasValue: value !== ""
+  readonly property color toggleTrackColor: checked ? Qt.rgba(foreground.r, foreground.g, foreground.b, 0.12) : Qt.rgba(toneAccent.r, toneAccent.g, toneAccent.b, 0.85)
+  readonly property color toggleBorderColor: checked ? Qt.rgba(foreground.r, foreground.g, foreground.b, 0.20) : Qt.rgba(toneAccent.r, toneAccent.g, toneAccent.b, 0.9)
+  readonly property color toggleKnobColor: checked ? foreground : background
   readonly property int rowHeight: compact ? 44 : 50
   readonly property int trailingWidth: control === "slider" ? (compact ? 124 : 150) : control === "segments" ? Math.min(170, Math.max(92, options.length * (compact ? 48 : 56))) : control === "toggle" ? 38 : control === "button" ? 68 : hasValue ? 86 : 18
 
@@ -154,9 +157,9 @@ LacunaRect {
         width: root.compact ? 30 : 34
         height: root.compact ? 16 : 18
         radius: height / 2
-        color: root.checked ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.85) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
+        color: root.toggleTrackColor
         border.width: 1
-        border.color: root.checked ? Qt.rgba(root.toneAccent.r, root.toneAccent.g, root.toneAccent.b, 0.9) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.20)
+        border.color: root.toggleBorderColor
 
         LacunaRect {
           width: root.compact ? 10 : 12
@@ -164,7 +167,7 @@ LacunaRect {
           radius: height / 2
           anchors.verticalCenter: parent.verticalCenter
           x: root.checked ? parent.width - width - 3 : 3
-          color: root.checked ? root.background : root.muted
+          color: root.toggleKnobColor
 
           Behavior on x {
             LacunaAnim { motion: "fast" }
