@@ -7,12 +7,20 @@ and the suite version lives in [`VERSION`](VERSION) and is mirrored into every
 
 ## [Unreleased]
 
+### Added
+- The Lacuna workspace widget can optionally show only the active workspace
+  from Settings → Bar; the existing multi-workspace display remains the default.
+
 ### Changed
 - Documentation now pairs its user-first content with a calm neutral shell,
   restrained navigation and accent states, readable proportional prose,
   asymmetric product layouts, authentic product crops, and hardened keyboard behavior.
 
 ### Fixed
+- Settings toggles now use a bright knob with the neutral track when enabled;
+  disabled toggles retain the former accent track with its dark knob.
+- Sidebar button opens now continue to obey the pointer envelope and hide delay
+  while sidebar autohide is enabled instead of creating a held-open session.
 - Full uninstall now removes Lacuna-owned Hyprland gap, corner-rounding, and
   single-window-aspect overrides, reloads Hyprland, and transactionally restores
   those overrides if the uninstall reload fails.
